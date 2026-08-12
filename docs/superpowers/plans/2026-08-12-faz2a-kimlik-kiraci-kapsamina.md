@@ -405,3 +405,29 @@ git add -A && git commit -m "docs(auth): Faz 2a sonucu — oturumların geri sar
 - [ ] Backend ve frontend suite'leri yeşil, derleme uyarısız
 
 **Sonraki:** Faz 2b — ayrılma. `Tenants.DatabaseName`, gerçek `CREATE DATABASE`, çözücünün katalog üretmesi, purge'ün `DROP DATABASE` yapması, `Subscriptions` taşınması, migration orkestrasyonu, test altyapısının kiracı başına veritabanı kurması.
+
+---
+
+## Uygulama sonucu (2026-08-12)
+
+**Tamamlandı.** 3 görev, 4 commit. Test tabanı 200 → 206, derleme uyarısız.
+
+| Görev | Nasıl yapıldı | İncelemede yakalanan |
+| --- | --- | --- |
+| 1 · Refresh token'lar platforma | Alt ajan | Plan kusuru: `RefreshToken` Infrastructure'daydı, `IPlatformDbContext` ise Application'da — Application Infrastructure'a referans veremez. Varlık Domain'e taşındı. |
+| 2 · Kimlik kiracı kapsamında | Kontrolör yazdı, alt ajan inceledi | **Gerileme:** `EmailExistsAsync` dizin-önce olunca seed'deki bilinçli bir koruma körleşti. **Fazla iddia:** kilitleme testinin kapsam değişmezini kanıtladığını yazmıştım; kanıtlamıyor. |
+| 3 · Doğrulama + dokümantasyon | Kontrolör | — |
+
+**Yaklaşım değişikliği:** Görev 2'de alt ajan iki kez oturum limitine takıldı (fazın en büyük görevi, her taze ajan sıfırdan okuyor). Uygulama kontrolöre alındı, **inceleme alt ajanda bırakıldı** — inceleme uygulamadan ucuz, güvenlik ağı en gerekli yerde kaldı. İnceleme haklı çıktı: kontrolörün kaçırdığı bir gerilemeyi ve bir fazla iddiayı buldu.
+
+**Elle doğrulama:** iki veritabanı düşürülüp uygulama temiz açıldı; giriş, refresh + rotasyon, dondurma → login 403, çözme → login 200 doğrulandı. Refresh token'lar platform veritabanında (2 kayıt), uygulama veritabanında tablo yok. Dondurulmuş kiracıda yetkili istek ve refresh reddi script hatası yüzünden elle ölçülemedi; `ErisimKapisiTests` bunları uçtan uca kapsıyor ve geçiyor.
+
+## Faz 2b'ye devredilenler
+
+| Madde | Neden |
+| --- | --- |
+| `EmailExistsAsync` çözülemeyen kiracıda fırlatır | Dizin türetilmiştir ve sapabilir; `Create(...)` çözülemeyen kiracıda patlar ve boolean sözleşmesi 500'e döner. "Çözülemeyen kiracı → false" davranışı eklenmeli. |
+| `AppDbContextInitializer` root kapsamdan çözülüyor | Tek kalan elle `Impersonate`. Düzeltme `Program.cs`'te: initializer kiracı kapsamından çözülmeli. |
+| `AcceptInviteAsync` durum makinesini atlıyor | Herhangi bir `Provisioning` kiracıyı şifre belirlenir belirlenmez `Active` yapıyor — Faz 2b'de var olmayan veritabanına Active kiracı demek. |
+| `TenantOnboarding` / `RegisterTenantCommand` sıra kopyası | İki kopya, sessiz sapma riski. |
+| Kiracı veritabanı harmanlaması | Yerel `Turkish_CI_AS`, CI `SQL_Latin1_General_CP1_CI_AS`. `CREATE DATABASE` açık harmanlama vermeli; hangisi olacağı ürün kararı. |

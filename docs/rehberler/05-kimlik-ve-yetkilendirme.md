@@ -28,6 +28,37 @@ sequenceDiagram
 çift üretilir. Çalınmış bir refresh token'ın tekrar kullanımını sınırlar. Bu mantık
 frontend'de `api/client.ts` (tek-uçuş refresh), backend'de `IdentityService`'tedir.
 
+### Refresh token'lar nerede durur — ve neden orada
+
+Kullanıcılar ve İK verisi **kiracı** veritabanında, refresh token'lar ise
+**platform** veritabanındadır.
+
+Sebep bir yönlendirme problemi: login'de kullanıcı e-postasını verir ve hangi
+kiracıya bakılacağı yönlendirme dizininden çözülür. Refresh'te ise elde yalnız
+rastgele bir dize vardır — dizin yardım edemez. Token satırı platformda durduğu
+ve `TenantId` taşıdığı için, arama tek bir yerde yapılır ve kiracı oradan
+öğrenilir. Token biçimi bu sayede değişmedi.
+
+İki sonucu var:
+
+- `RefreshTokens.UserId → Users.Id` yabancı anahtarı **yoktur** — SQL Server
+  çapraz-veritabanı FK'yı desteklemez. Kullanıcı, `TenantId` ile açılan kiracı
+  kapsamından bu kimlikle çözülür.
+- Bir kiracıyı yedekten geri yüklemek **oturumları geri sarmaz**; kullanıcıları
+  yeniden giriş yapar (bkz. `docs/yedekleme-ve-kurtarma.md`).
+
+### Kullanıcı işlemleri kiracıya sabitlenmiş kapsamda çalışır
+
+`UserManager`, `AddEntityFrameworkStores<AppDbContext>` ile uygulama context'ine
+bağlıdır; o da bağlantısını aktif kiracıdan alır. Bu yüzden `IdentityService`
+onu constructor'dan almaz — kiracı, DI kapsamı kurulduğunda henüz bilinmiyor
+olabilir (login'de ancak dizin sorgusundan sonra öğrenilir).
+
+Her işlem kiracıyı önce çözer, sonra `ITenantScopeFactory.Create(...)` ile
+kapsam açar ve `UserManager`/`SignInManager`'ı **o kapsamdan** alır. İkisinin
+aynı kapsamdan gelmesi zorunludur: `CheckPasswordSignInAsync` kilitleme
+sayacını `UserManager` üzerinden yazar.
+
 ## Roller ve Policy'ler
 
 Üç rol: `hr-admin`, `manager`, `employee`. Backend'de policy'lerle uygulanır

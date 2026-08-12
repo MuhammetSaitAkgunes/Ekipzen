@@ -19,5 +19,7 @@ public class ApplicationUser : IdentityUser
 
     public bool IsActive { get; set; } = true;
 
-    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    // RefreshToken koleksiyon navigasyonu YOKTUR: refresh token'lar artık platform
+    // veritabanında (bkz. RefreshToken.cs xmldoc), bu kullanıcı ise kiracı
+    // veritabanındadır — SQL Server çapraz-veritabanı ilişkiyi desteklemez.
 }

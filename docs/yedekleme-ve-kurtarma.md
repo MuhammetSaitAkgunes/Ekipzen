@@ -96,6 +96,14 @@ yapılmamış sayılır.
 6. **Aç:** Uygulamayı devreye al.
 7. **Yaz:** Olay sonrası not — kök neden ve tekrarını önleyecek adım.
 
+> **Geri yükleme oturumları geri sarmaz.** Refresh token'lar kiracı
+> veritabanında değil **platform** veritabanında durur — yönlendirme için:
+> elinde yalnız token dizesi olan sunucu, hangi kiracıya bakacağını satırdaki
+> `TenantId`'den öğrenir. Bu yüzden bir müşteriyi düne döndürdüğünüzde
+> oturumları düne dönmez; kullanıcıları bir kez yeniden giriş yapar. Bilinçli
+> bir karardır (oturum veri değil, durumdur) ama müşteriye bildirilecek
+> adımlar listesine yazın.
+
 ### Tek kiracıyı dondurma (bakım / kısmi geri yükleme öncesi)
 
 Bütün uygulamayı kapatmak yerine **tek bir müşteriyi** dondurmak gerektiğinde

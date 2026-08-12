@@ -240,6 +240,40 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
         (await platform2.Tenants.AnyAsync(x => x.Id == t.TenantId)).Should().BeFalse("kiracı verisi yine de silinmeli");
     }
 
+    /// <summary>
+    /// Refresh token'lar PLATFORM veritabanındadır (Faz 2a) — purge'ün kiracı
+    /// verisini silen ham SQL'i onlara ulaşmaz, ayrı bir adım gerekir. Bu adım
+    /// atlanırsa silinmiş bir kiracının token'ları platformda kalır: KVKK açısından
+    /// artık PII, ve teorik olarak oturum uzatmaya devam edebilir.
+    /// </summary>
+    [Fact]
+    public async Task Purge_RefreshTokenlariPlatformdanDaSiler()
+    {
+        var eposta = $"rt-purge-{Guid.NewGuid():N}@purge.local";
+        var t = await ProvisionAndActivateAsync("Token Silme A.Ş.", eposta);
+
+        // Giriş, platform veritabanında bir refresh token satırı üretir.
+        _ = await AuthedClientAsync(eposta);
+
+        using (var once = Factory.Services.CreateScope())
+        {
+            var platform = once.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+            (await platform.RefreshTokens.AnyAsync(x => x.TenantId == t.TenantId))
+                .Should().BeTrue("testin anlamlı olması için önce token var olmalı");
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ITenantPurger>()
+                .PurgeAsync(t.TenantId, CancellationToken.None);
+        }
+
+        using var sonra = Factory.Services.CreateScope();
+        var platformSonra = sonra.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+        (await platformSonra.RefreshTokens.AnyAsync(x => x.TenantId == t.TenantId))
+            .Should().BeFalse("purge refresh token'ları platform veritabanından da silmeli");
+    }
+
     [Fact]
     public async Task Delete_WithWrongSlug_Returns409_AndKeepsData()
     {

@@ -32,7 +32,6 @@ public class AppDbContextInitializer(
     RoleManager<IdentityRole> roleManager,
     ICurrentTenant currentTenant,
     IConfiguration configuration,
-    IIdentityService identityService,
     ITenantDirectory directory,
     ITenantScopeFactory tenantScopeFactory)
 {
@@ -171,7 +170,7 @@ public class AppDbContextInitializer(
         }
 
         // BİLİNÇLİ OLARAK ITenantScopeFactory KULLANILMIYOR: `context` (ve bu sınıfın diğer
-        // tüm bağımlılıkları — userManager, roleManager, directory, identityService) constructor
+        // tüm bağımlılıkları — userManager, roleManager, directory) constructor
         // parametresi olarak enjekte edildiğinden, DI konteyneri bunları BU SINIFIN KENDİSİ
         // çözülürken (Program.cs'de `scope.ServiceProvider.GetRequiredService<AppDbContextInitializer>()`)
         // ÇOKTAN kurmuştur — yani `SeedAsync` hiç çalışmadan önce. Burada yeni bir fabrika kapsamı
@@ -205,7 +204,15 @@ public class AppDbContextInitializer(
         // açılış çöker. Admin e-postası zaten varsa seed'i atla; doğru yükseltme
         // prosedürü iki veritabanını da BİRLİKTE düşürmektir (bkz.
         // docs/rehberler/07-veritabani-ve-migrationlar.md, "Yükseltme notu").
-        if (await identityService.EmailExistsAsync(adminEmail, default))
+        //
+        // DİKKAT — burada IIdentityService.EmailExistsAsync KULLANILAMAZ: o metot
+        // e-postayı önce yönlendirme DİZİNİNDEN çözer, dizin ise platform
+        // veritabanındadır. Tam da bu korumanın hedeflediği senaryoda (platform taze,
+        // uygulama DB'si eski) dizin BOŞTUR; EmailExistsAsync false döner ve koruma
+        // kör kalır. Sapmanın tespit edilmek istendiği yer kullanıcı deposudur,
+        // dolayısıyla kontrol doğrudan orada yapılır.
+        var normalizeAdmin = adminEmail.ToUpperInvariant();
+        if (await context.Set<ApplicationUser>().AnyAsync(u => u.NormalizedEmail == normalizeAdmin))
         {
             logger.LogWarning(
                 "Globex demo kiracısı platform veritabanında yok ama {AdminEmail} uygulama " +
