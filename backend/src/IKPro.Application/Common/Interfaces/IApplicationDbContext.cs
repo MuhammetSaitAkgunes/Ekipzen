@@ -68,7 +68,6 @@ public interface IApplicationDbContext
     // Settings
     DbSet<CompanyProfile> CompanyProfiles { get; }
     DbSet<NotificationSettings> NotificationSettings { get; }
-    DbSet<Subscription> Subscriptions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

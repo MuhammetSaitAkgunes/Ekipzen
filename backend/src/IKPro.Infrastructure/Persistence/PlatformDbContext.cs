@@ -1,5 +1,6 @@
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Entities.Identity;
+using IKPro.Domain.Entities.Settings;
 using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,9 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
     /// katalogda arayacağını başka türlü bilemez. Satırdaki TenantId yönlendirmeyi verir.
     /// </summary>
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    /// <inheritdoc cref="IPlatformDbContext.Subscriptions"/>
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
     public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
         CancellationToken cancellationToken) => Database.BeginTransactionAsync(cancellationToken);
@@ -55,6 +59,20 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
             b.HasKey(d => d.NormalizedEmail);
             b.Property(d => d.NormalizedEmail).HasMaxLength(256);
             b.HasIndex(d => d.TenantId);
+        });
+
+        builder.Entity<Subscription>(b =>
+        {
+            b.Property(s => s.Plan).IsRequired().HasMaxLength(64);
+            b.Property(s => s.PlanName).HasMaxLength(128);
+            b.Property(s => s.BillingCycle).HasMaxLength(32);
+            b.Property(s => s.PaymentMethodMasked).HasMaxLength(64);
+
+            // Kiracı başına EN FAZLA BİR abonelik. Tekillik burada, veritabanı
+            // seviyesinde uygulanır: "tekil kayıt" varsayımı kodda birden çok yerde
+            // (FirstOrDefault) var ve ikinci bir satır sessizce yanlış planı
+            // gösterirdi.
+            b.HasIndex(s => s.TenantId).IsUnique();
         });
 
         builder.Entity<RefreshToken>(b =>

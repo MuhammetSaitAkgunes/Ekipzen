@@ -17,12 +17,3 @@ public class CompanyProfileConfiguration : IEntityTypeConfiguration<CompanyProfi
     }
 }
 
-public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
-{
-    public void Configure(EntityTypeBuilder<Subscription> b)
-    {
-        b.Property(s => s.Plan).IsRequired().HasMaxLength(64);
-        b.Property(s => s.BillingCycle).HasMaxLength(32);
-        b.Property(s => s.PaymentMethodMasked).HasMaxLength(64);
-    }
-}

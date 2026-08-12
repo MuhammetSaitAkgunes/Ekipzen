@@ -258,6 +258,24 @@ Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki 
 
 **`Subscriptions`:** kiracı veritabanından platforma taşınır. Gerekçe: "kim hangi pakette, kimin yenilemesi geldi" bir platform sorusudur; kiracı DB'lerinde kalsaydı her fatura raporu tüm veritabanlarını gezerdi. Yan fayda: bir müşteriyi geri yüklemek **aboneliği geri sarmaz** — doğrusu budur. `SettingsHandlers` tek okuma noktası.
 
+> **✅ TAMAMLANDI (2026-08-13).**
+>
+> **Purge:** `PurgeAsync` artık dosya alanını siliyor, `DROP DATABASE` yapıyor, sonra platformdaki izleri (refresh token, abonelik, dizin, kiracı satırı) temizliyor. `TenantScopedTablesInDeleteOrder` ve `QualifiedTableName` **silindi**; `#pragma warning disable EF1002` de onlarla birlikte gitti.
+>
+> **Sıra değişti — dosyalar artık ÖNCE siliniyor.** Eski gerekçe ("silme transaction'ı geri alınırsa dosyalar boşuna gitmesin") `DROP DATABASE` geri alınamadığı için düştü. Yeni ölçüt hangi artığın daha kötü olduğu: veritabanı gidip dosyalar kalırsa diskte PII sürer (KVKK riski); dosyalar gidip veritabanı kalırsa kiracı zaten `Purging`'de erişilemez durur ve operatör yeniden çalıştırınca tamamlanır.
+>
+> **`DatabaseName` boşsa:** `InvalidOperationException` — sessizce eski yola düşmüyoruz (zaten o yol artık yok).
+>
+> **Planın değinmediği bir düzeltme:** `PurgeUnverifiedAsync` kataloğu HİÇ oluşmamış adayları da "okuyamadım" diye atlıyordu; onlar tam da temizlenmesi gereken enkaz. Artık önce `ExistsAsync` soruluyor — katalog yoksa kaybedilecek veri de yok, silinir; katalog VAR ama okunamıyorsa atlanır.
+>
+> **`Subscriptions` platforma taşındı.** İki migration (`SubscriptionsToPlatform`, `DropSubscriptionsFromAppDb`) + `TenantId` üzerinde **tekil** indeks (kod birden çok yerde "tek kayıt" varsayıyor). Seed ve purge platforma yazıyor/siliyor.
+>
+> **Taşımanın bedeli ve karşılığı:** platform context'inde **global kiracı filtresi YOKTUR** — kiracı veritabanında yapısal olarak imkânsız olan "filtreyi unutma" hatası burada mümkün. `GetSettingsQueryHandler` kiracıyı açıkça filtreliyor ve `AbonelikPlatformdaTests` bunu iki kiracıyla sabitliyor (filtre kalksaydı ikisi de aynı planı görürdü).
+>
+> **Test altyapısı:** `IKProApiFactory` artık koşum SONUNDA da süpürüyor — test host'unun açılışta kurduğu demo kiracıları koleksiyon boyunca yaşamak zorunda ve ancak host kapanınca silinebiliyor. Koşu sonrası sunucuda tek bir test kataloğu kalmıyor (elle doğrulandı).
+>
+> Doğrulama: 66 birim + 177 entegrasyon yeşil, `-warnaserror` temiz.
+
 ---
 
 ### Görev 7: Migration orkestrasyonu, açılış doğrulaması, dokümantasyon

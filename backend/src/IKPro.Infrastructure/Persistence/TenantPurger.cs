@@ -10,13 +10,18 @@ using Microsoft.Extensions.Logging;
 namespace IKPro.Infrastructure.Persistence;
 
 /// <summary>
-/// Kiracının tüm verisini FK-güvenli sırada siler. Silinecek tablolar EF model
-/// metadata'sından türetilir (ITenantScoped + PK'lı = view'ler hariç); yeni bir
-/// kiracı-kapsamlı tablo eklendiğinde otomatik kapsama girer (unutma sızıntısı yok).
+/// Kiracının tüm verisini kalıcı olarak siler.
 ///
-/// <b>Bu sınıf AMBIENT <c>AppDbContext</c> ALMAZ</b> — bilinçli. Her okuma/silme,
-/// hedef kiracıya sabitlenmiş TAZE bir kapsamdan çözülür. Ambient bir context
-/// çağıranın kiracısına (ya da hiçbirine) bağlı olurdu ve kiracı başına
+/// <b>Silme artık <c>DROP DATABASE</c>'dir.</b> Kiracının verisi kendi
+/// kataloğunda olduğu için tablo tablo silmeye gerek yok — ve gerek olmaması
+/// bir kolaylıktan fazlası: eski yol, silinecek tabloları EF metadata'sından
+/// türetiyordu ve o listeye girmeyen her şey (view olmayan yeni bir tablo,
+/// Identity'nin yan tabloları, ileride eklenecek bir şema nesnesi) sessizce
+/// geride kalırdı. <c>DROP DATABASE</c> hiçbir şey kaçırmaz.
+///
+/// <b>Bu sınıf AMBIENT <c>AppDbContext</c> ALMAZ</b> — bilinçli. Kiracıya ait her
+/// okuma, hedef kiracıya sabitlenmiş TAZE bir kapsamdan çözülür. Ambient bir
+/// context çağıranın kiracısına (ya da hiçbirine) bağlı olurdu ve kiracı başına
 /// veritabanında bu, yanlış katalogda çalışmak demek — üstelik sessizce.
 /// Constructor'da o parametrenin bulunmaması, yanlış kullanımı derleme
 /// seviyesinde imkânsız kılar.
@@ -24,6 +29,7 @@ namespace IKPro.Infrastructure.Persistence;
 public sealed class TenantPurger(
     IPlatformDbContext platform,
     ITenantScopeFactory tenantScopeFactory,
+    ITenantDatabaseProvisioner databaseProvisioner,
     IFileStorage fileStorage,
     ITenantDirectory directory,
     ITenantRegistry registry,
@@ -44,105 +50,92 @@ public sealed class TenantPurger(
             registry.Invalidate(tenantId);
         }
 
-        // Silinecek kiracı için AYRI, TAZE bir kapsam açılır. Bu sınıfa constructor'da
-        // enjekte edilen `context`, TenantPurger inşa edilirken ÇOKTAN kurulmuş olabilir —
-        // ya çağıranın kendi kiracısıyla (operatör isteğiyse) ya da hiç kiracısız (arka
-        // plan servisiyse). O bağlantıyı burada impersone etmeye çalışmak SIRAYA GÜVENMEK
-        // olurdu: AppDbContext'in bağlantısı kapsam başına, ilk çözümde ICurrentTenant'tan
-        // okunuyor (bkz. Infrastructure.DependencyInjection) — yani Impersonate BURADA
-        // çağrılsa bile `context` zaten yanlış (ya da kiracısız) bağlantıyla kurulmuş olurdu,
-        // ve bu SESSİZCE olurdu. Faz 1b'de tüm kiracılar aynı DB'yi paylaştığı için zararsız,
-        // Faz 2'de kiracı başına DB'ye geçilince "yanlış kiracının verisini silme/görememe"
-        // demek olur. Bu yüzden asıl silme, `tenantId`'ye özel taze bir kapsamdan çözülen
-        // AppDbContext ile yapılır (bkz. ITenantScopeFactory).
-        using var kapsam = tenantScopeFactory.Create(tenantId);
-        var purgeContext = kapsam.Services.GetRequiredService<AppDbContext>();
-
-        var tables = TenantScopedTablesInDeleteOrder(purgeContext);
-
-        // Tablo adları metadata'dan çözülür (Identity tabloları yeniden adlandırılmış: Users/UserRoles…).
-        var userTable = QualifiedTableName(purgeContext, typeof(ApplicationUser));
-
-        await using var tx = await purgeContext.Database.BeginTransactionAsync(cancellationToken);
-
-        // EF1002 bilinçli olarak bastırılıyor: tenantId SQL'e PARAMETRE olarak geçiyor
-        // ({0} yer tutucusu + object[]), dolayısıyla enjeksiyona kapalı. Enterpole edilen
-        // tek şey EF metadata'sından çözülen tablo adları — tablo adı SQL'de zaten
-        // parametreleştirilemez ve kullanıcı girdisinden gelmez.
-#pragma warning disable EF1002
-        // 1) ITenantScoped tablolar (çocuk→ebeveyn). Açık TenantId filtresi (impersonation'a bağlı değil).
-        foreach (var table in tables)
+        // 1) Fiziksel dosyalar ÖNCE silinir.
+        //
+        // Sıra değişti ve gerekçesi de değişti: eskiden dosyalar EN SONA bırakılıyordu
+        // ki silme transaction'ı geri alınırsa dosyalar boşuna gitmesin. DROP DATABASE
+        // geri alınamaz, dolayısıyla o gerekçe ortadan kalktı. Şimdi belirleyici olan
+        // hangi artığın daha kötü olduğu: veritabanı gidip dosyalar kalırsa diskte
+        // PII (özlük evrakı, fotoğraf) sürer — KVKK riski. Dosyalar gidip veritabanı
+        // kalırsa kiracı zaten Purging'de erişilemez durur ve operatör yeniden
+        // çalıştırınca tamamlanır.
+        //
+        // Hata purge'ü YARIDA KESMEZ ama sessiz de kalmaz: LOUD loglanır ve dönüş
+        // değeriyle (false) operatöre "silindi ama dosyalar diskte" durumu bildirilir.
+        var dosyalarSilinemedi = false;
+        try
         {
-            await purgeContext.Database.ExecuteSqlRawAsync(
-                $"DELETE FROM {table} WHERE [TenantId] = {{0}}", new object[] { tenantId }, cancellationToken);
+            await fileStorage.DeleteTenantSpaceAsync(tenantId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            dosyalarSilinemedi = true;
+            logger.LogError(ex,
+                "Kiracı {TenantId} purge: dosya alanı silinemedi — elle temizlik gerekiyor.",
+                tenantId);
         }
 
-        // 2) Kimlik: kullanıcılar (UserRoles/UserClaims cascade). Refresh token'lar
-        // BURADA SİLİNMEZ — platform veritabanındadır (uygulama transaction'ının
-        // dışında), aşağıda ayrı silinir (bkz. adım 3).
-        await purgeContext.Database.ExecuteSqlRawAsync(
-            $"DELETE FROM {userTable} WHERE [TenantId] = {{0}}", new object[] { tenantId }, cancellationToken);
-#pragma warning restore EF1002
+        // 2) Kiracının veritabanı düşürülür. Tek satırlık bu adım, eski yolun
+        // onlarca DELETE'inin yerine geçer ve hiçbir tabloyu kaçıramaz.
+        if (tenantRow is not null)
+        {
+            if (string.IsNullOrWhiteSpace(tenantRow.DatabaseName))
+            {
+                // Ayrılma tamamlandıktan sonra katalog adı boş bir kiracı OLMAMALI.
+                // Sessizce eski satır-silme yoluna düşmek yanlış olurdu: o yol artık
+                // yok ve olsaydı bile "hangi veritabanında?" sorusunun cevabı yok
+                // demektir. Bu bir veri bütünlüğü arızasıdır, operatör görmeli.
+                throw new InvalidOperationException(
+                    $"Kiracı {tenantId} silinemiyor: DatabaseName boş. Ayrılmadan sonra " +
+                    "bu duruma düşülmemeli — kiracı satırı elle incelenmelidir.");
+            }
 
-        await tx.CommitAsync(cancellationToken);
+            await databaseProvisioner.DropAsync(tenantRow.DatabaseName, cancellationToken);
+        }
 
-        // 3) Kiracı satırı, dizin kayıtları VE refresh token'lar platform veritabanındadır
-        // — uygulama transaction'ı onları kapsamaz. Bu yüzden ayrı silinir. Dizin satırları
-        // silinmezse e-posta KALICI KİLİTLENİR: purge sonrası Identity'de kullanıcı
-        // kalmadığından EmailExistsAsync false döner ama dizinin birincil anahtarı hâlâ
-        // eski kiracıyı gösterir → aynı e-postayla yeniden kayıt/provizyon denemesi
-        // rezervasyonda 409'a çarpar ve asla açılamaz. Buradan önce patlarsa kiracı
-        // satırı/dizin/token kalır ama uygulama verisi gitmiştir; durum Purging'de kaldığı
-        // için kiracı erişilemez olarak durur (bkz. Task 6) ve operatör yeniden
-        // çalıştırabilir (dizin silme de idempotenttir — kayıt yoksa no-op).
+        // 3) Platform veritabanındaki izler. Kiracının kataloğu gitti ama platform
+        // hâlâ onu tanıyor; bu satırlar temizlenmezse kiracı "yok ama var" olur.
         //
-        // Refresh token'lar kalıcı kalırsa gerçek bir zarar yoktur (kullanıcı zaten
-        // silindi, token'lar RefreshAsync'te kullanıcı bulunamayınca reddedilir) ama
-        // KVKK açısından PII artığı sayılır — bu yüzden purge onları da temizler.
+        // Dizin satırları silinmezse e-posta KALICI KİLİTLENİR: dizinin birincil
+        // anahtarı hâlâ eski kiracıyı gösterir → aynı e-postayla yeniden provizyon
+        // denemesi rezervasyonda 409'a çarpar ve o adres bir daha asla açılamaz.
+        //
+        // Refresh token'lar kalıcı kalırsa işlevsel zarar yoktur (kullanıcı zaten
+        // yok, token RefreshAsync'te reddedilir) ama KVKK açısından PII artığıdır.
         await platform.RefreshTokens
             .Where(t => t.TenantId == tenantId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        // Abonelik de platformdadır ve kiracı silinince silinmelidir. DİKKAT: bu,
+        // "geri yükleme aboneliği geri sarmaz" ilkesiyle çelişmez — orada kiracı
+        // YAŞAMAYA DEVAM ediyor, burada tamamen yok ediliyor. Kalsaydı sahipsiz bir
+        // faturalama satırı olur ve aynı slug yeniden açıldığında yanlış müşteriye
+        // bağlanırdı.
+        await platform.Subscriptions
+            .Where(x => x.TenantId == tenantId)
             .ExecuteDeleteAsync(cancellationToken);
 
         await directory.RemoveForTenantAsync(tenantId, cancellationToken);
 
         // tenantRow üstte, Purging'e geçirilirken zaten çekildi ve DbContext'te
-        // izleniyor (bkz. metod başı) — burada yeniden sorgulamaya gerek yok.
+        // izleniyor — burada yeniden sorgulamaya gerek yok.
         if (tenantRow is not null)
         {
             platform.Tenants.Remove(tenantRow);
             await platform.SaveChangesAsync(cancellationToken);
         }
 
-        // 4) Fiziksel dosyalar (DB tutarlılığından SONRA — rollback olursa dosya kaybı olmasın).
-        // Kiracının TÜM dosya alanı silinir. Eskiden yalnız EmployeeDocuments yolları tek tek
-        // siliniyordu; bu, çalışan fotoğraflarını ve şirket logosunu KAÇIRIYORDU. Alan silme
-        // ileride eklenecek her dosya türünü de otomatik kapsar.
-        // Hata sessizce yutulmaz: DB temizlenip dosyalar kalırsa KVKK açısından PII riski
-        // sürer, elle temizlik için LOUD loglanır. Hata purge'ü yarıda kesmez — ama artık
-        // çağırana da sessiz kalmaz: dönüş değeri (false) operatöre "200 OK ama dosyalar
-        // hâlâ diskte" durumunu görünür kılar (bkz. ITenantPurger.PurgeAsync sözleşmesi).
-        try
-        {
-            await fileStorage.DeleteTenantSpaceAsync(tenantId, cancellationToken);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Kiracı {TenantId} purge: dosya alanı silinemedi — elle temizlik gerekiyor.",
-                tenantId);
-            return false;
-        }
+        return !dosyalarSilinemedi;
     }
 
     public async Task<int> PurgeUnverifiedAsync(DateTime createdBeforeUtc, CancellationToken cancellationToken)
     {
         // Doğrulanmamış + eski kiracı adayları (Tenant filtresizdir).
-        var candidateIds = await platform.Tenants
+        var adaylar = await platform.Tenants
             .Where(t => t.Status == TenantStatus.Provisioning && t.CreatedAtUtc < createdBeforeUtc)
-            .Select(t => t.Id)
+            .Select(t => new { t.Id, t.DatabaseName })
             .ToListAsync(cancellationToken);
-        if (candidateIds.Count == 0) return 0;
+        if (adaylar.Count == 0) return 0;
 
         // Şifre belirlemiş (davet kabul edilmiş / askıya alınmış) kullanıcısı olan
         // kiracıları hariç tut — onlar "hiç kurulmamış" değil, "kurulmuş ama durumu
@@ -159,33 +152,44 @@ public sealed class TenantPurger(
         // Kapsam başına bir sorgu maliyeti kabul edilebilir: adaylar nadirdir
         // (yarıda kalmış kurulumlar) ve bu yol günde birkaç kez çalışır.
         List<int> toPurge = [];
-        foreach (var id in candidateIds)
+        foreach (var aday in adaylar)
         {
-            using var adayKapsami = tenantScopeFactory.Create(id);
-            var adayContext = adayKapsami.Services.GetRequiredService<AppDbContext>();
+            // Katalog hiç oluşmamışsa (provizyon 2. adımdan önce kesilmiş) kaybedilecek
+            // veri YOKTUR — bu tam da temizlenmesi gereken enkazdır. Bu ayrımı yapmadan
+            // "okuyamadım, atlıyorum" demek, o satırların sonsuza kadar birikmesine yol
+            // açardı: temizlik servisinin var olma sebebi tam da onlar.
+            if (string.IsNullOrWhiteSpace(aday.DatabaseName)
+                || !await databaseProvisioner.ExistsAsync(aday.DatabaseName, cancellationToken))
+            {
+                logger.LogInformation(
+                    "Kiracı {TenantId}: katalog yok, veri kaybı riski olmadan temizleniyor.", aday.Id);
+                toPurge.Add(aday.Id);
+                continue;
+            }
 
             bool sifreliKullaniciVar;
             try
             {
+                using var adayKapsami = tenantScopeFactory.Create(aday.Id);
+                var adayContext = adayKapsami.Services.GetRequiredService<AppDbContext>();
                 sifreliKullaniciVar = await adayContext.Set<ApplicationUser>()
                     .AnyAsync(u => u.PasswordHash != null, cancellationToken);
             }
             catch (Exception ex)
             {
-                // Katalog hiç oluşmamış olabilir (provizyon 2. adımdan önce kesilmiş).
-                // Bu, silinmesi GEREKEN durumdur — ama emin olmadan silmiyoruz:
-                // hatayı loglayıp adayı ATLIYORUZ. Yanlışlıkla veri silmektense
-                // artık bir satır bırakmak yeğdir; operatör onu stuck listesinde görür.
+                // Katalog VAR ama okunamıyor (şema eksik, izin sorunu, bağlantı arızası).
+                // Burada emin olmadan silmiyoruz: yanlışlıkla veri silmektense artık bir
+                // satır bırakmak yeğdir. Operatör onu stuck listesinde görür.
                 logger.LogWarning(ex,
-                    "Kiracı {TenantId} kullanıcıları okunamadı; otomatik temizlikten " +
-                    "ATLANDI. Yarıda kalmış kurulum olabilir — /api/tenants/stuck ile inceleyin.",
-                    id);
+                    "Kiracı {TenantId} kullanıcıları okunamadı ama katalog VAR; otomatik " +
+                    "temizlikten atlandı. /api/tenants/stuck ile elle inceleyin.",
+                    aday.Id);
                 continue;
             }
 
             if (!sifreliKullaniciVar)
             {
-                toPurge.Add(id);
+                toPurge.Add(aday.Id);
             }
         }
         foreach (var id in toPurge)
@@ -196,62 +200,5 @@ public sealed class TenantPurger(
             await PurgeAsync(id, cancellationToken);
         }
         return toPurge.Count;
-    }
-
-    // ITenantScoped + tablo (PK'lı) tipleri FK bağımlılığına göre çocuk-önce sıralar.
-    // `ctx` parametre olarak alınır (ambient `context` yerine): çağıran taze `purgeContext`
-    // geçirir. Model METADATA'sı (tablo/şema adları, FK grafiği) hangi AppDbContext örneğinden
-    // okunduğuna bağlı değildir — ikisi de aynı derlenmiş EF modelini paylaşır — ama ambient
-    // `context` alanını burada kullanmak, purge akışının TAMAMEN `purgeContext` üzerinden
-    // yürüdüğü izlenimini bozar ve ileride biri metadata-dışı bir kullanım eklerse (ör. bir
-    // sorgu) yanlış kiracıya sessizce çalışabilir. Parametre almak bunu yapısal olarak imkânsız kılar.
-    private static List<string> TenantScopedTablesInDeleteOrder(AppDbContext ctx)
-    {
-        var entityTypes = ctx.Model.GetEntityTypes()
-            .Where(e => typeof(ITenantScoped).IsAssignableFrom(e.ClrType)
-                        && e.FindPrimaryKey() is not null // keyless view'leri (read-model) dışla
-                        && e.GetTableName() is not null)
-            .Distinct()
-            .ToList();
-
-        var set = entityTypes.ToHashSet();
-        var visited = new HashSet<IEntityType>();
-        var ordered = new List<IEntityType>();
-
-        void Visit(IEntityType node)
-        {
-            if (!visited.Add(node)) return;
-            // node'un referans ettiği (principal) kiracı-kapsamlı tipleri önce ekle;
-            // böylece 'ordered' principal-önce olur, tersine çevirince child-önce.
-            foreach (var fk in node.GetForeignKeys())
-            {
-                var principal = fk.PrincipalEntityType;
-                if (principal != node && set.Contains(principal))
-                {
-                    Visit(principal);
-                }
-            }
-            ordered.Add(node);
-        }
-
-        foreach (var e in entityTypes) Visit(e);
-
-        ordered.Reverse(); // principal-önce → child-önce (silme için)
-
-        return ordered
-            .Select(e => e.GetSchema() is { } s ? $"[{s}].[{e.GetTableName()}]" : $"[{e.GetTableName()}]")
-            .Distinct()
-            .ToList();
-    }
-
-    // Bir CLR tipinin köşeli-parantezli, şema-nitelikli tablo adını metadata'dan üretir.
-    // `ctx` parametre alır — bkz. TenantScopedTablesInDeleteOrder üstündeki gerekçe.
-    private static string QualifiedTableName(AppDbContext ctx, Type clrType)
-    {
-        var entityType = ctx.Model.FindEntityType(clrType)
-            ?? throw new InvalidOperationException($"{clrType.Name} için EF entity tipi bulunamadı.");
-        var table = entityType.GetTableName()
-            ?? throw new InvalidOperationException($"{clrType.Name} bir tabloya eşlenmemiş.");
-        return entityType.GetSchema() is { } schema ? $"[{schema}].[{table}]" : $"[{table}]";
     }
 }

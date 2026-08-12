@@ -1,4 +1,5 @@
 using IKPro.Domain.Entities.Identity;
+using IKPro.Domain.Entities.Settings;
 using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -25,6 +26,16 @@ public interface IPlatformDbContext
     /// yönlendirmeyi verir.
     /// </summary>
     DbSet<RefreshToken> RefreshTokens { get; }
+
+    /// <summary>
+    /// Abonelikler — kiracı başına tek satır. Kiracı veritabanında DEĞİL: faturalama
+    /// kiracı-üstü bir sorudur ve bir kiracıyı geri yüklemek aboneliği geri sarmamalı
+    /// (bkz. <see cref="Domain.Entities.Settings.Subscription"/>).
+    ///
+    /// Bu context'te global kiracı filtresi YOKTUR — sorgular <c>TenantId</c>'yi
+    /// AÇIKÇA filtrelemelidir.
+    /// </summary>
+    DbSet<Subscription> Subscriptions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 

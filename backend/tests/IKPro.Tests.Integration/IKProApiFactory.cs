@@ -103,6 +103,39 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
         }
     }
 
+    /// <summary>
+    /// Koşum bitince test kataloglarını da düşürür.
+    ///
+    /// Testlerin kendi açtıkları zaten test sonunda düşüyor
+    /// (<c>TenancyTestBase.DisposeAsync</c>), ama test host'unun AÇILIŞTA kurduğu
+    /// demo kiracıları (<c>IKPro_test_demo</c>, <c>IKPro_test_globex</c>) koleksiyon
+    /// boyunca yaşamak zorunda; ancak host kapandıktan sonra silinebilirler.
+    /// Buradan silinmeselerdi bir sonraki koşuma kadar diskte kalırlardı — koşum
+    /// başındaki süpürme onları yine toplardı ama "testleri çalıştırdım, makinemde
+    /// artık veritabanı kalmadı" güvencesi bozulurdu.
+    /// </summary>
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        if (!disposing)
+        {
+            return;
+        }
+
+        try
+        {
+            KiraciKataloglariniSupur();
+        }
+        catch (Exception ex)
+        {
+            // Temizlik başarısızlığı test SONUCUNU değiştirmemeli: bu noktada tüm
+            // testler çoktan koştu. Sessiz de kalmıyoruz — bir sonraki koşumun
+            // açılış süpürmesi zaten toplayacak.
+            Console.WriteLine($"Test kiracı katalogları temizlenemedi: {ex.Message}");
+        }
+    }
+
     private static void DropDatabase(string databaseName)
     {
         using var connection = new SqlConnection(ConnectionFor("master"));

@@ -77,7 +77,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     // Settings
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
     public DbSet<NotificationSettings> NotificationSettings => Set<NotificationSettings>();
-    public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
     // RefreshTokens BURADA DEĞİL: platform veritabanına taşındı (bkz.
     // PlatformDbContext.RefreshTokens / RefreshToken.cs xmldoc) — hangi kiracı

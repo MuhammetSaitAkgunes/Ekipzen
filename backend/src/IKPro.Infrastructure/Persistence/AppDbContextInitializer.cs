@@ -27,6 +27,7 @@ namespace IKPro.Infrastructure.Persistence;
 public class AppDbContextInitializer(
     ILogger<AppDbContextInitializer> logger,
     AppDbContext context,
+    IPlatformDbContext platform,
     UserManager<ApplicationUser> userManager,
     ICurrentTenant currentTenant,
     IConfiguration configuration,
@@ -208,13 +209,14 @@ public class AppDbContextInitializer(
             NewPersonnelEmail = true, LeaveRequestEmail = true,
             WeeklyReportEmail = false, TwoFactorSmsEnabled = false,
         });
-        context.Subscriptions.Add(new Subscription
+        await context.SaveChangesAsync();
+
+        await AbonelikTohumlaAsync(tenantId, new Subscription
         {
             Plan = "STANDART", PlanName = "Globex Başlangıç", BillingCycle = "Aylık",
             Price = 900m, RenewalDate = new DateOnly(year, 12, 1),
             PaymentMethodMasked = "•••• •••• •••• 1000",
         });
-        await context.SaveChangesAsync();
         var users = new (ApplicationUser User, string Role, Employee? Employee)[]
         {
             (new ApplicationUser
@@ -693,19 +695,34 @@ public class AppDbContextInitializer(
             });
         }
 
-        if (!await context.Subscriptions.AnyAsync())
-        {
-            context.Subscriptions.Add(new Subscription
-            {
-                Plan = "PRO",
-                PlanName = "HR Master Kurumsal",
-                BillingCycle = "Yıllık",
-                Price = 12000m,
-                RenewalDate = new DateOnly(2026, 10, 12),
-                PaymentMethodMasked = "•••• •••• •••• 4582",
-            });
-        }
-
         await context.SaveChangesAsync();
+
+        await AbonelikTohumlaAsync(currentTenant.TenantIdOrThrow(), new Subscription
+        {
+            Plan = "PRO",
+            PlanName = "HR Master Kurumsal",
+            BillingCycle = "Yıllık",
+            Price = 12000m,
+            RenewalDate = new DateOnly(2026, 10, 12),
+            PaymentMethodMasked = "•••• •••• •••• 4582",
+        });
+    }
+
+    /// <summary>
+    /// Aboneliği PLATFORM veritabanına yazar.
+    ///
+    /// Kiracı context'inden farklı olarak burada <c>AuditableEntityInterceptor</c>
+    /// çalışmaz: <c>TenantId</c> ve <c>CreatedAtUtc</c> ELLE doldurulmalıdır.
+    /// Unutulursa satır kiracısız (TenantId = 0) yazılır ve hiçbir kiracıya
+    /// görünmez — sessiz bir arıza, o yüzden tek bir yerde toplandı.
+    /// </summary>
+    private async Task AbonelikTohumlaAsync(int tenantId, Subscription abonelik)
+    {
+        if (await platform.Subscriptions.AnyAsync(s => s.TenantId == tenantId)) return;
+
+        abonelik.TenantId = tenantId;
+        abonelik.CreatedAtUtc = DateTime.UtcNow;
+        platform.Subscriptions.Add(abonelik);
+        await platform.SaveChangesAsync(default);
     }
 }

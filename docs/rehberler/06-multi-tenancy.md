@@ -142,8 +142,17 @@ Araya giren bir hata kiracıyı `Provisioning`'de bırakır: erişilemez ama
 ## Kiracı Verisini Silme (KVKK)
 
 - `DELETE /api/tenants/{id}?confirmSlug=` — kiracının **tüm** verisini kalıcı siler
-  (platform-key + slug onayı gerekir). `ITenantPurger`, silinecek tabloları EF
-  metadata'sından türetir ve FK-güvenli sırada tek transaction'da siler.
+  (platform-key + slug onayı gerekir). Sıra: dosya alanı → **`DROP DATABASE`** →
+  platformdaki izler (refresh token, abonelik, dizin, kiracı satırı).
+
+  > Tablo tablo silme yolu **kaldırıldı**. Eski yol silinecek tabloları EF
+  > metadata'sından türetiyordu ve o listeye girmeyen her şey (view olmayan yeni
+  > bir tablo, Identity'nin yan tabloları) sessizce geride kalırdı.
+  > `DROP DATABASE` hiçbir şey kaçırmaz.
+  >
+  > Dosyalar neden ÖNCE: `DROP DATABASE` geri alınamaz, dolayısıyla "rollback
+  > olursa dosya kaybı olmasın" gerekçesi düştü. Geriye hangi artığın daha kötü
+  > olduğu kaldı — veritabanı gidip dosyalar kalırsa diskte PII sürer.
 - `POST /api/tenants/cleanup-unverified` + arka plan servisi — `Provisioning`
   durumunda takılı kalmış eski kiracıları temizler; yani provizyon ortasında
   kesilmiş yarım kayıtları toplar (varsayılan kapalı, opt-in).

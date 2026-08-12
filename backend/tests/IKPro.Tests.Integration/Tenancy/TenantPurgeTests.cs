@@ -213,6 +213,7 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
             var purger = new TenantPurger(
                 sp.GetRequiredService<IPlatformDbContext>(),
                 sp.GetRequiredService<ITenantScopeFactory>(),
+                sp.GetRequiredService<ITenantDatabaseProvisioner>(),
                 patlayanDepo,
                 sp.GetRequiredService<ITenantDirectory>(),
                 sp.GetRequiredService<ITenantRegistry>(),
@@ -375,5 +376,67 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
             (await platform.Tenants.AnyAsync(x => x.Id == kiraci.TenantId)).Should().BeTrue(
                 "şifre belirlemiş kullanıcısı olan kiracı otomatik temizlikte silinmemeli");
         }
+    }
+
+    /// <summary>
+    /// Purge artık kiracının VERİTABANINI düşürür. Bunu ayrıca doğrulamak gerekir:
+    /// satırların gitmesi, katalogun da gittiğini kanıtlamaz — eski yol (tablo tablo
+    /// DELETE) da satırları siliyordu ama geriye boş bir veritabanı bırakıyordu.
+    /// Boş bırakılan katalog sessiz bir sızıntıdır: diskte yer tutar, yedek planına
+    /// girer ve aynı slug'la yeniden provizyon denemesini "zaten var" diye reddettirir.
+    /// </summary>
+    [Fact]
+    public async Task Purge_KiracininVeritabaniniDusurur()
+    {
+        var kiraci = await ProvisionAndActivateAsync("Katalog Düşer A.Ş.", $"kd-{Guid.NewGuid():N}@purge.local");
+        var katalog = Namer.For(kiraci.Slug);
+        var saglayici = Factory.Services.GetRequiredService<ITenantDatabaseProvisioner>();
+
+        (await saglayici.ExistsAsync(katalog, CancellationToken.None)).Should().BeTrue(
+            "provizyon katalogu kurmuş olmalı");
+
+        (await PlatformClient().DeleteAsync($"/api/tenants/{kiraci.TenantId}?confirmSlug={kiraci.Slug}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await saglayici.ExistsAsync(katalog, CancellationToken.None)).Should().BeFalse(
+            "purge kiracının veritabanını da düşürmeli, boş kabuk bırakmamalı");
+    }
+
+    /// <summary>
+    /// Aynı slug purge'den SONRA yeniden kullanılabilmeli.
+    ///
+    /// Bu, katalogun gerçekten düştüğünün ikinci ve daha sert kanıtı: provizyon
+    /// var olan katalogu bilinçli olarak reddediyor (bkz. TenantOnboarding), yani
+    /// purge boş bir kabuk bıraksaydı bu istek 409 alırdı. Operatör açısından da
+    /// gerçek bir senaryo: yanlış kurulan bir müşteriyi silip aynı kısa adla
+    /// yeniden açmak.
+    /// </summary>
+    [Fact]
+    public async Task Purge_SonrasiAyniSlugYenidenKullanilabilir()
+    {
+        var slug = TestSlug("yeniden-slug");
+        var ilk = await ProvisionRawAsync(new
+        {
+            companyName = "İlk Kurulum A.Ş.",
+            slug,
+            adminName = "X",
+            adminEmail = $"ilk-{Guid.NewGuid():N}@purge.local",
+        });
+        ilk.StatusCode.Should().Be(HttpStatusCode.Created);
+        var ilkKiraci = (await ilk.Content.ReadFromJsonAsync<ProvisionTenantResult>())!;
+
+        (await PlatformClient().DeleteAsync($"/api/tenants/{ilkKiraci.TenantId}?confirmSlug={slug}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var ikinci = await ProvisionRawAsync(new
+        {
+            companyName = "İkinci Kurulum A.Ş.",
+            slug,
+            adminName = "Y",
+            adminEmail = $"ikinci-{Guid.NewGuid():N}@purge.local",
+        });
+
+        ikinci.StatusCode.Should().Be(HttpStatusCode.Created,
+            "purge katalogu da düşürdüğü için aynı slug yeniden açılabilmeli");
     }
 }

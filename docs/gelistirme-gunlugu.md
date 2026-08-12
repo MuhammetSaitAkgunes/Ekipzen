@@ -8,11 +8,13 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0–5 bitti + geçmişe dönük temizlik. **Ayrılma tamamlandı:** her kiracı
-  kendi veritabanında (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama
-  duruyor (kiracı bağlamı olmayan işler ve sağlık kontrolü oraya bağlanıyor).
-  Sırada Görev 6 (purge → `DROP DATABASE`) ve Görev 7 (migration orkestrasyonu)
-  var. Faz 3'e (yedekleme/geri yükleme) geçmeden kullanıcıyla konuşulacak.
+  Görev 0–6 bitti. **Ayrılma tamamlandı:** her kiracı kendi veritabanında
+  (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama duruyor (kiracı
+  bağlamı olmayan işler ve sağlık kontrolü oraya bağlanıyor). Purge artık
+  `DROP DATABASE`, abonelikler platformda. Sırada **Görev 7** var: migration
+  orkestrasyonu (N kiracı veritabanına şema nasıl uygulanacak), açılış
+  doğrulaması, dokümantasyon. Faz 3'e (yedekleme/geri yükleme) geçmeden
+  kullanıcıyla konuşulacak.
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
   `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
   yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
@@ -118,6 +120,55 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 2b / Görev 6: purge `DROP DATABASE`, abonelikler platformda
+
+**Purge artık veritabanını düşürüyor.** `PurgeAsync` sırası: dosya alanı →
+`DROP DATABASE` → platformdaki izler (refresh token, abonelik, dizin, kiracı
+satırı). `TenantScopedTablesInDeleteOrder` ve `QualifiedTableName` silindi;
+onlarla birlikte `#pragma warning disable EF1002` de gitti.
+
+- **Neden daha güvenli:** eski yol silinecek tabloları EF metadata'sından
+  türetiyordu; o listeye girmeyen her şey (view olmayan yeni bir tablo,
+  Identity'nin yan tabloları) sessizce geride kalırdı. `DROP DATABASE` hiçbir
+  şey kaçırmaz.
+- **Dosyalar artık ÖNCE siliniyor.** Eski gerekçe ("transaction geri alınırsa
+  dosyalar boşuna gitmesin") `DROP DATABASE` geri alınamadığı için düştü. Yeni
+  ölçüt hangi artığın daha kötü olduğu: veritabanı gidip dosyalar kalırsa diskte
+  PII sürer (KVKK riski); tersi durumda kiracı `Purging`'de erişilemez durur ve
+  operatör yeniden çalıştırınca tamamlanır.
+- `DatabaseName` boşsa `InvalidOperationException` — sessizce eski yola düşmek yok.
+- **Planın değinmediği düzeltme:** `PurgeUnverifiedAsync`, kataloğu HİÇ oluşmamış
+  adayları da "okuyamadım" diye atlıyordu; oysa onlar tam da temizlenmesi gereken
+  enkaz. Artık önce `ExistsAsync` soruluyor: katalog yoksa kaybedilecek veri de
+  yok, silinir; katalog VAR ama okunamıyorsa atlanır.
+- Yeni testler: katalog gerçekten düşüyor mu, purge sonrası aynı slug yeniden
+  kullanılabiliyor mu (provizyon var olan katalogu reddettiği için bu, boş kabuk
+  bırakılmadığının sert kanıtı).
+
+**`Subscriptions` platform veritabanına taşındı.** İki migration + `TenantId`
+üzerinde **tekil** indeks (kod birden çok yerde "kiracı başına tek kayıt"
+varsayıyor; ikinci satır sessizce yanlış planı gösterirdi).
+
+- **Neden:** "kim hangi pakette, kimin yenilemesi geldi" kiracı-üstü bir sorudur;
+  kiracı veritabanlarında kalsaydı her fatura raporu bütün katalogları gezerdi.
+  Ayrıca bir müşteriyi yedekten geri yüklemek **aboneliği geri sarmamalı** — plan
+  ve ödeme geçmişi, İK verisinden bağımsız bir ticari gerçek.
+- **Bedeli ve karşılığı:** platform context'inde global kiracı filtresi YOKTUR;
+  kiracı veritabanında yapısal olarak imkânsız olan "filtreyi unutma" hatası
+  burada mümkün. `GetSettingsQueryHandler` kiracıyı açıkça filtreliyor ve
+  `AbonelikPlatformdaTests` bunu iki kiracıyla sabitliyor — filtre kalksaydı
+  ikisi de aynı planı görürdü.
+- Purge aboneliği de siliyor. Bu, "geri yükleme aboneliği geri sarmaz" ilkesiyle
+  çelişmez: orada kiracı yaşamaya devam eder, burada tamamen yok edilir.
+
+**Test altyapısı:** `IKProApiFactory` artık koşum SONUNDA da süpürüyor — test
+host'unun açılışta kurduğu demo kiracıları koleksiyon boyunca yaşamak zorunda ve
+ancak host kapanınca silinebiliyor. Koşu sonrası sunucuda tek bir test kataloğu
+kalmadığı elle doğrulandı. Ayrıca `ProvisionRawAsync` cevabı okuduktan sonra
+gövdenin tazesini geri koyuyor; yoksa izleme eklemek ilgisiz testleri bozuyordu.
+
+**Doğrulama:** 66 birim + 177 entegrasyon yeşil, `-warnaserror` temiz.
 
 ### 2026-08-13 — Ayrılma sonrası temizlik + davet yeniden gönderme
 

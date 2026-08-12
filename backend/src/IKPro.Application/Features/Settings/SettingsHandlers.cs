@@ -12,7 +12,8 @@ namespace IKPro.Application.Features.Settings;
 /// <summary>Ayarlar ekranının tamamı: profil + bildirim + güvenlik + abonelik (tekil kayıtlar).</summary>
 public sealed record GetSettingsQuery : IRequest<SettingsDto>;
 
-public sealed class GetSettingsQueryHandler(IApplicationDbContext context)
+public sealed class GetSettingsQueryHandler(
+    IApplicationDbContext context, IPlatformDbContext platform, ICurrentTenant currentTenant)
     : IRequestHandler<GetSettingsQuery, SettingsDto>
 {
     public async Task<SettingsDto> Handle(GetSettingsQuery request, CancellationToken cancellationToken)
@@ -21,8 +22,15 @@ public sealed class GetSettingsQueryHandler(IApplicationDbContext context)
             .FirstOrDefaultAsync(cancellationToken) ?? new CompanyProfile();
         var notifications = await context.NotificationSettings.AsNoTracking()
             .FirstOrDefaultAsync(cancellationToken) ?? new NotificationSettings();
-        var subscription = await context.Subscriptions.AsNoTracking()
-            .FirstOrDefaultAsync(cancellationToken) ?? new Subscription();
+
+        // Abonelik PLATFORM veritabanındadır ve orada global kiracı filtresi YOKTUR —
+        // kiracı AÇIKÇA filtrelenmeli. Unutulsaydı bu sorgu başka bir müşterinin
+        // planını gösterirdi; filtreyi zorunlu kılan bir mekanizma bu context'te yok,
+        // o yüzden burada elle ve görünür duruyor.
+        var tenantId = currentTenant.TenantIdOrThrow();
+        var subscription = await platform.Subscriptions.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.TenantId == tenantId, cancellationToken)
+            ?? new Subscription();
 
         return new SettingsDto(
             profile.ToDto(),

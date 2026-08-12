@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -107,7 +108,15 @@ public abstract class TenancyTestBase(IKProApiFactory factory) : IAsyncLifetime
         var response = await client.PostAsJsonAsync("/api/tenants", body);
         if (response.StatusCode == HttpStatusCode.Created)
         {
-            var sonuc = await response.Content.ReadFromJsonAsync<ProvisionTenantResult>();
+            // Gövde okunup YERİNE TAZE BİR KOPYASI konur. Okuma akışı tüketiyor;
+            // değiştirmeseydik bu yardımcı, çağıranın aynı cevabı okumasını sessizce
+            // imkânsız kılardı (ObjectDisposedException) — yani izleme eklemek,
+            // ilgisiz testleri bozardı.
+            var govde = await response.Content.ReadAsStringAsync();
+            response.Content = new StringContent(govde, Encoding.UTF8, "application/json");
+
+            var sonuc = JsonSerializer.Deserialize<ProvisionTenantResult>(
+                govde, new JsonSerializerOptions(JsonSerializerDefaults.Web));
             if (sonuc is not null)
             {
                 _acilanKataloglar.Add(Namer.For(sonuc.Slug));
