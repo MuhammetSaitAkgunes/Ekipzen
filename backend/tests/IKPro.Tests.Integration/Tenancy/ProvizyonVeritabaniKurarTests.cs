@@ -1,6 +1,5 @@
 using FluentAssertions;
 using IKPro.Application.Common.Interfaces;
-using IKPro.Application.Features.Tenancy;
 using IKPro.Domain.Entities.Organization;
 using IKPro.Domain.Entities.Tenancy;
 using IKPro.Domain.Enums;
@@ -26,7 +25,7 @@ public sealed class ProvizyonVeritabaniKurarTests(IKProApiFactory factory) : Ten
     public async Task Provizyon_KiraciyaAitKatalogOlusturur_VeSatirinaYazar()
     {
         var kiraci = await ProvisionTenantAsync("Katalog Kuran A.Ş.", $"kk-{Guid.NewGuid():N}@test.local");
-        var beklenenAd = TenantDatabaseNaming.For(kiraci.Slug);
+        var beklenenAd = Namer.For(kiraci.Slug);
 
         using var scope = Factory.Services.CreateScope();
         var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
@@ -50,7 +49,7 @@ public sealed class ProvizyonVeritabaniKurarTests(IKProApiFactory factory) : Ten
     {
         var eposta = $"veri-{Guid.NewGuid():N}@test.local";
         var kiraci = await ProvisionAndActivateAsync("Veri Yeri A.Ş.", eposta);
-        var katalog = TenantDatabaseNaming.For(kiraci.Slug);
+        var katalog = Namer.For(kiraci.Slug);
 
         var bolumAdi = $"Bolum-{Guid.NewGuid():N}";
         await SeedInTenantAsync(kiraci.TenantId, db =>
@@ -92,7 +91,7 @@ public sealed class ProvizyonVeritabaniKurarTests(IKProApiFactory factory) : Ten
     public async Task Katalog_ZatenVarsa_ProvizyonReddedilir()
     {
         var slug = TestSlug("artik");
-        var katalog = TenantDatabaseNaming.For(slug);
+        var katalog = Namer.For(slug);
         var saglayici = Factory.Services.GetRequiredService<ITenantDatabaseProvisioner>();
 
         try
@@ -149,7 +148,7 @@ public sealed class ProvizyonVeritabaniKurarTests(IKProApiFactory factory) : Ten
             "başarısız provizyon geriye kiracı satırı bırakmamalı");
 
         var saglayici = Factory.Services.GetRequiredService<ITenantDatabaseProvisioner>();
-        (await saglayici.ExistsAsync(TenantDatabaseNaming.For(ikinciSlug), CancellationToken.None))
+        (await saglayici.ExistsAsync(Namer.For(ikinciSlug), CancellationToken.None))
             .Should().BeFalse("başarısız provizyon geriye katalog da bırakmamalı");
     }
 

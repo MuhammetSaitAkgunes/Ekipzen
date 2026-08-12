@@ -41,6 +41,7 @@ public static class DependencyInjection
 
         // Kiracı veritabanını fiziksel olarak kuran/düşüren yetenek. Durumsuzdur
         // (her çağrı kendi bağlantısını açar), bu yüzden singleton.
+        services.AddSingleton<ITenantDatabaseNamer, Tenancy.TenantDatabaseNamer>();
         services.AddSingleton<ITenantDatabaseProvisioner, Tenancy.SqlServerTenantDatabaseProvisioner>();
 
         // Yeni kiracı veritabanına migration + rol tohumlaması. Kendi kapsamını
@@ -164,6 +165,7 @@ public static class DependencyInjection
             services.AddSingleton<IEmailSender, Email.FileOutboxEmailSender>();
         }
         services.AddScoped<AppDbContextInitializer>();
+        services.AddScoped<DemoTenantSeeder>();
 
         return services;
     }

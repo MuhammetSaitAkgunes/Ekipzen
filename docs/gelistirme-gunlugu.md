@@ -8,10 +8,14 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0–4 bitti. **YENİ kiracılar artık kendi veritabanlarında doğuyor**;
-  mevcutlar (demo + globex) hâlâ paylaşılan `IKProDb`'de. Sırada Görev 5 var —
-  mevcut kiracıların taşınması, yani geri dönüşün zorlaştığı nokta. Faz 3'e
+  Görev 0–5 bitti. **Ayrılma tamamlandı:** her kiracı kendi veritabanında
+  (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama duruyor (kiracı
+  bağlamı olmayan işler ve sağlık kontrolü oraya bağlanıyor). Sırada Görev 6
+  (purge → `DROP DATABASE`) ve Görev 7 (migration orkestrasyonu) var. Faz 3'e
   (yedekleme/geri yükleme) geçmeden kullanıcıyla konuşulacak.
+- **Geliştirme kurulumunu sıfırlarken:** artık `IKProDb` + `IKProPlatform`
+  yetmez, **tüm `IKPro_*` kiracı veritabanları da birlikte düşürülmeli**. Aksi
+  halde provizyon "katalog zaten var" diye reddeder (bilinçli koruma).
 - **Kayıt (signup) politikası — kalıcı karar:** Uygulamada **hiçbir** self-servis
   kayıt ucu yok. Yeni şirket yalnız operatör tarafından `POST /api/tenants`
   (`X-Platform-Key`) ile açılır; katılımın tek yolu davettir. Gerekçe:
@@ -110,6 +114,45 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 2b / Görev 5: ayrılma tamamlandı
+
+Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmadı**: tüm
+veritabanları düşürüldü, uygulama açıldı, demo kiracılar Görev 4'teki gerçek
+provizyon yolundan yeniden kuruldu.
+
+- **Seed artık kestirme kullanmıyor.** `DemoTenantSeeder` demo kiracıları
+  `TenantOnboarding` üzerinden oluşturuyor; `AppDbContextInitializer` yalnız
+  kiracının İÇİNİ dolduruyor. Böylece kayıt akışı her geliştirme kurulumunda
+  baştan sona çalıştırılmış oluyor — provizyonu bozan bir değişiklik yalnız
+  testlerde değil, uygulamayı açan herkesin karşısında patlıyor.
+- **Demo admin'leri provizyondan geliyor** (şifresiz + davet); seed yalnız
+  şifrelerini veriyor (`DemoSifresiVerAsync`), hesabı yeniden yaratmıyor.
+- **Paylaşılan `IKProDb` duruyor ama boş.** Kiracı bağlamı olmayan her şey
+  (sağlık kontrolü, henüz ayrılmamış kiracılar) oraya bağlanıyor; şeması
+  açılışta migrate ediliyor, içinde veri yok.
+- `PlatformDbInitializer.EnsureDefaultTenantAsync` kaldırıldı — varsayılan
+  kiracı artık provizyon yolundan doğduğu için ölü koda dönüşmüştü.
+
+**Planın öngörmediği bir tuzak çıktı ve kapatıldı:** demo kiracıların slug'ları
+sabit olduğu için test koşumu da `IKPro_demo` üretiyordu — yani `dotnet test`
+her çalıştığında geliştiricinin demo ortamını silecekti. Katalog adı üretimi
+statik yardımcıdan **`ITenantDatabaseNamer`** servisine dönüştü; önek
+`Tenancy:DatabasePrefix` ile geliyor ve testler `IKPro_test_` kullanıyor.
+
+**Kırılan test:** `AuthFlowTests` — demo admin'in baş harfleri `İK` yerine `İY`.
+Sebep: baş harfler artık üretim kuralından (`DeriveInitials`) geliyor, çünkü
+hesabı elle yazılmış bir seed satırı değil gerçek provizyon oluşturuyor.
+Beklenti güncellendi; bu, seed'in ürün kuralını atlamayı bıraktığının kanıtı.
+
+**Elle doğrulama (tüm `IKPro*` düşürülüp uygulama sıfırdan açıldı):**
+- `IKPro_demo` + `IKPro_globex` oluştu, ikisi de `Turkish_CI_AS`.
+- Kullanıcı/personel: demo 3/4, globex 3/2, **paylaşılan `IKProDb` 0/0**.
+- İki kiracıyla giriş yapıldı, her biri yalnız kendi personelini gördü.
+- Globex'te departman oluşturuldu → satır fiziksel olarak `IKPro_globex`'te;
+  `IKPro_demo` ve `IKProDb`'de yok.
+
+**Doğrulama:** 66 birim + 167 entegrasyon yeşil, `-warnaserror` temiz.
 
 ### 2026-08-13 — Faz 2b / Görev 4: provizyon gerçek veritabanı kuruyor
 

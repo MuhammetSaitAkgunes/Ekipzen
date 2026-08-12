@@ -19,6 +19,7 @@ public sealed class TenantOnboarding(
     ITenantDirectory directory,
     ITenantRegistry registry,
     ITenantDatabaseProvisioner databaseProvisioner,
+    ITenantDatabaseNamer databaseNamer,
     ITenantSchemaInitializer schemaInitializer,
     ILogger<TenantOnboarding> logger)
 {
@@ -37,7 +38,7 @@ public sealed class TenantOnboarding(
             throw new ConflictException($"'{adminEmail}' e-postasıyla kayıtlı bir hesap zaten var.");
         }
 
-        var katalogAdi = TenantDatabaseNaming.For(slug);
+        var katalogAdi = databaseNamer.For(slug);
 
         // Kiracının katalogu ZATEN VARSA reddet. Başarısız bir denemeden kalmış
         // veritabanını sessizce yeniden kullanmak, iki müşterinin verisinin aynı

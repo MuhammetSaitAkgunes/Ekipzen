@@ -13,12 +13,21 @@ taşır, bağlantı çözücü kiracıdan o adı üretir.
 geri yükleyebilmek için. Ortak veritabanında bir müşterinin "dünkü hâline dönün"
 talebi, ya herkesi geri sarmayı ya da satır satır elle onarımı gerektirirdi.
 
-> **Geçiş durumu:** `DatabaseName` **boş olabilir** ve bu bir hata değildir — boş
-> ad "henüz paylaşılan veritabanında" demektir. Yeni provizyonlanan kiracılar kendi
-> katalogunda doğar; daha önceden var olanlar taşınana kadar `IKProDb`'de kalır.
-> Bu yüzden `TenantId` sütunu ve global sorgu filtresi **kalkmadı**: paylaşılan
-> veritabanındaki kiracılar hâlâ onunla ayrılıyor ve filtre, ayrılmış kiracılarda
-> ikinci bir güvenlik katmanı olarak duruyor.
+Ayrılma tamamlandı: geliştirme kurulumunda demo kiracılar `IKPro_demo` ve
+`IKPro_globex` kataloglarında yaşıyor, paylaşılan `IKProDb` **boş**.
+
+> **`DatabaseName` yine de boş olabilir** ve bu bir hata değildir — boş ad "henüz
+> paylaşılan veritabanında" demektir. Mekanizma bilinçli olarak korunuyor: ileride
+> bir kiracıyı taşımak ya da bir kurulumu kademeli ayırmak gerekirse yol açık kalsın.
+>
+> **`TenantId` sütunu ve global sorgu filtresi de kalkmadı.** Ayrılmış kiracılarda
+> ikinci bir güvenlik katmanı olarak duruyorlar: bağlantı çözümü yanlış katalogu
+> verse bile filtre veriyi karıştırmaz. İki bağımsız savunma, tek bir kusursuz
+> savunmadan iyidir.
+
+> **Sıfırlarken:** `IKProDb` + `IKProPlatform` düşürmek yetmez; tüm `IKPro_*`
+> kiracı veritabanlarını da birlikte düşürün. Aksi halde provizyon "katalog zaten
+> var" diye reddeder.
 
 ## Çekirdek Garanti: Global Sorgu Filtresi
 

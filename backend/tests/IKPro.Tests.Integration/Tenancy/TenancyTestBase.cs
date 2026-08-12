@@ -1,7 +1,6 @@
 using FluentAssertions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Features.Auth;
-using IKPro.Application.Features.Tenancy;
 using IKPro.Application.Features.Tenancy.Commands;
 using IKPro.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +21,9 @@ namespace IKPro.Tests.Integration.Tenancy;
 public abstract class TenancyTestBase(IKProApiFactory factory) : IAsyncLifetime
 {
     protected IKProApiFactory Factory { get; } = factory;
+
+    /// <summary>Katalog adı üretici — testlerde önek yapılandırmadan gelir.</summary>
+    protected ITenantDatabaseNamer Namer => Factory.Services.GetRequiredService<ITenantDatabaseNamer>();
 
     // Bu test sırasında provizyonlanan kiracıların katalog adları. xUnit her test
     // metodu için sınıfın YENİ bir örneğini kurduğundan liste test başına temizdir.
@@ -72,7 +74,7 @@ public abstract class TenancyTestBase(IKProApiFactory factory) : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"provizyon başarısız: {companyName}");
 
         var sonuc = (await response.Content.ReadFromJsonAsync<ProvisionTenantResult>())!;
-        _acilanKataloglar.Add(TenantDatabaseNaming.For(sonuc.Slug));
+        _acilanKataloglar.Add(Namer.For(sonuc.Slug));
         return sonuc;
     }
 
@@ -97,7 +99,7 @@ public abstract class TenancyTestBase(IKProApiFactory factory) : IAsyncLifetime
             var sonuc = await response.Content.ReadFromJsonAsync<ProvisionTenantResult>();
             if (sonuc is not null)
             {
-                _acilanKataloglar.Add(TenantDatabaseNaming.For(sonuc.Slug));
+                _acilanKataloglar.Add(Namer.For(sonuc.Slug));
             }
         }
 

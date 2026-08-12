@@ -47,7 +47,11 @@ public sealed class AuthFlowTests(IKProApiFactory factory) : TenancyTestBase(fac
         auth.User.Name.Should().Be("İK Yöneticisi");
         auth.User.Role.Should().Be("hr-admin");
         auth.User.RoleLabel.Should().Be("İK Admin");
-        auth.User.Initials.Should().Be("İK");
+        // "İK Yöneticisi" → "İY". Baş harfler artık ÜRETİM kuralından (DeriveInitials)
+        // geliyor: demo admin'i elle yazılmış bir seed satırı değil, gerçek provizyon
+        // yolu oluşturuyor. Eskiden "İK" idi çünkü seed değeri elle veriliyordu —
+        // yani demo veri, ürünün kendi kuralını atlıyordu.
+        auth.User.Initials.Should().Be("İY");
     }
 
     [Fact]

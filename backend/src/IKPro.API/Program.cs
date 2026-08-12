@@ -150,27 +150,25 @@ try
     {
         using var scope = app.Services.CreateScope();
 
-        // Önce platform: migrate et ve varsayılan kiracıyı garanti et. Kiracı kimliği
-        // bir sonraki adımın ÖNKOŞULU — seed'in hangi kiracıya yazacağı, seed
-        // başlamadan bilinmeli.
+        // 1) Platform veritabanı: kiracı kimliğinin yaşadığı yer, her şeyin önkoşulu.
         var platformInitializer = scope.ServiceProvider
             .GetRequiredService<IKPro.Infrastructure.Persistence.PlatformDbInitializer>();
         await platformInitializer.InitialiseAsync();
-        var varsayilanKiraciId = await platformInitializer.EnsureDefaultTenantAsync();
 
-        // Uygulama initializer'ı KİRACIYA SABİTLENMİŞ bir kapsamdan çözülür. Kök
-        // kapsamdan çözüp içeride Impersonate çağırmak işe yaramaz: AppDbContext'in
-        // bağlantısı, initializer DI tarafından kurulurken çoktan belirlenmiş olur —
-        // yani kiracı başına veritabanına geçildiğinde seed sessizce YANLIŞ
-        // veritabanına yazardı. Kapsam fabrikası kiracıyı kapsam dönmeden önce
-        // sabitler; bu sırayı yanlış yapmak yapısal olarak imkânsızdır.
-        using var kiraciKapsami = scope.ServiceProvider
-            .GetRequiredService<IKPro.Application.Common.Interfaces.ITenantScopeFactory>()
-            .Create(varsayilanKiraciId);
-        var initializer = kiraciKapsami.Services
+        // 2) PAYLAŞILAN IKProDb'yi migrate et. Kiracılar artık kendi kataloglarında
+        //    yaşıyor, ama bu katalog hâlâ gerekli: kiracı bağlamı OLMAYAN her şey
+        //    (sağlık kontrolü, henüz ayrılmamış kiracılar) buraya bağlanıyor.
+        //    İçi boş kalabilir — var olması ve şemasının güncel olması yeterli.
+        var paylasilan = scope.ServiceProvider
             .GetRequiredService<IKPro.Infrastructure.Persistence.AppDbContextInitializer>();
-        await initializer.InitialiseAsync();
-        await initializer.SeedAsync();
+        await paylasilan.InitialiseAsync();
+
+        // 3) Demo kiracıları GERÇEK PROVİZYON YOLUNDAN kur (kendi veritabanlarıyla)
+        //    ve içlerini doldur. Seed'in kendi kestirmesi yok: kayıt akışı böylece
+        //    her geliştirme kurulumunda baştan sona çalıştırılmış olur.
+        var demoSeeder = scope.ServiceProvider
+            .GetRequiredService<IKPro.Infrastructure.Persistence.DemoTenantSeeder>();
+        await demoSeeder.SeedAsync();
     }
 
     app.UseExceptionHandler();

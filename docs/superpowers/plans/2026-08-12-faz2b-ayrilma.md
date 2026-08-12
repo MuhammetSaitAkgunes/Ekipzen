@@ -225,6 +225,23 @@ Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki 
 
 **Doğrulama (elle, çıktıları rapora):** iki DB düşür → uygulama aç → `IKPro_demo` ve `IKPro_globex` veritabanlarının **fiilen oluştuğunu** ve harmanlamalarının `Turkish_CI_AS` olduğunu sqlcmd ile gör → iki demo kiracıyla giriş yap → birinde personel oluştur, diğerinde görünmediğini doğrula.
 
+> **✅ TAMAMLANDI (2026-08-13).**
+>
+> **Elle doğrulama çıktıları** (tüm `IKPro*` veritabanları düşürülüp uygulama sıfırdan açıldı):
+> - `IKPro_demo` ve `IKPro_globex` **oluştu**, ikisi de `Turkish_CI_AS`.
+> - `Tenants`: `demo → IKPro_demo (Active)`, `globex → IKPro_globex (Active)`.
+> - Kullanıcılar: demo katalogunda 3 (ik@/ece/ahmet), globex katalogunda 3 (globex-admin/deniz/cem), **paylaşılan `IKProDb`'de 0**. Personel: 4 / 2 / **0**.
+> - İki kiracıyla giriş yapıldı; her biri yalnız kendi personelini gördü.
+> - Globex'te departman oluşturuldu → `IKPro_globex`'te 1 satır, `IKPro_demo` ve `IKProDb`'de 0. API üzerinden de yalnız globex görüyor.
+>
+> **Planla sapma — testler kendi katalog önekini kullanıyor.** Plan bunu öngörmüyordu ama şart oldu: demo kiracıların slug'ları sabit (`demo`, `globex`), dolayısıyla test koşumu da `IKPro_demo` üretirdi ve **geliştiricinin çalışan demo ortamını her `dotnet test`'te silerdi**. Katalog adı üretimi statik yardımcıdan `ITenantDatabaseNamer` servisine dönüştü; önek `Tenancy:DatabasePrefix` ile geliyor ve testler `IKPro_test_` kullanıyor.
+>
+> `PlatformDbInitializer.EnsureDefaultTenantAsync` (Görev 1'de eklenmişti) **kaldırıldı**: varsayılan kiracı artık provizyon yolundan doğuyor, o metot ölü koda dönüşmüştü.
+>
+> **Kırılan test:** `AuthFlowTests` — demo admin'in baş harfleri `İK` yerine `İY`. Sebep: baş harfler artık üretim kuralından (`DeriveInitials`) geliyor, çünkü hesabı elle yazılmış bir seed satırı değil gerçek provizyon oluşturuyor. Beklenti güncellendi; bu, seed'in ürün kuralını atlamayı bıraktığının kanıtı.
+>
+> Doğrulama: 66 birim + 167 entegrasyon yeşil, `-warnaserror` temiz.
+
 ---
 
 ### Görev 6: Purge `DROP DATABASE` ve `Subscriptions` platforma

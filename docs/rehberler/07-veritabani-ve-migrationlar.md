@@ -77,10 +77,27 @@ değil, migration içinde **`migrationBuilder.Sql("CREATE VIEW ...")`** ile yön
 
 ## Seed (Örnek Veri)
 
-`AppDbContextInitializer` şunları oluşturur:
-- **Varsayılan kiracı** ("Demo Şirket") + demo departman/personel/izin/bordro verisi.
-- **Demo kullanıcılar** (`ik@`, `ece.arslan@`, `ahmet.yilmaz@` — hepsi `demo123`).
-- İkinci bir demo kiracı (Globex) — izolasyonu göstermek için.
+Açılış sırası (yalnız Development):
+1. `PlatformDbInitializer` — `IKProPlatform` migrate edilir.
+2. `AppDbContextInitializer.InitialiseAsync()` — **paylaşılan** `IKProDb` migrate
+   edilir. İçi boş kalır; kiracı bağlamı olmayan işler (sağlık kontrolü, henüz
+   ayrılmamış kiracılar) buraya bağlandığı için var olmak zorunda.
+3. `DemoTenantSeeder` — iki demo kiracıyı **gerçek provizyon yolundan** kurar
+   (`IKPro_demo`, `IKPro_globex`) ve içlerini doldurur.
+
+Demo veri: departman/personel/izin/bordro + üç kullanıcı (`ik@`, `ece.arslan@`,
+`ahmet.yilmaz@` — hepsi `demo123`) ve izolasyonu göstermek için ikinci bir kiracı
+(Globex, kendi üç kullanıcısıyla).
+
+> **Seed neden provizyon yolunu kullanıyor?** Kendi kestirmesini kullansaydı,
+> provizyonu bozan bir değişiklik yalnız testlerde görünürdü. Bu şekilde kayıt
+> akışı, uygulamayı açan her geliştiricinin karşısında baştan sona çalışır.
+> Demo admin'leri de bu yüzden şifresiz doğar; seed yalnız şifrelerini verir.
+
+> **⚠️ Sıfırlarken:** `IKProDb` + `IKProPlatform` düşürmek ARTIK YETMEZ. Tüm
+> `IKPro_*` kiracı veritabanlarını da birlikte düşürün — aksi halde provizyon
+> "katalog zaten var" diye reddeder (yarıda kalmış kurulumun artığını sessizce
+> yeniden kullanmamak için konulmuş bilinçli koruma).
 
 Seed **kiracıya sabitlenmiş bir DI kapsamından** çalışır: `Program.cs` önce
 `PlatformDbInitializer.EnsureDefaultTenantAsync()` ile varsayılan kiracıyı garanti

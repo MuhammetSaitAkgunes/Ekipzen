@@ -27,13 +27,11 @@ namespace IKPro.Infrastructure.Persistence;
 public class AppDbContextInitializer(
     ILogger<AppDbContextInitializer> logger,
     AppDbContext context,
-    IPlatformDbContext platform,
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
     ICurrentTenant currentTenant,
     IConfiguration configuration,
-    ITenantDirectory directory,
-    ITenantScopeFactory tenantScopeFactory)
+    ITenantDirectory directory)
 {
     public async Task InitialiseAsync()
     {
@@ -48,6 +46,14 @@ public class AppDbContextInitializer(
         }
     }
 
+    /// <summary>
+    /// Varsayılan demo kiracısının zengin verisini TOHUMLAR — çağıran kapsam o
+    /// kiracıya sabitlenmiş olmalıdır.
+    ///
+    /// Kiracının KENDİSİNİ oluşturmaz: kiracı, gerçek provizyon yolundan
+    /// (<c>TenantOnboarding</c>) doğar ve bu sınıf yalnız içini doldurur. Bkz.
+    /// <c>DemoTenantSeeder</c>.
+    /// </summary>
     public async Task SeedAsync()
     {
         try
@@ -73,7 +79,6 @@ public class AppDbContextInitializer(
             await SeedComplianceAsync();
             await SeedActionsAsync();
             await SeedSettingsAsync();
-            await SeedSecondDemoTenantAsync();
         }
         catch (Exception ex)
         {
@@ -156,69 +161,26 @@ public class AppDbContextInitializer(
     }
 
     /// <summary>
-    /// Multi-tenancy'yi çalışan demo'da görünür kılmak için ikinci, bağımsız bir kiracı
-    /// (Globex Bilişim). Üç rolle giriş yapılabilir; verisi varsayılan kiracıdan tamamen
-    /// izoledir. İdempotent: kiracı zaten varsa atlanır.
+    /// İkinci demo kiracısının (Globex Bilişim) verisini tohumlar — çağıran kapsam
+    /// o kiracıya sabitlenmiş olmalıdır.
+    ///
+    /// Multi-tenancy'yi çalışan demo'da GÖRÜNÜR kılmak için var: üç rolle giriş
+    /// yapılabilen, verisi varsayılan kiracıdan tamamen izole ikinci bir şirket.
+    /// Kiracının kendisini ve hr-admin'ini burası oluşturmaz — ikisi de gerçek
+    /// provizyon yolundan gelir (bkz. <c>DemoTenantSeeder</c>).
     /// </summary>
-    private async Task SeedSecondDemoTenantAsync()
+    public async Task SeedGlobexTenantAsync()
     {
-        const string slug = "globex";
-        const string adminEmail = "globex-admin@globex.local";
-        if (await platform.Tenants.AnyAsync(t => t.Slug == slug)) return;
+        var tenantId = currentTenant.TenantIdOrThrow();
+        if (await context.Departments.AnyAsync()) return;
 
-        // İkinci koruma: platform DB'si (IKProPlatform) taze/boş doğduğunda yukarıdaki
-        // slug kontrolü tutmaz (platformda "globex" yok) ama uygulama DB'si (IKProDb)
-        // eski bir çalıştırmadan kalmışsa Identity'de globex-admin ZATEN vardır. Bu
-        // durumda userManager.CreateAsync var olan kullanıcıya çarpar → istisna →
-        // açılış çöker. Admin e-postası zaten varsa seed'i atla; doğru yükseltme
-        // prosedürü iki veritabanını da BİRLİKTE düşürmektir (bkz.
-        // docs/rehberler/07-veritabani-ve-migrationlar.md, "Yükseltme notu").
-        //
-        // DİKKAT — burada IIdentityService.EmailExistsAsync KULLANILAMAZ: o metot
-        // e-postayı önce yönlendirme DİZİNİNDEN çözer, dizin ise platform
-        // veritabanındadır. Tam da bu korumanın hedeflediği senaryoda (platform taze,
-        // uygulama DB'si eski) dizin BOŞTUR; EmailExistsAsync false döner ve koruma
-        // kör kalır. Sapmanın tespit edilmek istendiği yer kullanıcı deposudur,
-        // dolayısıyla kontrol doğrudan orada yapılır.
-        var normalizeAdmin = adminEmail.ToUpperInvariant();
-        if (await context.Set<ApplicationUser>().AnyAsync(u => u.NormalizedEmail == normalizeAdmin))
-        {
-            logger.LogWarning(
-                "Globex demo kiracısı platform veritabanında yok ama {AdminEmail} uygulama " +
-                "veritabanında zaten var; seed atlandı. Bu genelde IKProPlatform düşürülüp " +
-                "IKProDb düşürülmediğinde oluşur — ikisini birlikte düşürüp yeniden başlatın.",
-                adminEmail);
-            return;
-        }
-
-        var tenant = new Tenant
-        {
-            Name = "Globex Bilişim A.Ş.",
-            Slug = slug,
-            Status = TenantStatus.Active,
-            CreatedAtUtc = DateTime.UtcNow,
-        };
-        platform.Tenants.Add(tenant);
-        await platform.SaveChangesAsync(default);
-
-        // Bu adımdan sonraki TÜM yazımlar Globex'e ait — ama ambient `context` yukarıdaki
-        // varsayılan-kiracı seed adımlarıyla (SeedOrganizationAsync…SeedSettingsAsync) PAYLAŞILAN
-        // aynı DbContext'tir. Ambient `currentTenant`'ı burada yeniden impersone edip ambient
-        // `context`'i kullanmaya devam etmek (Faz 1b'de tek DB olduğundan) çalışırdı, ama TAM
-        // OLARAK Task 5'in kaçınmak istediği örüntü olurdu: "önce impersone et, sonra context'i
-        // KULLANMAYA DEVAM ET" sırasına güvenmek. Bunun yerine — TenantPurger'ın taze purgeContext
-        // açması gibi — Globex için TAMAMEN BAĞIMSIZ, kendi ICurrentTenant/AppDbContext/UserManager/
-        // ITenantDirectory'sini taşıyan bir kapsam açılır; kapsam DÖNMEDEN önce impersone edilmiş
-        // olduğundan sıra hatası yapısal olarak imkânsızdır (bkz. ITenantScopeFactory dokümanı).
-        using var kapsam = tenantScopeFactory.Create(tenant.Id);
-        var globexContext = kapsam.Services.GetRequiredService<AppDbContext>();
-        var globexUserManager = kapsam.Services.GetRequiredService<UserManager<ApplicationUser>>();
-        var globexDirectory = kapsam.Services.GetRequiredService<ITenantDirectory>();
+        var demoPassword = configuration["Seed:DemoPassword"] ?? "demo123";
+        await DemoSifresiVerAsync("globex-admin@globex.local", demoPassword);
 
         var urun = new Department { Name = "Ürün" };
         var operasyon = new Department { Name = "Operasyon" };
-        globexContext.Departments.AddRange(urun, operasyon);
-        await globexContext.SaveChangesAsync();
+        context.Departments.AddRange(urun, operasyon);
+        await context.SaveChangesAsync();
 
         var deniz = new Employee
         {
@@ -226,8 +188,8 @@ public class AppDbContextInitializer(
             DepartmentId = operasyon.Id, HireDate = new DateOnly(2024, 3, 1),
             Status = EmployeeStatus.Active, Profile = new EmployeeProfile(),
         };
-        globexContext.Employees.Add(deniz);
-        await globexContext.SaveChangesAsync();
+        context.Employees.Add(deniz);
+        await context.SaveChangesAsync();
 
         var cem = new Employee
         {
@@ -235,89 +197,115 @@ public class AppDbContextInitializer(
             DepartmentId = operasyon.Id, HireDate = new DateOnly(2025, 6, 1),
             Status = EmployeeStatus.Active, ManagerId = deniz.Id, Profile = new EmployeeProfile(),
         };
-        globexContext.Employees.Add(cem);
-        await globexContext.SaveChangesAsync();
+        context.Employees.Add(cem);
+        await context.SaveChangesAsync();
 
         var year = DateTime.UtcNow.Year;
-        globexContext.LeaveBalances.AddRange(
+        context.LeaveBalances.AddRange(
             new LeaveBalance { EmployeeId = deniz.Id, Year = year, EntitledDays = 24, CarriedOverDays = 0 },
             new LeaveBalance { EmployeeId = cem.Id, Year = year, EntitledDays = 24, CarriedOverDays = 0 });
 
-        globexContext.CompanyProfiles.Add(new CompanyProfile
+        context.CompanyProfiles.Add(new CompanyProfile
         {
             Name = "Globex Bilişim A.Ş.", Website = "www.globex.local",
             SystemEmail = "info@globex.local", Phone = "+90 216 000 00 00",
             HeadquartersAddress = "Ataşehir/İstanbul",
         });
-        globexContext.NotificationSettings.Add(new NotificationSettings
+        context.NotificationSettings.Add(new NotificationSettings
         {
             NewPersonnelEmail = true, LeaveRequestEmail = true,
             WeeklyReportEmail = false, TwoFactorSmsEnabled = false,
         });
-        globexContext.Subscriptions.Add(new Subscription
+        context.Subscriptions.Add(new Subscription
         {
             Plan = "STANDART", PlanName = "Globex Başlangıç", BillingCycle = "Aylık",
             Price = 900m, RenewalDate = new DateOnly(year, 12, 1),
             PaymentMethodMasked = "•••• •••• •••• 1000",
         });
-        await globexContext.SaveChangesAsync();
-
-        var demoPassword = configuration["Seed:DemoPassword"] ?? "demo123";
+        await context.SaveChangesAsync();
         var users = new (ApplicationUser User, string Role, Employee? Employee)[]
         {
             (new ApplicationUser
             {
-                UserName = adminEmail, Email = adminEmail,
-                EmailConfirmed = true, DisplayName = "Globex Yöneticisi", Initials = "GY",
-                TenantId = tenant.Id,
-            }, Roles.HrAdmin, null),
-            (new ApplicationUser
-            {
                 UserName = "deniz.kaya@globex.local", Email = "deniz.kaya@globex.local",
                 EmailConfirmed = true, DisplayName = "Deniz Kaya", Initials = "DK",
-                TenantId = tenant.Id,
+                TenantId = tenantId,
             }, Roles.Manager, deniz),
             (new ApplicationUser
             {
                 UserName = "cem.oz@globex.local", Email = "cem.oz@globex.local",
                 EmailConfirmed = true, DisplayName = "Cem Öz", Initials = "CÖ",
-                TenantId = tenant.Id,
+                TenantId = tenantId,
             }, Roles.Employee, cem),
         };
 
         foreach (var (user, role, employee) in users)
         {
             user.EmployeeId = employee?.Id;
-            var result = await globexUserManager.CreateAsync(user, demoPassword);
+            var result = await userManager.CreateAsync(user, demoPassword);
             if (!result.Succeeded)
             {
                 throw new InvalidOperationException(
-                    $"Globex demo kullanıcı oluşturulamadı ({user.Email}): " +
+                    $"Globex demo kullanıcısı oluşturulamadı ({user.Email}): " +
                     string.Join(", ", result.Errors.Select(e => e.Description)));
             }
 
             // Demo kullanıcılar da normal kullanıcı oluşturma yollarıyla aynı kuralı izler:
             // dizine yazılmadan hiçbir hesap "var" sayılmaz (Faz 1b login'i buradan çözecek).
-            await globexDirectory.ReserveAsync(user.Email!, tenant.Id, default);
+            await directory.ReserveAsync(user.Email!, tenantId, default);
 
-            await globexUserManager.AddToRoleAsync(user, role);
+            await userManager.AddToRoleAsync(user, role);
             if (employee is not null)
             {
                 employee.UserId = user.Id;
             }
         }
 
-        await globexContext.SaveChangesAsync();
+        await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Provizyonun ŞİFRESİZ oluşturduğu demo admin'ine şifre verir.
+    ///
+    /// Üründe bu adımın karşılığı davet e-postasıyla <c>accept-invite</c>'tır;
+    /// demo kurulumunda geliştiricinin outbox dosyasını açması beklenmez. Hesabın
+    /// KENDİSİ yine de gerçek akışın ürünüdür — seed onu taklit etmez, yalnız
+    /// giriş yapılabilir hale getirir.
+    /// </summary>
+    private async Task DemoSifresiVerAsync(string email, string sifre)
+    {
+        var kullanici = await userManager.FindByEmailAsync(email)
+            ?? throw new InvalidOperationException(
+                $"Demo admin '{email}' bulunamadı — provizyon adımı çalışmamış olabilir.");
+
+        if (await userManager.HasPasswordAsync(kullanici)) return;
+
+        var sonuc = await userManager.AddPasswordAsync(kullanici, sifre);
+        if (!sonuc.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Demo admin şifresi belirlenemedi ({email}): " +
+                string.Join(", ", sonuc.Errors.Select(e => e.Description)));
+        }
     }
 
     private async Task SeedDemoUsersAsync()
     {
-        if (await userManager.Users.AnyAsync()) return;
-
         var tenantId = currentTenant.TenantIdOrThrow();
 
         // Frontend login formu bu şifreyi öndolu getirir (auth.js); üretimde geçersizdir.
         var demoPassword = configuration["Seed:DemoPassword"] ?? "demo123";
+
+        // hr-admin'i PROVİZYON oluşturdu (şifresiz + davet). Demo kurulumunda
+        // geliştiricinin davet e-postasını açması beklenmez; şifreyi burada
+        // veriyoruz. Kullanıcıyı yeniden oluşturmuyoruz — o, gerçek kayıt akışının
+        // ürünüdür ve seed'in onu taklit etmesi akışı test edilmemiş bırakırdı.
+        await DemoSifresiVerAsync("ik@hrmaster.local", demoPassword);
+
+        // Geri kalan iki demo hesabı (yönetici + personel) burada oluşur: üründe
+        // onların karşılığı işe alım akışıdır, demo verisinde ise personel kayıtları
+        // doğrudan tohumlandığı için hesapları da doğrudan bağlıyoruz.
+        if (await userManager.Users.CountAsync() > 1) return;
 
         var ece = await context.Employees.FirstAsync(e => e.FirstName == "Ece" && e.LastName == "Arslan");
         var ahmet = await context.Employees.FirstAsync(e => e.FirstName == "Ahmet" && e.LastName == "Yılmaz");
@@ -325,14 +313,6 @@ public class AppDbContextInitializer(
         // demoUsers (mockData.js) ile birebir: e-posta, görünen ad, rol, baş harfler.
         var users = new (ApplicationUser User, string Role, Employee? Employee)[]
         {
-            (new ApplicationUser
-            {
-                UserName = "ik@hrmaster.local",
-                Email = "ik@hrmaster.local",
-                EmailConfirmed = true,
-                DisplayName = "İK Yöneticisi",
-                Initials = "İK",
-            }, Roles.HrAdmin, null),
             (new ApplicationUser
             {
                 UserName = "ece.arslan@hrmaster.local",

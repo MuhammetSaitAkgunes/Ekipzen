@@ -1,6 +1,5 @@
 using FluentAssertions;
 using IKPro.Application.Common.Interfaces;
-using IKPro.Application.Features.Tenancy;
 using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +81,7 @@ public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factor
         using var scope = Factory.Services.CreateScope();
         var kutuk = scope.ServiceProvider.GetRequiredService<ITenantRegistry>();
 
-        var provizyonAdi = TenantDatabaseNaming.For(kiraci.Slug);
+        var provizyonAdi = Namer.For(kiraci.Slug);
         kutuk.GetDatabaseName(kiraci.TenantId).Should().Be(provizyonAdi,
             "provizyon katalog adını üretip kiracı satırına yazmalı");
 
@@ -117,7 +116,7 @@ public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factor
         var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
 
         var tenant = await platform.Tenants.FirstAsync(t => t.Id == kiraci.TenantId);
-        var yeniAd = TenantDatabaseNaming.For(kiraci.Slug) + "_tek_kayit";
+        var yeniAd = Namer.For(kiraci.Slug) + "_tek_kayit";
         tenant.DatabaseName = yeniAd;
         tenant.Status = TenantStatus.Frozen;
         await platform.SaveChangesAsync(CancellationToken.None);

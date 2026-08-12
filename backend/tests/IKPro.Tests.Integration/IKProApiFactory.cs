@@ -16,6 +16,9 @@ namespace IKPro.Tests.Integration;
 public sealed class IKProApiFactory : WebApplicationFactory<Program>
 {
     private const string TestDatabaseName = "IKProDb_Test";
+
+    /// <summary>Testlerin ürettiği tüm kiracı kataloglarının öneki.</summary>
+    internal const string KiraciKatalogOneki = "IKPro_test_";
     private const string PlatformTestDatabaseName = "IKProPlatform_Test";
 
     /// <summary>Testlerde kiracı provizyon ucunu çağırmak için platform anahtarı.</summary>
@@ -55,6 +58,11 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
         // ("signup" politikası, self-servis kayıt ucuyla birlikte kaldırıldı.)
         Environment.SetEnvironmentVariable("RateLimiting__AuthPermitPerMinute", "1000000");
         Environment.SetEnvironmentVariable("Storage__Root", StorageRoot);
+        // Kiracı katalogları testlere ÖZEL önekle doğar. Bu olmadan test koşumu,
+        // geliştiricinin makinesindeki gerçek IKPro_demo / IKPro_globex
+        // veritabanlarını düşürüp yeniden kurardı — yani "testleri çalıştırmak"
+        // demo ortamını silmek anlamına gelirdi.
+        Environment.SetEnvironmentVariable("Tenancy__DatabasePrefix", KiraciKatalogOneki);
 
         DropDatabase(TestDatabaseName);
         DropDatabase(PlatformTestDatabaseName);
@@ -62,14 +70,15 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>
-    /// Testlerin ürettiği kiracı kataloglarını (<c>IKPro_test_*</c>) koşum başında
-    /// süpürür.
+    /// Testlerin ürettiği TÜM kiracı kataloglarını (<c>IKPro_test_*</c>) koşum
+    /// başında süpürür — demo kiracıları dahil.
     ///
-    /// Testler bunları normalde kendi bitişlerinde düşürüyor (bkz.
-    /// <c>TenancyTestBase.DisposeAsync</c>); bu süpürme, koşum ORTASINDA çöken
-    /// bir süreçten kalan artıklar içindir. Olmasaydı artık katalog bir sonraki
-    /// koşuda "veritabanı zaten var" hatasıyla provizyonu reddettirirdi — yani
-    /// tek bir çökme, sonraki tüm koşumları kırardı.
+    /// Testler kendi açtıklarını bitişte düşürüyor (bkz.
+    /// <c>TenancyTestBase.DisposeAsync</c>); bu süpürme iki şey için: koşum
+    /// ORTASINDA çöken bir süreçten kalan artıklar ve her koşumda sıfırdan kurulan
+    /// demo kiracıları. Olmasaydı artık katalog bir sonraki koşuda "veritabanı
+    /// zaten var" hatasıyla provizyonu reddettirirdi — yani tek bir çökme,
+    /// sonraki tüm koşumları kırardı.
     /// </summary>
     private static void KiraciKataloglariniSupur()
     {
@@ -79,7 +88,8 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
         List<string> adlar = [];
         using (var oku = connection.CreateCommand())
         {
-            oku.CommandText = "SELECT name FROM sys.databases WHERE name LIKE 'IKPro[_]test[_]%';";
+            oku.CommandText =
+                $"SELECT name FROM sys.databases WHERE name LIKE '{KiraciKatalogOneki.Replace("_", "[_]")}%';";
             using var reader = oku.ExecuteReader();
             while (reader.Read())
             {
