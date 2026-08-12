@@ -19,18 +19,56 @@ namespace IKPro.Tests.Integration.Auth;
 public class KimlikKiraciKapsamiTests(IKProApiFactory factory) : TenancyTestBase(factory)
 {
     /// <summary>
-    /// Kilitleme, kimlik servislerinin AYNI kapsamdan çözüldüğünün kanıtıdır.
-    ///
-    /// <c>SignInManager.CheckPasswordSignInAsync</c> başarısız deneme sayacını
-    /// <c>UserManager</c> üzerinden YAZAR; ikisi AYNI kapsamdan çözülmelidir.
-    ///
-    /// Kırılabilirlik doğrulandı: <c>SignInManager</c> ayrı bir kapsamdan çözülecek
-    /// şekilde bilerek bozulduğunda bu test kırıldı (giriş 401 yerine 500 verdi —
-    /// bir context'ten gelen kullanıcı nesnesi başka bir context'in yöneticisine
-    /// verilemiyor). Yani yanlış kullanım sessiz kalmıyor, gürültülü patlıyor;
-    /// bu test o gürültüyü yakalayan yer.
+    /// Login, ambient kapsamda kiracı OLMADAN çalışabilmeli: anonim bir istekte
+    /// JWT yok, dolayısıyla <c>ICurrentTenant</c> boş. Kiracı yalnız dizinden
+    /// çözülüp kapsam ORADAN açıldığı için giriş çalışır. Faz 2b'de ambient kapsam
+    /// yanlış (ya da hiçbir) katalogda olacağından bu koruma değerlidir.
+    /// </summary>
+    [Fact]
+    public async Task Login_AmbientKapsamdaKiraciYokkenDeCalisir()
+    {
+        var eposta = $"ak-{Guid.NewGuid():N}@ornek.local";
+        await ProvisionAndActivateAsync("AmbientKapsam", eposta);
+
+        var yanit = await Factory.CreateClient()
+            .PostAsJsonAsync("/api/auth/login", new { email = eposta, password = DefaultPassword });
+
+        yanit.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Davet kabulü de anonim bir istektir ve kullanıcı kiracı veritabanındadır:
+    /// token doğrulaması onu bulabilmek için kiracıya sabitlenmiş kapsamda
+    /// çalışmalı. Kiracı yine dizinden çözülür.
+    /// </summary>
+    [Fact]
+    public async Task DavetKabulu_KiraciKapsamindaCalisir()
+    {
+        var eposta = $"dk-{Guid.NewGuid():N}@ornek.local";
+        await ProvisionTenantAsync("DavetKapsam", eposta);
+
+        await AcceptInviteAsync(eposta);
+
+        var giris = await Factory.CreateClient()
+            .PostAsJsonAsync("/api/auth/login", new { email = eposta, password = DefaultPassword });
+
+        giris.StatusCode.Should().Be(HttpStatusCode.OK, "davet kabulü sonrası giriş çalışmalı");
+    }
+
+    /// <summary>
+    /// Kilitlemenin uçtan uca çalıştığını doğrular: beş hatalı denemeden sonra
+    /// DOĞRU şifre bile reddedilmeli ve reddin sebebi "şifre hatalı" değil
+    /// KİLİTLENME olmalı. Sayaç kalıcı yazılmazsa bu test kırılır.
     ///
     /// Politika: 5 başarısız denemede 5 dakika kilit (bkz. DependencyInjection).
+    ///
+    /// KAPSAM İDDİASI DEĞİLDİR: bu testin <c>UserManager</c> ile
+    /// <c>SignInManager</c>'ın aynı kapsamdan çözüldüğünü kanıtladığını
+    /// varsaymayın. Faz 2a'da tüm kiracılar aynı fiziksel veritabanını paylaşıyor
+    /// (<c>TenantConnectionResolver</c> <c>tenantId</c>'yi yok sayıyor), dolayısıyla
+    /// ayrı bir kapsam da sayacı AYNI tabloya yazardı ve test yeşil kalırdı.
+    /// Aynı-kapsam garantisi testte değil, <c>IdentityService.KimlikServisleri</c>'nin
+    /// ikisini tek ifadede tek kapsamdan döndürmesinde — yapısal olarak sağlanır.
     /// </summary>
     [Fact]
     public async Task Kilitleme_BesBasarisizDenemedenSonraDogruSifreyiDeReddeder()

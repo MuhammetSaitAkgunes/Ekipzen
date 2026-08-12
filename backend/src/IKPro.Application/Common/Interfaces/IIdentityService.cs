@@ -11,7 +11,15 @@ public interface IIdentityService
     /// <summary>E-posta + şifre ile giriş; başarısızsa <c>UnauthorizedException</c>.</summary>
     Task<AuthResponse> LoginAsync(string email, string password, CancellationToken cancellationToken);
 
-    /// <summary>E-posta ile kayıtlı bir hesap var mı (işe alım öncesi erken doğrulama).</summary>
+    /// <summary>
+    /// E-posta ile kayıtlı bir hesap var mı (işe alım öncesi erken doğrulama).
+    ///
+    /// Semantik: e-posta önce yönlendirme DİZİNİNDEN kiracıya çözülür, sonra o
+    /// kiracının kullanıcı deposunda aranır. Dizinde kayıt yoksa <c>false</c> döner.
+    /// Yani cevap, dizinin tutarlı olduğu varsayımına dayanır — dizinden BAĞIMSIZ
+    /// bir kontrol gerekiyorsa (ör. dizin ile kullanıcı deposunun SAPMASINI tespit
+    /// etmek) bu metot kullanılamaz, depoya doğrudan bakılmalıdır.
+    /// </summary>
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
 
     /// <summary>

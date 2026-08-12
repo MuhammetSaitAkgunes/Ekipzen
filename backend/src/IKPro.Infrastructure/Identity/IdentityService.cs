@@ -114,6 +114,14 @@ public sealed class IdentityService(
             return false;
         }
 
+        // FAZ 2B NOTU: dizin TÜRETİLMİŞ bir tablodur ve geri yükleme sonrası
+        // sapabilir — karşılığı olmayan bir TenantId'ye işaret edebilir (test
+        // altyapısı bunu bilerek üretiyor: PlatformKatmaniTests, TenantId = -1).
+        // Bugün zararsız çünkü çözücü tenantId'yi yok sayıyor. Kiracı başına
+        // veritabanına geçilince Create(...) çözülemeyen kiracıda FIRLATIR ve bu
+        // metot sözleşmesi gereği boolean dönmesi gerekirken 500'e dönüşür —
+        // provizyon, self-servis kayıt ve işe alım yollarını kırar. O fazda
+        // "çözülemeyen kiracı → false" davranışı eklenmeli.
         using var kapsam = tenantScopeFactory.Create(kiraciId.Value);
         var (kullanicilar, _) = KimlikServisleri(kapsam);
         return await kullanicilar.FindByEmailAsync(email) is not null;
