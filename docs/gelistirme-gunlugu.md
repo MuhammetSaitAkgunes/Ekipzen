@@ -8,13 +8,15 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0–6 bitti. **Ayrılma tamamlandı:** her kiracı kendi veritabanında
-  (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama duruyor (kiracı
-  bağlamı olmayan işler ve sağlık kontrolü oraya bağlanıyor). Purge artık
-  `DROP DATABASE`, abonelikler platformda. Sırada **Görev 7** var: migration
-  orkestrasyonu (N kiracı veritabanına şema nasıl uygulanacak), açılış
-  doğrulaması, dokümantasyon. Faz 3'e (yedekleme/geri yükleme) geçmeden
+  **FAZ 2b TAMAMLANDI (Görev 0–7).** Her kiracı kendi veritabanında
+  (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama duruyor. Purge
+  `DROP DATABASE`, abonelikler platformda, migration ayrı bir dağıtım adımı.
+  **Sırada Faz 3 var: yedekleme ve kurtarma** — ve ona başlamadan önce
   kullanıcıyla konuşulacak.
+- **⚠️ Dağıtım sırası değişti:** üretimde artık üç adım var — (1) `IKProDb`
+  migrate, (2) `IKProPlatform` migrate, (3) **`POST /api/tenants/migrate`**
+  (kiracı katalogları). 3. adım atlanırsa müşteriler 503 alır (kasıtlı) ve durum
+  açılış logunda + `GET /api/tenants/schema-status`'ta görünür.
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
   `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
   yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
@@ -120,6 +122,56 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 2b / Görev 7: migration orkestrasyonu — FAZ TAMAMLANDI
+
+Fazın son ve en çok işletim etkisi olan kararı: **kiracı veritabanları açılışta
+migrate EDİLMEZ.**
+
+**Neden:** açılışta migrate etmek açılış süresini müşteri sayısıyla büyütür (200
+müşteride uygulama dakikalarca kapalı) ve daha kötüsü, tek bir kiracının
+veritabanı erişilemez olduğunda uygulama **hiç açılmaz** — bir müşterinin sorunu
+bütün müşterileri offline yapar. Ayrılmanın amacı tam tersiydi.
+
+**Bedeli:** dağıtım adımı atlanabilir. Üç yerden birden görünür kılındı ki sessiz
+kalmasın:
+
+1. **Açılış logu** — `TenantSchemaCheckService` şemaları kontrol eder (migrate
+   etmez, açılışı da bloklamaz) ve geride kalanları `LogError` ile yazar.
+2. **`GET /api/tenants/schema-status`** — hangi kiracı neyin gerisinde, hata
+   alanı dahil. Okunamayan kiracı listeden düşmez; tam tersine görülmesi gereken
+   satır odur.
+3. **503** — şeması geride kalan kiracının hem istekleri hem login'i reddedilir.
+   Kontrol `TenantAccessGuard` içine kondu: o metot token üretimi (login/refresh)
+   ile yetkili isteğin ORTAK yolu, yani tek kontrol iki darboğazı da kapatıyor.
+   Ayrı bir mekanizma kurmak birini kaçırma riski taşırdı.
+
+**503, 403 değil:** kimlik ve yetki doğru, kiracı da kapalı değil — eksik olan
+dağıtımın bir adımı. 503 "şu anda değil, birazdan" der; 403 "senin hakkın yok"
+diyerek kullanıcıyı desteğe yönlendirirdi.
+
+**Neden eski şemayla çalıştırmıyoruz:** uygulama kodu artık var olmayan sütunları
+sorguluyor. En iyi ihtimalle her istek anlaşılmaz bir SQL hatasıyla düşer; daha
+kötüsü kısmen çalışan bir yazma yolu veriyi tutarsız bırakır. Açıkça reddetmek,
+sessizce bozmaktan iyidir.
+
+**Yeni uçlar:** `POST /api/tenants/migrate` (bir kiracı patlarsa diğerleri
+denenmeye devam eder ama uç **500** döner — `curl -f` ile dağıtım script'i durur)
+ve `GET /api/tenants/schema-status`.
+
+**Önbellek ömürleri asimetrik:** "güncel" 30 dk (şema kendiliğinden eskimez,
+ancak dağıtımla eskir ve dağıtım süreci yeniden başlatır), "geride" 30 sn (biri
+veritabanını elle migrate ederse kimse haber vermez; kiracı yarım saat boyunca
+503'te kalmasın). Koşucu bitince zaten açıkça düşürülüyor.
+
+**Dokümantasyon:** `yedekleme-ve-kurtarma.md`'ye **gerçek tek-kiracı geri yükleme
+prosedürü** yazıldı (kuyruk log → FULL → DIFF → `RESTORE … STOPAT` → şema
+kontrolü → **dizin yeniden kurma** → çöz). Dizin adımı zorunlu: yönlendirme
+dizini platformdadır ve geri yüklemeyle geri sarılmaz, atlanırsa kullanıcılar
+giriş yapamaz. `07-veritabani-ve-migrationlar.md` artık "iki context, N+2
+veritabanı" gerçeğini ve üç adımlı dağıtım sırasını anlatıyor.
+
+**Doğrulama:** 66 birim + 181 entegrasyon yeşil, `-warnaserror` temiz.
 
 ### 2026-08-13 — Faz 2b / Görev 6: purge `DROP DATABASE`, abonelikler platformda
 

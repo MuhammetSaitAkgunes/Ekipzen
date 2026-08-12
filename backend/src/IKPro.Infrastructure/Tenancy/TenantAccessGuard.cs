@@ -19,9 +19,13 @@ namespace IKPro.Infrastructure.Tenancy;
 /// </summary>
 public sealed class TenantAccessGuard(
     ITenantRegistry registry,
+    ITenantSchemaGuard schemaGuard,
     ILogger<TenantAccessGuard> logger) : ITenantAccessGuard
 {
     private const string KullaniciMesaji = "Şirket hesabınız şu anda kullanıma kapalı. Yöneticinizle iletişime geçin.";
+
+    private const string SemaMesaji =
+        "Sistem güncelleniyor; şirket hesabınız birkaç dakika içinde tekrar erişilebilir olacak.";
 
     public async Task EnsureAccessibleAsync(int tenantId, CancellationToken cancellationToken)
     {
@@ -29,6 +33,16 @@ public sealed class TenantAccessGuard(
 
         if (durum == TenantStatus.Active)
         {
+            // Kiracı açık — ama veritabanı şeması uygulamanın gerisindeyse istekleri
+            // ALMAK, var olmayan sütunları sorgulamak demektir. Kontrol BURADA duruyor
+            // çünkü bu metot iki darboğazın da ortak yoludur: token üretimi (login +
+            // refresh) ve elinde token'la gelen istek. Ayrı bir mekanizma kurmak, o
+            // iki yoldan birini kaçırma riski taşırdı.
+            if (!await schemaGuard.IsUpToDateAsync(tenantId, cancellationToken))
+            {
+                throw new TenantSchemaOutdatedException(SemaMesaji);
+            }
+
             return;
         }
 

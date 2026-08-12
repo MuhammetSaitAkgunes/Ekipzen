@@ -78,6 +78,21 @@ sorguları filtreleyerek yapılır (ör. `GetTeamLeavesQuery` yöneticinin ekibi
 > kullanıcının görebileceği satırları daraltır. İkisi birlikte "yatay yetki yükseltme"yi
 > (başka çalışanın verisini görme) engeller.
 
+### Kiracı kapısı: 403 mü, 503 mü?
+
+Rol kontrolünden ÖNCE bir kapı daha var — kiracının kendisi erişilebilir mi?
+
+| Durum | Kod | Anlamı |
+| --- | --- | --- |
+| Kiracı `Frozen` / `Purging` / yok | **403** | "Şirket hesabınız kullanıma kapalı" — kalıcı bir engel, yeniden denemek çözmez |
+| Kiracının şeması dağıtımın gerisinde | **503** | "Sistem güncelleniyor" — geçici, birazdan düzelir |
+
+Ayrım önemli: 403 kullanıcıya "senin hakkın yok" der ve destek aramasına yol
+açar; 503 "şu anda değil" der ve istemcinin yeniden denemesini söyler. İkisi de
+`ITenantAccessGuard.EnsureAccessibleAsync` içinden geçer — o metot hem token
+üretiminin (login/refresh) hem yetkili isteğin ortak yolu olduğu için tek bir
+kontrol iki darboğazı da kapatır.
+
 ## Güvenli Kullanıcı Kurulumu: Davet Akışı
 
 Yeni kullanıcılar **paylaşılan geçici şifre almaz.** Bunun yerine:

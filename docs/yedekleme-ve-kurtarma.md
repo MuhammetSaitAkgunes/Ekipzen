@@ -148,6 +148,70 @@ bu durumlar kendi yaşam döngüsüne aittir, elle dondurulup çözülmez. Zaten
 hedef durumdaki bir kiracıyı tekrar dondurmak/çözmek hataya çarpmaz (idempotent
 no-op) — operatör yeniden denerse güvenlidir.
 
+### TEK KİRACIYI geri yükleme (artık gerçek)
+
+Her müşteri kendi kataloğunda (`IKPro_{slug}`) olduğu için, bir müşteriyi
+**diğerlerine hiç dokunmadan** ve saniye hassasiyetinde geri döndürebilirsiniz.
+Ayrılmanın asıl sebebi buydu.
+
+```bash
+# 1) O KİRACIYI dondur — geri yükleme sırasında yazma gelmemeli.
+curl -X POST https://<api-host>/api/tenants/<tenantId>/freeze   -H "X-Platform-Key: <platform-anahtarı>"
+```
+
+```sql
+-- 2) Kuyruk log yedeğini al: son yedekten ŞU ANA kadarki işlemleri kurtarır.
+--    Bu adım atlanırsa son yedekten sonraki her şey kaybolur.
+BACKUP LOG [IKPro_acme] TO DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
+    WITH NORECOVERY;
+
+-- 3) FULL → DIFF → LOG zinciri. NORECOVERY, zincir bitene kadar veritabanını
+--    kullanıma AÇMAZ; son adımda STOPAT ile istenen ana kadar ilerlenir.
+RESTORE DATABASE [IKPro_acme]
+    FROM DISK = 'C:\SQLYedek\IKPro_acme_FULL.bak'
+    WITH NORECOVERY, REPLACE;
+
+RESTORE DATABASE [IKPro_acme]
+    FROM DISK = 'C:\SQLYedek\IKPro_acme_DIFF.bak'
+    WITH NORECOVERY;
+
+-- 4) Hedef ana kadar log uygula. STOPAT'ı yanlış yazmak sessizce fazla/eksik
+--    veri getirir — müşteriyle birlikte kararlaştırın ve buraya not düşün.
+RESTORE LOG [IKPro_acme]
+    FROM DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
+    WITH RECOVERY, STOPAT = '2026-08-13T09:45:00';
+```
+
+```bash
+# 5) Şema kontrolü: geri yüklenen veritabanı ESKİ bir şemada olabilir.
+curl https://<api-host>/api/tenants/schema-status   -H "X-Platform-Key: <platform-anahtarı>"
+
+# Geride ise migration adımını çalıştır (yalnız geride olanlara uygular):
+curl -f -X POST https://<api-host>/api/tenants/migrate   -H "X-Platform-Key: <platform-anahtarı>"
+
+# 6) DİZİNİ YENİDEN KUR — atlanırsa kullanıcılar giriş yapamaz (aşağıya bakın).
+curl -X POST https://<api-host>/api/tenants/<tenantId>/rebuild-directory   -H "X-Platform-Key: <platform-anahtarı>"
+
+# 7) Çöz.
+curl -X POST https://<api-host>/api/tenants/<tenantId>/unfreeze   -H "X-Platform-Key: <platform-anahtarı>"
+```
+
+> **6. adım neden zorunlu:** yönlendirme dizini (e-posta → kiracı) PLATFORM
+> veritabanındadır ve geri yüklemeyle **geri sarılmaz**. Geri yüklediğiniz ana
+> göre:
+> - O tarihten SONRA açılan kullanıcılar dizinde vardır ama kiracı kataloğunda
+>   yoktur → login onları var olmayan bir hesaba yönlendirir.
+> - O tarihten önce silinmiş kullanıcılar katalogda geri gelir ama dizinde
+>   yoktur → hiç giriş yapamazlar.
+>
+> `rebuild-directory` dizini kiracının KENDİ veritabanından yeniden kurar ve iki
+> sapmayı da kapatır. Başka kiracıya ait çakışan e-postalar atlanır ve sonuçta
+> raporlanır — tek çakışma yüzünden kurtarma yarıda kalmaz.
+
+> **Abonelik geri sarılmaz — ve bu doğrudur.** `Subscriptions` platform
+> veritabanındadır. Müşterinin İK verisini düne döndürmek, dün iptal edilmiş bir
+> aboneliği canlandırmamalı; plan ve ödeme geçmişi ayrı bir ticari gerçektir.
+
 ## KVKK notu
 
 **Yedekler de kişisel veri içerir.** Bu şu sonuçları doğurur:

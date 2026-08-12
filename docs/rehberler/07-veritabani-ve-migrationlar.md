@@ -14,13 +14,39 @@ flowchart LR
 ```
 
 - Migration'lar: `backend/src/IKPro.Infrastructure/Persistence/Migrations/`
+  (kiracı şeması) ve `.../Migrations/Platform/` (platform şeması)
 - Her migration zaman damgalı: `20260717114308_MultiTenancyFoundation.cs`
-- `AppDbContextInitializer`:
-  - `InitialiseAsync()` → `context.Database.MigrateAsync()` (bekleyen migration'ları uygular)
-  - `SeedAsync()` → varsayılan kiracı + demo kullanıcılar + örnek veri
 
-**Development'ta bunlar otomatik** çalışır (`Program.cs`). Üretimde ise migration'lar
-**bilinçli bir adımda** uygulanmalıdır (bkz. aşağıdaki uyarı).
+### Kaç veritabanı migrate ediliyor?
+
+**İki context, ama N+2 veritabanı.** `AppDbContext`'in migration'ları HER kiracı
+kataloğuna ayrı ayrı uygulanır:
+
+| Veritabanı | Şema kaynağı | Ne zaman uygulanır |
+| --- | --- | --- |
+| `IKProPlatform` | `PlatformDbContext` | Açılışta, otomatik |
+| `IKProDb` (paylaşılan, boş) | `AppDbContext` | Açılışta, otomatik |
+| `IKPro_{slug}` × N | `AppDbContext` | **Provizyonda** (yeni kiracı) + **`POST /api/tenants/migrate`** (mevcut kiracılar) |
+
+**Kiracı veritabanları açılışta migrate EDİLMEZ.** Bu, fazın en önemli işletim
+kararı ve gerekçesi somut: açılışta migrate etmek açılış süresini müşteri
+sayısıyla büyütür (200 müşteride uygulama dakikalarca kapalı) ve daha kötüsü,
+tek bir kiracının veritabanı erişilemez olduğunda uygulama **hiç açılmaz** —
+yani bir müşterinin sorunu bütün müşterileri offline yapar. Ayrılmanın amacı
+tam tersiydi.
+
+Bunun bedeli, dağıtım adımının atlanabilmesidir. Üç yerden birden görünür kılındı:
+
+1. **Açılış logu** — `TenantSchemaCheckService` şemaları kontrol eder (migrate
+   etmez) ve geride kalanları `LogError` ile yazar.
+2. **`GET /api/tenants/schema-status`** — hangi kiracı neyin gerisinde.
+3. **503** — şeması geride kalan kiracının istekleri ve login'i reddedilir
+   (`ITenantSchemaGuard`). Eski şemayla sessizce çalışmak veri bozulmasıdır:
+   uygulama var olmayan sütunları sorgular, kısmen çalışan bir yazma yolu veriyi
+   tutarsız bırakabilir.
+
+**Development'ta seed otomatik** çalışır (`Program.cs`) ve demo kiracıları gerçek
+provizyon yolundan kurduğu için şemaları zaten günceldir.
 
 ## Yeni Migration Ekleme
 
@@ -138,6 +164,26 @@ dotnet ef database update \
   --context PlatformDbContext --connection "<prod-platform-connection>"
 ```
 
+**3) KİRACI VERİTABANLARI — dağıtımın son adımı.** Yukarıdaki iki komut
+müşterilerin veritabanlarına DOKUNMAZ; onlar `IKPro_{slug}` kataloglarındadır ve
+`dotnet ef` onları tek tek bilmez. Uygulama yeni sürümle ayağa kalktıktan sonra:
+
+```bash
+curl -f -X POST https://<api-host>/api/tenants/migrate -H "X-Platform-Key: <platform-anahtarı>"
+```
+
+`-f` önemli: bir kiracı bile patlarsa uç 500 döner ve dağıtım script'i durur.
+Diğer kiracılar yine de denenir; gövdedeki rapor hangisinin neden başarısız
+olduğunu söyler. Durumu istediğiniz an `GET /api/tenants/schema-status` ile
+görebilirsiniz.
+
+Bu adım tamamlanana kadar mevcut müşteriler **503** alır — kasıtlı; eski şemayla
+çalışmalarına izin vermek veri bozulması riskidir.
+
+> **Sıra neden böyle:** uygulama önce açılmalı ki `migrate` ucu çağrılabilsin.
+> Açılış kiracı şemasına bakmadığı için bu güvenli — uygulama ayakta, müşteriler
+> geçici olarak 503'te, siz adımı çalıştırıp onları geri alıyorsunuz.
+
 Ayrıca prod'da bağlantı dizeleri ve sırlar **ortam değişkeninden** gelmelidir
 (`ConnectionStrings__DefaultConnection`, `ConnectionStrings__PlatformConnection`,
 `Jwt__Secret` vb.); commit'li placeholder'lar prod'da reddedilir. **Tuzak:** yalnız
@@ -145,26 +191,30 @@ Ayrıca prod'da bağlantı dizeleri ve sırlar **ortam değişkeninden** gelmeli
 uygulama verisi senin belirttiğin sunucuya, kiracı kimliği ise `appsettings.Development.json`
 içindeki başka bir sunucuya bağlanır — **hata vermeden**. İkisini birlikte ayarla.
 
-## Yükseltme Notu — Faz 1a (kiracı-başına-veritabanı) sonrası
+## Yerel Kurulumu Sıfırlama
 
-Bu dal kiracı kimliğini (`Tenants`, `TenantDirectoryEntries`) ayrı bir `IKProPlatform`
-veritabanına taşıdı. Eğer makinende bu daldan ÖNCEKİ bir sürümden kalma `IKProDb`
-varsa ve bu dalı çekip uygulamayı açarsan: `IKProPlatform` taze/boş doğar, `IKProDb`
-ise eski demo verisiyle (kullanıcılar dahil) dolu kalır. Seed mantığı bu iki DB'nin
-"ikisi de boş" ya da "ikisi de dolu" olacağını varsayar; aralarında biri boş biri
-doluyken tutarsız durumlara düşebilir (bkz. `AppDbContextInitializer.SeedSecondDemoTenantAsync`
-koruması).
+Kiracı başına veritabanına geçildikten sonra iki veritabanı düşürmek **yetmez**:
+demo kiracıların katalogları (`IKPro_demo`, `IKPro_globex`) yerinde kalırsa
+provizyon onları "katalog zaten var" diye reddeder ve uygulama açılmaz. Bu,
+yarıda kalmış bir kurulumun artığını sessizce yeniden kullanmamak için konulmuş
+bilinçli bir korumadır — hata mesajı da ne yapmanız gerektiğini söyler.
 
-**Doğru prosedür: iki veritabanını da BİRLİKTE düşür.** Gerçek müşteri verisi yok —
-demo veri seed'den yeniden üretiliyor, dolayısıyla veri kaybı riski taşımaz:
+**Hepsini birlikte düşürün.** Gerçek müşteri verisi yok; demo veri seed'den
+yeniden üretilir:
 
 ```sql
-DROP DATABASE IKProDb;
-DROP DATABASE IKProPlatform;
+DECLARE @sql NVARCHAR(MAX) = N'';
+SELECT @sql = @sql +
+    'ALTER DATABASE [' + name + '] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; ' +
+    'DROP DATABASE [' + name + '];'
+FROM sys.databases
+WHERE name IN ('IKProDb', 'IKProPlatform') OR name LIKE 'IKPro[_]%';
+EXEC sp_executesql @sql;
 ```
 
-Ardından uygulamayı Development'ta çalıştır; her iki context de sıfırdan migrate
-edilip seed'lenir.
+Ardından uygulamayı Development'ta çalıştırın; platform migrate edilir, demo
+kiracılar gerçek provizyon yolundan yeniden kurulur (kendi katalogları,
+`Turkish_CI_AS` harmanlamasıyla).
 
 ## Sonraki Adım
 

@@ -48,6 +48,12 @@ public sealed class GlobalExceptionHandler(
                 Title = exception.Message,
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
             },
+            TenantSchemaOutdatedException => new ProblemDetails
+            {
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Title = exception.Message,
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.4"
+            },
             NotFoundException => new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,

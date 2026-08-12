@@ -42,4 +42,12 @@ public sealed class TenantSchemaInitializer(
             }
         }
     }
+
+    public async Task<IReadOnlyList<string>> PendingMigrationsAsync(
+        int tenantId, CancellationToken cancellationToken)
+    {
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+        var context = kapsam.Services.GetRequiredService<AppDbContext>();
+        return (await context.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+    }
 }

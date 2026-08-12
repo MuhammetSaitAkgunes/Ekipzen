@@ -118,6 +118,8 @@ Araya giren bir hata kiracıyı `Provisioning`'de bırakır: erişilemez ama
 | `POST /api/tenants/{id}/rebuild-directory` | Yönlendirme dizini sapmış; kiracının kendi veritabanından yeniden kur |
 | `POST /api/tenants/{id}/freeze` · `/unfreeze` | Bakım/geri yükleme penceresi |
 | `POST /api/tenants/cleanup-unverified` | Provisioning'de takılı, **şifresiz** eski kiracıları topla |
+| `GET /api/tenants/schema-status` | Hangi kiracı hangi migration'ların gerisinde? |
+| `POST /api/tenants/migrate` | Tüm kiracı veritabanlarını migrate et — **dağıtımın son adımı** |
 
 > `resend-invite` neden var: provizyonun 5. adımı e-posta göndermektir. O adım
 > başarısız olduğunda (SMTP arızası, spam, yanlış adres) geriye kullanıcısı oluşmuş

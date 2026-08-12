@@ -48,6 +48,11 @@ public static class DependencyInjection
         // açtığı için (ITenantScopeFactory) durumsuzdur → singleton.
         services.AddSingleton<ITenantSchemaInitializer, Tenancy.TenantSchemaInitializer>();
 
+        // Şema kapısı: kiracının veritabanı uygulamanın gerisindeyse istekleri
+        // reddeder. Önbelleği singleton olmalı — kapsam başına olsaydı her istek
+        // __EFMigrationsHistory'ye giderdi.
+        services.AddSingleton<ITenantSchemaGuard, Tenancy.TenantSchemaGuard>();
+
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
             // Bağlantı KAPSAM BAŞINA çözülür: aktif kiracı neyse ona göre. Kiracının

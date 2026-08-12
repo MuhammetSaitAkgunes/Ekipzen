@@ -17,4 +17,12 @@ namespace IKPro.Application.Common.Interfaces;
 public interface ITenantSchemaInitializer
 {
     Task PrepareAsync(int tenantId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Kiracıya HENÜZ uygulanmamış migration'ların adları; boşsa şema günceldir.
+    ///
+    /// Hem şema kapısı hem operatör raporu bunu kullanır: "geride mi?" ve "neyin
+    /// gerisinde?" aynı kaynaktan cevaplanmalı, yoksa ikisi zamanla ayrışır.
+    /// </summary>
+    Task<IReadOnlyList<string>> PendingMigrationsAsync(int tenantId, CancellationToken cancellationToken);
 }

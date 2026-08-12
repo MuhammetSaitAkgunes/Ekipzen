@@ -19,3 +19,18 @@ public class ConflictException(string message) : Exception(message);
 /// "parolan yanlış" anlamına gelir ve kullanıcıyı yanlış yönlendirir.
 /// </summary>
 public class TenantInaccessibleException(string message) : Exception(message);
+
+/// <summary>
+/// Kiracının veritabanı şeması, uygulamanın beklediğinin GERİSİNDE (503).
+///
+/// 403 DEĞİL: kimlik ve yetki doğru, kiracı da kapalı değil — eksik olan
+/// dağıtımın bir adımı. 503 "şu anda değil, birazdan" der ve istemciye yeniden
+/// denemesi gerektiğini söyler; 403 ise "senin hakkın yok" diyerek kullanıcıyı
+/// yanlış yönlendirirdi.
+///
+/// <b>Neden istek reddediliyor da eski şemayla çalışılmıyor:</b> uygulama kodu
+/// artık var olmayan sütunları sorguluyor. En iyi ihtimalle her istek anlaşılmaz
+/// bir SQL hatasıyla düşer; daha kötüsü, kısmen çalışan bir yazma yolu veriyi
+/// tutarsız bırakır. Açıkça reddetmek, sessizce bozmaktan iyidir.
+/// </summary>
+public class TenantSchemaOutdatedException(string message) : Exception(message);

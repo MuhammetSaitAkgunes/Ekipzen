@@ -294,13 +294,53 @@ Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki 
 
 ## Faz sonu doğrulama
 
-- [ ] Yeni müşteri açıldığında kendi veritabanı oluşuyor, harmanlaması `Turkish_CI_AS`
-- [ ] İki demo kiracı ayrı veritabanlarında; birinde oluşturulan veri diğerinde görünmüyor
-- [ ] Login, refresh, dondurma/çözme, davet kabulü, işe alım çalışıyor
-- [ ] Purge veritabanını düşürüyor; diğer kiracıya dokunmuyor
-- [ ] Yarıda kalan provizyon `Provisioning`'de görünür kalıyor ve erişilemiyor
-- [ ] Migration koşucusu tüm kiracıları güncelliyor, başarısızlığı raporluyor
-- [ ] Açılış kiracı veritabanlarını migrate etmiyor; geride kalanı 503 ile bildiriyor
-- [ ] Backend + frontend suite'leri yeşil, derleme uyarısız, CI yeşil
+- [x] Yeni müşteri açıldığında kendi veritabanı oluşuyor, harmanlaması `Turkish_CI_AS` — `ProvizyonVeritabaniKurarTests` + elle `sys.databases` kontrolü
+- [x] İki demo kiracı ayrı veritabanlarında; birinde oluşturulan veri diğerinde görünmüyor — elle doğrulandı (Görev 5), `ProvizyonVeritabaniKurarTests`
+- [x] Login, refresh, dondurma/çözme, davet kabulü, işe alım çalışıyor — mevcut suite
+- [x] Purge veritabanını düşürüyor; diğer kiracıya dokunmuyor — `TenantPurgeTests`
+- [x] Yarıda kalan provizyon `Provisioning`'de görünür kalıyor ve erişilemiyor — `PlatformKatmaniTests`, `KiraciDurumMakinesiTests`
+- [x] Migration koşucusu tüm kiracıları güncelliyor, başarısızlığı raporluyor — `POST /api/tenants/migrate`, `SemaKapisiTests`
+- [x] Açılış kiracı veritabanlarını migrate etmiyor; geride kalanı 503 ile bildiriyor — `TenantSchemaCheckService` + `ITenantSchemaGuard`, `SemaKapisiTests`
+- [x] Backend + frontend suite'leri yeşil, derleme uyarısız
 
-**Sonraki:** Faz 3 — yedekleme ve kurtarma. `RESTORE … STOPAT` bu fazdan sonra gerçek olur.
+---
+
+## Uygulama sonucu
+
+**Faz 2b tamamlandı (2026-08-13).** Her müşterinin verisi kendi veritabanında;
+tek bir müşteri, diğerlerine dokunulmadan geri yüklenebilir hale geldi.
+
+### Planla sapmalar ve gerekçeleri
+
+| Nerede | Plan | Yapılan | Neden |
+| --- | --- | --- | --- |
+| Görev 0 | signup 404 dönmeli | 405 dönüyor; test kodu değil sonucu sabitliyor | Kodu çakmak sözleşmeyi değil ASP.NET yönlendiricisini test etmek olurdu |
+| Görev 1(b) | "yalnız tamamlanmış kiracı etkinleşsin" | Etkinleştirme tamamen kaldırıldı | Görev 0'dan sonra meşru tetikleyicisi kalmadı; geriye yalnız zararı kalırdı |
+| Görev 2 | `ClearAllPools()` | Yalnız hedef kataloğun havuzu | Süreçteki her veritabanının havuzunu boşaltmak, bir silme yüzünden tüm müşterilere gecikme bindirirdi |
+| Görev 3 | — | Kütüğe **senkron** `GetDatabaseName` | `ResolveFor`, `AddDbContext` geri çağrısından çağrılıyor; async'e çevrilemez, sync-over-async da istenmedi |
+| Görev 4 | Davet ayrı adım | Ayrılmadı; yerine `resend-invite` ucu | Plandaki sıra riski azaltmıyordu; asıl eksik operatörün kurtarma aracıydı |
+| Görev 4 | — | `ITenantSchemaInitializer` (migration + **rol**) | Boş katalogda rol yoksa `AddToRoleAsync` sessizce düşer, admin yetkisiz kalır |
+| Görev 5 | — | `ITenantDatabaseNamer` (yapılandırılabilir önek) | Demo slug'ları sabit; testler geliştiricinin `IKPro_demo`'sunu silecekti |
+| Görev 6 | Dosyalar en sonda | Dosyalar ÖNCE | `DROP DATABASE` geri alınamaz; eski gerekçe (rollback) düştü, KVKK riski belirleyici oldu |
+
+### Yol boyunca bulunan gerçek hatalar
+
+1. **`cleanup-unverified` koruması sessizce kalkmıştı** — "şifre belirlemiş
+   kiracıyı silme" kontrolü ambient bağlantıdan okuyordu; ayrılmadan sonra o
+   bağlantı boş paylaşılan veritabanına bakıyor ve "kimsenin şifresi yok" diyordu.
+   Korunması gereken kiracılar silinirdi. Koruma hiç test edilmemişti.
+2. **Yedekleme script'leri boş bir veritabanını yedekliyor** — hâlâ açık,
+   üretim öncesi kritik (aşağıda).
+
+### Kapatılmayan, bilinen açıklar
+
+- ⚠️ **Yedekleme kiracı kataloglarını kapsamıyor.** `scripts/backup-restore-drill.ps1`
+  ve `register-backup-task.ps1` tek bir `-Database IKProDb` alıyor; o katalog artık
+  boş. Script'ler `IKPro[_]%` desenini keşfedip her kiracı için ayrı yedek almalı.
+  **Faz 3'ün ilk maddesi budur.**
+- `POST /api/tenants/migrate` bir HTTP ucu; ayrı bir CLI komutu yok. Dağıtım
+  script'i `curl -f` ile aynı sonucu alıyor, ama uygulama açılmadan migration
+  çalıştırılamıyor (sıra: aç → migrate → müşteriler 503'ten çıkar).
+
+**Sonraki:** Faz 3 — yedekleme ve kurtarma. `RESTORE … STOPAT` prosedürü
+`docs/yedekleme-ve-kurtarma.md`'ye yazıldı ama **tatbikatı yapılmadı**.

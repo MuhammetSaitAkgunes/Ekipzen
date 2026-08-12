@@ -4433,6 +4433,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenants/migrate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description TÜM kiracı veritabanlarını migrate eder — <b>dağıtımın bir adımıdır</b>.
+         *     Açılış bunu yapmaz: açılış süresi müşteri sayısıyla büyümemeli ve tek bir
+         *     kiracının arızası tüm uygulamayı offline yapmamalıdır.
+         *
+         *     Bir kiracı patlarsa diğerleri denenmeye DEVAM eder, ama uç <b>500</b> döner —
+         *     dağıtım script'i (`curl -f`) böylece başarısızlığı yakalar. Gövde her
+         *     durumda kiracı kiracı sonucu taşır.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MigrateTenantsResult"];
+                        "application/json": components["schemas"]["MigrateTenantsResult"];
+                        "text/json": components["schemas"]["MigrateTenantsResult"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MigrateTenantsResult"];
+                        "application/json": components["schemas"]["MigrateTenantsResult"];
+                        "text/json": components["schemas"]["MigrateTenantsResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/schema-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Her kiracının şema durumu: güncel mi, değilse hangi migration'ların
+         *     gerisinde. "Dağıtım tamamlandı mı?" sorusunun cevabı burasıdır.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSchemaStatusDto"][];
+                        "application/json": components["schemas"]["TenantSchemaStatusDto"][];
+                        "text/json": components["schemas"]["TenantSchemaStatusDto"][];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/stuck": {
         parameters: {
             query?: never;
@@ -5163,6 +5283,15 @@ export interface components {
             /** Format: int32 */
             load?: number;
         };
+        MigrateTenantsResult: {
+            /** Format: int32 */
+            toplam?: number;
+            /** Format: int32 */
+            basarili?: number;
+            /** Format: int32 */
+            basarisiz?: number;
+            sonuclar?: components["schemas"]["TenantMigrationOutcome"][] | null;
+        };
         MyPayslipDto: {
             /** Format: int32 */
             periodId?: number;
@@ -5627,6 +5756,24 @@ export interface components {
             startDate?: string;
             /** Format: date */
             endDate?: string;
+        };
+        TenantMigrationOutcome: {
+            /** Format: int32 */
+            tenantId?: number;
+            slug?: string | null;
+            basarili?: boolean;
+            /** Format: int32 */
+            uygulananMigrationSayisi?: number;
+            hata?: string | null;
+        };
+        TenantSchemaStatusDto: {
+            /** Format: int32 */
+            tenantId?: number;
+            slug?: string | null;
+            databaseName?: string | null;
+            guncel?: boolean;
+            bekleyenMigrationlar?: string[] | null;
+            hata?: string | null;
         };
         /**
          * Format: int32

@@ -138,6 +138,11 @@ try
         builder.Configuration.GetSection(UnverifiedTenantCleanupOptions.SectionName));
     builder.Services.AddHostedService<UnverifiedTenantCleanupService>();
 
+    // Açılışta kiracı şemalarını KONTROL eder (migrate etmez) ve geride kalanı
+    // yüksek sesle loglar. Migration ayrı bir dağıtım adımıdır:
+    // POST /api/tenants/migrate. Bkz. TenantSchemaCheckService xmldoc.
+    builder.Services.AddHostedService<TenantSchemaCheckService>();
+
     // CORS — allow the local frontend origin during development.
     const string frontendCors = "frontend";
     builder.Services.AddCors(options => options.AddPolicy(frontendCors, policy =>

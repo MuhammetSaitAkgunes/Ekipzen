@@ -157,6 +157,51 @@ public sealed class TenancyController(ISender sender, IConfiguration configurati
     /// <summary>Davet yeniden gönderme isteği gövdesi.</summary>
     public sealed record ResendInviteRequest(string Email);
 
+    /// <remarks>
+    /// TÜM kiracı veritabanlarını migrate eder — <b>dağıtımın bir adımıdır</b>.
+    /// Açılış bunu yapmaz: açılış süresi müşteri sayısıyla büyümemeli ve tek bir
+    /// kiracının arızası tüm uygulamayı offline yapmamalıdır.
+    ///
+    /// Bir kiracı patlarsa diğerleri denenmeye DEVAM eder, ama uç <b>500</b> döner —
+    /// dağıtım script'i (<c>curl -f</c>) böylece başarısızlığı yakalar. Gövde her
+    /// durumda kiracı kiracı sonucu taşır.
+    /// </remarks>
+    [HttpPost("migrate")]
+    [ProducesResponseType<MigrateTenantsResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType<MigrateTenantsResult>(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<MigrateTenantsResult>> Migrate(CancellationToken cancellationToken)
+    {
+        if (!PlatformKeyValid())
+        {
+            return Unauthorized(new { title = "Platform anahtarı geçersiz veya eksik." });
+        }
+
+        var sonuc = await sender.Send(new MigrateTenantsCommand(), cancellationToken);
+
+        return sonuc.Basarisiz > 0
+            ? StatusCode(StatusCodes.Status500InternalServerError, sonuc)
+            : Ok(sonuc);
+    }
+
+    /// <remarks>
+    /// Her kiracının şema durumu: güncel mi, değilse hangi migration'ların
+    /// gerisinde. "Dağıtım tamamlandı mı?" sorusunun cevabı burasıdır.
+    /// </remarks>
+    [HttpGet("schema-status")]
+    [ProducesResponseType<IReadOnlyList<TenantSchemaStatusDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<TenantSchemaStatusDto>>> SchemaStatus(
+        CancellationToken cancellationToken)
+    {
+        if (!PlatformKeyValid())
+        {
+            return Unauthorized(new { title = "Platform anahtarı geçersiz veya eksik." });
+        }
+
+        return Ok(await sender.Send(new GetSchemaStatusQuery(), cancellationToken));
+    }
+
     /// <remarks>Provizyonu/silmesi yarıda kalmış kiracılar (operatör görünürlüğü).</remarks>
     [HttpGet("stuck")]
     [ProducesResponseType<IReadOnlyList<StuckTenantDto>>(StatusCodes.Status200OK)]
