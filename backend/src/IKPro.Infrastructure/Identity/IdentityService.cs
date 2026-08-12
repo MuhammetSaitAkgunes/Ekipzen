@@ -5,7 +5,6 @@ using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Features.Auth;
 using IKPro.Domain.Constants;
 using IKPro.Domain.Entities.Tenancy;
-using IKPro.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +24,6 @@ public sealed class IdentityService(
     ICurrentTenant currentTenant,
     IEmailSender emailSender,
     IConfiguration configuration,
-    AppDbContext context,
     IPlatformDbContext platform,
     ITenantDirectory directory,
     ITenantRegistry registry,
@@ -225,25 +223,44 @@ public sealed class IdentityService(
 
     public async Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        // FAZ 2 NOTU: `context` burada da (LoginAsync'teki `userManager` gibi) constructor'da
-        // enjekte edilen AMBIENT AppDbContext'tir — refresh token'ın hangi kiracıya ait
-        // olduğu bu sorgudan ÖNCE bilinmez, tıpkı login'de e-postanın kiracısının dizin
-        // sorgusundan önce bilinmemesi gibi. Bugün doğru sonuç verir (Faz 1b'de tek DB) ve
-        // ayrıca bu uç HTTP isteğiyle çağrıldığından `ICurrentTenant` zaten geçerli bir JWT
-        // `tenant` claim'inden dolar — ama bu, `context`'in doğru kiracıya kasıtlı olarak
-        // SABİTLENDİĞİ anlamına gelmez, sadece HTTP kapsamının o anki değeriyle çakıştığı
-        // anlamına gelir. Faz 2'de kiracı başına veritabanına geçilince: token hash'i
-        // yalnızca refresh token'ın SAHİBİ olduğu kiracının veritabanında bulunabilir,
-        // dolayısıyla bu sorgu da LoginAsync gibi iki aşamalı çözülmeli — ya token'ın
-        // kiracısı platform/dizin katmanından ÖNCE belirlenip `ITenantScopeFactory` ile
-        // taze bir kapsamdan çözülmeli, ya da bu uç için ambient context'in JWT claim'inden
-        // GERÇEKTEN doğru kiracıya sabitlendiği açıkça garanti altına alınmalı.
+        // Refresh token PLATFORM veritabanındadır (bkz. RefreshToken.cs xmldoc): elinde
+        // yalnız token dizesi olan sunucu, kiracı DB'leri ayrıldığında hangi katalogda
+        // arayacağını başka türlü bilemez. Satır bulunduktan SONRA TenantId yönlendirmeyi
+        // verir — tıpkı login'de e-postanın kiracısının dizin sorgusundan önce
+        // bilinmemesi gibi, burada da kiracı token'ı bulmadan önce bilinmez.
+        //
+        // FAZ 2 NOTU (bu görev — Faz 2a/Görev 1 — burayı ÇÖZMEZ): kullanıcı aşağıda hâlâ
+        // AMBIENT `userManager` (constructor'da enjekte edilen, HTTP kapsamının
+        // AppDbContext'ine bağlı) ile çözülür. Faz 1b/2a'da tüm kiracılar aynı uygulama
+        // veritabanını paylaştığından doğru sonuç verir. Kiracı başına veritabanına
+        // geçilince (Faz 2b) bu satır YANLIŞ kiracının veritabanında arar (stored.TenantId
+        // yerine ambient/JWT kiracısını kullanır) — o zaman LoginAsync ile aynı desene
+        // (bkz. oradaki not): `ITenantScopeFactory.Create(stored.TenantId)` ile taze bir
+        // kapsam açıp kullanıcıyı ORADAN çözmek gerekir. Bu görevin kapsamı yalnız
+        // token'ın DEPOLANDIĞI veritabanını değiştirmektir; kullanıcı çözümünün kiracı
+        // kapsamına taşınması sonraki göreve bırakılmıştır.
         var hash = JwtTokenService.Hash(refreshToken);
-        var stored = await context.RefreshTokens
-            .Include(t => t.User)
+        var stored = await platform.RefreshTokens
             .FirstOrDefaultAsync(t => t.Token == hash, cancellationToken);
 
-        if (stored is null || !stored.IsActive || stored.User is null || !stored.User.IsActive)
+        if (stored is null || !stored.IsActive)
+        {
+            throw new UnauthorizedException("Geçersiz veya süresi dolmuş yenileme token'ı.");
+        }
+
+        var user = await userManager.FindByIdAsync(stored.UserId);
+        if (user is null)
+        {
+            // Token platformda var ama kullanıcı kiracı veritabanında yok — ör. kiracı
+            // geri yükleme (restore) sonrası ya da veri bütünlüğü bozulmuşsa mümkündür.
+            // Sessizce yutulmaz: bu bir anomalidir, loglanır.
+            logger.LogWarning(
+                "Refresh token platformda bulundu ama kullanıcı yok: UserId={UserId}, TenantId={TenantId}",
+                stored.UserId, stored.TenantId);
+            throw new UnauthorizedException("Geçersiz veya süresi dolmuş yenileme token'ı.");
+        }
+
+        if (!user.IsActive)
         {
             throw new UnauthorizedException("Geçersiz veya süresi dolmuş yenileme token'ı.");
         }
@@ -251,20 +268,20 @@ public sealed class IdentityService(
         // Rotasyon: eski token tek kullanımlıktır.
         stored.RevokedAtUtc = DateTime.UtcNow;
 
-        return await IssueTokensAsync(stored.User, cancellationToken);
+        return await IssueTokensAsync(user, cancellationToken);
     }
 
     public async Task LogoutAsync(string refreshToken, CancellationToken cancellationToken)
     {
         var hash = JwtTokenService.Hash(refreshToken);
-        var stored = await context.RefreshTokens
+        var stored = await platform.RefreshTokens
             .FirstOrDefaultAsync(t => t.Token == hash, cancellationToken);
 
         // Idempotent: token bulunamazsa sessizce başarı (zaten çıkış yapılmış).
         if (stored is not null && stored.RevokedAtUtc is null)
         {
             stored.RevokedAtUtc = DateTime.UtcNow;
-            await context.SaveChangesAsync(cancellationToken);
+            await platform.SaveChangesAsync(cancellationToken);
         }
     }
 
@@ -316,8 +333,10 @@ public sealed class IdentityService(
         var (rawRefreshToken, refreshEntity) = tokenService.CreateRefreshToken(user.Id);
         refreshEntity.TenantId = user.TenantId;
 
-        context.RefreshTokens.Add(refreshEntity);
-        await context.SaveChangesAsync(cancellationToken);
+        // Platform veritabanına yazılır (bkz. RefreshToken.cs xmldoc) — uygulama
+        // veritabanına DEĞİL.
+        platform.RefreshTokens.Add(refreshEntity);
+        await platform.SaveChangesAsync(cancellationToken);
 
         var tenantName = await TenantNameAsync(user.TenantId, cancellationToken);
         return new AuthResponse(accessToken, rawRefreshToken, expiresAtUtc, ToUserDto(user, roles, tenantName));

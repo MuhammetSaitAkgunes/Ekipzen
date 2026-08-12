@@ -1,4 +1,5 @@
 using IKPro.Application.Common.Interfaces;
+using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,13 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
 
     public DbSet<TenantDirectoryEntry> Directory => Set<TenantDirectoryEntry>();
 
+    /// <summary>
+    /// Refresh token'lar burada, kiracı İK verisinin yanında (AppDbContext) DEĞİL:
+    /// elinde yalnız token dizesi olan sunucu, kiracı DB'leri ayrıldığında hangi
+    /// katalogda arayacağını başka türlü bilemez. Satırdaki TenantId yönlendirmeyi verir.
+    /// </summary>
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -38,6 +46,20 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
             b.HasKey(d => d.NormalizedEmail);
             b.Property(d => d.NormalizedEmail).HasMaxLength(256);
             b.HasIndex(d => d.TenantId);
+        });
+
+        builder.Entity<RefreshToken>(b =>
+        {
+            // Token sütununda ham değer değil SHA-256 hash saklanır (Base64, 44 karakter).
+            b.Property(t => t.Token).IsRequired().HasMaxLength(256);
+            b.Property(t => t.UserId).IsRequired().HasMaxLength(450);
+            b.Ignore(t => t.IsActive);
+
+            b.HasIndex(t => t.Token).IsUnique();
+
+            // Kullanıcıya FK YOK: kullanıcı kiracı veritabanında. Kiracı bazlı
+            // silme ve yönlendirme TenantId üzerinden yapılır.
+            b.HasIndex(t => t.TenantId);
         });
     }
 }

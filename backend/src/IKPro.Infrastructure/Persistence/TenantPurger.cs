@@ -55,7 +55,6 @@ public sealed class TenantPurger(
         var tables = TenantScopedTablesInDeleteOrder(purgeContext);
 
         // Tablo adları metadata'dan çözülür (Identity tabloları yeniden adlandırılmış: Users/UserRoles…).
-        var refreshTokenTable = QualifiedTableName(purgeContext, typeof(RefreshToken));
         var userTable = QualifiedTableName(purgeContext, typeof(ApplicationUser));
 
         await using var tx = await purgeContext.Database.BeginTransactionAsync(cancellationToken);
@@ -72,24 +71,32 @@ public sealed class TenantPurger(
                 $"DELETE FROM {table} WHERE [TenantId] = {{0}}", new object[] { tenantId }, cancellationToken);
         }
 
-        // 2) Kimlik: refresh token'lar, sonra kullanıcılar (UserRoles/UserClaims cascade).
-        await purgeContext.Database.ExecuteSqlRawAsync(
-            $"DELETE FROM {refreshTokenTable} WHERE [TenantId] = {{0}}", new object[] { tenantId }, cancellationToken);
+        // 2) Kimlik: kullanıcılar (UserRoles/UserClaims cascade). Refresh token'lar
+        // BURADA SİLİNMEZ — platform veritabanındadır (uygulama transaction'ının
+        // dışında), aşağıda ayrı silinir (bkz. adım 3).
         await purgeContext.Database.ExecuteSqlRawAsync(
             $"DELETE FROM {userTable} WHERE [TenantId] = {{0}}", new object[] { tenantId }, cancellationToken);
 #pragma warning restore EF1002
 
         await tx.CommitAsync(cancellationToken);
 
-        // 3) Kiracı satırı ve dizin kayıtları platform veritabanındadır — uygulama
-        // transaction'ı onları kapsamaz. Bu yüzden ayrı silinir. Dizin satırları
+        // 3) Kiracı satırı, dizin kayıtları VE refresh token'lar platform veritabanındadır
+        // — uygulama transaction'ı onları kapsamaz. Bu yüzden ayrı silinir. Dizin satırları
         // silinmezse e-posta KALICI KİLİTLENİR: purge sonrası Identity'de kullanıcı
         // kalmadığından EmailExistsAsync false döner ama dizinin birincil anahtarı hâlâ
         // eski kiracıyı gösterir → aynı e-postayla yeniden kayıt/provizyon denemesi
         // rezervasyonda 409'a çarpar ve asla açılamaz. Buradan önce patlarsa kiracı
-        // satırı/dizin kalır ama uygulama verisi gitmiştir; durum Purging'de kaldığı
+        // satırı/dizin/token kalır ama uygulama verisi gitmiştir; durum Purging'de kaldığı
         // için kiracı erişilemez olarak durur (bkz. Task 6) ve operatör yeniden
         // çalıştırabilir (dizin silme de idempotenttir — kayıt yoksa no-op).
+        //
+        // Refresh token'lar kalıcı kalırsa gerçek bir zarar yoktur (kullanıcı zaten
+        // silindi, token'lar RefreshAsync'te kullanıcı bulunamayınca reddedilir) ama
+        // KVKK açısından PII artığı sayılır — bu yüzden purge onları da temizler.
+        await platform.RefreshTokens
+            .Where(t => t.TenantId == tenantId)
+            .ExecuteDeleteAsync(cancellationToken);
+
         await directory.RemoveForTenantAsync(tenantId, cancellationToken);
 
         // tenantRow üstte, Purging'e geçirilirken zaten çekildi ve DbContext'te

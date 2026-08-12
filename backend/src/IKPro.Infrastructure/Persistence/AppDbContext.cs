@@ -79,8 +79,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<NotificationSettings> NotificationSettings => Set<NotificationSettings>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
-    // Identity extras
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    // RefreshTokens BURADA DEĞİL: platform veritabanına taşındı (bkz.
+    // PlatformDbContext.RefreshTokens / RefreshToken.cs xmldoc) — hangi kiracı
+    // DB'sine bakılacağı token dizesinden başka türlü bilinemez.
 
     // Okuma modelleri (SQL view)
     public DbSet<Domain.ReadModels.LeaveBalanceSummary> LeaveBalanceSummaries
@@ -127,9 +128,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
         // Multi-tenant global query filter: kiracı-kapsamlı (ITenantScoped) HER tip —
         // kalıcı varlıklar VE SQL view read-model'leri — aktif kiracıya otomatik izole
         // edilir. Reflection ile uygulanır ki yeni bir tip eklendiğinde filtreyi eklemeyi
-        // UNUTMAK imkânsız olsun (sızıntı önlemi). Not: Identity varlıkları
-        // (ApplicationUser/RefreshToken) ITenantScoped DEĞİL — login e-posta araması
-        // kiracı-üstüdür, onlar elle kapsamlanır.
+        // UNUTMAK imkânsız olsun (sızıntı önlemi). Not: ApplicationUser ITenantScoped
+        // DEĞİL — login e-posta araması kiracı-üstüdür, elle kapsamlanır. RefreshToken
+        // artık bu context'te bile değil (platform veritabanında).
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
             if (!typeof(ITenantScoped).IsAssignableFrom(entityType.ClrType))
@@ -158,11 +159,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
             }
         }
 
-        // Identity varlıkları ITenantScoped DEĞİL (login e-posta araması kiracı-üstüdür),
-        // bu yüzden yukarıdaki reflection döngüsüne girmezler. Ama TenantId taşır ve
-        // kiracı bazında sorgulanırlar (kullanıcı listesi, purge) — indeksleri elle eklenir.
+        // ApplicationUser ITenantScoped DEĞİL (login e-posta araması kiracı-üstüdür),
+        // bu yüzden yukarıdaki reflection döngüsüne girmez. Ama TenantId taşır ve
+        // kiracı bazında sorgulanır (kullanıcı listesi, purge) — indeksi elle eklenir.
+        // RefreshToken burada YOK — platform veritabanında, indeksi orada tanımlanır.
         builder.Entity<ApplicationUser>().HasIndex(u => u.TenantId);
-        builder.Entity<RefreshToken>().HasIndex(r => r.TenantId);
 
         // Kısa Identity tablo adları.
         builder.Entity<ApplicationUser>().ToTable("Users");
