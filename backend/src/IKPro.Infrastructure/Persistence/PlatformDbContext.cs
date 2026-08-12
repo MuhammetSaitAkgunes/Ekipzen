@@ -39,6 +39,12 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
 
             // Okunabilirlik: durum veritabanında metin olarak durur (AppDbContext ile aynı kural).
             b.Property(t => t.Status).HasConversion<string>().HasMaxLength(32);
+
+            // SQL Server tanımlayıcı sınırı 128. Kasıtlı olarak NULLABLE ve
+            // TEKİL DEĞİL: henüz ayrılmamış kiracılarda boştur ve birden çok
+            // boş satır olacaktır (SQL Server'da unique index NULL'ları tek
+            // sayardı — kiracıların çoğu boşken ikinci kiracı eklenemezdi).
+            b.Property(t => t.DatabaseName).HasMaxLength(128);
         });
 
         builder.Entity<TenantDirectoryEntry>(b =>

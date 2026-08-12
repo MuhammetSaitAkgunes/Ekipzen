@@ -43,6 +43,7 @@ public class EmailExistsAsyncTests
     {
         public Task<TenantStatus?> GetStatusAsync(int tenantId, CancellationToken cancellationToken)
             => Task.FromResult<TenantStatus?>(null);
+        public string? GetDatabaseName(int tenantId) => null;
         public void Invalidate(int tenantId) { }
     }
 

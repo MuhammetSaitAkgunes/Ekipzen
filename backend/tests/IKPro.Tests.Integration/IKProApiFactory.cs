@@ -40,7 +40,8 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
             InitialCatalog = database,
         }.ConnectionString;
 
-    private static readonly string TestConnectionString = ConnectionFor(TestDatabaseName);
+    /// <summary>Testlerin de kullanabilmesi için açık: kiracı katalogları aynı sunucuda doğar.</summary>
+    internal static readonly string TestConnectionString = ConnectionFor(TestDatabaseName);
     private static readonly string PlatformTestConnectionString = ConnectionFor(PlatformTestDatabaseName);
 
     public IKProApiFactory()

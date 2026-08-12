@@ -18,26 +18,66 @@ public sealed class TenantRegistry(IServiceScopeFactory scopeFactory, IMemoryCac
     // Bir yol Invalidate çağırmayı unutursa değişiklik en geç bu süre içinde görünür.
     private static readonly TimeSpan Omur = TimeSpan.FromMinutes(5);
 
-    private static string Anahtar(int tenantId) => $"kiraci-durum-{tenantId}";
+    /// <summary>
+    /// Durum ve katalog adı TEK kayıtta önbelleklenir: ikisi de aynı satırdan
+    /// geliyor, ayrı ayrı önbelleklemek aynı satırı iki kez okumak olurdu.
+    /// </summary>
+    private sealed record Kayit(TenantStatus Status, string? DatabaseName);
+
+    private static string Anahtar(int tenantId) => $"kiraci-{tenantId}";
 
     public async Task<TenantStatus?> GetStatusAsync(int tenantId, CancellationToken cancellationToken)
     {
-        if (cache.TryGetValue(Anahtar(tenantId), out TenantStatus? onbellekli))
+        if (Onbellekte(tenantId, out var onbellekli))
         {
-            return onbellekli;
+            return onbellekli?.Status;
         }
 
+        var kayit = await OkuAsync(tenantId, cancellationToken);
+        cache.Set(Anahtar(tenantId), kayit, Omur);
+        return kayit?.Status;
+    }
+
+    public string? GetDatabaseName(int tenantId)
+    {
+        if (Onbellekte(tenantId, out var onbellekli))
+        {
+            return onbellekli?.DatabaseName;
+        }
+
+        // SENKRON sorgu — bilinçli. Çağıran (bağlantı çözücü) AddDbContext
+        // yapılandırma geri çağrısının içinden çalışır ve orası async'e
+        // çevrilemez. Sync-over-async (.Result / .GetAwaiter().GetResult())
+        // bir thread'i bloke ederdi; burada bloke edilen thread zaten
+        // senkron olarak bekliyor, üstelik bu yol yalnız önbellek ıskasında
+        // (kiracı başına ~5 dakikada bir) çalışıyor.
         using var scope = scopeFactory.CreateScope();
         var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
-
-        var durum = await platform.Tenants
+        var kayit = platform.Tenants
             .Where(t => t.Id == tenantId)
-            .Select(t => (TenantStatus?)t.Status)
-            .FirstOrDefaultAsync(cancellationToken);
+            .Select(t => new Kayit(t.Status, t.DatabaseName))
+            .FirstOrDefault();
 
-        cache.Set(Anahtar(tenantId), durum, Omur);
-        return durum;
+        cache.Set(Anahtar(tenantId), kayit, Omur);
+        return kayit?.DatabaseName;
     }
 
     public void Invalidate(int tenantId) => cache.Remove(Anahtar(tenantId));
+
+    // "Kiracı yok" da önbelleklenebilir bir cevaptır (kayıt null olarak saklanır).
+    // Bu yüzden "önbellekte kayıt VAR MI" ile "kaydın değeri null MI" ayrımı
+    // korunur — karıştırılsaydı var olmayan bir kiracı her sorguda veritabanına
+    // giderdi ve geçersiz bir kimlikle yapılan istek ucuz bir DoS yüzeyi olurdu.
+    private bool Onbellekte(int tenantId, out Kayit? kayit) =>
+        cache.TryGetValue(Anahtar(tenantId), out kayit);
+
+    private async Task<Kayit?> OkuAsync(int tenantId, CancellationToken cancellationToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+        return await platform.Tenants
+            .Where(t => t.Id == tenantId)
+            .Select(t => new Kayit(t.Status, t.DatabaseName))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

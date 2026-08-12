@@ -20,5 +20,23 @@ public class Tenant
     /// </summary>
     public TenantStatus Status { get; set; } = TenantStatus.Provisioning;
 
+    /// <summary>
+    /// Kiracının kendi veritabanının katalog adı, ör. "IKPro_acme".
+    ///
+    /// <b>BOŞ OLABİLİR</b> ve bu bir hata değildir: henüz ayrılmamış (paylaşılan
+    /// veritabanında duran) kiracılarda boştur ve bağlantı çözücü onları paylaşılan
+    /// dizeye yönlendirir. Böylece ayrılma kiracı kiracı, tek seferde değil
+    /// kademeli yapılabilir.
+    ///
+    /// Provizyonda BİR KEZ üretilir ve bir daha DEĞİŞMEZ. Değişmezliği önemli:
+    /// kütük bu adı önbellekliyor ve yedekleme/geri yükleme prosedürleri kiracıyı
+    /// bu adla buluyor — sonradan değişmesi, adı bilen her yeri sessizce yanıltırdı.
+    ///
+    /// Ad SQL'e enterpole edilir (CREATE/DROP DATABASE parametreleştirilemez), bu
+    /// yüzden yalnız <c>[A-Za-z0-9_]</c> karakterleri kabul edilir — doğrulama
+    /// <c>ITenantDatabaseProvisioner</c> içindedir ve tek savunmadır.
+    /// </summary>
+    public string? DatabaseName { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 }

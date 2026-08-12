@@ -39,6 +39,10 @@ public static class DependencyInjection
         // ICurrentTenant.Impersonate çağırıp sıraya güvenmek yerine (bkz. arayüz dokümanı).
         services.AddSingleton<ITenantScopeFactory, Tenancy.TenantScopeFactory>();
 
+        // Kiracı veritabanını fiziksel olarak kuran/düşüren yetenek. Durumsuzdur
+        // (her çağrı kendi bağlantısını açar), bu yüzden singleton.
+        services.AddSingleton<ITenantDatabaseProvisioner, Tenancy.SqlServerTenantDatabaseProvisioner>();
+
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
             // Bağlantı KAPSAM BAŞINA çözülür: aktif kiracı neyse ona göre.

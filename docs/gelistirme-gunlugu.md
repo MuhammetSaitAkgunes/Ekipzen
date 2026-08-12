@@ -8,10 +8,11 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0 (self-servis kaydın kaldırılması) ve Görev 1 (devralınan mayınların
-  temizliği) bitti; sırada Görev 2 (`Tenants.DatabaseName` + veritabanı
-  sağlayıcı) var. Faz 3'e (yedekleme/geri yükleme) geçmeden önce kullanıcıyla
-  konuşulacak.
+  Görev 0–3 bitti (self-servis kaydın kaldırılması, devralınan mayınlar,
+  `DatabaseName` + veritabanı sağlayıcı, çözücünün katalog üretmesi). **Sırada
+  Görev 4 var ve ondan önce kullanıcıyla konuşulacak** — orası ilk kez GERÇEK
+  `CREATE DATABASE` çalıştıran ve geri dönüşü zorlaşan nokta. Faz 3'e
+  (yedekleme/geri yükleme) geçmeden de ayrıca konuşulacak.
 - **Kayıt (signup) politikası — kalıcı karar:** Uygulamada **hiçbir** self-servis
   kayıt ucu yok. Yeni şirket yalnız operatör tarafından `POST /api/tenants`
   (`X-Platform-Key`) ile açılır; katılımın tek yolu davettir. Gerekçe:
@@ -110,6 +111,60 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-12 — Faz 2b / Görev 2+3: katalog tesisatı (davranış değişmedi)
+
+İkisi de bilinçli olarak "ölü" görevler: üretilen yetenekleri henüz kimse
+çağırmıyor, tüm `DatabaseName` alanları boş, dolayısıyla uygulama davranışı
+hiç değişmedi. Amaç, Görev 4'te bir hata çıktığında "tesisat mı, provizyon akışı
+mı" sorusunu ortadan kaldırmak.
+
+**Görev 2 — `DatabaseName` + veritabanı sağlayıcı**
+
+- `Tenants.DatabaseName` (`nvarchar(128)`, **nullable**) + platform migration'ı
+  `TenantDatabaseName`. Boş olması hata değil, geçişin tasarımı: boş ad
+  "paylaşılan veritabanında" demek, böylece ayrılma kiracı kiracı yapılabiliyor.
+  **Tekil indeks YOK** — SQL Server'da unique index NULL'ları tek değer sayar,
+  kiracıların çoğu boşken ikinci kiracı eklenemezdi.
+- `ITenantDatabaseProvisioner` + `SqlServerTenantDatabaseProvisioner`:
+  `ExistsAsync` / `CreateAsync` / `DropAsync`. Bağlantı, paylaşılan dizeden
+  katalog `master` yapılarak türetilir — kiracı DB'leri aynı sunucuda doğduğu
+  için ayrı bir bağlantı ayarı iki yerde tutulan ve zamanla ayrışan bir gerçek
+  yaratırdı.
+- **Ad doğrulaması tek savunmadır:** `CREATE/DROP DATABASE` parametre kabul
+  etmez, ad SQL metnine gömülmek zorunda; ad ise slug'dan türetiliyor ve slug
+  istemciden geliyor. Yalnız `[A-Za-z0-9_]`, 1–128 karakter kabul ediliyor ve
+  üç metot da aynı kapıdan geçiyor (testi bunu ayrı ayrı doğruluyor).
+- Harmanlama **açıkça** veriliyor: `COLLATE Turkish_CI_AS`. Sunucu varsayılanına
+  bırakılsaydı yerel (Turkish) ile CI (Latin1) arasında sıralama ve eşitlik
+  davranışı ayrışırdı.
+- **Planla sapma:** plan `SqlConnection.ClearAllPools()` diyordu; yalnız hedef
+  kataloğun havuzu temizleniyor (`ClearPool`). `ClearAllPools` süreçteki her
+  veritabanının havuzunu boşaltır — üretimde bir kiracının silinmesi, onunla
+  hiç ilgisi olmayan bütün isteklere bağlantı yeniden kurma maliyeti bindirirdi.
+
+**Görev 3 — çözücü katalog üretir**
+
+- `TenantConnectionResolver`: kiracı yok → paylaşılan; katalog adı boş → 
+  paylaşılan; dolu → aynı sunucu, o katalog. Katalog dışında hiçbir ayar
+  değişmiyor (testle sabitlendi).
+- **Planın değinmediği zorunluluk:** `ResolveFor` senkron ve öyle kalmak zorunda —
+  çağrıldığı yer `AddDbContext` yapılandırma geri çağrısı, async'e çevrilemez.
+  Kütüğün API'si ise `Task` döndürüyordu. Sync-over-async yerine kütüğe senkron
+  `GetDatabaseName(int)` eklendi; önbellek ıskası gerçek senkron sorguyla
+  doldurulur (kiracı başına ~5 dakikada bir; sıcak yolda veritabanına gidilmez).
+- Durum ve katalog adı **tek önbellek kaydında**: ayrı kayıtlar biri düşüp
+  diğeri kalınca kütüğün kendiyle çelişmesine yol açardı. "Kiracı yok" cevabı da
+  önbellekleniyor — aksi halde geçersiz kimlikli istek her seferinde veritabanına
+  giderdi (ucuz bir DoS yüzeyi).
+
+**Doğrulama:** 66 birim + 162 entegrasyon yeşil, `-warnaserror` temiz.
+
+**Not — bir kez görülen, tekrarlanamayan kırılma:** Görev 2 sonrası tam takım bir
+kez toplu çöktü (160/160, fixture seviyesinde, 515 ms). Aynı komut hemen sonra ve
+o günden beri hep yeşil; kök neden kanıtlanamadı. Şüpheli `ClearAllPools`'un
+süreç genelinde havuzları boşaltmasıydı ve o kod zaten yukarıdaki gerekçeyle
+daraltıldı. Tekrarlarsa ilk bakılacak yer burasıdır.
 
 ### 2026-08-12 — Faz 2b / Görev 1: devralınan üç mayın temizlendi
 

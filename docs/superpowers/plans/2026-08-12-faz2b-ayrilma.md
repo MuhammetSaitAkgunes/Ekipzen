@@ -141,6 +141,14 @@ Kopyanın kaynağı self-servis kayıttı; o kalkınca tek yol kaldı. Görev 0'
 
 **Bu görevde kimse sağlayıcıyı kullanmaz.** Testler onu doğrudan çağırır: oluştur → var mı → harmanlaması doğru mu → düşür → yok mu. Ad doğrulamasının kötü girdiyi reddettiği de sınanmalı.
 
+> **✅ TAMAMLANDI (2026-08-12).** Planla bir sapma:
+>
+> Plan `SqlConnection.ClearAllPools()` diyordu; **yalnız hedef kataloğun havuzu** temizleniyor (`ClearPool`). `ClearAllPools` süreçteki her veritabanının havuzunu boşaltır — üretimde tek bir kiracının silinmesi, o kiracıyla hiç ilgisi olmayan bütün isteklere bağlantı yeniden kurma maliyeti bindirirdi. Havuzlar bağlantı dizesine göre anahtarlandığı için hedefi seçmek mümkün; çözücü ve sağlayıcı aynı türetmeyi kullanıyor, böylece anahtarlar eşleşiyor.
+>
+> Ek not: `Tenants.DatabaseName` **tekil indeks almadı**. SQL Server'da unique index NULL'ları tek değer sayar; kiracıların çoğu boşken ikinci kiracı eklenemezdi.
+>
+> Testler: `VeritabaniAdiDogrulamaTests` (birim — enjeksiyon denemeleri dahil, üç metodun da aynı kapıdan geçtiği), `VeritabaniSaglayiciTests` (entegrasyon — oluştur/var/harmanlama/düşür + idempotanslık + açık bağlantı varken düşürme).
+
 ---
 
 ### Görev 3: Çözücü katalog üretir
@@ -154,6 +162,14 @@ Kopyanın kaynağı self-servis kayıttı; o kalkınca tek yol kaldı. Görev 0'
 **Kritik:** çözücü her çağrıda platform veritabanına gidemez — bağlantı çözümü istek başına birden fazla kez çalışır. `ITenantRegistry` zaten kiracı durumunu önbelleklemek için var; **`DatabaseName`'i de oraya ekleyin** ve çözücü kütükten okusun. Kütük kaydı `Invalidate` ile düşüyor; `DatabaseName` değişmediği için ek bir düşürme yolu gerekmez.
 
 **Bu görevde tüm `DatabaseName`'ler boş**, dolayısıyla davranış değişmez ve 207 test geçmeye devam eder. Bunu doğrulayan bir test yazın: `DatabaseName` dolu olan bir kiracı için çözücünün o katalogu döndürdüğünü, boş olan için paylaşılanı döndürdüğünü sınayın (birim testi, gerçek veritabanı gerekmez).
+
+> **✅ TAMAMLANDI (2026-08-12).** Planın değinmediği bir zorunluluk çıktı:
+>
+> `ResolveFor` **senkrondur** ve öyle kalmak zorunda — çağrıldığı yer `AddDbContext` yapılandırma geri çağrısı, orası async'e çevrilemez. Kütüğün mevcut API'si ise `Task` döndürüyordu. Sync-over-async (`.GetAwaiter().GetResult()`) yerine kütüğe **senkron** bir `GetDatabaseName(int)` eklendi; önbellek ıskası gerçek senkron sorguyla doldurulur (kiracı başına ~5 dakikada bir, sıcak yolda hiç veritabanına gidilmez).
+>
+> Durum ve katalog adı **tek önbellek kaydında** tutuluyor: ayrı kayıtlar biri düşüp diğeri kalınca kütüğün kendiyle çelişmesine yol açardı. "Kiracı yok" cevabı da önbellekleniyor — aksi halde geçersiz kimlikli istek her seferinde veritabanına giderdi (ucuz bir DoS yüzeyi).
+>
+> Testler: `BaglantiCozucuTests` (üç yol + katalog dışında hiçbir ayarın değişmediği), `KiraciKutuguTests` (katalog adı okuma, `Invalidate` ile tazelenme, durum+ad aynı kayıttan).
 
 ---
 
