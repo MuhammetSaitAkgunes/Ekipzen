@@ -1,0 +1,178 @@
+# Faz 2b — Ayrılma
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Her müşterinin verisini kendi veritabanına almak — böylece tek bir müşteri, diğerlerine dokunulmadan ve saniye hassasiyetinde geri yüklenebilsin.
+
+**Architecture:** `Tenants.DatabaseName` her kiracının katalog adını taşır. Provizyon `CREATE DATABASE` yapıp migration'ları uygular; bağlantı çözücünün içi katalog adını oradan üretir — çağıranların hiçbiri değişmez, çünkü ayrılma noktası Faz 1b'de kurulmuştu. Purge `DROP DATABASE`'e iner. Riskli sıra bilinçli: önce devredilen mayınlar temizlenir, sonra tesisat kurulur, en son veri bölünür.
+
+**Tech Stack:** .NET 9, EF Core 9, SQL Server, xUnit + FluentAssertions.
+
+Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
+Önceki fazlar: `2026-08-06-faz1a-platform-katmani.md`, `2026-08-07-faz1b-baglanti-tesisati.md`, `2026-08-12-faz2a-kimlik-kiraci-kapsamina.md`
+
+## Global Constraints
+
+- **Faz başlangıcı: 51 birim + 156 entegrasyon = 207 test, CI yeşil.** Azalmamalı.
+- Derleme uyarısız (`-warnaserror`). `await` içermeyen `async` test metodu CS1998 verir.
+- Türkçe kod yorumları ve test adları; yorumlar "ne" değil "neden" anlatır.
+- **Testler işletim sistemine özgü davranışa yaslanmamalı** — CI Linux, yerel Windows. Bu, bir testi zaten kırdı (dosya kilitleme).
+- **Kiracı veritabanları `Turkish_CI_AS` harmanlamasıyla oluşturulur** (ürün kararı: Türkçe alfabetik sıralama doğru olsun, aksan duyarlı kalsın). `CREATE DATABASE` bunu AÇIKÇA verir — sunucu varsayılanına bırakılmaz, çünkü yerel (Turkish) ile CI (Latin1) ayrışıyor.
+- Gerçek müşteri verisi yok; demo veri seed'den yeniden üretilir.
+- Her görev ayrı commit.
+
+## Test yazımı hakkında
+
+Bu planda testler **birebir kod olarak verilmez**, ne kanıtlamaları gerektiği yazılır. Sebebi: önceki fazlarda plandaki test taslakları iki kez yanlış çıktı (var olmayan uç nokta, var olmayan varlık alanı) ve uygulayıcının döngüsünü boşa harcadı. Uygulayıcı **gerçek sözleşmeyi koddan doğrulayıp** testi ona göre yazar.
+
+---
+
+## Görev sırası ve gerekçesi
+
+Sıra riske göre kurulmuştur; bozmayın:
+
+| # | Görev | Neden bu sırada |
+| --- | --- | --- |
+| 1 | Devredilen mayınları temizle | Bunlar ayrılmadan **önce** düzeltilmezse, ayrılma anında patlarlar ve sebebi ayrılmaya bağlanır |
+| 2 | `DatabaseName` + veritabanı sağlayıcı | Kullanılmaz; tek başına doğrulanabilir |
+| 3 | Çözücü katalog üretir | Tüm `DatabaseName` boş olduğu için davranış değişmez |
+| 4 | Provizyon gerçek DB kurar + test altyapısı | **Yeni** kiracılar ayrılır; mevcutlar paylaşımda kalır |
+| 5 | Mevcut kiracılar ayrılır | Herkes ayrılır — geri dönüşün zorlaştığı nokta |
+| 6 | Purge `DROP DATABASE` + `Subscriptions` platforma | Ayrılma tamamlanınca anlamlı olur |
+| 7 | Migration orkestrasyonu + açılış doğrular + dokümantasyon | Çok veritabanlı işletim |
+
+---
+
+### Görev 1: Devredilen mayınları temizle
+
+Önceki fazlar bu dört maddeyi bilinçli olarak 2b'ye bıraktı. Hepsi ayrılma anında gerçek soruna dönüşür; ayrılmadan **önce** kapatılmalı ki bir hata çıktığında sebebi ayrılmaya bağlanmasın.
+
+**a) `EmailExistsAsync` çözülemeyen kiracıda fırlatır**
+`IdentityService.EmailExistsAsync` dizinden gelen `TenantId` ile kapsam açıyor. Dizin türetilmiştir ve sapabilir — karşılığı olmayan bir kimliğe işaret edebilir (test altyapısı bunu bilerek üretiyor). Ayrılmadan sonra `Create(...)` çözülemeyen kiracıda **fırlatır** ve metot `bool` döndürmesi gerekirken 500'e dönüşür; provizyon, self-servis kayıt ve işe alım yollarını kırar.
+→ Çözülemeyen kiracıda `false` dönmeli. Gerekçeyi yoruma yaz.
+
+**b) `AcceptInviteAsync` durum makinesini atlıyor**
+Herhangi bir `Provisioning` kiracıyı, kullanıcı şifre belirler belirlemez `Active` yapıyor. Ayrılmadan sonra bu, **veritabanı henüz kurulmamış bir kiracıyı Active** yapmak demek — kullanıcı girer ve var olmayan katalogla karşılaşır.
+→ Yalnız provizyonu **tamamlanmış** kiracı etkinleştirilmeli. Kiracının veritabanı gerçekten hazır değilse durumu değiştirme.
+
+**c) `AppDbContextInitializer` kök kapsamdan çözülüyor**
+Tek kalan elle `Impersonate`. Düzeltme bu dosyada değil `Program.cs`'te: initializer, `ITenantScopeFactory` ile açılan bir kapsamdan çözülmeli.
+
+**d) `TenantOnboarding` / `RegisterTenantCommand` sıra kopyası**
+Self-servis kayıt ortak yolu kullanmıyor, provizyon sırasını kopyalıyor. İki kopya = sessiz sapma. Görev 4'te provizyon sırası değişecek; **iki kopyayı ayrı ayrı değiştirmek zorunda kalmamak için** şimdi tek yola indirilmeli. Slug retry döngüsü korunmalı.
+
+**Doğrulama:** her madde için davranışı sabitleyen bir test. Tam suite geçmeli.
+
+---
+
+### Görev 2: `DatabaseName` ve veritabanı sağlayıcı
+
+**Üretilen:**
+- `Tenants.DatabaseName` (`string?`, max 128) — provizyonda bir kez üretilir, bir daha değişmez. **Boş bırakılabilir**: mevcut kiracılar Görev 5'e kadar paylaşılan veritabanında kalır.
+- `ITenantDatabaseProvisioner` (Application):
+  - `Task<bool> ExistsAsync(string databaseName, CancellationToken)`
+  - `Task CreateAsync(string databaseName, CancellationToken)`
+  - `Task DropAsync(string databaseName, CancellationToken)`
+
+**Uygulama notları:**
+- `CREATE DATABASE` EF migration içinde yapılamaz; `master`'a ham SQL gerekir. Bağlantı, çözücünün kullandığı dizeden katalog adı `master` yapılarak türetilir (`SqlConnectionStringBuilder`).
+- **Veritabanı adı ASLA SQL'e enterpole edilmez.** Ad slug'dan üretiliyor ve slug istemciden geliyor — `QUOTENAME` ile kaçırılmalı ya da adın `^[A-Za-z0-9_]+$` desenine uyduğu doğrulanmalı. `CREATE DATABASE` parametreleştirilemez, bu yüzden doğrulama tek savunmadır.
+- `CREATE DATABASE [ad] COLLATE Turkish_CI_AS` — harmanlama **açıkça** verilir (bkz. Global Constraints).
+- `DropAsync` önce `ALTER DATABASE … SET SINGLE_USER WITH ROLLBACK IMMEDIATE` yapmalı; aktif bağlantı varken `DROP` başarısız olur. Bağlantı havuzu da temizlenmeli (`SqlConnection.ClearAllPools`).
+
+**Bu görevde kimse sağlayıcıyı kullanmaz.** Testler onu doğrudan çağırır: oluştur → var mı → harmanlaması doğru mu → düşür → yok mu. Ad doğrulamasının kötü girdiyi reddettiği de sınanmalı.
+
+---
+
+### Görev 3: Çözücü katalog üretir
+
+`TenantConnectionResolver.ResolveFor(int? tenantId)` içi değişir:
+
+- `tenantId` null → paylaşılan dize (migration, platform işlemleri, login öncesi)
+- Kiracının `DatabaseName`'i boş → paylaşılan dize (henüz ayrılmamış kiracı)
+- Doluysa → aynı sunucu, katalog adı `DatabaseName`
+
+**Kritik:** çözücü her çağrıda platform veritabanına gidemez — bağlantı çözümü istek başına birden fazla kez çalışır. `ITenantRegistry` zaten kiracı durumunu önbelleklemek için var; **`DatabaseName`'i de oraya ekleyin** ve çözücü kütükten okusun. Kütük kaydı `Invalidate` ile düşüyor; `DatabaseName` değişmediği için ek bir düşürme yolu gerekmez.
+
+**Bu görevde tüm `DatabaseName`'ler boş**, dolayısıyla davranış değişmez ve 207 test geçmeye devam eder. Bunu doğrulayan bir test yazın: `DatabaseName` dolu olan bir kiracı için çözücünün o katalogu döndürdüğünü, boş olan için paylaşılanı döndürdüğünü sınayın (birim testi, gerçek veritabanı gerekmez).
+
+---
+
+### Görev 4: Provizyon gerçek veritabanı kurar
+
+Provizyon altı adıma iner (tasarım belgesindeki sıra):
+
+1. **Platform, tek transaction:** `Tenants` satırı (`Status = Provisioning`, `DatabaseName` üretilmiş) **ve** `TenantDirectory` rezervasyonu
+2. `CREATE DATABASE` — **hedef zaten varsa reddet.** Başarısız bir denemeden kalmış veritabanını sessizce yeniden kullanmak, iki müşterinin verisinin karışması demektir
+3. Migration'lar uygulanır (yeni veritabanına bağlı bir context ile)
+4. Roller seed edilir, admin kullanıcı (şifresiz) oluşturulur
+5. Davet e-postası gönderilir
+6. `Status = Active`
+
+**Sıra gerekçeleri (yoruma yazın):** e-posta 1. adımda rezerve edilir ki eşzamanlı iki kayıt aynı adresi alamasın; davet en sonda gönderilir ki müşteri çalışmayan bir kuruluma link almasın.
+
+**Yarıda kalırsa** kiracı `Status = Provisioning`'de kalır — erişilemez ama görünür (`GET /api/tenants/stuck` zaten var).
+
+**Veritabanı adı üretimi:** `IKPro_{slug}`. Slug zaten `^[a-z0-9-]+$` doğrulamasından geçiyor, ama tire SQL tanımlayıcısında sorun çıkarabilir — adı üretirken tireyi alt çizgiye çevirin ve sonucu Görev 2'deki desen doğrulamasından geçirin.
+
+**Test altyapısı — bu görevin en büyük parçası:**
+- Her provizyon testi artık **gerçek bir veritabanı** kuruyor. `IKProApiFactory` koşum başında `IKPro_test_*` kalıntılarını da düşürmeli (bugün yalnız iki sabit adı düşürüyor).
+- Testlerin ürettiği veritabanı adları çakışmamalı ve tanınabilir olmalı.
+- Koşum süresi artacak; ölçün ve rapora yazın. Kabul edilebilir bulmuyorsanız durun ve bildirin — şablon veritabanı kopyalama gibi bir optimizasyon ayrı bir iştir.
+
+---
+
+### Görev 5: Mevcut kiracılar ayrılır
+
+Bu, geri dönüşün zorlaştığı nokta.
+
+Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki veritabanı da düşürülür, uygulama açılır, demo kiracılar Görev 4'teki gerçek provizyon yolundan yeniden kurulur.
+
+**Seed bunun için değişmeli:** `AppDbContextInitializer` bugün demo kiracıları doğrudan yazıyor. Artık provizyon yolunu çağırmalı — böylece kayıt akışı her geliştirme kurulumunda çalıştırılmış olur.
+
+**Doğrulama (elle, çıktıları rapora):** iki DB düşür → uygulama aç → `IKPro_demo` ve `IKPro_globex` veritabanlarının **fiilen oluştuğunu** ve harmanlamalarının `Turkish_CI_AS` olduğunu sqlcmd ile gör → iki demo kiracıyla giriş yap → birinde personel oluştur, diğerinde görünmediğini doğrula.
+
+---
+
+### Görev 6: Purge `DROP DATABASE` ve `Subscriptions` platforma
+
+**Purge:**
+1. `Status = Purging` (erişim kesilir)
+2. Dosya alanı silinir
+3. `DROP DATABASE` (Görev 2'deki sağlayıcı)
+4. Platform: dizin satırları, refresh token'lar, abonelik, kiracı satırı
+
+`TenantPurger`'ın FK sıralı silme mantığı ve `TenantScopedTablesInDeleteOrder` **artık gereksiz** — silin. `DROP DATABASE` hiçbir tabloyu kaçırmaz. Mevcut purge testleri korunmalı: kiracı verisi gitmeli, **diğer kiracıya dokunulmamalı**, dosya silme hatası çağırana görünmeli.
+
+`DatabaseName` boş olan bir kiracı (hiç ayrılmamış) purge edilirse eski satır-silme yolu gerekir mi? Görev 5'ten sonra böyle bir kiracı **kalmaz**; kalıyorsa bu bir hatadır — o durumda anlamlı hata fırlatın, sessizce eski yola düşmeyin.
+
+**`Subscriptions`:** kiracı veritabanından platforma taşınır. Gerekçe: "kim hangi pakette, kimin yenilemesi geldi" bir platform sorusudur; kiracı DB'lerinde kalsaydı her fatura raporu tüm veritabanlarını gezerdi. Yan fayda: bir müşteriyi geri yüklemek **aboneliği geri sarmaz** — doğrusu budur. `SettingsHandlers` tek okuma noktası.
+
+---
+
+### Görev 7: Migration orkestrasyonu, açılış doğrulaması, dokümantasyon
+
+**Migration koşucusu:** tüm kiracı veritabanlarını sırayla migrate eden bir komut. Her kiracı için başarı/başarısızlık raporlar; biri bile patlarsa sıfırdan farklı kodla çıkar. Bu, dağıtımın bir adımıdır.
+
+**Açılış migrate etmez, doğrular:** platform veritabanı açılışta migrate olur (küçük, her zaman gerekli). Kiracı veritabanları **edilmez** — açılış süresi müşteri sayısıyla büyümemeli ve yarıda kalan bir dağıtım fark edilmeli. Şeması geride kalan kiracı 503 döner ve log yüksek sesle söyler; eski şemayla sessizce çalışmak veri bozulmasıdır.
+
+**Dokümantasyon:**
+- `docs/yedekleme-ve-kurtarma.md`: geri yükleme artık gerçek — `RESTORE DATABASE IKPro_acme … STOPAT` komutunu yaz. "Veritabanı kiracı bazına bölünmüyor" maddesini kapat.
+- `docs/rehberler/07-veritabani-ve-migrationlar.md`: iki context değil artık N+1 veritabanı; migration koşucusu ve üretim adımları.
+- `docs/rehberler/06-multi-tenancy.md`: izolasyon artık fiziksel.
+- Plana "Uygulama sonucu" bölümü.
+
+---
+
+## Faz sonu doğrulama
+
+- [ ] Yeni müşteri açıldığında kendi veritabanı oluşuyor, harmanlaması `Turkish_CI_AS`
+- [ ] İki demo kiracı ayrı veritabanlarında; birinde oluşturulan veri diğerinde görünmüyor
+- [ ] Login, refresh, dondurma/çözme, davet kabulü, işe alım çalışıyor
+- [ ] Purge veritabanını düşürüyor; diğer kiracıya dokunmuyor
+- [ ] Yarıda kalan provizyon `Provisioning`'de görünür kalıyor ve erişilemiyor
+- [ ] Migration koşucusu tüm kiracıları güncelliyor, başarısızlığı raporluyor
+- [ ] Açılış kiracı veritabanlarını migrate etmiyor; geride kalanı 503 ile bildiriyor
+- [ ] Backend + frontend suite'leri yeşil, derleme uyarısız, CI yeşil
+
+**Sonraki:** Faz 3 — yedekleme ve kurtarma. `RESTORE … STOPAT` bu fazdan sonra gerçek olur.
