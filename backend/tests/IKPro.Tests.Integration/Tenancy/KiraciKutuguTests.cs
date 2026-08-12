@@ -1,5 +1,6 @@
 using FluentAssertions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Application.Features.Tenancy;
 using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,10 +70,9 @@ public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factor
     /// <summary>
     /// Kütük katalog adını da taşır — bağlantı çözücünün tek kaynağı burasıdır.
     ///
-    /// Provizyonlanan kiracıda ad HENÜZ BOŞTUR (fiziksel ayrılma Görev 4/5'te
-    /// başlıyor) ve bu bir eksiklik değil, geçişin tasarımıdır: boş ad
-    /// "paylaşılan veritabanında" demek. Test iki tarafı da sabitliyor —
-    /// boşken null, doldurulup kütük düşürülünce yeni değer.
+    /// Provizyonlanan kiracının adı artık DOLUDUR (Görev 4: provizyon gerçek
+    /// veritabanı kuruyor). Test iki şeyi sabitliyor: kütük adı okuyor ve
+    /// önbellek yalnız <c>Invalidate</c> ile tazeleniyor.
     /// </summary>
     [Fact]
     public async Task Kutuk_KatalogAdiniDoner_VeDusurulunceTazelenir()
@@ -82,19 +82,25 @@ public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factor
         using var scope = Factory.Services.CreateScope();
         var kutuk = scope.ServiceProvider.GetRequiredService<ITenantRegistry>();
 
-        kutuk.GetDatabaseName(kiraci.TenantId).Should().BeNull(
-            "yeni kiracı henüz ayrılmadı; boş ad paylaşılan veritabanı demektir");
+        var provizyonAdi = TenantDatabaseNaming.For(kiraci.Slug);
+        kutuk.GetDatabaseName(kiraci.TenantId).Should().Be(provizyonAdi,
+            "provizyon katalog adını üretip kiracı satırına yazmalı");
 
         var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
         var tenant = await platform.Tenants.FirstAsync(t => t.Id == kiraci.TenantId);
-        tenant.DatabaseName = "IKPro_katalog_testi";
+        tenant.DatabaseName = "IKPro_test_katalog_degisti";
         await platform.SaveChangesAsync(CancellationToken.None);
 
-        kutuk.GetDatabaseName(kiraci.TenantId).Should().BeNull(
+        kutuk.GetDatabaseName(kiraci.TenantId).Should().Be(provizyonAdi,
             "önbellek düşürülmeden eski cevap geçerli kalmalı — kütüğün varlık sebebi bu");
 
         kutuk.Invalidate(kiraci.TenantId);
-        kutuk.GetDatabaseName(kiraci.TenantId).Should().Be("IKPro_katalog_testi");
+        kutuk.GetDatabaseName(kiraci.TenantId).Should().Be("IKPro_test_katalog_degisti");
+
+        // Kiracı satırını eski adına döndür ki testin temizliği doğru katalogu düşürsün.
+        tenant.DatabaseName = provizyonAdi;
+        await platform.SaveChangesAsync(CancellationToken.None);
+        kutuk.Invalidate(kiraci.TenantId);
     }
 
     /// <summary>
@@ -111,14 +117,15 @@ public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factor
         var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
 
         var tenant = await platform.Tenants.FirstAsync(t => t.Id == kiraci.TenantId);
-        tenant.DatabaseName = "IKPro_tek_kayit";
+        var yeniAd = TenantDatabaseNaming.For(kiraci.Slug) + "_tek_kayit";
+        tenant.DatabaseName = yeniAd;
         tenant.Status = TenantStatus.Frozen;
         await platform.SaveChangesAsync(CancellationToken.None);
         kutuk.Invalidate(kiraci.TenantId);
 
         // Önce katalog adı sorulur (önbelleği senkron yol doldurur), sonra durum:
         // durum artık VERİTABANINA GİTMEDEN aynı kayıttan gelmeli ve güncel olmalı.
-        kutuk.GetDatabaseName(kiraci.TenantId).Should().Be("IKPro_tek_kayit");
+        kutuk.GetDatabaseName(kiraci.TenantId).Should().Be(yeniAd);
         (await kutuk.GetStatusAsync(kiraci.TenantId, default)).Should().Be(TenantStatus.Frozen);
     }
 }

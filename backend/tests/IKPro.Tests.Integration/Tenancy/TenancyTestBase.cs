@@ -1,6 +1,7 @@
 using FluentAssertions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Features.Auth;
+using IKPro.Application.Features.Tenancy;
 using IKPro.Application.Features.Tenancy.Commands;
 using IKPro.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,9 +19,40 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// davet e-postasındaki token ile <see cref="AcceptInviteAsync"/> çağrılarak
 /// (veya kısayol <see cref="ProvisionAndActivateAsync"/>) şifre belirlenir.
 /// </summary>
-public abstract class TenancyTestBase(IKProApiFactory factory)
+public abstract class TenancyTestBase(IKProApiFactory factory) : IAsyncLifetime
 {
     protected IKProApiFactory Factory { get; } = factory;
+
+    // Bu test sırasında provizyonlanan kiracıların katalog adları. xUnit her test
+    // metodu için sınıfın YENİ bir örneğini kurduğundan liste test başına temizdir.
+    private readonly List<string> _acilanKataloglar = [];
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// Her testten sonra o testin açtığı kiracı veritabanlarını düşürür.
+    ///
+    /// Ürün kararı (kullanıcı onaylı): temizlik testten sonra AGRESİF yapılır.
+    /// Alternatif — koşum sonunda toplu düşürme — daha hızlıydı ama koşum ortasında
+    /// bir çökme sunucuda artık katalog bırakırdı. Burada maliyet koşum süresidir
+    /// ve bilinçli ödeniyor: geliştiricinin makinesinde biriken artık veritabanı,
+    /// bir süre sonra "neden diskim doldu" sorusuna dönüşür.
+    /// </summary>
+    public async Task DisposeAsync()
+    {
+        if (_acilanKataloglar.Count == 0)
+        {
+            return;
+        }
+
+        var saglayici = Factory.Services.GetRequiredService<ITenantDatabaseProvisioner>();
+        foreach (var katalog in _acilanKataloglar)
+        {
+            // Testin kendisi kiracıyı zaten purge etmiş olabilir; DropAsync
+            // "zaten yok" durumunu hata saymıyor.
+            await saglayici.DropAsync(katalog, CancellationToken.None);
+        }
+    }
 
     /// <summary>Davet akışında belirlenen varsayılan şifre (login için de kullanılır).</summary>
     protected const string DefaultPassword = "demo123";
@@ -33,23 +65,43 @@ public abstract class TenancyTestBase(IKProApiFactory factory)
         var response = await client.PostAsJsonAsync("/api/tenants", new
         {
             companyName,
-            slug = $"{Slugify(companyName)}-{Guid.NewGuid():N}",
+            slug = TestSlug(companyName),
             adminName = $"{companyName} Yöneticisi",
             adminEmail,
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"provizyon başarısız: {companyName}");
-        return (await response.Content.ReadFromJsonAsync<ProvisionTenantResult>())!;
+
+        var sonuc = (await response.Content.ReadFromJsonAsync<ProvisionTenantResult>())!;
+        _acilanKataloglar.Add(TenantDatabaseNaming.For(sonuc.Slug));
+        return sonuc;
     }
 
-    /// <summary>Ham provizyon isteği (hata senaryoları için).</summary>
-    protected Task<HttpResponseMessage> ProvisionRawAsync(object body, bool withPlatformKey = true)
+    /// <summary>
+    /// Ham provizyon isteği (hata senaryoları için). İstek BAŞARILI olursa açılan
+    /// katalog izlenir — bu yol da gerçek bir veritabanı kurar ve testin sonunda
+    /// temizlenmesi gerekir. İzlemeyi çağıranın sorumluluğuna bırakmak, "bu test
+    /// 409 bekliyordu ama 201 aldı" gibi bir durumda sunucuda sessizce artık
+    /// bırakırdı.
+    /// </summary>
+    protected async Task<HttpResponseMessage> ProvisionRawAsync(object body, bool withPlatformKey = true)
     {
         var client = Factory.CreateClient();
         if (withPlatformKey)
         {
             client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
         }
-        return client.PostAsJsonAsync("/api/tenants", body);
+
+        var response = await client.PostAsJsonAsync("/api/tenants", body);
+        if (response.StatusCode == HttpStatusCode.Created)
+        {
+            var sonuc = await response.Content.ReadFromJsonAsync<ProvisionTenantResult>();
+            if (sonuc is not null)
+            {
+                _acilanKataloglar.Add(TenantDatabaseNaming.For(sonuc.Slug));
+            }
+        }
+
+        return response;
     }
 
     /// <summary>
@@ -131,6 +183,17 @@ public abstract class TenancyTestBase(IKProApiFactory factory)
 
         throw new InvalidOperationException($"'{email}' için davet e-postası outbox'ta bulunamadı.");
     }
+
+    /// <summary>
+    /// Test slug'ı — DAİMA <c>test-</c> ile başlar.
+    ///
+    /// Önek şart: slug'dan üretilen katalog adı <c>IKPro_test_...</c> olur ve
+    /// böylece sunucudaki test artıkları hem bir bakışta ayırt edilir hem de
+    /// fabrikanın koşum-başı süpürmesi tarafından desenle bulunabilir. Öneksiz
+    /// olsaydı süpürme, gerçek bir kiracı veritabanını silme riski taşırdı.
+    /// </summary>
+    protected static string TestSlug(string companyName) =>
+        $"test-{Slugify(companyName)}-{Guid.NewGuid():N}";
 
     // Slug yalnız ASCII [a-z0-9] olmalı (validator kuralı) — Türkçe/aksanlı harfler atılır.
     private static string Slugify(string name) =>

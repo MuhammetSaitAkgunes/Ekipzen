@@ -27,6 +27,9 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
     /// </summary>
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
+        CancellationToken cancellationToken) => Database.BeginTransactionAsync(cancellationToken);
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

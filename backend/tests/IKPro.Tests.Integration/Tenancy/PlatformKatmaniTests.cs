@@ -167,7 +167,7 @@ public class PlatformKatmaniTests(IKProApiFactory factory) : TenancyTestBase(fac
         var yanit = await ProvisionRawAsync(new
         {
             companyName = "Ikinci",
-            slug = $"ikinci{Guid.NewGuid():N}"[..20],
+            slug = TestSlug("ikinci"),
             adminName = "Ikinci Yonetici",
             adminEmail = eposta,
         });
@@ -204,13 +204,24 @@ public class PlatformKatmaniTests(IKProApiFactory factory) : TenancyTestBase(fac
         var yanit = await ProvisionRawAsync(new
         {
             companyName = "Yarisan",
-            slug = $"yarisan{Guid.NewGuid():N}"[..20],
+            slug = TestSlug("yarisan"),
             adminName = "Yarisan Yonetici",
             adminEmail = eposta,
         });
 
         yanit.StatusCode.Should().Be(HttpStatusCode.Conflict,
             "e-posta dizinde başka bir kiracıya ait olduğunda rezervasyon veritabanı kısıtına çarpmalı");
+
+        // Bu yol, provizyonun ADIM 1 transaction'ını gerçekten tetikleyen tek
+        // testtir: kiracı satırı YAZILDIKTAN sonra rezervasyon patlıyor. Transaction
+        // olmasaydı geriye sahipsiz bir kiracı satırı kalır, slug'ı işgal eder ve
+        // operatör aynı adla yeniden deneyemezdi.
+        using (var kontrol = Factory.Services.CreateScope())
+        {
+            var platform = kontrol.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+            (await platform.Tenants.AnyAsync(t => t.Name == "Yarisan"))
+                .Should().BeFalse("rezervasyon çakışınca kiracı satırı geri alınmalı");
+        }
     }
 
     [Fact]

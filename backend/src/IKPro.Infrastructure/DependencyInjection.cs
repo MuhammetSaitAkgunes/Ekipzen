@@ -43,6 +43,10 @@ public static class DependencyInjection
         // (her çağrı kendi bağlantısını açar), bu yüzden singleton.
         services.AddSingleton<ITenantDatabaseProvisioner, Tenancy.SqlServerTenantDatabaseProvisioner>();
 
+        // Yeni kiracı veritabanına migration + rol tohumlaması. Kendi kapsamını
+        // açtığı için (ITenantScopeFactory) durumsuzdur → singleton.
+        services.AddSingleton<ITenantSchemaInitializer, Tenancy.TenantSchemaInitializer>();
+
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
             // Bağlantı KAPSAM BAŞINA çözülür: aktif kiracı neyse ona göre.

@@ -8,11 +8,10 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0–3 bitti (self-servis kaydın kaldırılması, devralınan mayınlar,
-  `DatabaseName` + veritabanı sağlayıcı, çözücünün katalog üretmesi). **Sırada
-  Görev 4 var ve ondan önce kullanıcıyla konuşulacak** — orası ilk kez GERÇEK
-  `CREATE DATABASE` çalıştıran ve geri dönüşü zorlaşan nokta. Faz 3'e
-  (yedekleme/geri yükleme) geçmeden de ayrıca konuşulacak.
+  Görev 0–4 bitti. **YENİ kiracılar artık kendi veritabanlarında doğuyor**;
+  mevcutlar (demo + globex) hâlâ paylaşılan `IKProDb`'de. Sırada Görev 5 var —
+  mevcut kiracıların taşınması, yani geri dönüşün zorlaştığı nokta. Faz 3'e
+  (yedekleme/geri yükleme) geçmeden kullanıcıyla konuşulacak.
 - **Kayıt (signup) politikası — kalıcı karar:** Uygulamada **hiçbir** self-servis
   kayıt ucu yok. Yeni şirket yalnız operatör tarafından `POST /api/tenants`
   (`X-Platform-Key`) ile açılır; katılımın tek yolu davettir. Gerekçe:
@@ -111,6 +110,56 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 2b / Görev 4: provizyon gerçek veritabanı kuruyor
+
+**Bu, fazın dönüm noktası.** `POST /api/tenants` artık altı adım işletiyor:
+(1) platform tek transaction'da kiracı satırı + e-posta rezervasyonu,
+(2) `CREATE DATABASE`, (3) migration'lar, (4) roller, (5) admin kullanıcı +
+davet, (6) `Status = Active`. Yarıda kalırsa kiracı `Provisioning`'de kalır —
+erişilemez ama görünür (`GET /api/tenants/stuck`).
+
+- **Katalog adı:** `IKPro_{slug}`, slug'daki tireler alt çizgiye çevrilerek.
+  Çakışma üretmez: slug deseni alt çizgiye izin vermediği için iki farklı slug
+  aynı ada indirgenemez.
+- **Var olan katalog REDDEDİLİR.** Yarıda kalmış bir kurulumdan artakalan
+  veritabanını sessizce yeniden kullanmak, iki müşterinin verisinin aynı yerde
+  toplanması demek olurdu — bu ürünün yapabileceği en pahalı hata.
+- **Yeni soyutlama `ITenantSchemaInitializer`** (migration + rol tohumlaması).
+  Roller şema hazırlığının parçası, isteğe bağlı bir seed adımı değil: boş bir
+  kiracı veritabanında `AspNetRoles` boştur ve `AddToRoleAsync` SESSİZCE düşer —
+  kullanıcı oluşur, giriş yapar, hiçbir şey göremez. Ayrı bir test bunu sabitliyor.
+- `TenantOnboarding` statik yardımcıdan **servise** dönüştü (7 bağımlılık).
+- `IPlatformDbContext.BeginTransactionAsync` eklendi: rezervasyon kiracının
+  veritabanı-üretimli kimliğini bilmek zorunda olduğundan iki `SaveChanges`
+  kaçınılmaz; transaction olmasaydı rezervasyon çakışınca geriye slug'ı işgal
+  eden sahipsiz bir kiracı satırı kalırdı.
+
+**Test altyapısı — kullanıcı kararı: agresif temizlik (A seçeneği).**
+`TenancyTestBase` artık `IAsyncLifetime`; her testin açtığı katalog test bitince
+düşürülüyor. Fabrika koşum başında `IKPro_test_*` artıklarını da süpürüyor (koşum
+ortasında çöken süreç için; olmasaydı tek çökme sonraki tüm koşumları kırardı).
+Test slug'ları `test-` önekli üretiliyor ki süpürme deseni gerçek bir kiracıyı
+asla silemesin.
+
+**Süre: entegrasyon takımı 33 sn → 93 sn** (167 test, ~2,8 kat). Bilinçli ödenen
+maliyet. Koşum sonrası sunucuda artık katalog kalmadığı elle doğrulandı.
+
+**Kırılan iki test, ikisi de bilgi taşıyordu:**
+- `KiraciKutuguTests` — `DatabaseName` artık dolu; güncellendi.
+- `TenantFileIsolationTests` — "yabancı ID → 404" kurgusu artık **kurulamıyor**:
+  her katalog kendi kimlik dizisini saydığından 1 numaralı personel her kiracıda
+  var. Gerileme değil, izolasyonun güçlenmesi — erişim artık sorgu filtresine
+  değil fiziksel ayrılığa dayanıyor. Test asıl güvenceyi ölçecek şekilde
+  yeniden yazıldı.
+
+**Bilinen açık:** davet e-postası hâlâ `Status = Active`'den önce gidiyor. Planın
+sırası da böyleydi ve bu sıra bugünkü riski azaltmıyor; e-postayı Active'den
+sonraya almak ise daha kötü bir arıza üretirdi (Active kiracı + davetsiz admin +
+slug çakışması yüzünden yeniden denenemeyen provizyon). Doğru çözüm bir operatör
+ucu: **"daveti yeniden gönder"**. Görev 7'ye ya da ayrı bir işe bırakıldı.
+
+**Doğrulama:** 66 birim + 167 entegrasyon yeşil, `-warnaserror` temiz.
 
 ### 2026-08-12 — Faz 2b / Görev 2+3: katalog tesisatı (davranış değişmedi)
 

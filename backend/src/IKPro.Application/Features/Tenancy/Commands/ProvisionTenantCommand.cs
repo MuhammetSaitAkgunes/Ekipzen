@@ -1,7 +1,6 @@
 using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,8 +34,7 @@ public sealed class ProvisionTenantCommandValidator : AbstractValidator<Provisio
 }
 
 public sealed class ProvisionTenantCommandHandler(
-    IPlatformDbContext platform, IIdentityService identityService, ITenantDirectory directory,
-    ITenantRegistry registry)
+    IPlatformDbContext platform, TenantOnboarding onboarding)
     : IRequestHandler<ProvisionTenantCommand, ProvisionTenantResult>
 {
     public async Task<ProvisionTenantResult> Handle(
@@ -48,15 +46,9 @@ public sealed class ProvisionTenantCommandHandler(
             throw new ConflictException($"'{slug}' kısa adıyla bir şirket zaten var.");
         }
 
-        // Kiracı doğrudan Active oluşturulur: bu uca ulaşmak platform anahtarını bilmeyi
-        // gerektirir, yani çağıran zaten operatördür — doğrulanacak bir şey kalmaz.
-        // (Kiracıyı Provisioning'de bırakıp davet kabulüyle aktifleştiren self-servis
-        // yol kaldırıldı; artık tek onboarding yolu burasıdır.)
-        var tenant = await TenantOnboarding.CreateWithAdminAsync(
-            platform, identityService, directory, registry,
+        var tenant = await onboarding.CreateWithAdminAsync(
             request.CompanyName.Trim(), slug,
-            request.AdminName.Trim(), request.AdminEmail.Trim(),
-            hedefDurum: TenantStatus.Active, cancellationToken);
+            request.AdminName.Trim(), request.AdminEmail.Trim(), cancellationToken);
 
         return new ProvisionTenantResult(tenant.Id, tenant.Slug, request.AdminEmail.Trim());
     }

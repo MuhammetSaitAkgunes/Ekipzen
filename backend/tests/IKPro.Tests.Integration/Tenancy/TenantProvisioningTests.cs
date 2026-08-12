@@ -54,7 +54,7 @@ public sealed class TenantProvisioningTests(IKProApiFactory factory) : TenancyTe
         var response = await ProvisionRawAsync(new
         {
             companyName = "Yetkisiz A.Ş.",
-            slug = $"yetkisiz-{Guid.NewGuid():N}",
+            slug = TestSlug("yetkisiz"),
             adminName = "X",
             adminEmail = $"x-{Guid.NewGuid():N}@x.local",
         }, withPlatformKey: false);
@@ -64,7 +64,7 @@ public sealed class TenantProvisioningTests(IKProApiFactory factory) : TenancyTe
     [Fact]
     public async Task Provision_DuplicateSlug_Returns409()
     {
-        var slug = $"dup-{Guid.NewGuid():N}";
+        var slug = TestSlug("dup");
         (await ProvisionRawAsync(new
         {
             companyName = "İlk A.Ş.", slug,

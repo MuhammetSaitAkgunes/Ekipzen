@@ -114,7 +114,7 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
         var yeniden = await ProvisionRawAsync(new
         {
             companyName = "Yeniden A.Ş.",
-            slug = $"yeniden{Guid.NewGuid():N}"[..20],
+            slug = TestSlug("yeniden"),
             adminName = "Yeniden Yonetici",
             adminEmail = eposta,
         });

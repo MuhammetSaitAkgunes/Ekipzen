@@ -1,6 +1,7 @@
 using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IKPro.Application.Common.Interfaces;
 
@@ -26,4 +27,15 @@ public interface IPlatformDbContext
     DbSet<RefreshToken> RefreshTokens { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Açık transaction — provizyonun ilk adımı için.
+    ///
+    /// Neden gerekti: kiracı satırı ile yönlendirme rezervasyonu iki ayrı
+    /// <c>SaveChanges</c> gerektirir (rezervasyon, kiracının veritabanı tarafından
+    /// üretilen kimliğini bilmek zorunda). Bunlar tek bir işlem gibi davranmazsa,
+    /// rezervasyon çakışırsa geriye sahipsiz bir kiracı satırı kalır — hem
+    /// slug'ı işgal eder hem de temizlenmesi gereken bir artık olur.
+    /// </summary>
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
 }

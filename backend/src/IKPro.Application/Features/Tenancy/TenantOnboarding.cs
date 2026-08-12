@@ -1,66 +1,107 @@
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Entities.Tenancy;
+using Microsoft.Extensions.Logging;
 
 namespace IKPro.Application.Features.Tenancy;
 
 /// <summary>
-/// Kiracı + ilk hr-admin oluşturmanın adımları — <c>ProvisionTenantCommand</c> (platform-key'li
-/// operatör provizyonu) bunu doğrudan çağırır. Admin ŞİFRESİZ oluşturulur; davet e-postası
-/// CreateTenantAdminAsync içinde gönderilir. Çağıran slug'ı (istemciden) ve hedef durumu belirler.
+/// Kiracı kurmanın TEK yolu. Adımların sırası kritiktir ve her biri aşağıda
+/// gerekçesiyle işaretlidir.
 ///
-/// Tek çağıranı <c>ProvisionTenantCommand</c>'dir. Daha önce ikinci bir yol vardı
-/// (<c>RegisterTenantCommand</c> — public self-servis kayıt, kendi slug-retry döngüsüyle);
-/// self-servis kayıt tamamen kaldırıldığı için o kopya da silindi.
+/// Statik bir yardımcıydı; kiracı başına veritabanına geçilince bağımlılık sayısı
+/// (platform, kimlik, dizin, kütük, katalog sağlayıcı, şema hazırlayıcı, log)
+/// parametre listesiyle taşınamaz hale geldi ve servise dönüştü.
 /// </summary>
-public static class TenantOnboarding
+public sealed class TenantOnboarding(
+    IPlatformDbContext platform,
+    IIdentityService identityService,
+    ITenantDirectory directory,
+    ITenantRegistry registry,
+    ITenantDatabaseProvisioner databaseProvisioner,
+    ITenantSchemaInitializer schemaInitializer,
+    ILogger<TenantOnboarding> logger)
 {
-    public static async Task<Tenant> CreateWithAdminAsync(
-        IPlatformDbContext platform,
-        IIdentityService identityService,
-        ITenantDirectory directory,
-        ITenantRegistry registry,
+    public async Task<Tenant> CreateWithAdminAsync(
         string companyName,
         string slug,
         string adminName,
         string adminEmail,
-        TenantStatus hedefDurum,
         CancellationToken cancellationToken)
     {
-        // Admin e-postasını önce doğrula — kiracı yazılmadan çakışmayı yakala (orphan önlenir).
+        // Ön kontrol: e-posta başka bir kiracıda kayıtlıysa hiçbir şeye başlama.
+        // Kiracı satırı yazıldıktan sonra fark etmek, temizlenmesi gereken bir
+        // artık bırakırdı.
         if (await identityService.EmailExistsAsync(adminEmail, cancellationToken))
         {
             throw new ConflictException($"'{adminEmail}' e-postasıyla kayıtlı bir hesap zaten var.");
         }
 
-        // Kiracı satırı ve uygulama verisi (admin kullanıcı) iki ayrı veritabanındadır,
-        // dolayısıyla tek transaction değildir. Kiracı burada DAİMA Provisioning ile
-        // yazılır — hedefDurum yalnız aşağıda, admin oluşturulduktan SONRA uygulanır.
+        var katalogAdi = TenantDatabaseNaming.For(slug);
+
+        // Kiracının katalogu ZATEN VARSA reddet. Başarısız bir denemeden kalmış
+        // veritabanını sessizce yeniden kullanmak, iki müşterinin verisinin aynı
+        // yerde toplanması demektir — bu ürünün en pahalı hatası olurdu. Operatör
+        // önce artığı bilinçli olarak temizlemeli.
+        if (await databaseProvisioner.ExistsAsync(katalogAdi, cancellationToken))
+        {
+            throw new ConflictException(
+                $"'{katalogAdi}' veritabanı sunucuda zaten var. Yarıda kalmış bir kurulumdan " +
+                "kalmış olabilir; devam etmeden önce elle incelenip temizlenmelidir.");
+        }
+
+        // ADIM 1 — Platform, TEK transaction: kiracı satırı + e-posta rezervasyonu.
+        // İkisi birlikte olmalı: rezervasyon çakışırsa (eşzamanlı bir istek aynı
+        // adresi kaptıysa) geriye sahipsiz bir kiracı satırı kalmamalı; o satır hem
+        // slug'ı işgal ederdi hem de temizlenmesi gereken bir artık olurdu.
+        //
+        // E-posta kullanıcı oluşturulmadan ÖNCE rezerve edilir: rezervasyonu
+        // kullanıcı oluşturmaya bıraksaydık iki müşteri aynı adres için yarışabilirdi.
         var tenant = new Tenant
         {
             Name = companyName,
             Slug = slug,
+            DatabaseName = katalogAdi,
+            // Kiracı DAİMA Provisioning ile doğar; Active'e ancak her şey bittiğinde geçer.
             Status = TenantStatus.Provisioning,
             CreatedAtUtc = DateTime.UtcNow,
         };
-        platform.Tenants.Add(tenant);
-        await platform.SaveChangesAsync(cancellationToken);
 
-        // E-posta, admin kullanıcı oluşturulmadan ÖNCE rezerve edilir: eşzamanlı
-        // iki kayıt aynı adresi alamaz. Rezervasyonu kullanıcı oluşturmaya
-        // bıraksaydık iki müşteri yarışabilirdi.
-        await directory.ReserveAsync(adminEmail, tenant.Id, cancellationToken);
+        await using (var islem = await platform.BeginTransactionAsync(cancellationToken))
+        {
+            platform.Tenants.Add(tenant);
+            await platform.SaveChangesAsync(cancellationToken);
+            await directory.ReserveAsync(adminEmail, tenant.Id, cancellationToken);
+            await islem.CommitAsync(cancellationToken);
+        }
 
-        await identityService.CreateTenantAdminAsync(tenant.Id, adminName, adminEmail, tenant.Name, cancellationToken);
-
-        // Son adım: kiracı ancak burada kullanılabilir hale gelir. Araya giren
-        // bir hata kiracıyı Provisioning'de bırakır — erişilemez ama GÖRÜNÜR,
-        // ve operatör yeniden deneyebilir ya da geri alabilir.
-        tenant.Status = hedefDurum;
-        await platform.SaveChangesAsync(cancellationToken);
-        // Durum değişti — kütüğü düşür ki bir sonraki erişim kapısı sorgusu
-        // bunu ANINDA görsün, süre dolmasını beklemesin.
+        // Kütük bu kiracıyı henüz tanımıyor; bağlantı çözücünün katalog adını
+        // görebilmesi için önbelleği temiz bırak. (Yeni kimlik olduğu için ıska
+        // zaten kaçınılmaz, ama açıkça düşürmek niyeti görünür kılar.)
         registry.Invalidate(tenant.Id);
+
+        // ADIM 2 — fiziksel veritabanı.
+        await databaseProvisioner.CreateAsync(katalogAdi, cancellationToken);
+
+        // ADIM 3+4 — şema (migration) ve roller. Roller admin'den ÖNCE gelmeli:
+        // rol yoksa AddToRoleAsync sessizce düşer ve admin yetkisiz kalır.
+        await schemaInitializer.PrepareAsync(tenant.Id, cancellationToken);
+
+        // ADIM 5 — admin kullanıcı (şifresiz) + davet e-postası.
+        await identityService.CreateTenantAdminAsync(
+            tenant.Id, adminName, adminEmail, tenant.Name, cancellationToken);
+
+        // ADIM 6 — kiracı ancak burada kullanılabilir hale gelir. Araya giren bir
+        // hata onu Provisioning'de bırakır: erişilemez ama GÖRÜNÜR
+        // (GET /api/tenants/stuck), yani operatör fark eder ve temizleyebilir.
+        tenant.Status = TenantStatus.Active;
+        await platform.SaveChangesAsync(cancellationToken);
+        // Durum değişti — kütüğü düşür ki erişim kapısı bunu ANINDA görsün.
+        registry.Invalidate(tenant.Id);
+
+        logger.LogInformation(
+            "Kiracı provizyonu tamamlandı: {TenantId} ({Slug}) → {Katalog}",
+            tenant.Id, tenant.Slug, katalogAdi);
 
         return tenant;
     }

@@ -62,7 +62,7 @@ public sealed class SelfServisKayitKaldirildiTests(IKProApiFactory factory) : Te
         var anahtarsiz = await ProvisionRawAsync(new
         {
             companyName = "Anahtarsız A.Ş.",
-            slug = $"anahtarsiz-{Guid.NewGuid():N}",
+            slug = TestSlug("anahtarsiz"),
             adminName = "X",
             adminEmail = $"anahtarsiz-{Guid.NewGuid():N}@test.local",
         }, withPlatformKey: false);

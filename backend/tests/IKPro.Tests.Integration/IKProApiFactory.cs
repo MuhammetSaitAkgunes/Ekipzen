@@ -58,6 +58,39 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
 
         DropDatabase(TestDatabaseName);
         DropDatabase(PlatformTestDatabaseName);
+        KiraciKataloglariniSupur();
+    }
+
+    /// <summary>
+    /// Testlerin ürettiği kiracı kataloglarını (<c>IKPro_test_*</c>) koşum başında
+    /// süpürür.
+    ///
+    /// Testler bunları normalde kendi bitişlerinde düşürüyor (bkz.
+    /// <c>TenancyTestBase.DisposeAsync</c>); bu süpürme, koşum ORTASINDA çöken
+    /// bir süreçten kalan artıklar içindir. Olmasaydı artık katalog bir sonraki
+    /// koşuda "veritabanı zaten var" hatasıyla provizyonu reddettirirdi — yani
+    /// tek bir çökme, sonraki tüm koşumları kırardı.
+    /// </summary>
+    private static void KiraciKataloglariniSupur()
+    {
+        using var connection = new SqlConnection(ConnectionFor("master"));
+        connection.Open();
+
+        List<string> adlar = [];
+        using (var oku = connection.CreateCommand())
+        {
+            oku.CommandText = "SELECT name FROM sys.databases WHERE name LIKE 'IKPro[_]test[_]%';";
+            using var reader = oku.ExecuteReader();
+            while (reader.Read())
+            {
+                adlar.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var ad in adlar)
+        {
+            DropDatabase(ad);
+        }
     }
 
     private static void DropDatabase(string databaseName)

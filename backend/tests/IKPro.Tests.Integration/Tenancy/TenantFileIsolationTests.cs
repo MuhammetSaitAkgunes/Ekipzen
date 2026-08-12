@@ -8,9 +8,19 @@ using System.Net;
 namespace IKPro.Tests.Integration.Tenancy;
 
 /// <summary>
-/// Faz 3: evrak/dosya erişimi de kiracıya izole. İndirme/liste uçları evrak ve
-/// personel kayıtlarını global-filtreli EF üzerinden çözdüğü için, bir kiracı
-/// diğerinin evrakına ID tahminiyle erişemez (yabancı ID → 404).
+/// Evrak/dosya erişimi kiracıya izoledir: bir kiracı, diğerinin evrakına ID
+/// tahminiyle erişemez.
+///
+/// <b>Test bir kez yeniden yazıldı, sebebi öğreticidir.</b> Eskiden "yabancı ID →
+/// 404" iddia ediliyordu ve bu, tüm kiracılar aynı veritabanını paylaşırken
+/// doğruydu: kimlikler global olarak tekildi, bir kiracının personel kimliği
+/// diğerinde YOKTU. Kiracı başına veritabanına geçilince her katalog kendi kimlik
+/// dizisini saydı; artık 1 numaralı personel HER kiracıda var. Yani kurgu
+/// kurulamaz oldu — "yabancı" bir kimlik bulmak mümkün değil.
+///
+/// Bu bir gerileme değil, izolasyonun GÜÇLENMESİDİR: erişim artık sorgu filtresine
+/// değil, fiziksel ayrılığa dayanıyor. Test bu yüzden asıl güvenceyi ölçüyor:
+/// başka kiracının cevabında ötekinin verisi ASLA görünmez.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public sealed class TenantFileIsolationTests(IKProApiFactory factory) : TenancyTestBase(factory)
@@ -46,11 +56,23 @@ public sealed class TenantFileIsolationTests(IKProApiFactory factory) : TenancyT
             owner, $"/api/employees/{employee.Id}/documents");
         ownDocs.Should().ContainSingle().Which.FileName.Should().Be("gizli.pdf");
 
-        // Varsayılan kiracının admin'i bu personeli/evrakı GÖREMEZ (yabancı ID → 404).
         var demoAdmin = await AuthedClientAsync("ik@hrmaster.local");
-        (await demoAdmin.GetAsync($"/api/employees/{employee.Id}/documents"))
-            .StatusCode.Should().Be(HttpStatusCode.NotFound, "yabancı kiracının personeli görünmemeli");
-        (await demoAdmin.GetAsync($"/api/employees/{employee.Id}/documents/{document.Id}"))
-            .StatusCode.Should().Be(HttpStatusCode.NotFound, "yabancı kiracının evrakı indirilememeli");
+
+        // AYNI kimlikle sorulduğunda: varsayılan kiracının admin'i ya kendi
+        // personelini görür ya 404 alır — ama öteki kiracının evrakı cevapta
+        // ASLA geçmez. Asıl güvence bu.
+        var ayniKimlik = await demoAdmin.GetAsync($"/api/employees/{employee.Id}/documents");
+        (await ayniKimlik.Content.ReadAsStringAsync())
+            .Should().NotContain("gizli.pdf", "başka kiracının evrakı hiçbir koşulda sızmamalı");
+
+        var indirme = await demoAdmin.GetAsync(
+            $"/api/employees/{employee.Id}/documents/{document.Id}");
+        (await indirme.Content.ReadAsStringAsync())
+            .Should().NotContain("gizli.pdf", "başka kiracının evrakı indirilememeli");
+
+        // Gerçekten var olmayan bir kimlik hâlâ 404 dönmeli: yukarıdaki iddianın
+        // "uç zaten hep boş dönüyor" diye geçmediğini bu ayırt eder.
+        (await demoAdmin.GetAsync("/api/employees/999999/documents"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

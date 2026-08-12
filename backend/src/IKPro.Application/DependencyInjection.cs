@@ -31,6 +31,10 @@ public static class DependencyInjection
         // Bildirim tetikleyicileri (Faz 11): ayar toggle'larına uyar, IEmailSender'a yazar.
         services.AddScoped<INotificationTrigger, NotificationTrigger>();
 
+        // Kiracı kurmanın tek yolu. Scoped: platform context'i ve dizin ile AYNI
+        // kapsamda olmalı — adım 1'in transaction'ı bu paylaşıma dayanıyor.
+        services.AddScoped<Features.Tenancy.TenantOnboarding>();
+
         return services;
     }
 }

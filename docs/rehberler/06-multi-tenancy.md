@@ -1,17 +1,24 @@
 # 06 — Multi-Tenancy (Çok Kiracılılık)
 
-İK Pro çok müşterili bir SaaS'tır: birçok şirket (kiracı) aynı uygulamayı ve aynı
-veritabanını paylaşır ama **hiçbiri diğerinin verisini göremez.** Bu rehber bu
-izolasyonun nasıl sağlandığını anlatır. (Uyum/KVKK detayı: [`../kvkk-veri-izolasyonu.md`](../kvkk-veri-izolasyonu.md).)
+İK Pro çok müşterili bir SaaS'tır: birçok şirket (kiracı) aynı uygulamayı
+paylaşır ama **hiçbiri diğerinin verisini göremez.** Bu rehber bu izolasyonun
+nasıl sağlandığını anlatır. (Uyum/KVKK detayı: [`../kvkk-veri-izolasyonu.md`](../kvkk-veri-izolasyonu.md).)
 
-## İzolasyon Modeli: Ortak DB + `TenantId`
+## İzolasyon Modeli: Kiracı Başına Veritabanı (geçiş sürüyor)
 
-Her kiracıya ayrı veritabanı vermek yerine **tek veritabanı, tek şema** kullanılır;
-her satır bir `TenantId` sütunuyla sahibine bağlanır.
+Her kiracı **kendi veritabanında** yaşar: `Tenants.DatabaseName` katalog adını
+taşır, bağlantı çözücü kiracıdan o adı üretir.
 
-**Neden bu model?** MVP ölçeğinde basitlik (tek migration, tek yedek), maliyet ve
-hız. Mimari, ileride kritik müşteriyi ayrı DB'ye taşımaya kapalı değildir
-(`ICurrentTenant` soyutlaması bunu mümkün kılar).
+**Neden ayrıldık?** Tek müşteriyi, diğerlerine dokunmadan ve saniye hassasiyetinde
+geri yükleyebilmek için. Ortak veritabanında bir müşterinin "dünkü hâline dönün"
+talebi, ya herkesi geri sarmayı ya da satır satır elle onarımı gerektirirdi.
+
+> **Geçiş durumu:** `DatabaseName` **boş olabilir** ve bu bir hata değildir — boş
+> ad "henüz paylaşılan veritabanında" demektir. Yeni provizyonlanan kiracılar kendi
+> katalogunda doğar; daha önceden var olanlar taşınana kadar `IKProDb`'de kalır.
+> Bu yüzden `TenantId` sütunu ve global sorgu filtresi **kalkmadı**: paylaşılan
+> veritabanındaki kiracılar hâlâ onunla ayrılıyor ve filtre, ayrılmış kiracılarda
+> ikinci bir güvenlik katmanı olarak duruyor.
 
 ## Çekirdek Garanti: Global Sorgu Filtresi
 
@@ -67,8 +74,25 @@ sessizce yanlış veritabanına yazar. Örnek doğru kullanım: `TenantPurger` v
 ## Kiracı Nasıl Oluşur?
 
 **Tek yol var:** `POST /api/tenants` — `X-Platform-Key` başlığıyla korunur (normal
-rol sisteminin dışında, platform operasyonu). Kiracı **aktif** başlar; ilk hr-admin
-şifresiz oluşturulur ve davet e-postasıyla `/accept-invite`'a yönlendirilir.
+rol sisteminin dışında, platform operasyonu).
+
+Provizyon **altı adımdır** ve sıra kritiktir:
+
+1. Platform veritabanında, **tek transaction**: kiracı satırı (`Provisioning`,
+   `DatabaseName` üretilmiş) + e-posta rezervasyonu. Birlikte olmalılar; ayrı
+   olsalardı rezervasyon çakıştığında geriye slug'ı işgal eden sahipsiz bir
+   kiracı satırı kalırdı.
+2. `CREATE DATABASE [IKPro_{slug}] COLLATE Turkish_CI_AS`. **Katalog zaten varsa
+   provizyon REDDEDİLİR** — yarıda kalmış bir kurulumdan artakalanı sessizce
+   yeniden kullanmak, iki müşterinin verisini aynı yerde toplamak olurdu.
+3. Migration'lar yeni veritabanına uygulanır.
+4. Roller tohumlanır. **İsteğe bağlı bir adım değildir:** rol yoksa
+   `AddToRoleAsync` sessizce düşer ve admin yetkisiz kalır.
+5. İlk hr-admin **şifresiz** oluşturulur, davet e-postası gider.
+6. `Status = Active` — kiracı ancak burada kullanılabilir olur.
+
+Araya giren bir hata kiracıyı `Provisioning`'de bırakır: erişilemez ama
+**görünür** (`GET /api/tenants/stuck`), yani operatör fark eder ve temizler.
 
 > **Self-servis kayıt (`POST /api/tenants/signup`) kaldırıldı — geri eklemeyin.**
 >

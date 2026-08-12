@@ -195,6 +195,24 @@ Provizyon altı adıma iner (tasarım belgesindeki sıra):
 - Testlerin ürettiği veritabanı adları çakışmamalı ve tanınabilir olmalı.
 - Koşum süresi artacak; ölçün ve rapora yazın. Kabul edilebilir bulmuyorsanız durun ve bildirin — şablon veritabanı kopyalama gibi bir optimizasyon ayrı bir iştir.
 
+> **✅ TAMAMLANDI (2026-08-13).**
+>
+> **Temizlik stratejisi (kullanıcı kararı):** her testten sonra agresif temizlik. `TenancyTestBase` artık `IAsyncLifetime` uyguluyor; provizyonlanan her katalog izleniyor ve test bitince düşürülüyor. Fabrika ayrıca koşum başında `IKPro_test_*` desenli artıkları süpürüyor — bu, koşum ORTASINDA çöken bir süreç içindir; olmasaydı tek bir çökme sonraki tüm koşumları "veritabanı zaten var" ile kırardı. Test slug'ları `test-` önekli üretiliyor ki süpürme deseni gerçek bir kiracıyı asla silemesin.
+>
+> **Süre:** entegrasyon takımı **33 sn → 93 sn** (167 test). Yaklaşık 2,8 kat. Kabul edildi.
+>
+> **Planla sapmalar:**
+> 1. `TenantOnboarding` statik yardımcıdan **servise** dönüştü — bağımlılık sayısı (7) parametre listesiyle taşınamaz hale geldi.
+> 2. Migration'ı Application katmanından çalıştırmak mümkün değil (`AppDbContext` Infrastructure'da). Yeni bir soyutlama gerekti: **`ITenantSchemaInitializer`** — migration + **rol tohumlaması**. Roller kritik: boş bir kiracı veritabanında `AspNetRoles` boştur, `AddToRoleAsync` SESSİZCE düşer ve admin yetkisiz kalır. Planda bu adım "roller seed edilir" diye geçiyordu ama nereye ait olduğu yazmıyordu.
+> 3. Adım 1'in tek transaction'ı için `IPlatformDbContext`'e `BeginTransactionAsync` eklendi (rezervasyon, kiracının veritabanı-üretimli kimliğini bilmek zorunda olduğundan iki `SaveChanges` kaçınılmaz).
+> 4. **Davet e-postası ayrı bir adıma çıkarılmadı.** Planın sırasında e-posta 5., `Active` 6. adım; yani e-posta yine `Active`'den önce gidiyor ve bu, bugünkü davranışa göre hiçbir riski azaltmıyor. Riski gerçekten azaltan tek sıra (e-posta `Active`'den SONRA) daha kötü bir arıza üretirdi: e-posta gönderimi patlarsa kiracı Active ama admin'in daveti yok ve provizyon slug çakışması yüzünden yeniden denenemez. **Doğru çözüm bir operatör ucu: "daveti yeniden gönder".** Görev 7'ye ya da ayrı bir işe bırakıldı.
+>
+> **İki mevcut test kırıldı ve ikisi de bilgi taşıyordu:**
+> - `KiraciKutuguTests` — provizyonlanan kiracının `DatabaseName`'i artık dolu; test güncellendi.
+> - `TenantFileIsolationTests` — "yabancı ID → 404" kurgusu artık **kurulamıyor**: her katalog kendi kimlik dizisini saydığı için 1 numaralı personel her kiracıda var. Bu bir gerileme değil, izolasyonun güçlenmesi (sorgu filtresi değil fiziksel ayrılık). Test asıl güvenceyi ölçecek şekilde yeniden yazıldı: başka kiracının cevabında ötekinin verisi asla görünmez.
+>
+> Doğrulama: 66 birim + 167 entegrasyon yeşil, `-warnaserror` temiz. Koşum sonrası sunucuda artık katalog yok (elle doğrulandı).
+
 ---
 
 ### Görev 5: Mevcut kiracılar ayrılır
