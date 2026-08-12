@@ -19,6 +19,48 @@ namespace IKPro.Tests.Integration.Auth;
 public class KimlikKiraciKapsamiTests(IKProApiFactory factory) : TenancyTestBase(factory)
 {
     /// <summary>
+    /// Kilitleme, kimlik servislerinin AYNI kapsamdan çözüldüğünün kanıtıdır.
+    ///
+    /// <c>SignInManager.CheckPasswordSignInAsync</c> başarısız deneme sayacını
+    /// <c>UserManager</c> üzerinden YAZAR; ikisi AYNI kapsamdan çözülmelidir.
+    ///
+    /// Kırılabilirlik doğrulandı: <c>SignInManager</c> ayrı bir kapsamdan çözülecek
+    /// şekilde bilerek bozulduğunda bu test kırıldı (giriş 401 yerine 500 verdi —
+    /// bir context'ten gelen kullanıcı nesnesi başka bir context'in yöneticisine
+    /// verilemiyor). Yani yanlış kullanım sessiz kalmıyor, gürültülü patlıyor;
+    /// bu test o gürültüyü yakalayan yer.
+    ///
+    /// Politika: 5 başarısız denemede 5 dakika kilit (bkz. DependencyInjection).
+    /// </summary>
+    [Fact]
+    public async Task Kilitleme_BesBasarisizDenemedenSonraDogruSifreyiDeReddeder()
+    {
+        var eposta = $"kilit-{Guid.NewGuid():N}@ornek.local";
+        await ProvisionAndActivateAsync("KilitKapsam", eposta);
+
+        var client = Factory.CreateClient();
+
+        for (var i = 1; i <= 5; i++)
+        {
+            var yanlis = await client.PostAsJsonAsync(
+                "/api/auth/login", new { email = eposta, password = "kesinlikle-yanlis" });
+            yanlis.StatusCode.Should().Be(HttpStatusCode.Unauthorized, $"{i}. hatalı deneme reddedilmeli");
+        }
+
+        // DOĞRU şifreyle dene: sayaç kalıcı yazıldıysa hesap artık kilitli olmalı.
+        var dogruSifre = await client.PostAsJsonAsync(
+            "/api/auth/login", new { email = eposta, password = DefaultPassword });
+
+        dogruSifre.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "beş hatalı denemeden sonra doğru şifre bile reddedilmeli");
+
+        var govde = await dogruSifre.Content.ReadAsStringAsync();
+        govde.Should().Contain("kilitlendi",
+            "reddin sebebi 'şifre hatalı' değil KİLİTLENME olmalı — aksi halde sayaç " +
+            "hiç yazılmamış demektir ve UserManager ile SignInManager ayrı kapsamlardan geliyordur");
+    }
+
+    /// <summary>
     /// Refresh token PLATFORM veritabanında durmalı: elinde yalnız token dizesi
     /// olan sunucu, kiracı DB'leri ayrıldığında hangi katalogda arayacağını
     /// başka türlü bilemez. Satırdaki TenantId yönlendirmeyi verir.

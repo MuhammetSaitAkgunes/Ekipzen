@@ -8,6 +8,7 @@ using IKPro.Domain.Entities.Tenancy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace IKPro.Infrastructure.Identity;
@@ -18,8 +19,7 @@ namespace IKPro.Infrastructure.Identity;
 /// ve DB'de hash'lenmiş saklanır.
 /// </summary>
 public sealed class IdentityService(
-    UserManager<ApplicationUser> userManager,
-    SignInManager<ApplicationUser> signInManager,
+    ITenantScopeFactory tenantScopeFactory,
     JwtTokenService tokenService,
     ICurrentTenant currentTenant,
     IEmailSender emailSender,
@@ -32,6 +32,25 @@ public sealed class IdentityService(
 {
     private const string InvalidCredentialsMessage = "E-posta veya şifre hatalı.";
 
+    /// <summary>
+    /// Kimlik servislerini KİRACIYA SABİTLENMİŞ bir kapsamdan çözer.
+    ///
+    /// <see cref="UserManager{TUser}"/>, <c>AddEntityFrameworkStores&lt;AppDbContext&gt;</c>
+    /// ile uygulama context'ine bağlıdır; o da bağlantısını <see cref="ICurrentTenant"/>'tan
+    /// alır. Bu yüzden bu servisler constructor'da enjekte EDİLEMEZ: DI kapsamı, kiracı
+    /// daha öğrenilmeden kurulur (login'de kiracı ancak dizin sorgusundan SONRA bilinir).
+    /// Kiracı başına veritabanına geçildiğinde (Faz 2b) constructor enjeksiyonu YANLIŞ
+    /// katalogda arama yapardı ve bu sessizce olurdu.
+    ///
+    /// İkisi AYNI kapsamdan çözülür — ayrı kapsamlardan çözülürse
+    /// <see cref="SignInManager{TUser}.CheckPasswordSignInAsync"/>'in yazdığı lockout
+    /// sayaçları başka bir context'e gider ve kilitleme sessizce çalışmaz.
+    /// </summary>
+    private static (UserManager<ApplicationUser> Kullanicilar, SignInManager<ApplicationUser> Girisler)
+        KimlikServisleri(ITenantScope kapsam) =>
+        (kapsam.Services.GetRequiredService<UserManager<ApplicationUser>>(),
+         kapsam.Services.GetRequiredService<SignInManager<ApplicationUser>>());
+
     public async Task<AuthResponse> LoginAsync(string email, string password, CancellationToken cancellationToken)
     {
         // Dizin login'in ÖN adımıdır: Faz 2'de kullanıcı tablosu kiracının kendi
@@ -41,24 +60,12 @@ public sealed class IdentityService(
         var dizinKiraciId = await directory.FindTenantIdAsync(email, cancellationToken)
             ?? throw new UnauthorizedException(InvalidCredentialsMessage);
 
-        // FAZ 2 NOTU (bu dal — Faz 1b — burayı ÇÖZMEZ): `dizinKiraciId` yukarıda DOĞRU
-        // kiracıyı bulur, ama aşağıdaki `userManager` (constructor'da enjekte edilen
-        // `UserManager<ApplicationUser>`, dolayısıyla onun içindeki `AppDbContext`) hâlâ
-        // bu sınıf inşa edilirken kurulmuş AMBIENT/kiracısız HTTP kapsamının bağlantısını
-        // kullanır — `dizinKiraciId`'ye SABİTLENMEMİŞTİR. Bugün doğru sonuç verir çünkü
-        // Faz 1b'de tüm kiracılar aynı veritabanını paylaşıyor (bkz. TenantConnectionResolver).
-        // Faz 2'de kiracı başına veritabanına geçilince bu satır YANLIŞ kiracının
-        // veritabanında kullanıcı arar (dizinKiraciId'nin veritabanında değil) — login
-        // burada SESSİZCE bozulur (muhtemelen "kullanıcı yok" hatasıyla, gerçek nedeni
-        // gizleyerek). Bu yüzden LoginAsync'in Faz 2'de YENİDEN YAPILANDIRILMASI gerekir:
-        // kiracı yalnızca BURADA, dizin sorgusundan SONRA bilinir, dolayısıyla constructor
-        // enjeksiyonu (sıra: DI kapsamı kurulur → sonra kiracı öğrenilir) yapısal olarak
-        // yetersizdir. Olası yaklaşım: userManager/context'i constructor'da almak yerine,
-        // `dizinKiraciId` bilindikten SONRA `ITenantScopeFactory.Create(dizinKiraciId)` ile
-        // taze bir kapsam açıp o kapsamdan UserManager/AppDbContext çözmek (bkz. TenantPurger
-        // ve UserDirectorySource'taki aynı desen) — ya da login akışını iki aşamaya bölüp
-        // ikinci aşamayı kiracıya sabitlenmiş bir kapsamda çalıştırmak.
-        var user = await userManager.FindByEmailAsync(email)
+        // Kiracı ancak BURADA, dizin sorgusundan sonra bilinir — bu yüzden kimlik
+        // servisleri constructor'dan değil, kiracıya sabitlenmiş bu kapsamdan çözülür.
+        using var kapsam = tenantScopeFactory.Create(dizinKiraciId);
+        var (kullanicilar, girisler) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.FindByEmailAsync(email)
             ?? throw new UnauthorizedException(InvalidCredentialsMessage);
 
         if (user.TenantId != dizinKiraciId)
@@ -79,7 +86,7 @@ public sealed class IdentityService(
             throw new UnauthorizedException("Hesap pasif durumda. Yöneticinizle iletişime geçin.");
         }
 
-        var result = await signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+        var result = await girisler.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
         if (result.IsLockedOut)
         {
             throw new UnauthorizedException("Çok sayıda hatalı deneme; hesap geçici olarak kilitlendi.");
@@ -94,11 +101,23 @@ public sealed class IdentityService(
         // doğruluk kaynağı IssueTokensAsync'in başındaki erişim kapısıdır (bkz.
         // orada). Burada tekrarlamak iki kaynak demekti ve refresh yolunu (aynı
         // kapıdan geçmeyen eski RefreshAsync) korumasız bırakmıştı.
-        return await IssueTokensAsync(user, cancellationToken);
+        return await IssueTokensAsync(kapsam, user, cancellationToken);
     }
 
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken)
-        => await userManager.FindByEmailAsync(email) is not null;
+    {
+        // Dizinde kayıt yoksa kullanıcı da yoktur — kapsam açmaya gerek kalmadan
+        // cevap verilir. Dizin, e-postanın hangi kiracıya ait olduğunu bilen tek yer.
+        var kiraciId = await directory.FindTenantIdAsync(email, cancellationToken);
+        if (kiraciId is null)
+        {
+            return false;
+        }
+
+        using var kapsam = tenantScopeFactory.Create(kiraciId.Value);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+        return await kullanicilar.FindByEmailAsync(email) is not null;
+    }
 
     public async Task CreateTenantAdminAsync(
         int tenantId, string name, string email, string companyName, CancellationToken cancellationToken)
@@ -119,7 +138,8 @@ public sealed class IdentityService(
         // no-op'tur. Rezervasyon yapılmamışsa (ör. eski bir çağıran unutursa) bu
         // çağrı yine de dizine yazar; "dizine hiç yazılmadı" sınıfı hatalar artık
         // derleyici tarafından değil, tek bir kod yolu tarafından imkansız kılınır.
-        await CreateInvitedUserAsync(user, Roles.HrAdmin, companyName, cancellationToken);
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+        await CreateInvitedUserAsync(kapsam, user, Roles.HrAdmin, companyName, cancellationToken);
     }
 
     public async Task CreateEmployeeLoginAsync(
@@ -140,17 +160,26 @@ public sealed class IdentityService(
             EmployeeId = employeeId,
             TenantId = tenantId,
         };
-        await CreateInvitedUserAsync(user, Roles.Employee, companyName, cancellationToken);
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+        await CreateInvitedUserAsync(kapsam, user, Roles.Employee, companyName, cancellationToken);
     }
 
     public async Task AcceptInviteAsync(
         string email, string token, string newPassword, CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByEmailAsync(email)
+        // Davet kabulü ANONİM bir istektir — ambient kapsamda kiracı yoktur.
+        // Kullanıcının hangi kiracıya ait olduğu yalnız dizinden bilinir.
+        var kiraciId = await directory.FindTenantIdAsync(email, cancellationToken)
+            ?? throw new ValidationException([new ValidationFailure("email", "Davet bulunamadı.")]);
+
+        using var kapsam = tenantScopeFactory.Create(kiraciId);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.FindByEmailAsync(email)
             ?? throw new ValidationException([new ValidationFailure("email", "Davet bulunamadı.")]);
 
         // Şifresiz oluşturulan hesabın ilk şifresini davet (reset) token'ıyla belirler.
-        var result = await userManager.ResetPasswordAsync(user, token, newPassword);
+        var result = await kullanicilar.ResetPasswordAsync(user, token, newPassword);
         if (!result.Succeeded)
         {
             throw new ValidationException(result.Errors
@@ -187,25 +216,27 @@ public sealed class IdentityService(
     /// alır. Dizine önce yazmak bu sınıf hatayı imkansız kılar.
     /// </summary>
     private async Task CreateInvitedUserAsync(
-        ApplicationUser user, string role, string companyName, CancellationToken cancellationToken)
+        ITenantScope kapsam, ApplicationUser user, string role, string companyName, CancellationToken cancellationToken)
     {
-        if (await userManager.FindByEmailAsync(user.Email!) is not null)
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        if (await kullanicilar.FindByEmailAsync(user.Email!) is not null)
         {
             throw new ConflictException($"'{user.Email}' e-postasıyla kayıtlı bir hesap zaten var.");
         }
 
         await directory.ReserveAsync(user.Email!, user.TenantId, cancellationToken);
 
-        var createResult = await userManager.CreateAsync(user); // şifresiz → davet gerektirir
+        var createResult = await kullanicilar.CreateAsync(user); // şifresiz → davet gerektirir
         if (!createResult.Succeeded)
         {
             throw new ValidationException(createResult.Errors
                 .Select(e => new ValidationFailure("email", e.Description)));
         }
 
-        await userManager.AddToRoleAsync(user, role);
+        await kullanicilar.AddToRoleAsync(user, role);
 
-        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var token = await kullanicilar.GeneratePasswordResetTokenAsync(user);
         await SendInviteEmailAsync(user.DisplayName, user.Email!, companyName, token, cancellationToken);
     }
 
@@ -229,16 +260,6 @@ public sealed class IdentityService(
         // verir — tıpkı login'de e-postanın kiracısının dizin sorgusundan önce
         // bilinmemesi gibi, burada da kiracı token'ı bulmadan önce bilinmez.
         //
-        // FAZ 2 NOTU (bu görev — Faz 2a/Görev 1 — burayı ÇÖZMEZ): kullanıcı aşağıda hâlâ
-        // AMBIENT `userManager` (constructor'da enjekte edilen, HTTP kapsamının
-        // AppDbContext'ine bağlı) ile çözülür. Faz 1b/2a'da tüm kiracılar aynı uygulama
-        // veritabanını paylaştığından doğru sonuç verir. Kiracı başına veritabanına
-        // geçilince (Faz 2b) bu satır YANLIŞ kiracının veritabanında arar (stored.TenantId
-        // yerine ambient/JWT kiracısını kullanır) — o zaman LoginAsync ile aynı desene
-        // (bkz. oradaki not): `ITenantScopeFactory.Create(stored.TenantId)` ile taze bir
-        // kapsam açıp kullanıcıyı ORADAN çözmek gerekir. Bu görevin kapsamı yalnız
-        // token'ın DEPOLANDIĞI veritabanını değiştirmektir; kullanıcı çözümünün kiracı
-        // kapsamına taşınması sonraki göreve bırakılmıştır.
         var hash = JwtTokenService.Hash(refreshToken);
         var stored = await platform.RefreshTokens
             .FirstOrDefaultAsync(t => t.Token == hash, cancellationToken);
@@ -248,7 +269,12 @@ public sealed class IdentityService(
             throw new UnauthorizedException("Geçersiz veya süresi dolmuş yenileme token'ı.");
         }
 
-        var user = await userManager.FindByIdAsync(stored.UserId);
+        // Kiracı token satırından gelir — login'de dizinin oynadığı rolü burada
+        // TenantId oynar. Kullanıcı o kiracıya sabitlenmiş kapsamdan çözülür.
+        using var kapsam = tenantScopeFactory.Create(stored.TenantId);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.FindByIdAsync(stored.UserId);
         if (user is null)
         {
             // Token platformda var ama kullanıcı kiracı veritabanında yok — ör. kiracı
@@ -268,7 +294,7 @@ public sealed class IdentityService(
         // Rotasyon: eski token tek kullanımlıktır.
         stored.RevokedAtUtc = DateTime.UtcNow;
 
-        return await IssueTokensAsync(user, cancellationToken);
+        return await IssueTokensAsync(kapsam, user, cancellationToken);
     }
 
     public async Task LogoutAsync(string refreshToken, CancellationToken cancellationToken)
@@ -288,10 +314,14 @@ public sealed class IdentityService(
     public async Task ChangePasswordAsync(
         string userId, string currentPassword, string newPassword, CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByIdAsync(userId)
+        // Oturum içi işlem: kiracı JWT'den gelir.
+        using var kapsam = tenantScopeFactory.Create(currentTenant.TenantIdOrThrow());
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.FindByIdAsync(userId)
             ?? throw new UnauthorizedException("Kullanıcı kaydı bulunamadı.");
 
-        var result = await userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        var result = await kullanicilar.ChangePasswordAsync(user, currentPassword, newPassword);
         if (result.Succeeded)
         {
             return;
@@ -308,8 +338,12 @@ public sealed class IdentityService(
 
     public async Task<UserDto?> GetUserAsync(string userId, CancellationToken cancellationToken)
     {
-        var user = await userManager.FindByIdAsync(userId);
-        return user is null ? null : await BuildUserDtoAsync(user);
+        // Oturum içi işlem: kiracı JWT'den gelir.
+        using var kapsam = tenantScopeFactory.Create(currentTenant.TenantIdOrThrow());
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.FindByIdAsync(userId);
+        return user is null ? null : await BuildUserDtoAsync(kapsam, user);
     }
 
     /// <summary>
@@ -320,7 +354,14 @@ public sealed class IdentityService(
     /// Ucun kaldırılmasıyla o istisna da ortadan kalktı: bundan sonra hiçbir token
     /// üretimi (login, refresh) bu kapıyı atlayamaz.
     /// </summary>
-    private async Task<AuthResponse> IssueTokensAsync(ApplicationUser user, CancellationToken cancellationToken)
+    /// <remarks>
+    /// <paramref name="kapsam"/> İMZADA: <paramref name="user"/> o kapsamın context'ine
+    /// bağlıdır ve rol okuma da aynı <c>UserManager</c>'dan yapılmalıdır. Kapsamı
+    /// parametre almak yerine "çağıran doğru kapsam içinden çağırsın" demek, sırayı
+    /// yine sözleşmeye bırakırdı — imzaya koymak yanlış kullanımı derleme hatasına çevirir.
+    /// </remarks>
+    private async Task<AuthResponse> IssueTokensAsync(
+        ITenantScope kapsam, ApplicationUser user, CancellationToken cancellationToken)
     {
         // Kapı burada: login ve refresh'in ORTAK yolu burasıdır, dolayısıyla
         // ikisi de tek noktadan korunur. Faz 1a'da kapı yalnız login'deydi ve
@@ -328,7 +369,8 @@ public sealed class IdentityService(
         // refresh token'la oturumunu süresiz uzatabiliyordu.
         await accessGuard.EnsureAccessibleAsync(user.TenantId, cancellationToken);
 
-        var roles = await userManager.GetRolesAsync(user);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+        var roles = await kullanicilar.GetRolesAsync(user);
         var (accessToken, expiresAtUtc) = tokenService.CreateAccessToken(user, roles);
         var (rawRefreshToken, refreshEntity) = tokenService.CreateRefreshToken(user.Id);
         refreshEntity.TenantId = user.TenantId;
@@ -342,8 +384,11 @@ public sealed class IdentityService(
         return new AuthResponse(accessToken, rawRefreshToken, expiresAtUtc, ToUserDto(user, roles, tenantName));
     }
 
-    private async Task<UserDto> BuildUserDtoAsync(ApplicationUser user)
-        => ToUserDto(user, await userManager.GetRolesAsync(user), await TenantNameAsync(user.TenantId, default));
+    private async Task<UserDto> BuildUserDtoAsync(ITenantScope kapsam, ApplicationUser user)
+    {
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+        return ToUserDto(user, await kullanicilar.GetRolesAsync(user), await TenantNameAsync(user.TenantId, default));
+    }
 
     /// <summary>Kiracının görünen adı — /me ve auth yanıtlarında şirket bağlamı için.</summary>
     private async Task<string> TenantNameAsync(int tenantId, CancellationToken cancellationToken) =>
