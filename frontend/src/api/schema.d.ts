@@ -4353,6 +4353,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenants/{id}/resend-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Kiracıdaki, henüz şifre belirlememiş bir kullanıcıya davet e-postasını YENİDEN
+         *     gönderir. Provizyonun e-posta adımı başarısız olduğunda (SMTP arızası, spam,
+         *     yanlış adres) operatörün kurtarma aracı budur — o olmadan tek çare kiracıyı
+         *     silip baştan kurmaktı. Şifresi olan hesaba gönderilmez (409).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ResendInviteRequest"];
+                    "text/json": components["schemas"]["ResendInviteRequest"];
+                    "application/*+json": components["schemas"]["ResendInviteRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/stuck": {
         parameters: {
             query?: never;
@@ -5432,6 +5512,10 @@ export interface components {
         };
         RefreshTokenCommand: {
             refreshToken?: string | null;
+        };
+        /** @description Davet yeniden gönderme isteği gövdesi. */
+        ResendInviteRequest: {
+            email?: string | null;
         };
         RiskDetailDto: {
             /** Format: int32 */

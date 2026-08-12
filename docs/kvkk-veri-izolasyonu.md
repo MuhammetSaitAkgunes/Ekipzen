@@ -14,20 +14,28 @@
 
 ---
 
-## 1. İzolasyon modeli — ortak DB + `TenantId` ayraç
+## 1. İzolasyon modeli — kiracı başına veritabanı + `TenantId` ayraç
 
-İK Pro **paylaşımlı veritabanı, paylaşımlı şema** modeli kullanır: tüm kiracılar
-aynı MSSQL veritabanını paylaşır, her satır bir `TenantId` sütunuyla sahibine
-bağlanır. Kiracılar arası ayrım tek bir çekirdek garantiye dayanır:
+İK Pro **kiracı başına ayrı veritabanı** modeli kullanır: her müşteri şirketin
+verisi kendi MSSQL kataloğunda durur (`Tenants.DatabaseName`), bağlantı kiracıdan
+çözülür. Ayrım böylece bir sorgu kuralına değil, **fiziksel sınıra** dayanır.
+
+Model 2026-08-13'te değişti; gerekçesi kurtarılabilirlikti: ortak veritabanında
+bir müşterinin "verimizi dünkü hâline döndürün" talebi ya bütün müşterileri geri
+sarmayı ya da satır satır elle onarımı gerektiriyordu. Ayrı katalogda tek
+müşteri, diğerlerine hiç dokunmadan geri yüklenebilir.
+
+**`TenantId` sütunu ve global sorgu filtresi KALDIRILMADI** — ikinci savunma
+katmanı olarak duruyorlar:
 
 > **Global sorgu filtresi:** EF Core, kiracı-kapsamlı her varlığa otomatik olarak
 > `WHERE TenantId = @currentTenant` ekler. Uygulama kodu bu filtreyi elle yazmaz;
 > dolayısıyla "filtre eklemeyi unutma" sızıntısı yapısal olarak imkânsızdır.
 
-Neden bu model (DB-per-tenant yerine): MVP ölçeğinde operasyonel basitlik
-(tek migration, tek yedekleme), maliyet ve hız. Mimari, ileride kurumsal
-müşteri için **DB-per-tenant** seçeneğine kapatılmadı (bkz. `ICurrentTenant`
-soyutlaması) — büyüdükçe kritik kiracılar ayrı veritabanına taşınabilir.
+Bağlantı çözümü yanlış katalogu verse bile filtre veriyi karıştırmaz. İki
+bağımsız savunma, tek kusursuz savunmadan iyidir. Ayrıca mekanizma, bir kiracıyı
+geçici olarak paylaşılan veritabanında tutmayı (`DatabaseName` boş) mümkün
+kılıyor — kademeli taşıma yolu açık kalsın diye.
 
 ### Nasıl çalışır
 
@@ -213,8 +221,10 @@ Dürüstlük için, bugün **otomatik olmayan** veya eksik olan maddeler:
    implementasyonu eklendi; `Email:Mode=smtp` + `Smtp:Host`/`Smtp:From` (env'den)
    ile etkinleşir. Varsayılan hâlâ `outbox` (dev/demo). Üretime geçerken yalnız
    yapılandırma değişir, kod değişmez.
-5. **Yedekleme/geri yükleme kiracı granülaritesi.** Ortak DB yedeği tüm
-   kiracıları kapsar; tek-kiracı geri yükleme prosedürü tanımlı değil.
+5. **Yedekleme/geri yükleme kiracı granülaritesi — ALTYAPISI HAZIR.** Her kiracı
+   kendi kataloğunda olduğu için tek-kiracı yedeği/geri yüklemesi artık teknik
+   olarak mümkün. Prosedürün kendisi (dondur → geri yükle → çöz, oturumların
+   geçersizleşmesi dahil) Faz 3'te yazılacak; bkz. `docs/yedekleme-ve-kurtarma.md`.
 
 Bu maddeler `docs/superpowers/plans/2026-07-17-multi-tenant-saas.md` "Sonraki
 adımlar" ve MVP sertleştirme kapsamıyla uyumludur.

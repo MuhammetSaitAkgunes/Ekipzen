@@ -131,6 +131,32 @@ public sealed class TenancyController(ISender sender, IConfiguration configurati
         return Ok(await sender.Send(new UnfreezeTenantCommand(id), cancellationToken));
     }
 
+    /// <remarks>
+    /// Kiracıdaki, henüz şifre belirlememiş bir kullanıcıya davet e-postasını YENİDEN
+    /// gönderir. Provizyonun e-posta adımı başarısız olduğunda (SMTP arızası, spam,
+    /// yanlış adres) operatörün kurtarma aracı budur — o olmadan tek çare kiracıyı
+    /// silip baştan kurmaktı. Şifresi olan hesaba gönderilmez (409).
+    /// </remarks>
+    [HttpPost("{id:int}/resend-invite")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResendInvite(
+        int id, ResendInviteRequest request, CancellationToken cancellationToken)
+    {
+        if (!PlatformKeyValid())
+        {
+            return Unauthorized(new { title = "Platform anahtarı geçersiz veya eksik." });
+        }
+
+        await sender.Send(new ResendTenantInviteCommand(id, request.Email), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Davet yeniden gönderme isteği gövdesi.</summary>
+    public sealed record ResendInviteRequest(string Email);
+
     /// <remarks>Provizyonu/silmesi yarıda kalmış kiracılar (operatör görünürlüğü).</remarks>
     [HttpGet("stuck")]
     [ProducesResponseType<IReadOnlyList<StuckTenantDto>>(StatusCodes.Status200OK)]

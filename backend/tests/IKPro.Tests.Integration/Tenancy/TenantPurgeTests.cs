@@ -123,13 +123,6 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
             "purge sonrası e-posta serbest kalmalı, kalıcı kilitlenmemeli");
     }
 
-    private HttpClient PlatformClient()
-    {
-        var client = Factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
-        return client;
-    }
-
     [Fact]
     public async Task Purge_DeletesPhysicalDocumentFiles()
     {
@@ -218,7 +211,6 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
             // bağımlılık gerçek DI'dan gelir — böylece sınanan şey gerçek purge
             // davranışıdır, sahte bir kurgu değil.
             var purger = new TenantPurger(
-                sp.GetRequiredService<AppDbContext>(),
                 sp.GetRequiredService<IPlatformDbContext>(),
                 sp.GetRequiredService<ITenantScopeFactory>(),
                 patlayanDepo,
@@ -342,6 +334,46 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
             var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
             (await platform.Tenants.AnyAsync(x => x.Id == unverifiedId)).Should().BeFalse("doğrulanmamış temizlenmeli");
             (await platform.Tenants.AnyAsync(x => x.Id == kept.TenantId)).Should().BeTrue("aktif kiracı korunmalı");
+        }
+    }
+
+    /// <summary>
+    /// Şifre BELİRLEMİŞ bir kullanıcısı olan kiracı, <c>Provisioning</c>'de takılı
+    /// ve eski olsa bile otomatik temizlikte SİLİNMEMELİ.
+    ///
+    /// Neden ayrı bir test: mevcut "korunur" testi ADAY OLMAYAN (Active) bir
+    /// kiracıyla çalışıyordu — yani korumanın kendisini hiç sınamıyordu, yalnız
+    /// filtrenin Active'leri dışarıda bıraktığını. Asıl koruma bu: aday olan ama
+    /// gerçek kullanıcısı bulunan kiracı. Kiracı başına veritabanına geçildikten
+    /// sonra bu kontrolün kiracının KENDİ katalogunda yapılması gerekiyor; ambient
+    /// bağlantı artık boş paylaşılan veritabanına baktığı için "hiç kimsenin şifresi
+    /// yok" der ve koruma sessizce kalkardı.
+    /// </summary>
+    [Fact]
+    public async Task CleanupUnverified_SifreBelirlemisKiraciyiKorur()
+    {
+        var eposta = $"korunan-{Guid.NewGuid():N}@cleanup.local";
+        var kiraci = await ProvisionAndActivateAsync("Korunmalı A.Ş.", eposta);
+
+        // Takılı kalmış görünüme sok: eski + Provisioning. Kullanıcı şifresini
+        // zaten belirledi (ProvisionAndActivateAsync davet kabul ediyor).
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+            var t = await platform.Tenants.FirstAsync(x => x.Id == kiraci.TenantId);
+            t.Status = TenantStatus.Provisioning;
+            t.CreatedAtUtc = DateTime.UtcNow.AddDays(-30);
+            await platform.SaveChangesAsync(CancellationToken.None);
+        }
+
+        (await PlatformClient().PostAsync("/api/tenants/cleanup-unverified?olderThanDays=7", null))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+            (await platform.Tenants.AnyAsync(x => x.Id == kiraci.TenantId)).Should().BeTrue(
+                "şifre belirlemiş kullanıcısı olan kiracı otomatik temizlikte silinmemeli");
         }
     }
 }

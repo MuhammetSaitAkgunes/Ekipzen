@@ -57,15 +57,21 @@ flowchart TD
 
 | Katman | Nasıl |
 | --- | --- |
-| Yazılabilir varlıklar | `BaseEntity : ITenantScoped` + global filtre |
+| Veritabanı | Kiracının verisi kendi kataloğunda — fiziksel sınır |
+| Yazılabilir varlıklar | `BaseEntity : ITenantScoped` + global filtre (ikinci katman) |
 | SQL view / okuma modelleri | View'ler `TenantId` sütununu kendileri taşır (EF filtresini baypas eder) |
 | SQL fonksiyonu | `fn_WorkingDays(@start, @end, @tenantId)` — kiracı parametresi zorunlu |
 | Audit trigger'ları | Etkilenen satırın `TenantId`'sini kopyalar |
-| Dosya/blob | Erişim, tenant-kapsamlı DB satırından geçer → yabancı kiracı 404 alır |
-| Kimlik | `ApplicationUser.TenantId`; pasif kiracıya giriş reddedilir |
+| Dosya/blob | Erişim, kiracının kendi veritabanındaki satırdan geçer → yabancı kiracıya hiç görünmez |
+| Kimlik | Kullanıcılar kiracının kendi veritabanında; login e-postayı önce yönlendirme dizininden kiracıya çözer, sonra o katalogda arar |
 
 Bu izolasyon **testlerle kanıtlanır** (`tests/.../Tenancy/`): Kiracı A asla Kiracı B'nin
 verisini göremez. Bu, ürünün en kritik güvencesidir.
+
+> **Kimlikler artık global tekil DEĞİL.** Her katalog kendi kimlik dizisini
+> sayar, yani 1 numaralı personel her kiracıda vardır. "Yabancı kimlikle sorgu →
+> 404" varsayımına dayanan bir test artık kurulamaz; doğru iddia "başka kiracının
+> cevabında ötekinin verisi görünmez"dir (bkz. `TenantFileIsolationTests`).
 
 ## `Impersonate` Ne İşe Yarar?
 
@@ -102,6 +108,25 @@ Provizyon **altı adımdır** ve sıra kritiktir:
 
 Araya giren bir hata kiracıyı `Provisioning`'de bırakır: erişilemez ama
 **görünür** (`GET /api/tenants/stuck`), yani operatör fark eder ve temizler.
+
+### Operatörün kurtarma araçları
+
+| Uç | Ne zaman |
+| --- | --- |
+| `GET /api/tenants/stuck` | Yarıda kalmış kurulum/silme var mı? |
+| `POST /api/tenants/{id}/resend-invite` | Davet e-postası gitmedi/kayboldu — hesabı silmeden yeniden gönder |
+| `POST /api/tenants/{id}/rebuild-directory` | Yönlendirme dizini sapmış; kiracının kendi veritabanından yeniden kur |
+| `POST /api/tenants/{id}/freeze` · `/unfreeze` | Bakım/geri yükleme penceresi |
+| `POST /api/tenants/cleanup-unverified` | Provisioning'de takılı, **şifresiz** eski kiracıları topla |
+
+> `resend-invite` neden var: provizyonun 5. adımı e-posta göndermektir. O adım
+> başarısız olduğunda (SMTP arızası, spam, yanlış adres) geriye kullanıcısı oluşmuş
+> ama girişi imkânsız bir kiracı kalıyordu ve operatörün tek çaresi kiracıyı silip
+> baştan kurmaktı — bir e-posta gitmedi diye veri silmek. Şifresi olan hesaba
+> gönderilmez (409): davet hesabı ilk kez kurmak içindir.
+>
+> `cleanup-unverified` **şifre belirlemiş kullanıcısı olan kiracıya dokunmaz** ve
+> bu kontrolü her kiracının KENDİ kataloğunda yapar.
 
 > **Self-servis kayıt (`POST /api/tenants/signup`) kaldırıldı — geri eklemeyin.**
 >

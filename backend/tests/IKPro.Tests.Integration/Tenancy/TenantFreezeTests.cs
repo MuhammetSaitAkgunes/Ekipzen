@@ -195,10 +195,4 @@ public sealed class TenantFreezeTests(IKProApiFactory factory) : TenancyTestBase
         return (eposta, kiraci.TenantId);
     }
 
-    private HttpClient PlatformClient()
-    {
-        var client = Factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
-        return client;
-    }
 }

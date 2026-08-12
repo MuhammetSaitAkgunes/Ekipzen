@@ -28,7 +28,6 @@ public class AppDbContextInitializer(
     ILogger<AppDbContextInitializer> logger,
     AppDbContext context,
     UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole> roleManager,
     ICurrentTenant currentTenant,
     IConfiguration configuration,
     ITenantDirectory directory)
@@ -68,7 +67,11 @@ public class AppDbContextInitializer(
             // yerine burada, hiçbir şey yazmadan patlar. Bkz. SeedKapsamiTests.
             var kiraciId = currentTenant.TenantIdOrThrow();
             logger.LogInformation("Demo verisi {TenantId} kiracısına tohumlanıyor.", kiraciId);
-            await SeedRolesAsync();
+
+            // Roller BURADA tohumlanmaz: onlar şema hazırlığının parçasıdır ve
+            // provizyonda ITenantSchemaInitializer tarafından yazılır. Burada da
+            // yapmak, aynı kuralı iki yerde tutmak olurdu — biri değişince diğeri
+            // sessizce eskir.
             await SeedOrganizationAsync();
             await SeedDemoUsersAsync();
             await SeedLeaveCatalogAsync();
@@ -84,17 +87,6 @@ public class AppDbContextInitializer(
         {
             logger.LogError(ex, "Seed verisi yazılırken hata oluştu.");
             throw;
-        }
-    }
-
-    private async Task SeedRolesAsync()
-    {
-        foreach (var role in Roles.All)
-        {
-            if (!await roleManager.RoleExistsAsync(role))
-            {
-                await roleManager.CreateAsync(new IdentityRole(role));
-            }
         }
     }
 

@@ -24,12 +24,11 @@ public sealed class GetStuckTenantsQueryHandler(IPlatformDbContext platform)
     {
         var esik = DateTime.UtcNow.AddMinutes(-request.OlderThanMinutes);
 
-        // Yaş eşiği YALNIZ Provisioning'e uygulanır. Provizyon, davet kabulünü
-        // beklerken meşru biçimde Provisioning'de durabilir — orada "ne kadar
-        // süredir?" sorusu anlamlıdır. Purging ise tek istek içinde saniyeler
-        // sürer; orada kalmış bir kiracı zaten TANIMI GEREĞİ anormaldir, yaşına
-        // bakmanın bir anlamı yok. Eşiği Purging'e de uygularsak sağlıklı
-        // ilerleyen bir silme anında "takılı" görünür ve liste gürültüye boğulur.
+        // Yaş eşiği YALNIZ Provisioning'e uygulanır. Provizyon artık tek istek
+        // içinde biter (veritabanı oluşturma + migration dahil), ama bu iş
+        // saniyeler sürebilir — sağlıklı ilerleyen bir kurulumu "takılı" diye
+        // listelememek için eşik gerekir. Purging ise çok daha kısadır ve orada
+        // kalmış bir kiracı TANIMI GEREĞİ anormaldir; yaşına bakmanın anlamı yok.
         return await platform.Tenants
             .Where(t => (t.Status == TenantStatus.Provisioning && t.CreatedAtUtc < esik)
                         || t.Status == TenantStatus.Purging)

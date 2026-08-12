@@ -27,8 +27,19 @@ cd frontend && npm test -- --run
 npx vitest run src/auth/LoginPage.test.tsx
 ```
 
-> Backend entegrasyon testleri **çalışan bir MSSQL** ister; `IKProDb_Test`'i her
-> koşuda sıfırlar.
+> Backend entegrasyon testleri **çalışan bir MSSQL** ister; `IKProDb_Test` ve
+> `IKProPlatform_Test`'i her koşuda sıfırlar.
+>
+> **Kiracı katalogları da gerçektir.** Provizyon yapan her test bir veritabanı
+> oluşturur (`IKPro_test_*`) ve testin sonunda düşürür. Bu yüzden entegrasyon
+> takımı ~33 sn'den **~93 sn**'ye çıktı — bilinçli bir tercih: alternatif (koşum
+> sonunda toplu temizlik) daha hızlıydı ama koşum ortasında bir çökme sunucuda
+> artık veritabanı bırakırdı.
+>
+> Önek testlere özeldir (`Tenancy:DatabasePrefix` = `IKPro_test_`). Olmasaydı
+> testler, geliştiricinin çalışan demo ortamındaki `IKPro_demo` veritabanını
+> düşürüp yeniden kurardı — yani "testleri çalıştırmak" demo ortamını silmek
+> anlamına gelirdi.
 
 ## Entegrasyon Testi Altyapısı
 

@@ -113,6 +113,7 @@ veya `smtp` (üretim — MailKit). Detay: [06](06-multi-tenancy.md) ve KVKK dok�
 | Uç | Kim çağırır | Sonuç |
 | --- | --- | --- |
 | `POST /api/tenants` | Platform (X-Platform-Key) | Yeni kiracı + ilk hr-admin (provizyon) |
+| `POST /api/tenants/{id}/resend-invite` | Platform (X-Platform-Key) | Şifresi HİÇ belirlenmemiş hesaba daveti yeniden gönderir (etkin hesapta 409) |
 | `POST /api/auth/accept-invite` | Davetli kullanıcı (token'la) | Şifre belirler, hesabı etkinleştirir |
 
 **Uygulamada hiçbir kayıt (signup) ucu yoktur.** Yeni şirket yalnız operatör

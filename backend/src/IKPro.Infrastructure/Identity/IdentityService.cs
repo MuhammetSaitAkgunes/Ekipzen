@@ -53,9 +53,9 @@ public sealed class IdentityService(
 
     public async Task<AuthResponse> LoginAsync(string email, string password, CancellationToken cancellationToken)
     {
-        // Dizin login'in ÖN adımıdır: Faz 2'de kullanıcı tablosu kiracının kendi
-        // veritabanında olacak, dolayısıyla hangi veritabanına bakılacağı
-        // bilinmeden kullanıcı aranamaz. Dizinde kayıt yoksa (ör. dizin bütünlüğü
+        // Dizin login'in ÖN adımıdır: kullanıcı tablosu kiracının KENDİ
+        // veritabanındadır, dolayısıyla hangi veritabanına bakılacağı bilinmeden
+        // kullanıcı aranamaz. Dizinde kayıt yoksa (ör. dizin bütünlüğü
         // bozulmuşsa) hesabın var olup olmadığını sızdırmadan genel mesajla reddet.
         var dizinKiraciId = await directory.FindTenantIdAsync(email, cancellationToken)
             ?? throw new UnauthorizedException(InvalidCredentialsMessage);
@@ -186,6 +186,32 @@ public sealed class IdentityService(
         };
         using var kapsam = tenantScopeFactory.Create(tenantId);
         await CreateInvitedUserAsync(kapsam, user, Roles.Employee, companyName, cancellationToken);
+    }
+
+    public async Task ResendInviteAsync(int tenantId, string email, CancellationToken cancellationToken)
+    {
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.FindByEmailAsync(email)
+            ?? throw new NotFoundException("Davetli kullanıcı", email);
+
+        if (await kullanicilar.HasPasswordAsync(user))
+        {
+            throw new ConflictException(
+                $"'{email}' hesabı zaten etkin; davet yalnız şifresi HİÇ belirlenmemiş " +
+                "hesaplara gönderilir.");
+        }
+
+        // Token her seferinde yeniden üretilir. Eskisini saklamıyoruz: Identity'nin
+        // reset token'ı zaman damgalı ve doğrulanabilir olduğundan saklamaya gerek yok,
+        // saklasaydık süresi geçmiş bir token'ı yeniden göndermek mümkün olurdu.
+        var token = await kullanicilar.GeneratePasswordResetTokenAsync(user);
+        var companyName = await TenantNameAsync(tenantId, cancellationToken);
+        await SendInviteEmailAsync(user.DisplayName, user.Email!, companyName, token, cancellationToken);
+
+        logger.LogInformation(
+            "Davet yeniden gönderildi: {Email} (kiracı {TenantId})", email, tenantId);
     }
 
     public async Task AcceptInviteAsync(

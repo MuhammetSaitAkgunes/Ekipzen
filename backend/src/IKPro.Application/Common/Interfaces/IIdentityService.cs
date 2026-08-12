@@ -30,6 +30,22 @@ public interface IIdentityService
     Task CreateTenantAdminAsync(int tenantId, string name, string email, string companyName, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Verili kiracıdaki, HENÜZ ŞİFRE BELİRLEMEMİŞ bir kullanıcıya davet
+    /// e-postasını yeniden gönderir.
+    ///
+    /// Neden var: davet e-postası kaybolabilir, spam'e düşebilir ya da provizyon
+    /// e-posta adımında kesilmiş olabilir. Bu uç olmadan operatörün elindeki tek
+    /// kurtarma yolu kiracıyı silip baştan kurmaktı — yani bir e-posta gitmedi
+    /// diye VERİ SİLMEK.
+    ///
+    /// Şifresi olan hesaba davet gönderilmez (<c>ConflictException</c>): davet,
+    /// hesabı ilk kez kurmak içindir; etkin hesabın parolasını yenilemek ayrı bir
+    /// akıştır ve o akışı bu uca yaptırmak, operatöre kullanıcı parolası
+    /// sıfırlatma yetkisi vermek olurdu.
+    /// </summary>
+    Task ResendInviteAsync(int tenantId, string email, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Davet token'ıyla kullanıcının ilk şifresini belirler ve hesabı etkinleştirir.
     /// Geçersiz/süresi geçmiş token → <c>ValidationException</c>.
     /// </summary>

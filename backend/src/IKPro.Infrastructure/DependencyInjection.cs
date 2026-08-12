@@ -50,9 +50,9 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
-            // Bağlantı KAPSAM BAŞINA çözülür: aktif kiracı neyse ona göre.
-            // Faz 1b'de sonuç herkes için aynı, ama çağrı yolu artık doğru yerden
-            // geçiyor — Faz 2'de yalnız çözücünün içi değişecek.
+            // Bağlantı KAPSAM BAŞINA çözülür: aktif kiracı neyse ona göre. Kiracının
+            // katalog adı doluysa kendi veritabanına, boşsa paylaşılana bağlanır
+            // (bkz. TenantConnectionResolver).
             var cozucu = sp.GetRequiredService<ITenantConnectionResolver>();
             var kiraci = sp.GetRequiredService<ICurrentTenant>();
 

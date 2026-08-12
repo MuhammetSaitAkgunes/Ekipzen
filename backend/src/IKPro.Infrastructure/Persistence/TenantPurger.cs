@@ -13,9 +13,15 @@ namespace IKPro.Infrastructure.Persistence;
 /// Kiracının tüm verisini FK-güvenli sırada siler. Silinecek tablolar EF model
 /// metadata'sından türetilir (ITenantScoped + PK'lı = view'ler hariç); yeni bir
 /// kiracı-kapsamlı tablo eklendiğinde otomatik kapsama girer (unutma sızıntısı yok).
+///
+/// <b>Bu sınıf AMBIENT <c>AppDbContext</c> ALMAZ</b> — bilinçli. Her okuma/silme,
+/// hedef kiracıya sabitlenmiş TAZE bir kapsamdan çözülür. Ambient bir context
+/// çağıranın kiracısına (ya da hiçbirine) bağlı olurdu ve kiracı başına
+/// veritabanında bu, yanlış katalogda çalışmak demek — üstelik sessizce.
+/// Constructor'da o parametrenin bulunmaması, yanlış kullanımı derleme
+/// seviyesinde imkânsız kılar.
 /// </summary>
 public sealed class TenantPurger(
-    AppDbContext context,
     IPlatformDbContext platform,
     ITenantScopeFactory tenantScopeFactory,
     IFileStorage fileStorage,
@@ -138,21 +144,50 @@ public sealed class TenantPurger(
             .ToListAsync(cancellationToken);
         if (candidateIds.Count == 0) return 0;
 
-        // Şifre belirlemiş (davet kabul edilmiş / askıya alınmış) kullanıcısı olan kiracıları
-        // hariç tut. Bu sorgu birden çok kiracıyı BİRDEN taradığı için (candidateIds.Contains)
-        // ve ApplicationUser ITenantScoped OLMADIĞINDAN (kiracı-üstü, global filtre yok)
-        // yapısı gereği tek bir kiracıya sabitlenemez — burada bilerek `context` alanı
-        // (constructor'da enjekte edilen, kiracısız/ambient bağlantı) kullanılır. Faz 1b'de
-        // tüm kiracılar aynı DB'yi paylaştığı için doğru sonucu verir; Faz 2'de kiracı başına
-        // DB'ye geçilince bu sorgu kiracı-ötesi bir mekanizmaya (ör. platform DB'sinde
-        // özetlenen bir alan) taşınmalı — TenantPurger'ın bugünkü kapsamı bunu çözmez.
-        var verifiedTenantIds = await context.Set<ApplicationUser>()
-            .Where(u => u.PasswordHash != null && candidateIds.Contains(u.TenantId))
-            .Select(u => u.TenantId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
+        // Şifre belirlemiş (davet kabul edilmiş / askıya alınmış) kullanıcısı olan
+        // kiracıları hariç tut — onlar "hiç kurulmamış" değil, "kurulmuş ama durumu
+        // takılmış" kiracılardır ve silinmeleri gerçek veri kaybı olur.
+        //
+        // Kontrol her kiracının KENDİ katalogunda yapılır. Tek bir sorguyla hepsini
+        // taramak (candidateIds.Contains(u.TenantId)) artık MÜMKÜN DEĞİL: kullanıcılar
+        // kiracı veritabanlarına dağıldı. Eskiden ambient `context` bunu yapıyordu;
+        // ayrılmadan sonra o bağlantı BOŞ paylaşılan veritabanına baktığı için
+        // "hiç kimsenin şifresi yok" derdi ve koruma SESSİZCE kalkardı — yani tam
+        // korunması gereken kiracılar silinirdi. Bkz.
+        // TenantPurgeTests.CleanupUnverified_SifreBelirlemisKiraciyiKorur.
+        //
+        // Kapsam başına bir sorgu maliyeti kabul edilebilir: adaylar nadirdir
+        // (yarıda kalmış kurulumlar) ve bu yol günde birkaç kez çalışır.
+        List<int> toPurge = [];
+        foreach (var id in candidateIds)
+        {
+            using var adayKapsami = tenantScopeFactory.Create(id);
+            var adayContext = adayKapsami.Services.GetRequiredService<AppDbContext>();
 
-        var toPurge = candidateIds.Except(verifiedTenantIds).ToList();
+            bool sifreliKullaniciVar;
+            try
+            {
+                sifreliKullaniciVar = await adayContext.Set<ApplicationUser>()
+                    .AnyAsync(u => u.PasswordHash != null, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Katalog hiç oluşmamış olabilir (provizyon 2. adımdan önce kesilmiş).
+                // Bu, silinmesi GEREKEN durumdur — ama emin olmadan silmiyoruz:
+                // hatayı loglayıp adayı ATLIYORUZ. Yanlışlıkla veri silmektense
+                // artık bir satır bırakmak yeğdir; operatör onu stuck listesinde görür.
+                logger.LogWarning(ex,
+                    "Kiracı {TenantId} kullanıcıları okunamadı; otomatik temizlikten " +
+                    "ATLANDI. Yarıda kalmış kurulum olabilir — /api/tenants/stuck ile inceleyin.",
+                    id);
+                continue;
+            }
+
+            if (!sifreliKullaniciVar)
+            {
+                toPurge.Add(id);
+            }
+        }
         foreach (var id in toPurge)
         {
             // Bu yol (cron/otomatik temizlik) etkileşimli bir operatörü olmadığından dönüş

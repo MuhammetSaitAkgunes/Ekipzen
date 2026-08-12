@@ -40,13 +40,22 @@ dotnet run --project src/IKPro.API           # https://localhost:7001/swagger
 ```
 
 - Development ortamında migration + demo seed **otomatik** uygulanır (`Program.cs`).
-- **İki ayrı veritabanı/bağlantı dizesi var:** `ConnectionStrings:DefaultConnection`
-  (`IKProDb`, kiracı verisi) ve `ConnectionStrings:PlatformConnection` (`IKProPlatform`,
-  kiracı kimliği — `Tenants`, `TenantDirectoryEntries`). İkisi de
-  `appsettings.Development.json`'da tanımlı (yerel Windows auth). Ortam değişkeniyle
-  ezilebilirler: `ConnectionStrings__DefaultConnection`, `ConnectionStrings__PlatformConnection`.
+- **İki bağlantı dizesi, N veritabanı.** `ConnectionStrings:PlatformConnection`
+  (`IKProPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar) ve
+  `ConnectionStrings:DefaultConnection` (`IKProDb` — **paylaşılan** katalog).
+  Her kiracının verisi ise kendi kataloğundadır (`IKPro_{slug}`); adresi
+  `DefaultConnection`'dan yalnız katalog adı değiştirilerek türetilir, yani
+  sunucu/kimlik ayarı tek yerde durur. Önek `Tenancy:DatabasePrefix` ile
+  değiştirilebilir (entegrasyon testleri bunu kullanır).
+  İkisi de `appsettings.Development.json`'da tanımlı (yerel Windows auth); ortam
+  değişkeniyle ezilebilirler: `ConnectionStrings__DefaultConnection`,
+  `ConnectionStrings__PlatformConnection`.
   **Tuzak:** yalnız birini ezersen diğeri sessizce varsayılan sunucuya bağlanmaya devam
   eder — hata vermeden tutarsız bir kuruluma düşersin, ikisini birlikte ayarla.
+- **Sıfırdan başlarken** `IKProDb` + `IKProPlatform` düşürmek YETMEZ; tüm
+  `IKPro_*` kiracı veritabanlarını da birlikte düşür. Aksi halde provizyon
+  "katalog zaten var" diye reddeder (yarıda kalmış kurulumun artığını sessizce
+  yeniden kullanmamak için konulmuş bilinçli koruma).
 - Dosya deposu kökü: `Storage:Root` (varsayılan `App_Data/storage`); e-posta outbox'ı
   `{Storage:Root}/outbox` altına JSON olarak düşer (SMTP yerine geliştirme göndericisi).
 

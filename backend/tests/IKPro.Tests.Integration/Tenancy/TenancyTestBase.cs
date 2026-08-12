@@ -59,6 +59,17 @@ public abstract class TenancyTestBase(IKProApiFactory factory) : IAsyncLifetime
     /// <summary>Davet akışında belirlenen varsayılan şifre (login için de kullanılır).</summary>
     protected const string DefaultPassword = "demo123";
 
+    /// <summary>
+    /// Platform anahtarını taşıyan istemci. Üç test sınıfında birebir aynı üç satır
+    /// olarak tekrarlanıyordu; anahtarın nasıl geçirildiği tek yerde dursun.
+    /// </summary>
+    protected HttpClient PlatformClient()
+    {
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
+        return client;
+    }
+
     /// <summary>Platform anahtarıyla yeni kiracı + ilk hr-admin provizyonlar.</summary>
     protected async Task<ProvisionTenantResult> ProvisionTenantAsync(string companyName, string adminEmail)
     {

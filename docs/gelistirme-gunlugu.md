@@ -8,11 +8,15 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0–5 bitti. **Ayrılma tamamlandı:** her kiracı kendi veritabanında
-  (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama duruyor (kiracı
-  bağlamı olmayan işler ve sağlık kontrolü oraya bağlanıyor). Sırada Görev 6
-  (purge → `DROP DATABASE`) ve Görev 7 (migration orkestrasyonu) var. Faz 3'e
-  (yedekleme/geri yükleme) geçmeden kullanıcıyla konuşulacak.
+  Görev 0–5 bitti + geçmişe dönük temizlik. **Ayrılma tamamlandı:** her kiracı
+  kendi veritabanında (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama
+  duruyor (kiracı bağlamı olmayan işler ve sağlık kontrolü oraya bağlanıyor).
+  Sırada Görev 6 (purge → `DROP DATABASE`) ve Görev 7 (migration orkestrasyonu)
+  var. Faz 3'e (yedekleme/geri yükleme) geçmeden kullanıcıyla konuşulacak.
+- **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
+  `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
+  yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
+  keşfedip her kiracı için ayrı yedek almalı — bkz. `docs/yedekleme-ve-kurtarma.md`.
 - **Geliştirme kurulumunu sıfırlarken:** artık `IKProDb` + `IKProPlatform`
   yetmez, **tüm `IKPro_*` kiracı veritabanları da birlikte düşürülmeli**. Aksi
   halde provizyon "katalog zaten var" diye reddeder (bilinçli koruma).
@@ -114,6 +118,54 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Ayrılma sonrası temizlik + davet yeniden gönderme
+
+Görev 0–5 boyunca birikmiş geçmişe dönük eksikler kapatıldı, ölü kod silindi ve
+Görev 4'te bilinçli olarak açık bırakılan boşluk dolduruldu.
+
+**Sessiz bir veri kaybı hatası bulundu ve düzeltildi.**
+`TenantPurger.PurgeUnverifiedAsync`, "şifre belirlemiş kullanıcısı olan kiracıyı
+silme" korumasını AMBIENT bağlantı üzerinden yapıyordu. Ayrılmadan sonra o
+bağlantı **boş** paylaşılan veritabanına bakıyor → "hiç kimsenin şifresi yok"
+diyor → koruma sessizce kalkıyordu. Yani `cleanup-unverified`, tam da korunması
+gereken kiracıları silerdi. Kontrol artık her kiracının KENDİ kataloğunda
+yapılıyor; kullanıcıları okunamayan aday (katalog hiç oluşmamış olabilir)
+silinmiyor, loglanıp atlanıyor — emin olmadan veri silmiyoruz.
+Regresyon testi: `CleanupUnverified_SifreBelirlemisKiraciyiKorur`. Bu koruma
+daha önce HİÇ test edilmemişti; mevcut test aday bile olmayan (Active) bir
+kiracıyla çalışıyordu.
+
+**`TenantPurger` artık ambient `AppDbContext` almıyor.** Son kullanıcısı da
+gidince constructor'dan kaldırıldı — yanlış kullanım artık derleme seviyesinde
+imkânsız.
+
+**Yeni: `POST /api/tenants/{id}/resend-invite`** (platform anahtarlı). Görev
+4'ün bilinen açığıydı: provizyonun 5. adımı e-posta göndermektir ve o adım
+başarısız olduğunda geriye kullanıcısı oluşmuş ama girişi imkânsız bir kiracı
+kalıyordu; operatörün tek çaresi kiracıyı silip baştan kurmaktı — bir e-posta
+gitmedi diye veri silmek. Şifresi olan hesaba gönderilmez (409): davet hesabı
+ilk kez kurmak içindir, etkin hesabın parolasını operatöre sıfırlatmak ayrı ve
+bilinçli tasarlanması gereken bir akıştır. 4 test.
+
+**Silinenler:** `AppDbContextInitializer.SeedRolesAsync` (roller artık
+`ITenantSchemaInitializer`'ın işi — aynı kural iki yerde durmasın) ve onunla
+birlikte `RoleManager` bağımlılığı; üç test sınıfında tekrarlanan
+`PlatformClient()` kopyaları (base'e taşındı).
+
+**Güncellenen dokümanlar** (hepsi ayrılmadan sonra yanlış kalmıştı):
+`kvkk-veri-izolasyonu.md` izolasyon modeli, `yedekleme-ve-kurtarma.md` katalog
+listesi + üretim öncesi açıklar, `06-multi-tenancy.md` izolasyon tablosu +
+operatör araçları, `05-kimlik-ve-yetkilendirme.md`, `07-veritabani`,
+`08-testler.md` (koşum süresi ve test öneki), `backend/README.md`. Ayrıca
+kodda kalan "Faz 1b/Faz 2'de olacak" yorumları bugünkü gerçeğe çevrildi.
+
+`frontend/src/api/schema.d.ts` **gerçekten yeniden üretildi** (elle değil):
+yalnız 84 satır eklendi, hiç silinmedi — Görev 0'daki elle düzenlemenin doğru
+olduğunu da doğruluyor.
+
+**Doğrulama:** 66 birim + 172 entegrasyon yeşil, `-warnaserror` temiz; frontend
+`tsc` + `oxlint` temiz.
 
 ### 2026-08-13 — Faz 2b / Görev 5: ayrılma tamamlandı
 

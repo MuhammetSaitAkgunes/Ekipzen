@@ -34,9 +34,22 @@ kararlaştırılmalıdır.
 | Fark (DIFFERENTIAL) | 6 saatte bir | 7 gün | Geri yükleme süresini kısaltır |
 | İşlem günlüğü (LOG) | RPO'ya göre (ör. saatlik) | 7 gün | Yalnız FULL recovery model'de |
 
-> **İki veritabanı:** `IKProDb` (kiracı verisi) ve `IKProPlatform` (kiracı
-> kimliği ve yönlendirme). İkisi de yedek planına dahildir — platform küçüktür
-> ama onsuz hiçbir kullanıcı giriş yapamaz.
+> **Kaç veritabanı?** İki sabit + kiracı sayısı kadar:
+> - `IKProPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar.
+>   Küçüktür ama **onsuz hiç kimse giriş yapamaz**, üstelik hangi kiracının hangi
+>   katalogda olduğunu yalnız o bilir. Yedeklenmezse diğer bütün yedekler
+>   sahipsiz kalır.
+> - `IKPro_{slug}` — **her kiracı için bir tane.** Yedek planı bunları
+>   otomatik keşfetmeli (sabit bir liste tutulursa yeni müşteri yedeksiz kalır).
+> - `IKProDb` — paylaşılan katalog. Bugün boştur; henüz ayrılmamış kiracılar için
+>   duruyor. Boş olsa da plana dahil edilmesi zararsızdır.
+>
+> **Platform ile kiracı yedekleri BİRBİRİNE BAĞLIDIR.** Bir kiracıyı eski bir
+> ana geri yükleyip platformu bugünkü hâlinde bırakırsanız, o kiracıda o tarihten
+> sonra oluşturulmuş kullanıcılar dizinde görünür ama katalogda yoktur — giriş
+> denemesi kullanıcıyı var olmayan bir hesaba yönlendirir. Geri yükleme sonrası
+> `POST /api/tenants/{id}/rebuild-directory` ile dizin, kiracının kendi
+> veritabanından yeniden kurulmalıdır.
 
 **Kritik kural:** Yedekler veritabanı sunucusuyla **aynı diskte tutulmaz.**
 Üretimde ayrı fiziksel konum (ayrı sunucu / nesne depolama) zorunludur. Aynı
@@ -257,7 +270,14 @@ Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Platform -Confirm:$false
   doğrulanmalı.
 - ⬜ **Log dosyası kimse tarafından izlenmiyor** — webhook kurulana kadar
   `tatbikat.jsonl` dosyasına düzenli bakılmalı.
-- 🔄 **Kiracı bazına bölme sürüyor** — Faz 1a tamamlandı: kiracı kimliği
-  `IKProPlatform` veritabanına ayrıldı. Kiracı VERİSİ hâlâ tek `IKProDb`
-  içindedir; tek müşteriyi geri yükleme yeteneği Faz 2'de gelir.
+- ✅ **Kiracı bazına bölme TAMAMLANDI (2026-08-13).** Her kiracının verisi kendi
+  kataloğunda (`IKPro_{slug}`); tek müşteriyi diğerlerine dokunmadan geri yükleme
+  artık teknik olarak mümkün.
+- ⬜ **Yedek planı kiracı kataloglarını KAPSAMIYOR.** Yukarıdaki komutlar hâlâ tek
+  bir `-Database IKProDb` alıyor; o katalog bugün **boş**. Yani şu anda alınan
+  yedekler gerçek müşteri verisini içermiyor. Script'lerin katalogları
+  `sys.databases`'ten `IKPro[_]%` deseniyle keşfedip her biri için ayrı yedek
+  alması gerekiyor — **bunu yapmadan üretime çıkılamaz.**
+- ⬜ **Tek-kiracı geri yükleme prosedürü yazılmadı.** Sıra bellidir (dondur →
+  geri yükle → dizini yeniden kur → çöz) ama tatbikatı yapılmadı. Faz 3'ün konusu.
   Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`

@@ -9,7 +9,10 @@ namespace IKPro.Application.Features.Tenancy.Commands;
 /// <summary>
 /// Yeni bir müşteri şirketi (kiracı) ve onun ilk <c>hr-admin</c> hesabını oluşturur.
 /// Platform seviyesi bir işlemdir (normal rol sisteminin dışında); TenancyController
-/// bunu platform anahtarıyla korur. Faz 1: geçici şifre; Faz 5: davet + şifre-belirleme.
+/// bunu platform anahtarıyla korur.
+///
+/// Kiracının VERİTABANI da burada kurulur — adımların sırası ve gerekçeleri
+/// <see cref="TenantOnboarding"/> içindedir.
 /// </summary>
 public sealed record ProvisionTenantCommand(
     string CompanyName,
