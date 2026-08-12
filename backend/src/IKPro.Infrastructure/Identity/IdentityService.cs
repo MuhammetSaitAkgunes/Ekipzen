@@ -140,13 +140,15 @@ public sealed class IdentityService(
             TenantId = tenantId,
         };
 
+        // Kiracı parametreden gelir (provizyon yolu) — dizine sormaya gerek yok.
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+
         // Dizine CreateInvitedUserAsync KOŞULSUZ yazar (idempotent ITenantDirectory.ReserveAsync).
         // Çağıran burada directory.ReserveAsync ile önceden rezervasyon yapmış olabilir
         // (TenantOnboarding) — o durumda bu ikinci yazım aynı kiracı için sessizce
         // no-op'tur. Rezervasyon yapılmamışsa (ör. eski bir çağıran unutursa) bu
         // çağrı yine de dizine yazar; "dizine hiç yazılmadı" sınıfı hatalar artık
         // derleyici tarafından değil, tek bir kod yolu tarafından imkansız kılınır.
-        using var kapsam = tenantScopeFactory.Create(tenantId);
         await CreateInvitedUserAsync(kapsam, user, Roles.HrAdmin, companyName, cancellationToken);
     }
 

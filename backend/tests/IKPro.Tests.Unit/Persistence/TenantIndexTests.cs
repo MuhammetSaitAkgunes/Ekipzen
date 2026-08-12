@@ -69,7 +69,10 @@ public class TenantIndexTests
         string[] kasitliGloballer =
         [
             "Tenant.Slug",              // kiracı slug'ı platform genelinde tektir
-            "RefreshToken.Token",       // token değeri evrensel olarak tek olmalı
+            // RefreshToken BU MODELDE DEĞİL: platform veritabanına taşındı (Faz 2a),
+            // dolayısıyla buradaki kural onu hiç değerlendirmiyor. Listede tutmak
+            // "korunuyor" yanılsaması yaratırdı — koruma testinin güvenilirliği,
+            // içindeki her satırın gerçekten bir şey ifade etmesine bağlıdır.
             "Employee.UserId",          // bir Identity kullanıcısı tek personele bağlanır
 
             // Login kiracı SORULMADAN yapılır: kullanıcı yalnız e-posta + parola
