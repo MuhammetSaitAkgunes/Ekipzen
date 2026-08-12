@@ -9,7 +9,7 @@
 | Uç | Rol | Açıklama |
 |---|---|---|
 | `POST /auth/login` | herkese açık | JWT + refresh token döner (lockout: 5 deneme/5 dk) |
-| ~~`POST /auth/register`~~ | — | **KALDIRILDI** — kiracı sızıntısı (her kaydı en düşük Id'li kiracıya bağlıyordu). Mevcut şirkete katılım yalnız davetle; yeni şirket için `POST /tenants/signup`. |
+| ~~`POST /auth/register`~~ | — | **KALDIRILDI** — kiracı sızıntısı (her kaydı en düşük Id'li kiracıya bağlıyordu). Katılımın tek yolu davettir. |
 | `POST /auth/refresh` | herkese açık | Refresh token rotasyonu |
 | `POST /auth/logout` | A M E | Refresh token iptali |
 | `POST /auth/change-password` | A M E | Şifre değişikliği (ayarlar güvenlik sekmesi) |

@@ -21,8 +21,10 @@ namespace IKPro.API.Controllers;
 /// kapısını BİLİNÇLİ ATLAYARAK (<c>skipAccessCheck: true</c>) veriyordu; internetten
 /// herhangi biri kaydolup o müşterinin İK panosunu okuyabiliyordu (kiracı
 /// sızıntısı). İK ürününde kimse başkasının şirketine kendi kendine kaydolmaz —
-/// meşru yollar <c>POST /api/tenants/signup</c> (şirket kaydı) ve
-/// <c>POST /api/auth/accept-invite</c> (personel daveti) olarak kalır.
+/// hesap açmanın tek meşru yolu operatörün kiracıyı provizyonlaması
+/// (<c>POST /api/tenants</c>, platform anahtarlı) ve ardından davetin kabulüdür
+/// (<c>POST /api/auth/accept-invite</c>). Public şirket kaydı
+/// (<c>POST /api/tenants/signup</c>) da kaldırıldı — bkz. TenancyController xmldoc.
 /// </summary>
 [ApiController]
 [Route("api/auth")]

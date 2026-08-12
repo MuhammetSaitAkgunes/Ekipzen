@@ -9,10 +9,9 @@ namespace IKPro.Application.Features.Tenancy;
 /// operatör provizyonu) bunu doğrudan çağırır. Admin ŞİFRESİZ oluşturulur; davet e-postası
 /// CreateTenantAdminAsync içinde gönderilir. Çağıran slug'ı (istemciden) ve hedef durumu belirler.
 ///
-/// DİKKAT — İKİ KOPYA VAR: <c>RegisterTenantCommand</c> (public self-servis kayıt) bu metodu
-/// ÇAĞIRMAZ; slug-çakışmasında yeniden deneme döngüsü (<c>CreateTenantWithUniqueSlugAsync</c>)
-/// gerektiği için aynı "önce rezerve et, sonra admin oluştur" sırasını kendi içinde ayrıca
-/// uygular. İki yolu değiştirirken ikisini de güncellemeyi unutma.
+/// Tek çağıranı <c>ProvisionTenantCommand</c>'dir. Daha önce ikinci bir yol vardı
+/// (<c>RegisterTenantCommand</c> — public self-servis kayıt, kendi slug-retry döngüsüyle);
+/// self-servis kayıt tamamen kaldırıldığı için o kopya da silindi.
 /// </summary>
 public static class TenantOnboarding
 {

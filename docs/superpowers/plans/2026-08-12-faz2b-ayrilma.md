@@ -61,9 +61,17 @@ Sıra riske göre kurulmuştur; bozmayın:
 
 **Giriş sayfası:** şirket kaydı bağlantısı kalkınca ziyaretçiye ne gösterileceğine karar verin. En sade seçenek: bağlantıyı kaldırıp giriş formunu bırakmak. Bir "bizimle iletişime geçin" metni eklenecekse bu bir ürün/pazarlama kararıdır — koda gömmeden önce sorun.
 
-**Regresyon testi:** `POST /api/tenants/signup` artık **404** dönmeli. Yorumunda neden kaldırıldığını yazın; biri ileride "kayıt ucu yok, ekleyeyim" demesin.
+**Regresyon testi:** `POST /api/tenants/signup` artık başarısız olmalı ve arkasında kiracı oluşmamalı. Yorumunda neden kaldırıldığını yazın; biri ileride "kayıt ucu yok, ekleyeyim" demesin.
 
 **Doğrulama:** backend tam suite (kaldırılan testler kadar azalır), frontend `vitest` + `tsc -b` + `oxlint`.
+
+> **✅ TAMAMLANDI (2026-08-12).** Planla iki sapma:
+> 1. Plan "404 dönmeli" diyordu; ASP.NET bu yola **405** döndürüyor (iki segmentli yol, var olan bir rota şablonuna başka bir fiille denk düşüyor). Test durum kodunu sabitlemek yerine sözleşmenin ölçülebilir karşılığını doğruluyor: **istek başarısız + kiracı satırı oluşmadı** (`SelfServisKayitKaldirildiTests`). Kodu çakmak sözleşmemizi değil ASP.NET'in yönlendiricisini test etmek olurdu.
+> 2. Planda yazmayan iki kaldırma daha gerekti: `"signup"` rate-limit politikası (tek kullanıcısı gitmişti) ve testlerdeki `RateLimiting__SignupPermitPerHour` ayarı.
+>
+> `cleanup-unverified`'ın **anlamı değişti**: artık "doğrulanmamış self-servis kayıt" değil, "provizyon ortasında kesilip `Provisioning`'de takılı kalmış kiracı" topluyor. Testleri buna göre yeniden yazıldı. Görev 1(d) doğrulandı: `TenantOnboarding.CreateWithAdminAsync`'in tek çağıranı `ProvisionTenantCommand`.
+>
+> Doğrulama: 51 birim + 153 entegrasyon yeşil, `-warnaserror` temiz; frontend `tsc --noEmit` temiz + 146 test yeşil.
 
 ---
 

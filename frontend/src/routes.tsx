@@ -3,7 +3,6 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { PageLoading } from "./features/shared/PageState";
 import { LoginPage } from "./auth/LoginPage";
 import { AcceptInvitePage } from "./auth/AcceptInvitePage";
-import { CompanySignupPage } from "./auth/CompanySignupPage";
 import { PublicOnly, RequireAuth, RouteGate } from "./auth/guards";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { AppShell } from "./layout/AppShell";
@@ -119,11 +118,13 @@ export function buildRouteObjects(): RouteObject[] {
   return [
     { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
     { path: "/accept-invite", element: <PublicOnly><AcceptInvitePage /></PublicOnly> },
-    { path: "/register-company", element: <PublicOnly><CompanySignupPage /></PublicOnly> },
-    // Eski self-servis kayıt sayfası kaldırıldı (bkz. POST /api/auth/register —
-    // kiracı sızıntısı). Yer imi/paylaşılmış link taşıyanlar catch-all'a düşüp
-    // yanlış URL'de login görmesin diye açıkça yönlendiriliyor.
-    { path: "/signup", element: <Navigate to="/register-company" replace /> },
+    // Self-servis kayıt sayfalarının İKİSİ DE kaldırıldı. Şirket hesabı yalnız
+    // operatör tarafından, platform anahtarıyla açılır (bkz. TenancyController
+    // xmldoc): kiracı başına veritabanına geçildiğinde kayıt bir satır değil bir
+    // VERİTABANI oluşturur; bunu anonim bir uçtan tetiklenebilir bırakmak kaynak
+    // tüketme açığıdır. Eski yer imleri ve paylaşılmış linkler girişe düşer.
+    { path: "/signup", element: <Navigate to="/login" replace /> },
+    { path: "/register-company", element: <Navigate to="/login" replace /> },
     {
       element: <RequireAuth />,
       children: [

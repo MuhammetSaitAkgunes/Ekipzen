@@ -126,9 +126,9 @@
 }
 
 /* .auth-tabs / .auth-tab kuralları kaldırıldı: giriş-kayıt sekmesi, anonim
-   self-servis kayıt ucuyla (POST /api/auth/register) birlikte gitti. Giriş
-   sayfasında artık tek form var; şirket kaydı ayrı bir bağlantıyla
-   /register-company'ye gidiyor. */
+   self-servis kayıt uçlarıyla birlikte gitti. Uygulamada artık HİÇBİR kayıt
+   sayfası yok — hesap operatör tarafından açılır, kullanıcı davet e-postasıyla
+   /accept-invite'a düşer. Giriş sayfasında tek form var. */
 
 .auth-form {
   display: none;

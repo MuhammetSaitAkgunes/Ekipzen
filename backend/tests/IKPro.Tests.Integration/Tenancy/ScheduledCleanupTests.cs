@@ -1,19 +1,19 @@
 using FluentAssertions;
 using IKPro.API.Services;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using System.Net;
-using System.Net.Http.Json;
 
 namespace IKPro.Tests.Integration.Tenancy;
 
 /// <summary>
-/// Zamanlanmış temizlik: BackgroundService'in tek geçişi (RunOnceAsync) doğrulanmamış
-/// eski kiracıları siler, aktif/doğrulanmış kiracıları korur. Timer'dan bağımsız test.
+/// Zamanlanmış temizlik: BackgroundService'in tek geçişi (RunOnceAsync) yarım kalmış
+/// (Provisioning'de takılı) eski kiracıları siler, aktif/doğrulanmış kiracıları korur.
+/// Timer'dan bağımsız test.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public sealed class ScheduledCleanupTests(IKProApiFactory factory) : TenancyTestBase(factory)
@@ -21,21 +21,21 @@ public sealed class ScheduledCleanupTests(IKProApiFactory factory) : TenancyTest
     [Fact]
     public async Task RunOnce_PurgesUnverified_KeepsActive()
     {
-        // Doğrulanmamış (davet kabul edilmemiş) self-servis kiracı, tarihi geçmişe çekilmiş.
-        var email = $"sched-{Guid.NewGuid():N}@cleanup.local";
-        (await Factory.CreateClient().PostAsJsonAsync("/api/tenants/signup",
-            new { companyName = "Zamanlı Temizlik A.Ş.", adminName = "X", adminEmail = email }))
-            .StatusCode.Should().Be(HttpStatusCode.Created);
+        // Yarım kalmış provizyon: kiracı satırı açıldı, admin daveti hiç kabul edilmedi.
+        // Self-servis kayıt kaldırıldığından bu durum artık ancak provizyon ORTASINDA
+        // kesilmekle (ör. veritabanı oluşturma adımı çökerse) oluşur; testte de tam
+        // olarak o durum kurulur — provizyonla + Provisioning'e geri al + tarihi eskit.
+        var unverified = await ProvisionTenantAsync("Zamanlı Temizlik A.Ş.", $"sched-{Guid.NewGuid():N}@cleanup.local");
 
-        int unverifiedId;
         using (var scope = Factory.Services.CreateScope())
         {
             var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
-            var t = await platform.Tenants.FirstAsync(x => x.Name == "Zamanlı Temizlik A.Ş.");
-            unverifiedId = t.Id;
+            var t = await platform.Tenants.FirstAsync(x => x.Id == unverified.TenantId);
+            t.Status = TenantStatus.Provisioning;
             t.CreatedAtUtc = DateTime.UtcNow.AddDays(-40);
             await platform.SaveChangesAsync(CancellationToken.None);
         }
+        var unverifiedId = unverified.TenantId;
 
         var kept = await ProvisionAndActivateAsync("Zamanlı Aktif A.Ş.", $"k-{Guid.NewGuid():N}@cleanup.local");
 

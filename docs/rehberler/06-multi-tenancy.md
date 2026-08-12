@@ -60,22 +60,29 @@ o kiracıyı impersone eder.
 
 ## Kiracı Nasıl Oluşur?
 
-İki yol var:
+**Tek yol var:** `POST /api/tenants` — `X-Platform-Key` başlığıyla korunur (normal
+rol sisteminin dışında, platform operasyonu). Kiracı **aktif** başlar; ilk hr-admin
+şifresiz oluşturulur ve davet e-postasıyla `/accept-invite`'a yönlendirilir.
 
-1. **Provizyon (platform):** `POST /api/tenants` — `X-Platform-Key` başlığıyla
-   korunur (normal rol sisteminin dışında, platform operasyonu). Kiracı **aktif** başlar.
-2. **Self-servis kayıt (public):** `POST /api/tenants/signup` — platform anahtarı
-   gerekmez, ayrı `signup` rate-limit'iyle korunur. Slug (kısa ad) sunucuda şirket
-   adından türetilir. Kiracı **pasif** başlar; ilk admin davet e-postasını kabul
-   edince (`accept-invite`) **etkinleşir** — yani e-posta doğrulaması kapısı.
+> **Self-servis kayıt (`POST /api/tenants/signup`) kaldırıldı — geri eklemeyin.**
+>
+> Kiracı başına ayrı veritabanına geçildikten sonra "kaydol" bir satır değil bir
+> **veritabanı** oluşturmak demek. Anonim bir uç bunu tetikleyebilseydi internetten
+> herhangi biri bir script'le SQL Server'a istediği kadar veritabanı kurdurabilir,
+> disk / yedekleme penceresi / lisans maliyetini eline geçirirdi. Rate limit bunu
+> yavaşlatır ama çözmez: maliyet kalıcı, istek anlıktır.
+>
+> Yeni müşteri açmak artık operatörün bilinçli bir eylemidir. Regresyon testi:
+> `SelfServisKayitKaldirildiTests`.
 
 ## Kiracı Verisini Silme (KVKK)
 
 - `DELETE /api/tenants/{id}?confirmSlug=` — kiracının **tüm** verisini kalıcı siler
   (platform-key + slug onayı gerekir). `ITenantPurger`, silinecek tabloları EF
   metadata'sından türetir ve FK-güvenli sırada tek transaction'da siler.
-- `POST /api/tenants/cleanup-unverified` + arka plan servisi — hiç etkinleşmemiş
-  eski self-servis kiracıları temizler (varsayılan kapalı, opt-in).
+- `POST /api/tenants/cleanup-unverified` + arka plan servisi — `Provisioning`
+  durumunda takılı kalmış eski kiracıları temizler; yani provizyon ortasında
+  kesilmiş yarım kayıtları toplar (varsayılan kapalı, opt-in).
 
 ## Yeni Bir Tablo Eklerken Dikkat
 

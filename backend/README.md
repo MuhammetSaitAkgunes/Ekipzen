@@ -94,6 +94,9 @@ Frontend'in beklediği sözleşme (`services/apiClient.js`) birebir karşılanı
 `POST /api/auth/login`, `GET /api/me`, `GET /api/actions`,
 `GET /api/audit-logs`, `PATCH /api/actions/{id}/status`.
 
-> `POST /api/auth/register` **kaldırıldı** (kiracı sızıntısı): anonim kayıt her
-> kullanıcıyı platformdaki en düşük Id'li kiracıya bağlıyordu. Mevcut şirkete
-> katılım yalnız davetle olur; yeni şirket için `POST /api/tenants/signup`.
+> **Uygulamada kayıt (signup) ucu yoktur.** `POST /api/auth/register` kiracı
+> sızıntısı yüzünden (anonim kayıt her kullanıcıyı platformdaki en düşük Id'li
+> kiracıya bağlıyordu), `POST /api/tenants/signup` ise anonim isteğin veritabanı
+> oluşturmasına yol açtığı için kaldırıldı. Yeni şirket yalnız operatör
+> tarafından açılır (`POST /api/tenants`, `X-Platform-Key`); mevcut şirkete
+> katılım yalnız davetle olur.

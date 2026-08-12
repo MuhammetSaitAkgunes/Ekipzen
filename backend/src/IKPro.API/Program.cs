@@ -57,17 +57,10 @@ try
                     QueueLimit = 0,
                 }));
 
-        // Self-servis kayıt daha nadir ve ağırdır → saatlik, daha sıkı ayrı politika (kötüye kullanım önleme).
-        var signupPermitPerHour = builder.Configuration.GetValue("RateLimiting:SignupPermitPerHour", 10);
-        options.AddPolicy("signup", httpContext =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = signupPermitPerHour,
-                    Window = TimeSpan.FromHours(1),
-                    QueueLimit = 0,
-                }));
+        // "signup" politikası KALDIRILDI: tek kullanıcısı olan self-servis kayıt ucu
+        // kaldırıldı. Kiracı açan tek uç (POST /api/tenants) platform anahtarı istediği
+        // için anonim kötüye kullanıma açık değil; onu "auth" politikası kapsar.
+        // RateLimiting:SignupPermitPerHour ayarı artık okunmuyor.
     });
 
     // İstek bağlamındaki kullanıcı (audit + yetki kapsamı).

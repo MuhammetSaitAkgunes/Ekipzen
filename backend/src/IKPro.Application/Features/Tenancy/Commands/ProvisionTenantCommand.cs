@@ -48,9 +48,10 @@ public sealed class ProvisionTenantCommandHandler(
             throw new ConflictException($"'{slug}' kısa adıyla bir şirket zaten var.");
         }
 
-        // Provizyon (platform-key) güvenilir → kiracı aktif oluşturulur. Self-servis kayıt
-        // ise Provisioning durumunda oluşturur (bkz. RegisterTenantCommand); ortak adımlar
-        // TenantOnboarding'de.
+        // Kiracı doğrudan Active oluşturulur: bu uca ulaşmak platform anahtarını bilmeyi
+        // gerektirir, yani çağıran zaten operatördür — doğrulanacak bir şey kalmaz.
+        // (Kiracıyı Provisioning'de bırakıp davet kabulüyle aktifleştiren self-servis
+        // yol kaldırıldı; artık tek onboarding yolu burasıdır.)
         var tenant = await TenantOnboarding.CreateWithAdminAsync(
             platform, identityService, directory, registry,
             request.CompanyName.Trim(), slug,

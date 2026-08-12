@@ -316,19 +316,17 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
     [Fact]
     public async Task CleanupUnverified_PurgesUnverified_KeepsVerifiedAndActive()
     {
-        // Doğrulanmamış (davet kabul edilmemiş) self-servis kiracı.
-        var email = $"u-{Guid.NewGuid():N}@cleanup.local";
-        (await Factory.CreateClient().PostAsJsonAsync("/api/tenants/signup",
-            new { companyName = "Doğrulanmamış A.Ş.", adminName = "X", adminEmail = email }))
-            .StatusCode.Should().Be(HttpStatusCode.Created);
+        // Yarım kalmış provizyon: kiracı satırı var, davet hiç kabul edilmedi, tarihi eski.
+        // (Self-servis kayıt kaldırıldı; Provisioning'de takılı kalma artık yalnız
+        // provizyonun ortasında kesilmesiyle oluşur — kurulum onu taklit ediyor.)
+        var unverified = await ProvisionTenantAsync("Doğrulanmamış A.Ş.", $"u-{Guid.NewGuid():N}@cleanup.local");
+        var unverifiedId = unverified.TenantId;
 
-        // CreatedAtUtc'yi geçmişe çek (eski olsun).
-        int unverifiedId;
         using (var scope = Factory.Services.CreateScope())
         {
             var platform = scope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
-            var t = await platform.Tenants.FirstAsync(x => x.Name == "Doğrulanmamış A.Ş.");
-            unverifiedId = t.Id;
+            var t = await platform.Tenants.FirstAsync(x => x.Id == unverifiedId);
+            t.Status = TenantStatus.Provisioning;
             t.CreatedAtUtc = DateTime.UtcNow.AddDays(-30);
             await platform.SaveChangesAsync(CancellationToken.None);
         }

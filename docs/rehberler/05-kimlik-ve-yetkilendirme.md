@@ -106,11 +106,19 @@ veya `smtp` (üretim — MailKit). Detay: [06](06-multi-tenancy.md) ve KVKK dok�
 | Uç | Kim çağırır | Sonuç |
 | --- | --- | --- |
 | `POST /api/tenants` | Platform (X-Platform-Key) | Yeni kiracı + ilk hr-admin (provizyon) |
-| `POST /api/tenants/signup` | Anonim (public) | Self-servis: **yeni şirket** + hr-admin (`Provisioning`; davet kabul edilince `Active`) |
 | `POST /api/auth/accept-invite` | Davetli kullanıcı (token'la) | Şifre belirler, hesabı etkinleştirir |
 
-**Mevcut bir şirkete katılmanın tek yolu davettir.** Personel, işe alım akışıyla
-(aday → personel) oluşturulur ve davet e-postası alır; kendi kendine kaydolamaz.
+**Uygulamada hiçbir kayıt (signup) ucu yoktur.** Yeni şirket yalnız operatör
+tarafından platform anahtarıyla açılır; mevcut bir şirkete katılmanın tek yolu
+davettir. Personel, işe alım akışıyla (aday → personel) oluşturulur ve davet
+e-postası alır.
+
+> **⚠️ `POST /api/tenants/signup` KALDIRILDI — yeniden eklemeyin.**
+>
+> Kiracı başına ayrı veritabanına geçildikten sonra self-servis kayıt, anonim bir
+> isteğin **veritabanı oluşturması** anlamına geliyordu — internetten herhangi biri
+> disk ve yedekleme maliyetini istediği kadar şişirebilirdi. Regresyon testi:
+> `SelfServisKayitKaldirildiTests`.
 
 > **⚠️ `POST /api/auth/register` KALDIRILDI — yeniden eklemeyin.**
 >

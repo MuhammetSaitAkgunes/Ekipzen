@@ -45,10 +45,11 @@ export function LoginPage() {
       </section>
 
       <section className="auth-panel">
-        {/* Kayıt sekmesi/mode="signup" yolu KASITLI olarak yok: anonim self-servis
-            kayıt (eski POST /api/auth/register) kiracı sızıntısı güvenlik açığıydı
-            ve uç tamamen kaldırıldı. Şirket kaydı için tek meşru yol aşağıdaki
-            "Şirketinizi kaydedin" bağlantısıyla /register-company'dir. */}
+        {/* Bu ekranda KAYIT YOKTUR — ne kullanıcı ne şirket. Hesap açmanın tek yolu
+            operatörün platform anahtarıyla kiracı provizyonlaması, ardından gelen
+            davet e-postasıdır (/accept-invite). Kiracı başına ayrı veritabanına
+            geçildiğinde "kaydol" bir satır değil bir VERİTABANI oluşturur; anonim
+            bir düğmenin bunu tetiklemesi kaynak tüketme açığıdır. */}
         <form id="auth-login" className="auth-form active" onSubmit={(e) => run(e, () => login(email, password))}>
           <h2>Hoş geldiniz</h2>
           <p>Demo hesaba giriş yaparak uygulamayı inceleyebilirsiniz.</p>
@@ -65,10 +66,8 @@ export function LoginPage() {
             <i aria-hidden="true" className="fa-solid fa-arrow-right-to-bracket" /> Giriş yap
           </button>
           <p className="auth-alt">
-            Şirketiniz yok mu?{" "}
-            <button type="button" className="auth-link" onClick={() => navigate("/register-company")}>
-              Şirketinizi kaydedin
-            </button>
+            Şirketiniz yok mu? Hesabınız İK Pro ekibi tarafından açılır — davet
+            e-postanızdaki bağlantıyla şifrenizi belirleyin.
           </p>
         </form>
       </section>

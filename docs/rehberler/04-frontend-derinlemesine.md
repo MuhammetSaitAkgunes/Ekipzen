@@ -14,9 +14,9 @@ frontend/src/
 │  ├─ session.ts       # Oturum (token/kullanıcı) localStorage yönetimi
 │  └─ schema.d.ts      # Backend Swagger'ından ÜRETİLEN tipler (elle düzenleme!)
 ├─ auth/
-│  ├─ AuthContext.tsx  # login/register/logout + kullanıcı durumu
+│  ├─ AuthContext.tsx  # login/logout + kullanıcı durumu
 │  ├─ guards.tsx       # RequireAuth, PublicOnly, RouteGate (rol kontrolü)
-│  ├─ LoginPage.tsx, AcceptInvitePage.tsx, CompanySignupPage.tsx
+│  ├─ LoginPage.tsx, AcceptInvitePage.tsx   # kayıt sayfası YOK (bkz. Yönlendirme)
 ├─ layout/
 │  ├─ AppShell.tsx     # Kenar çubuğu + üst bar (giriş yapılınca sarmalar)
 │  └─ GlobalSearch.tsx # Ctrl+K arama
@@ -35,11 +35,13 @@ bir **rol listesi** taşır; kullanıcının rolü uymuyorsa sayfa gizlenir.
 ```
 
 - `RequireAuth` → giriş yoksa `/login`'e yollar.
-- `PublicOnly` → login/signup gibi sayfalar (girişliyken erişilmez).
+- `PublicOnly` → giriş/davet sayfaları (girişliyken erişilmez).
 - `RouteGate` → rol matrisini uygular.
 
-Public (girişsiz) route'lar: `/login`, `/signup`, `/accept-invite` (davet kabul),
-`/register-company` (self-servis şirket kaydı).
+Public (girişsiz) route'lar: `/login` ve `/accept-invite` (davet kabul) — hepsi bu.
+**Kayıt sayfası yoktur:** hesap operatör tarafından açılır (bkz.
+[06 — Multi-Tenancy](06-multi-tenancy.md)). `/signup` ve `/register-company` eski
+yer imleri için `/login`'e yönlendiren birer kalıntıdır.
 
 ## Veri Çekme: TanStack Query
 

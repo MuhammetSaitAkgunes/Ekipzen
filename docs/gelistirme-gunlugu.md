@@ -6,10 +6,15 @@
 
 ## Şu an neredeyiz
 
-- **Aktif iş:** **Kod-inceleme fix'leri (#2/#3/#4).** Dal `fix/review-2-3-4`
-  main'e merge kararı bekliyor. Zamanlanmış temizlik, veri dışa aktarımı, SMTP,
-  kiracı purge, self-servis kayıt, multi-tenant (Faz 0–5) ve React portu (8/8)
-  daha önce merge/push edildi.
+- **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
+  `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
+  Görev 0 (self-servis kaydın tamamen kaldırılması) bitti; sırada Görev 1
+  (devralınan mayınların temizliği) var. Faz 3'e (yedekleme/geri yükleme)
+  geçmeden önce kullanıcıyla konuşulacak.
+- **Kayıt (signup) politikası — kalıcı karar:** Uygulamada **hiçbir** self-servis
+  kayıt ucu yok. Yeni şirket yalnız operatör tarafından `POST /api/tenants`
+  (`X-Platform-Key`) ile açılır; katılımın tek yolu davettir. Gerekçe:
+  kiracı başına DB'de "kaydol" bir veritabanı oluşturur.
 - **Son tamamlanan:** **T5.2 davet/şifre-belirleme akışı.** Provizyonlanan
   hr-admin ve işe alınan personel artık `demo123` yerine **şifresiz** oluşturulur;
   davet e-postası (outbox stub) şifre-belirleme token'ı gönderir. Yeni uçlar:
@@ -104,6 +109,37 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-12 — Faz 2b / Görev 0: self-servis kayıt tamamen kaldırıldı
+
+- **Neden:** Kiracı başına ayrı veritabanına geçiyoruz. O geçişten sonra
+  "kaydol" bir satır değil bir **veritabanı** oluşturmak demek. Anonim bir uç
+  bunu tetikleyebilseydi internetten herhangi biri bir script'le SQL Server'a
+  istediği kadar veritabanı kurdurabilir; disk, yedekleme penceresi ve lisans
+  maliyeti saldırganın eline geçerdi. Rate limit bunu yavaşlatır, çözmez —
+  maliyet kalıcı, istek anlıktır. Veritabanı oluşturmak otomatik bir yan etki
+  değil, operatörün bilinçli eylemi olmalı.
+- **Kaldırılanlar:** `POST /api/tenants/signup` aksiyonu, `RegisterTenantCommand`
+  (+ validator/handler ve kendi slug-retry döngüsü), `SelfServiceSignupTests`,
+  `"signup"` rate-limit politikası ve `RateLimiting:SignupPermitPerHour` ayarı,
+  frontend `CompanySignupPage` (+ testi) ve `/register-company` rotası, giriş
+  sayfasındaki "Şirketinizi kaydedin" bağlantısı. `/signup` ve
+  `/register-company` eski yer imleri için `/login`'e yönlendiriyor.
+- **Kalan tek onboarding yolu:** `POST /api/tenants` (`X-Platform-Key`) → kiracı
+  **Active** başlar, ilk hr-admin şifresiz oluşur ve davet e-postasıyla
+  `/accept-invite`'a gider. `TenantOnboarding.CreateWithAdminAsync`'in tek
+  çağıranı artık `ProvisionTenantCommand`.
+- **Yan etki — temizlik servisinin anlamı değişti:** `cleanup-unverified` artık
+  "doğrulanmamış self-servis kayıtları" değil, **provizyon ortasında kesilmiş,
+  `Provisioning`'de takılı kalmış** kiracıları topluyor. `ScheduledCleanupTests`
+  ve `TenantPurgeTests` kurulumları buna göre yeniden yazıldı (signup çağırmak
+  yerine provizyonlayıp durumu `Provisioning`'e alıyorlar).
+- **Regresyon testi:** `SelfServisKayitKaldirildiTests` — istek başarısız olmalı
+  ve **arkasında kiracı satırı oluşmamalı**. Durum kodu bilerek sabitlenmedi:
+  ASP.NET bu yola 404 değil **405** döndürüyor; kodu teste çakmak sözleşmemizi
+  değil yönlendiriciyi test etmek olurdu.
+- **Doğrulama:** backend 51 birim + 153 entegrasyon yeşil, `-warnaserror` build
+  temiz; frontend `tsc --noEmit` temiz, 146 test (44 dosya) yeşil.
 
 ### 2026-07-20 — Geliştirici rehberleri (docs/rehberler/)
 
