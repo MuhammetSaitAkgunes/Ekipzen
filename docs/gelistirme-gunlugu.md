@@ -17,6 +17,11 @@
   migrate, (2) `IKProPlatform` migrate, (3) **`POST /api/tenants/migrate`**
   (kiracı katalogları). 3. adım atlanırsa müşteriler 503 alır (kasıtlı) ve durum
   açılış logunda + `GET /api/tenants/schema-status`'ta görünür.
+- **Faz 3 başladı.** Yedekleme artık tüm kiracı kataloglarını kapsıyor ve
+  **tatbikatı gerçekten koşturuldu** (nokta-zaman geri yükleme dahil). Kalanlar:
+  off-site hedefi seçimi, zamanlanmış görevin kurulması, RPO/RTO kararı ve
+  `freeze → geri yükle → rebuild-directory → unfreeze` zincirinin uçtan uca
+  tatbikatı.
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
   `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
   yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
@@ -122,6 +127,43 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 3 (1): yedekleme tüm kiracıları kapsıyor + tatbikat koşturuldu
+
+Faz 2b'nin bıraktığı **üretim öncesi kritik açık** kapandı: yedekleme script'leri
+tek bir `-Database IKProDb` alıyordu ve o katalog artık boş — yani alınan
+yedekler gerçek müşteri verisini içermiyordu.
+
+**`backup-restore-drill.ps1` çoklu veritabanına çevrildi.** Yedeklenecekler
+**platform veritabanından keşfediliyor**: `IKProPlatform` + `IKProDb` + her
+`Tenants.DatabaseName`. `-Database` artık zorunlu değil; verilirse yalnız o
+katalog tatbik edilir (hedefli tatbikat).
+
+- **Keşif kaynağı neden platform tablosu, `sys.databases` deseni değil:** desen,
+  silinmiş bir müşteriden kalan artık katalogu da yedekler ve gerçek müşteri
+  listesiyle hiç doğrulanmaz. Tersi durum — platformda yazılı olup sunucuda
+  bulunmayan katalog — tatbikatı **durdurur**; sessizce atlamak felaket anında
+  "yedeği hiç yokmuş" sürprizine dönüşürdü.
+- Bir veritabanının tatbikatı patlarsa diğerleri denenmeye devam eder, ama çıkış
+  kodu 1 olur. Kısmi başarı başarı değildir: yedeklenmemiş tek müşteri bile
+  telafi edilemez.
+- `register-backup-task.ps1` de artık ad almadan kaydediliyor (varsayılan: hepsi).
+
+**İKİ TATBİKAT DA GERÇEKTEN KOŞTURULDU** — bu belgenin kendi ilkesi gereği
+("test edilmemiş yedek, olmayan yedektir"):
+
+1. **Otomatik tatbikat:** 4 veritabanı (platform 5 tablo/22 satır, paylaşılan
+   36/18, demo 36/146, globex 36/42) yedeklendi, ayrı ada geri yüklendi, satır
+   sayıları doğrulandı, kopyalar düşürüldü. Çıkış kodu 0.
+2. **Nokta-zaman geri yükleme (`RESTORE … STOPAT`)** — belgede vaat edilen ama
+   hiç sınanmamış olan iddia. `IKPro_demo`'ya işaret satırları eklenip kesme
+   noktası belirlendi; geri yüklenen kopyada kesme noktasından ÖNCEKİ kayıt var,
+   SONRAKİ yok. Saniye hassasiyetinde geri dönüş çalışıyor.
+
+Tatbikat kayıtları `docs/yedekleme-ve-kurtarma.md` içinde tablolarıyla duruyor;
+bir sonraki tatbikatta yapılması gerekenler de orada listeli (gerçek boyutta
+veri, off-site kopya doğrulaması, `freeze → geri yükle → rebuild-directory →
+unfreeze` zincirinin uçtan uca denenmesi).
 
 ### 2026-08-13 — Faz 2b / Görev 7: migration orkestrasyonu — FAZ TAMAMLANDI
 

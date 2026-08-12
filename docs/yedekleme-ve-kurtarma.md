@@ -324,6 +324,67 @@ Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Platform -Confirm:$false
 > operatöre bırakıldı. Yukarıdaki komut çalıştırılana kadar yedekleme ELLE
 > çalışır durumdadır.
 
+## Tatbikat kaydı — 2026-08-13
+
+**İki tatbikat da GERÇEKTEN çalıştırıldı.** Bu belgede yazan ilke gereği: test
+edilmemiş yedek, olmayan yedektir.
+
+### 1) Otomatik tatbikat (yedek → geri yükle → satır sayısı doğrula)
+
+```
+pwsh scripts/backup-restore-drill.ps1 -BackupPath <yedek-klasörü> -LogPath <log>
+```
+
+| Veritabanı | Tablo | Satır | Sonuç |
+| --- | --- | --- | --- |
+| `IKProPlatform` | 5 | 22 | ✅ |
+| `IKProDb` (paylaşılan) | 36 | 18 | ✅ |
+| `IKPro_demo` | 36 | 146 | ✅ |
+| `IKPro_globex` | 36 | 42 | ✅ |
+
+Çıkış kodu **0**; 4 veritabanının tamamı yedeklendi, ayrı bir ada geri yüklendi,
+satır sayıları kaynakla karşılaştırıldı ve tatbikat kopyaları düşürüldü. Toplam
+süre ~4 sn (demo ölçeği).
+
+> `IKProDb`'nin 36 tablosu var ama yalnız 18 satırı: katalog boş, şeması güncel.
+> Beklenen durum — kiracı bağlamı olmayan işler oraya bağlanıyor.
+
+### 2) Nokta-zaman geri yükleme (`RESTORE … STOPAT`) — asıl kanıt
+
+Yukarıdaki tatbikat "yedek geri yüklenebiliyor" der; bu belgede vaat edilen ise
+**"tek müşteriyi istediğiniz saniyeye döndürebilirsiniz"**. O iddia ayrıca sınandı:
+
+1. `IKPro_demo` FULL yedeği alındı.
+2. `TATBIKAT-A` departmanı eklendi → `02:26:07`
+3. **kesme noktası** → `02:26:10`
+4. `TATBIKAT-B` departmanı eklendi → `02:26:13`
+5. Kuyruk log yedeği alındı.
+6. `RESTORE … NORECOVERY` + `RESTORE LOG … WITH RECOVERY, STOPAT = '02:26:10'`
+
+**Sonuç:**
+
+```
+CANLI  IKPro_demo      : TATBIKAT-A, TATBIKAT-B   (6 departman)
+GERİ YÜKLENEN (STOPAT) : TATBIKAT-A               (5 departman)
+```
+
+Kesme noktasından **önceki** kayıt geldi, **sonraki** gelmedi. Saniye
+hassasiyetinde geri dönüş çalışıyor.
+
+**Tatbikatın gerçek prosedürden tek farkı:** geri yükleme, canlı katalogun
+üzerine değil ayrı bir ada (`IKPro_demo_PitrDrill`) yapıldı. Gerçek kurtarmada
+hedef canlı katalogdur ve öncesinde `freeze`, sonrasında `rebuild-directory` +
+`unfreeze` adımları gelir (yukarıdaki prosedüre bakın). Tatbikat kopyası ve
+işaret satırları sonrasında temizlendi.
+
+### Bir sonraki tatbikatta yapılması gerekenler
+
+- Gerçek boyutta veriyle koşturun: demo ölçeğinde 4 saniye süren işlem, RTO
+  hedefini sınamaz.
+- `-OffsitePath` ile ikinci kopyayı da doğrulayın.
+- `freeze` → geri yükle → `rebuild-directory` → `unfreeze` zincirini **uçtan uca**
+  deneyin; bu tatbikat yalnız veritabanı katmanını kapsadı.
+
 ## Kalan eksikler
 
 - ⬜ **RPO/RTO belirlenmedi** — ticari karar; sözleşmeye yazılmadan önce netleşmeli.
@@ -335,13 +396,15 @@ Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Platform -Confirm:$false
 - ⬜ **Log dosyası kimse tarafından izlenmiyor** — webhook kurulana kadar
   `tatbikat.jsonl` dosyasına düzenli bakılmalı.
 - ✅ **Kiracı bazına bölme TAMAMLANDI (2026-08-13).** Her kiracının verisi kendi
-  kataloğunda (`IKPro_{slug}`); tek müşteriyi diğerlerine dokunmadan geri yükleme
-  artık teknik olarak mümkün.
-- ⬜ **Yedek planı kiracı kataloglarını KAPSAMIYOR.** Yukarıdaki komutlar hâlâ tek
-  bir `-Database IKProDb` alıyor; o katalog bugün **boş**. Yani şu anda alınan
-  yedekler gerçek müşteri verisini içermiyor. Script'lerin katalogları
-  `sys.databases`'ten `IKPro[_]%` deseniyle keşfedip her biri için ayrı yedek
-  alması gerekiyor — **bunu yapmadan üretime çıkılamaz.**
-- ⬜ **Tek-kiracı geri yükleme prosedürü yazılmadı.** Sıra bellidir (dondur →
-  geri yükle → dizini yeniden kur → çöz) ama tatbikatı yapılmadı. Faz 3'ün konusu.
-  Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
+  kataloğunda (`IKPro_{slug}`); tek müşteri diğerlerine dokunulmadan geri
+  yüklenebiliyor.
+- ✅ **Yedek planı artık TÜM katalogları kapsıyor (2026-08-13).**
+  `backup-restore-drill.ps1` yedeklenecekleri **platform veritabanından
+  keşfediyor**: `IKProPlatform` + `IKProDb` + her `Tenants.DatabaseName`.
+  `-Database` artık zorunlu değil; verilirse yalnız o katalog tatbik edilir
+  (hedefli tatbikat). Platformda kayıtlı olup sunucuda bulunmayan bir katalog
+  tatbikatı **durdurur** — sessizce atlamak "yedeği hiç yokmuş" sürprizine
+  dönüşürdü. Zamanlanmış görev de artık ad almadan kaydediliyor.
+- ✅ **Tatbikat gerçekten koşturuldu (2026-08-13).** Aşağıya bakın.
+- ⬜ **Off-site hedefi ve zamanlanmış görev hâlâ kurulmadı** — script hazır,
+  operatör kararı bekliyor (`-OffsitePath`, `register-backup-task.ps1`).

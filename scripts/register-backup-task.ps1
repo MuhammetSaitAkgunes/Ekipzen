@@ -13,7 +13,9 @@
     -WhatIf ile görebilirsiniz.
 
 .PARAMETER Database
-    Yedeklenecek veritabanı (ör. IKProDb).
+    YALNIZ bu veritabanını yedekle. Boş bırakın: tatbikat o zaman platform +
+    paylaşılan katalog + HER MÜŞTERİ veritabanını kapsar (kiracı listesi
+    platformdan keşfedilir). Tek ad vermek diğer müşterileri yedeksiz bırakır.
 
 .PARAMETER BackupPath
     Yedek klasörü. SQL Server servis hesabının yazabildiği bir yol olmalı:
@@ -40,11 +42,11 @@
 
 .EXAMPLE
     # Önce ne yapacağını gör:
-    pwsh scripts/register-backup-task.ps1 -Database IKProDb -BackupPath "C:\SQLYedek" -WhatIf
+    pwsh scripts/register-backup-task.ps1 -BackupPath "C:\SQLYedek" -WhatIf
 
 .EXAMPLE
     # Yönetici PowerShell'de kaydet:
-    pwsh scripts/register-backup-task.ps1 -Database IKProDb -BackupPath "C:\SQLYedek" `
+    pwsh scripts/register-backup-task.ps1 -BackupPath "C:\SQLYedek" `
         -OffsitePath "\\yedek-sunucu\ikpro" -LogPath "C:\SQLYedek\tatbikat.jsonl"
 
 .EXAMPLE
@@ -53,7 +55,10 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [Parameter(Mandatory = $true)][string]$Database,
+    # Boş bırakılırsa tatbikat TÜM veritabanlarını (platform + paylaşılan + her
+    # müşteri kataloğu) kapsar. Normal kullanım budur; tek bir ad vermek yalnız
+    # hedefli bir tatbikat içindir ve DİĞER MÜŞTERİLERİ YEDEKSİZ BIRAKIR.
+    [string]$Database,
     [Parameter(Mandatory = $true)][string]$BackupPath,
     [string]$OffsitePath,
     [string]$LogPath,
@@ -73,7 +78,8 @@ if (-not (Test-Path $drillScript)) {
 
 # Argümanlar tırnaklanır: yollar boşluk içerebilir ("C:\Program Files\...").
 $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$drillScript`"",
-    "-Database", "`"$Database`"", "-BackupPath", "`"$BackupPath`"")
+    "-BackupPath", "`"$BackupPath`"")
+if ($Database) { $argList += @("-Database", "`"$Database`"") }
 if ($OffsitePath) { $argList += @("-OffsitePath", "`"$OffsitePath`"") }
 if ($LogPath) { $argList += @("-LogPath", "`"$LogPath`"") }
 if ($StoragePath) { $argList += @("-StoragePath", "`"$StoragePath`"") }
