@@ -33,6 +33,7 @@ Sıra riske göre kurulmuştur; bozmayın:
 
 | # | Görev | Neden bu sırada |
 | --- | --- | --- |
+| 0 | Self-servis kaydı kaldır | Ayrılmadan sonra anonim kayıt **veritabanı oluşturur**; en başta kapatılmalı |
 | 1 | Devredilen mayınları temizle | Bunlar ayrılmadan **önce** düzeltilmezse, ayrılma anında patlarlar ve sebebi ayrılmaya bağlanır |
 | 2 | `DatabaseName` + veritabanı sağlayıcı | Kullanılmaz; tek başına doğrulanabilir |
 | 3 | Çözücü katalog üretir | Tüm `DatabaseName` boş olduğu için davranış değişmez |
@@ -40,6 +41,29 @@ Sıra riske göre kurulmuştur; bozmayın:
 | 5 | Mevcut kiracılar ayrılır | Herkes ayrılır — geri dönüşün zorlaştığı nokta |
 | 6 | Purge `DROP DATABASE` + `Subscriptions` platforma | Ayrılma tamamlanınca anlamlı olur |
 | 7 | Migration orkestrasyonu + açılış doğrular + dokümantasyon | Çok veritabanlı işletim |
+
+---
+
+### Görev 0: Self-servis kaydı kaldır
+
+**Neden en başta:** `POST /api/tenants/signup` bugün anonim ve bir **satır** oluşturuyor. Bu fazdan sonra aynı uç bir **veritabanı** oluşturacak — yani internetten herhangi biri, bir script'le SQL Server'a istediği kadar veritabanı kurdurabilir. Kaynak tüketme açığı.
+
+**Karar:** veritabanı oluşturmak otomatik bir yan etki değil, **bilinçli bir eylem** olmalı. Kiracı yalnız platform anahtarıyla (`POST /api/tenants`) açılır — yani operatör satışı kapattığında.
+
+**Kaldırılacaklar:**
+- `TenancyController` — `Signup` aksiyonu
+- `RegisterTenantCommand.cs` — komut, validator, handler, slug üretimi (dosyanın tamamı)
+- Testler: `SelfServiceSignupTests`; `ScheduledCleanupTests` ve `TenantPurgeTests` içinde signup kullanan kurulumlar provizyon yoluna çevrilir
+- Frontend: `CompanySignupPage` + testi, `/register-company` rotası, `/signup` yönlendirmesi, giriş sayfasındaki bağlantı
+- `schema.d.ts` — üretilmiş; yeniden üretilir ya da ilgili bölüm çıkarılır
+
+**Yan kazanç:** Görev 1(d)'deki "`TenantOnboarding` / `RegisterTenantCommand` sıra kopyası" mayını **kendiliğinden yok olur** — kopya kalkıyor, tek yol kalıyor.
+
+**Giriş sayfası:** şirket kaydı bağlantısı kalkınca ziyaretçiye ne gösterileceğine karar verin. En sade seçenek: bağlantıyı kaldırıp giriş formunu bırakmak. Bir "bizimle iletişime geçin" metni eklenecekse bu bir ürün/pazarlama kararıdır — koda gömmeden önce sorun.
+
+**Regresyon testi:** `POST /api/tenants/signup` artık **404** dönmeli. Yorumunda neden kaldırıldığını yazın; biri ileride "kayıt ucu yok, ekleyeyim" demesin.
+
+**Doğrulama:** backend tam suite (kaldırılan testler kadar azalır), frontend `vitest` + `tsc -b` + `oxlint`.
 
 ---
 
@@ -58,8 +82,8 @@ Herhangi bir `Provisioning` kiracıyı, kullanıcı şifre belirler belirlemez `
 **c) `AppDbContextInitializer` kök kapsamdan çözülüyor**
 Tek kalan elle `Impersonate`. Düzeltme bu dosyada değil `Program.cs`'te: initializer, `ITenantScopeFactory` ile açılan bir kapsamdan çözülmeli.
 
-**d) `TenantOnboarding` / `RegisterTenantCommand` sıra kopyası**
-Self-servis kayıt ortak yolu kullanmıyor, provizyon sırasını kopyalıyor. İki kopya = sessiz sapma. Görev 4'te provizyon sırası değişecek; **iki kopyayı ayrı ayrı değiştirmek zorunda kalmamak için** şimdi tek yola indirilmeli. Slug retry döngüsü korunmalı.
+**d) ~~`TenantOnboarding` / `RegisterTenantCommand` sıra kopyası~~ — Görev 0 ile kapandı.**
+Kopyanın kaynağı self-servis kayıttı; o kalkınca tek yol kaldı. Görev 0'dan sonra `TenantOnboarding.CreateWithAdminAsync`'in tek çağıranının `ProvisionTenantCommand` olduğunu **doğrulayın**; değilse burada ele alın.
 
 **Doğrulama:** her madde için davranışı sabitleyen bir test. Tam suite geçmeli.
 
