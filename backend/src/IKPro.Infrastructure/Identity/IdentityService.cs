@@ -114,14 +114,28 @@ public sealed class IdentityService(
             return false;
         }
 
-        // FAZ 2B NOTU: dizin TÜRETİLMİŞ bir tablodur ve geri yükleme sonrası
-        // sapabilir — karşılığı olmayan bir TenantId'ye işaret edebilir (test
-        // altyapısı bunu bilerek üretiyor: PlatformKatmaniTests, TenantId = -1).
-        // Bugün zararsız çünkü çözücü tenantId'yi yok sayıyor. Kiracı başına
-        // veritabanına geçilince Create(...) çözülemeyen kiracıda FIRLATIR ve bu
-        // metot sözleşmesi gereği boolean dönmesi gerekirken 500'e dönüşür —
-        // provizyon, self-servis kayıt ve işe alım yollarını kırar. O fazda
-        // "çözülemeyen kiracı → false" davranışı eklenmeli.
+        // Dizin TÜRETİLMİŞ bir tablodur ve sapabilir: karşılığı OLMAYAN bir kiracıya
+        // işaret edebilir (geri yükleme, elle müdahale, yarıda kalmış purge; test
+        // altyapısı da bunu bilerek üretiyor — PlatformKatmaniTests, TenantId = -1).
+        // Böyle bir kimlikle kapsam açmak, kiracı başına veritabanına geçildikten
+        // sonra bağlantı çözümlemesinde FIRLAR — oysa bu metot `bool` sözleşmesinde
+        // ve üç yolun ön kontrolü: provizyon, işe alım, davet. Fırlarsa hepsi 500'e
+        // döner, üstelik anlamı aslında sadece "böyle bir kullanıcı yok" olan bir
+        // durumdan.
+        //
+        // Kütüğe SORARAK ayırıyoruz (try/catch ile YUTMUYORUZ): kütük null derse
+        // kiracı gerçekten yoktur → false. SQL erişilemiyorsa kütük fırlatır ve o
+        // istisna yukarı çıkar — altyapı arızasını "kullanıcı yok" diye raporlamak,
+        // onboarding'i sessizce yanlış yöne sokardı.
+        if (await registry.GetStatusAsync(kiraciId.Value, cancellationToken) is null)
+        {
+            logger.LogWarning(
+                "Yönlendirme dizini var olmayan kiracı {TenantId}'ye işaret ediyor; " +
+                "e-posta yok sayıldı. Dizin sapmış olabilir — rebuild-directory'yi değerlendirin.",
+                kiraciId.Value);
+            return false;
+        }
+
         using var kapsam = tenantScopeFactory.Create(kiraciId.Value);
         var (kullanicilar, _) = KimlikServisleri(kapsam);
         return await kullanicilar.FindByEmailAsync(email) is not null;
@@ -196,17 +210,20 @@ public sealed class IdentityService(
                 .Select(e => new ValidationFailure("token", e.Description)));
         }
 
-        // Şifre belirlendi = e-posta doğrulandı. Self-servis kayıtta Provisioning
-        // durumunda oluşturulan kiracıyı ilk admin kabulünde etkinleştir.
-        var tenant = await platform.Tenants.FirstOrDefaultAsync(
-            t => t.Id == user.TenantId, cancellationToken);
-        if (tenant is { Status: TenantStatus.Provisioning })
-        {
-            tenant.Status = TenantStatus.Active;
-            await platform.SaveChangesAsync(cancellationToken);
-            // Durum değişti — kütüğü düşür ki erişim kapısı bunu ANINDA görsün.
-            registry.Invalidate(tenant.Id);
-        }
+        // BURADA KİRACI DURUMU DEĞİŞTİRİLMEZ — bilinçli.
+        //
+        // Eskiden değiştiriliyordu: self-servis kayıt kiracıyı Provisioning
+        // oluşturuyordu ve ilk admin'in şifre belirlemesi "e-posta doğrulandı"
+        // anlamına geldiğinden kiracı burada Active'e çekiliyordu. Self-servis
+        // kayıt kaldırıldı (kiracıyı yalnız operatör açar ve DAİMA Active olarak
+        // biter), dolayısıyla bu geçişin meşru bir tetikleyicisi kalmadı.
+        //
+        // Geriye yalnız tehlikeli tarafı kalırdı: kiracı başına veritabanında
+        // Provisioning'de TAKILI KALMIŞ bir kiracı "veritabanı henüz kurulmadı"
+        // demektir. Onu bir son kullanıcının şifre belirlemesiyle Active yapmak,
+        // kullanıcıyı var olmayan bir kataloğa sokar; hata veritabanı katmanından
+        // gelir ve sebebi anlaşılmaz. Durum geçişleri provizyon yolunun işidir.
+        // Bkz. KiraciDurumMakinesiTests.
     }
 
     /// <summary>

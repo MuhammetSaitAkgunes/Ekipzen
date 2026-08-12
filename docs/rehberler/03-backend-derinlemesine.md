@@ -66,8 +66,9 @@ Application'daki arayüzlerin gerçek uygulamaları burada:
 - **`Persistence/Interceptors/AuditableEntityInterceptor.cs`** — kaydetme anında
   audit alanlarını ve `TenantId`'yi otomatik damgalar.
 - **`Identity/JwtTokenService.cs`** — JWT üretimi (claim'ler: sub, name, email,
-  role, employeeId, **tenant**); **`IdentityService.cs`** — login/register/refresh,
-  davet akışı, kiracı etkinleştirme.
+  role, employeeId, **tenant**); **`IdentityService.cs`** — login/refresh/logout,
+  şifre değiştirme, davet akışı. **Kiracı DURUMUNU değiştirmez** — durum geçişleri
+  provizyon yolunun işidir (bkz. [06](06-multi-tenancy.md)).
 - **`Email/` `Storage/` `Pdf/`** — SMTP/outbox e-posta, yerel dosya deposu, QuestPDF bordro pusulası.
 
 `IKPro.Infrastructure/DependencyInjection.cs` (`AddInfrastructure`) tüm bunları DI'a

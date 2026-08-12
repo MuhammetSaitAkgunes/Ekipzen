@@ -53,10 +53,16 @@ verisini göremez. Bu, ürünün en kritik güvencesidir.
 
 ## `Impersonate` Ne İşe Yarar?
 
-HTTP isteği olmayan bağlamlarda (seed, arka plan servisi, purge) JWT yoktur.
-`ICurrentTenant.Impersonate(tenantId)` aktif kiracıyı elle ayarlar; böylece global
-filtre bu bağlamda da doğru çalışır. Örnek: `TenantPurger` bir kiracıyı silerken
-o kiracıyı impersone eder.
+HTTP isteği olmayan bağlamlarda (seed, arka plan servisi, purge) JWT yoktur ve
+kiracı elle sabitlenmelidir. Bunun **doğru yolu `ITenantScopeFactory.Create(id)`**:
+kiracıyı kapsam çağırana dönmeden önce sabitler, dolayısıyla kapsamdan çözülen her
+servis — `AppDbContext` dahil — doğru kiracıyı görür.
+
+`ICurrentTenant.Impersonate` bu fabrikanın **içinde** kullanılır; dışarıdan doğrudan
+çağrılmaz. Sebebi: `AppDbContext`'in bağlantısı kapsam başına, ilk çözümde belirlenir
+— context zaten çözüldükten sonra `Impersonate` çağırmak hata FIRLATMAZ, sadece
+sessizce yanlış veritabanına yazar. Örnek doğru kullanım: `TenantPurger` ve
+`AppDbContextInitializer` (bkz. [07](07-veritabani-ve-migrationlar.md)).
 
 ## Kiracı Nasıl Oluşur?
 

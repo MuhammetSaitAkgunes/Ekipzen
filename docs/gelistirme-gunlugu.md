@@ -8,9 +8,10 @@
 
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
-  Görev 0 (self-servis kaydın tamamen kaldırılması) bitti; sırada Görev 1
-  (devralınan mayınların temizliği) var. Faz 3'e (yedekleme/geri yükleme)
-  geçmeden önce kullanıcıyla konuşulacak.
+  Görev 0 (self-servis kaydın kaldırılması) ve Görev 1 (devralınan mayınların
+  temizliği) bitti; sırada Görev 2 (`Tenants.DatabaseName` + veritabanı
+  sağlayıcı) var. Faz 3'e (yedekleme/geri yükleme) geçmeden önce kullanıcıyla
+  konuşulacak.
 - **Kayıt (signup) politikası — kalıcı karar:** Uygulamada **hiçbir** self-servis
   kayıt ucu yok. Yeni şirket yalnız operatör tarafından `POST /api/tenants`
   (`X-Platform-Key`) ile açılır; katılımın tek yolu davettir. Gerekçe:
@@ -109,6 +110,39 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-12 — Faz 2b / Görev 1: devralınan üç mayın temizlendi
+
+Önceki fazların bilinçli olarak 2b'ye bıraktığı üç madde; hepsi ayrılma anında
+gerçek soruna dönüşüyordu, ayrılmadan **önce** kapatıldı ki bir hata çıktığında
+sebebi ayrılmaya bağlanmasın. Üçü de önce kırmızı test, sonra düzeltme.
+
+- **(a) `EmailExistsAsync` sapmış dizinde patlıyordu.** Dizin türetilmiştir ve
+  karşılığı olmayan bir kiracıya işaret edebilir; ayrılmadan sonra o kimlikle
+  kapsam açmak fırlatır — oysa metot `bool` sözleşmesinde ve provizyon/işe
+  alım/davet yollarının ön kontrolü. Çözüm **try/catch değil**: kapsam açmadan
+  önce kütüğe soruluyor (`ITenantRegistry.GetStatusAsync`), null ise kiracı
+  yoktur → `false` + uyarı logu. `catch` kullanmak altyapı arızasını da yutup
+  "kullanıcı yok" diye raporlardı; bu ayrım korundu.
+- **(b) Davet kabulü kiracıyı etkinleştiriyordu.** Self-servis kaydın e-posta
+  doğrulama kapısıydı; o akış kalkınca geriye yalnız zararı kaldı —
+  `Provisioning`'de takılı bir kiracı "veritabanı henüz kurulmadı" demek ve onu
+  bir son kullanıcının şifre belirlemesiyle açmak, kullanıcıyı var olmayan bir
+  kataloğa sokar. Etkinleştirme tamamen kaldırıldı. Kural: **durum geçişleri
+  provizyon yolunun işidir.**
+- **(c) Seed kök kapsamdan çözülüyordu.** `AppDbContextInitializer` içeride
+  `Impersonate` çağırıyordu ama `AppDbContext`'in bağlantısı sınıf DI tarafından
+  kurulurken çoktan belirleniyordu — yani ayrılmadan sonra seed **sessizce yanlış
+  veritabanına** yazardı. Varsayılan kiracıyı garanti etme işi
+  `PlatformDbInitializer.EnsureDefaultTenantAsync()`'e taşındı; `Program.cs`
+  initializer'ı `ITenantScopeFactory.Create(...)` kapsamından çözüyor. `SeedAsync`
+  artık ilk satırında `TenantIdOrThrow()` ile **tel tuzağı** kuruyor.
+- **(d) `TenantOnboarding` sıra kopyası:** Görev 0 ile kapanmıştı, doğrulandı —
+  tek çağıran `ProvisionTenantCommand`.
+- **Yeni testler:** `EmailExistsAsyncTests` (birim; kapsam fabrikası çözülemeyen
+  kiracıda fırlatıyor, yani metot fabrikaya giderse kırılır — değeri fazdan
+  bağımsız), `KiraciDurumMakinesiTests`, `SeedKapsamiTests`.
+- **Doğrulama:** 52 birim + 156 entegrasyon yeşil, `-warnaserror` temiz.
 
 ### 2026-08-12 — Faz 2b / Görev 0: self-servis kayıt tamamen kaldırıldı
 

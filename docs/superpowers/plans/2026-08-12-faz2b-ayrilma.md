@@ -95,6 +95,33 @@ Kopyanın kaynağı self-servis kayıttı; o kalkınca tek yol kaldı. Görev 0'
 
 **Doğrulama:** her madde için davranışı sabitleyen bir test. Tam suite geçmeli.
 
+> **✅ TAMAMLANDI (2026-08-12).**
+>
+> **(a)** Çözüm try/catch DEĞİL: `EmailExistsAsync` kapsam açmadan önce
+> `ITenantRegistry.GetStatusAsync`'e soruyor — null ise kiracı yoktur → `false` +
+> uyarı logu. Fark önemli: `catch` altyapı arızasını da yutar ve "kullanıcı yok"
+> diye raporlardı; bu ayrım korunuyor (SQL erişilemezse istisna yukarı çıkar).
+> Test `EmailExistsAsyncTests` bir birim testi ve ayrılmadan SONRAKİ dünyayı taklit
+> ediyor: kapsam fabrikası çözülemeyen kiracıda fırlatıyor, yani metot fabrikaya
+> giderse test kırılıyor — değeri fazdan bağımsız.
+>
+> **(b)** "Yalnız provizyonu tamamlanmış kiracı etkinleştirilsin" yerine
+> **etkinleştirme tamamen kaldırıldı**. Görev 0'dan sonra `Provisioning` kiracı
+> yaratan meşru bir akış kalmadı; geriye yalnız tehlikeli tarafı kalırdı. Kural
+> netleşti: durum geçişleri provizyon yolunun işidir, son kullanıcının hiçbir
+> eylemi kiracıyı erişilebilir yapamaz (`KiraciDurumMakinesiTests`).
+>
+> **(c)** `SeedDefaultTenantAsync` (ve `Impersonate` çağrısı) `AppDbContextInitializer`'dan
+> çıkarıldı; kiracı satırını garanti etme işi `PlatformDbInitializer.EnsureDefaultTenantAsync()`'e
+> taşındı (platform verisi + seed'in önkoşulu). `Program.cs` initializer'ı artık
+> `ITenantScopeFactory.Create(varsayılanKiraciId)` kapsamından çözüyor. `SeedAsync`
+> ilk satırında `TenantIdOrThrow()` ile **tel tuzağı** kuruyor: kiracısız kapsamda
+> sessizce yanlış yere yazmak yerine patlıyor (`SeedKapsamiTests`).
+>
+> **(d)** Doğrulandı, ek iş çıkmadı.
+>
+> Doğrulama: 52 birim + 156 entegrasyon yeşil, `-warnaserror` temiz.
+
 ---
 
 ### Görev 2: `DatabaseName` ve veritabanı sağlayıcı

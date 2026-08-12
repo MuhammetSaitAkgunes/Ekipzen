@@ -150,11 +150,25 @@ try
     {
         using var scope = app.Services.CreateScope();
 
+        // Önce platform: migrate et ve varsayılan kiracıyı garanti et. Kiracı kimliği
+        // bir sonraki adımın ÖNKOŞULU — seed'in hangi kiracıya yazacağı, seed
+        // başlamadan bilinmeli.
         var platformInitializer = scope.ServiceProvider
             .GetRequiredService<IKPro.Infrastructure.Persistence.PlatformDbInitializer>();
         await platformInitializer.InitialiseAsync();
+        var varsayilanKiraciId = await platformInitializer.EnsureDefaultTenantAsync();
 
-        var initializer = scope.ServiceProvider.GetRequiredService<IKPro.Infrastructure.Persistence.AppDbContextInitializer>();
+        // Uygulama initializer'ı KİRACIYA SABİTLENMİŞ bir kapsamdan çözülür. Kök
+        // kapsamdan çözüp içeride Impersonate çağırmak işe yaramaz: AppDbContext'in
+        // bağlantısı, initializer DI tarafından kurulurken çoktan belirlenmiş olur —
+        // yani kiracı başına veritabanına geçildiğinde seed sessizce YANLIŞ
+        // veritabanına yazardı. Kapsam fabrikası kiracıyı kapsam dönmeden önce
+        // sabitler; bu sırayı yanlış yapmak yapısal olarak imkânsızdır.
+        using var kiraciKapsami = scope.ServiceProvider
+            .GetRequiredService<IKPro.Application.Common.Interfaces.ITenantScopeFactory>()
+            .Create(varsayilanKiraciId);
+        var initializer = kiraciKapsami.Services
+            .GetRequiredService<IKPro.Infrastructure.Persistence.AppDbContextInitializer>();
         await initializer.InitialiseAsync();
         await initializer.SeedAsync();
     }

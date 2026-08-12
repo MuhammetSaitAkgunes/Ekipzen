@@ -52,10 +52,16 @@ public class AppDbContextInitializer(
     {
         try
         {
-            // Multi-tenant: demo verisi tek bir "Demo" kiracıya yazılır. Kiracı impersone
-            // edilince interceptor tüm yazımları o kiracıyla damgalar ve global filtre
-            // guard'ları doğru kiracıya çalışır (Faz 3'te çok-kiracılı demo'ya genişler).
-            await SeedDefaultTenantAsync();
+            // Kiracı KAPSAMDAN gelir; bu sınıf artık kendi kendine impersone etmez.
+            // Program.cs bu initializer'ı ITenantScopeFactory ile açılmış, varsayılan
+            // kiracıya sabitlenmiş bir kapsamdan çözer — böylece AppDbContext'in
+            // bağlantısı ve interceptor damgalaması ilk andan itibaren doğrudur.
+            //
+            // Bu satır bir TEL TUZAĞIDIR: biri ileride initializer'ı kök kapsamdan
+            // çözerse seed veriyi SESSİZCE yanlış (ya da hiçbir) kiracıya yazmak
+            // yerine burada, hiçbir şey yazmadan patlar. Bkz. SeedKapsamiTests.
+            var kiraciId = currentTenant.TenantIdOrThrow();
+            logger.LogInformation("Demo verisi {TenantId} kiracısına tohumlanıyor.", kiraciId);
             await SeedRolesAsync();
             await SeedOrganizationAsync();
             await SeedDemoUsersAsync();
@@ -147,43 +153,6 @@ public class AppDbContextInitializer(
         context.Employees.AddRange(ece, ahmet, ayse, selin);
 
         await context.SaveChangesAsync();
-    }
-
-    private async Task SeedDefaultTenantAsync()
-    {
-        // Platform veritabanında (IKProPlatform) bir migration backfill'i YOKTUR — kiracı
-        // kimliği bu daldan (kiracı-başına-veritabanı, Faz 1a) itibaren ayrı bir DB'de.
-        // Bu yüzden varsayılan kiracıyı burada doğrudan güvence altına alıyoruz: yoksa
-        // oluştur, sonra impersone et.
-        var tenant = await platform.Tenants.OrderBy(t => t.Id).FirstOrDefaultAsync();
-        if (tenant is null)
-        {
-            tenant = new Tenant
-            {
-                Name = "Demo Şirket",
-                Slug = "demo",
-                Status = TenantStatus.Active,
-                CreatedAtUtc = DateTime.UtcNow,
-            };
-            platform.Tenants.Add(tenant);
-            await platform.SaveChangesAsync(default);
-        }
-
-        // BİLİNÇLİ OLARAK ITenantScopeFactory KULLANILMIYOR: `context` (ve bu sınıfın diğer
-        // tüm bağımlılıkları — userManager, roleManager, directory) constructor
-        // parametresi olarak enjekte edildiğinden, DI konteyneri bunları BU SINIFIN KENDİSİ
-        // çözülürken (Program.cs'de `scope.ServiceProvider.GetRequiredService<AppDbContextInitializer>()`)
-        // ÇOKTAN kurmuştur — yani `SeedAsync` hiç çalışmadan önce. Burada yeni bir fabrika kapsamı
-        // açıp impersone etmek o YENİ kapsamın KENDİ ICurrentTenant/AppDbContext'ini etkiler,
-        // ambient `context`'i DEĞİL — hiçbir şey düzeltmez, üstelik SeedOrganizationAsync'ten
-        // SeedSettingsAsync'e kadar tüm alt adımlar zaten bu ambient `context`'i paylaşır. Doğru
-        // düzeltme (Faz 2'de gerekecek): Program.cs, AppDbContextInitializer'ı ROOT kapsamdan değil,
-        // `tenantScopeFactory.Create(varsayılanKiraciId)` ile açılan bir kapsamdan çözmeli — bu,
-        // Task 5'in kapsamı dışında (bu dosya tek başına çözemez). Faz 1b'de zararsız: bağlantı
-        // kiracıdan bağımsız her zaman DefaultConnection'dır (bkz. TenantConnectionResolver) ve
-        // TenantId damgalaması SaveChanges anında DİNAMİK okunur (bkz. AuditableEntityInterceptor) —
-        // yani bu doğrudan çağrı bugün doğru çalışır, ama sıraya güvenir.
-        currentTenant.Impersonate(tenant.Id);
     }
 
     /// <summary>

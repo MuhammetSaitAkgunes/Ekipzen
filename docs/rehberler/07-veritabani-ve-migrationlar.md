@@ -82,8 +82,17 @@ değil, migration içinde **`migrationBuilder.Sql("CREATE VIEW ...")`** ile yön
 - **Demo kullanıcılar** (`ik@`, `ece.arslan@`, `ahmet.yilmaz@` — hepsi `demo123`).
 - İkinci bir demo kiracı (Globex) — izolasyonu göstermek için.
 
-Seed, `Impersonate` kullanarak varsayılan kiracı bağlamında yazar (JWT yokken bile
-global filtre doğru çalışsın diye).
+Seed **kiracıya sabitlenmiş bir DI kapsamından** çalışır: `Program.cs` önce
+`PlatformDbInitializer.EnsureDefaultTenantAsync()` ile varsayılan kiracıyı garanti
+eder, sonra `ITenantScopeFactory.Create(kiracıId)` ile açtığı kapsamdan
+`AppDbContextInitializer`'ı çözer.
+
+> **Neden kapsamdan, `Impersonate` ile değil:** `AppDbContext`'in bağlantısı kapsam
+> başına, **ilk çözümde** belirlenir. Initializer kök kapsamdan çözülüp içeride
+> `Impersonate` çağırsaydı bağlantı çoktan kurulmuş olurdu — kiracı başına
+> veritabanında seed **sessizce yanlış veritabanına** yazardı. Kapsam fabrikası
+> kiracıyı kapsam dönmeden önce sabitler; sırayı yanlış yapmak imkânsız olur.
+> `SeedAsync` ayrıca kiracısız kapsamda açıkça patlar (`SeedKapsamiTests`).
 
 ## Test Veritabanı
 

@@ -90,12 +90,19 @@ flowchart LR
 ```
 
 Bu akış iki yerde tetiklenir:
-- **Kiracı provizyonu / self-servis kayıt:** ilk `hr-admin` şifresiz oluşur, davet alır.
+- **Kiracı provizyonu:** ilk `hr-admin` şifresiz oluşur, davet alır.
 - **İşe alım (hire):** aday `employee`'ye dönüşünce şifresiz login + davet alır.
 
 **Uçlar:**
 - `POST /api/auth/accept-invite` — davet token'ıyla ilk şifreyi belirler (anonim).
 - Token geçersiz/süresi geçmişse reddedilir.
+- **KİRACI DURUMUNU DEĞİŞTİRMEZ.** Şifre belirlemek kullanıcının hesabını
+  kullanılabilir yapar, kiracıyı değil. Eskiden `Provisioning` bir kiracıyı
+  `Active`'e çekiyordu (self-servis kaydın e-posta doğrulama kapısıydı); o akış
+  kalkınca geriye yalnız zararı kalırdı — `Provisioning`'de takılı bir kiracı
+  "veritabanı henüz kurulmadı" demektir ve onu açmak kullanıcıyı var olmayan bir
+  kataloğa sokar. Durum geçişleri provizyon yolunun işidir
+  (`KiraciDurumMakinesiTests`).
 - Frontend sayfası: `/#/accept-invite?email=...&token=...` (`AcceptInvitePage.tsx`).
 
 Davet e-postaları `Email:Mode` ayarına göre gider: `outbox` (dev — dosyaya yazar)
