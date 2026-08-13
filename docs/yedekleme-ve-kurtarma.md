@@ -110,8 +110,20 @@ Başka bir klasör (ör. ayrı bir disk) kullanacaksanız izni açıkça verin:
 icacls "D:\Yedek\IKPro" /grant "NT Service\MSSQLSERVER:(OI)(CI)F"
 ```
 
-**Zamanlanmış görevi kaydetmek ayrıca YÖNETİCİ hakkı ister** — görev SYSTEM
-hesabıyla çalışacak şekilde kaydedilir.
+**4. Kayıt için YÖNETİCİ hakkı şart, ve `-WhatIf` KAYIT YAPMAZ.** Görev SYSTEM
+hesabıyla çalışacak şekilde kaydedilir; bu yükseltilmiş hak ister. Sıra şudur:
+
+```powershell
+# a) Önce ne yapacağını gör — sistemi DEĞİŞTİRMEZ, yönetici gerekmez:
+powershell -ExecutionPolicy Bypass -File scriptsegister-backup-task.ps1 -BackupPath "<yol>" -WhatIf
+
+# b) Sonra YÖNETİCİ PowerShell'de, -WhatIf OLMADAN çalıştır:
+powershell -ExecutionPolicy Bypass -File scriptsegister-backup-task.ps1 -BackupPath "<yol>"
+```
+
+(b) adımı atlanırsa görev **hiç oluşmaz** ve doğrulama komutu
+"Sistem belirtilen dosyayı bulamıyor" der — çünkü aranan görev yoktur.
+Script yönetici olmadan çalıştırılırsa bunu açıkça söyler ve hiçbir şey yapmaz.
 
 ### Script'ler
 

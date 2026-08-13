@@ -82,6 +82,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Yönetici kontrolü ÖNCE: görev SYSTEM hesabıyla kaydedilecek ve bu yükseltilmiş
+# hak ister. Kontrol olmasaydı hata, Register-ScheduledTask'tan gelen anlaşılmaz
+# bir COM hatası olarak çıkardı ("Erişim engellendi" / HRESULT 0x80070005) ve
+# operatör sebebini aramakla vakit kaybederdi.
+# -WhatIf modunda kontrol atlanır: deneme modu sistemi değiştirmiyor.
+if (-not $WhatIfPreference) {
+    $kimlik = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    if (-not $kimlik.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Error ("Bu script YÖNETİCİ olarak çalıştırılmalıdır — görev SYSTEM hesabıyla " +
+            "kaydediliyor. PowerShell'i 'Yönetici olarak çalıştır' ile açıp tekrar deneyin. " +
+            "(Ne yapacağını görmek için -WhatIf yönetici olmadan da çalışır.)")
+        exit 1
+    }
+}
+
 $drillScript = Join-Path $PSScriptRoot "backup-restore-drill.ps1"
 if (-not (Test-Path $drillScript)) {
     Write-Error "Tatbikat script'i bulunamadı: $drillScript"
