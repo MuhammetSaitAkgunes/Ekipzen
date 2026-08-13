@@ -63,10 +63,14 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 | [Payroll](payroll.md) | 13 | 12 | ✅ 2026-08-13 | 12 |
 | [Employees](employees.md) | 13 | 38 | ✅ 2026-08-13 | 6 |
 | [Leaves](leaves.md) | 9 | 9 | ✅ 2026-08-13 | 8 |
-| Actions | 8 | 5 | ⬜ | — |
-| Dashboard | 7 | 7 | ⬜ | — |
-| Settings | 6 | 4 | ⬜ | — |
-| Compliance | 6 | 5 | ⬜ | — |
+| [Actions](kalan-alanlar.md) | 8 | 5 | ✅ 2026-08-13 | 1 |
+| [Dashboard](kalan-alanlar.md) | 7 | 7 | ✅ 2026-08-13 | 0 |
+| [Settings](kalan-alanlar.md) | 6 | 4 | ✅ 2026-08-13 | 0 |
+| [Compliance](kalan-alanlar.md) | 6 | 5 | ✅ 2026-08-13 | 2 |
 | [Attendance](attendance.md) | 5 | 6 | ✅ 2026-08-13 | 8 |
-| Departments | 4 | — | ⬜ | — |
+| [Departments](kalan-alanlar.md) | 4 | — | ✅ 2026-08-13 | 1 |
 | Auth / Tenancy | 15 | 121 | ⬜ (üç fazdır denetleniyor) | — |
+| **Çapraz kesen** | — | — | ✅ 2026-08-13 | **1** (X-1) |
+
+**Toplam: 49 açık bulgu — 1 KRİTİK, 15 YÜKSEK.**
+Hepsi tek listede: [**bulgular.md**](bulgular.md) — düzeltme planı buradan yürür.

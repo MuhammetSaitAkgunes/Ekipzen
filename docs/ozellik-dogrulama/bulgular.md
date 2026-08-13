@@ -1,0 +1,204 @@
+# Bulgular — Birleşik Liste
+
+**Tarih:** 2026-08-13 · **Kaynak:** 6 ÖD belgesi, 11 özellik alanı
+**Toplam: 49 bulgu — 1 KRİTİK · 15 YÜKSEK · 25 ORTA · 8 DÜŞÜK**
+
+Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
+canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
+ve hangi sırayla** var.
+
+| Alan | Bulgu | KRİTİK | YÜKSEK |
+| --- | --- | --- | --- |
+| [Payroll](payroll.md) | 12 | — | 4 |
+| [Recruitment](recruitment.md) | 10 | — | 4 |
+| [Leaves](leaves.md) | 8 | — | 2 |
+| [Attendance](attendance.md) | 8 | — | 3 |
+| [Employees](employees.md) | 6 | **1** | 1 |
+| [Kalan alanlar](kalan-alanlar.md) | 5 | — | 1 |
+
+---
+
+## 1. Bulgular tek tek değil, yedi kök nedenin belirtisi
+
+49 bulgunun büyük kısmı bağımsız hata değil; aynı yapısal eksiğin farklı
+modüllerdeki görünümü. Düzeltme planı **bulgu bazlı değil kök neden bazlı**
+kurulmalı — yoksa aynı hata bir sonraki modülde yeniden yazılır.
+
+### K1 · İleri yön var, geri yön yok
+
+`R-5` işe alım geri alınamıyor · `L-3` onaylı izin iptal edilemiyor ·
+`E-5` işten çıkış bir alan güncellemesi · `A-7` onaylı döneme müdahale serbest
+
+Her modülde "yap" yolu yazılmış, "geri al / düzelt" yolu yazılmamış. Gerçek İK
+operasyonunda yanlış giriş kaçınılmazdır; bugün her yanlış giriş **kalıcı**.
+
+### K2 · Takvim kavramı yok
+
+`L-1` yıl devri hiç yok · `L-2` yıl aşan izin başlangıç yılına yazılıyor ·
+`R-2` geçmiş tarihli işe alımda cari yıl bakiyesi oluşmuyor ·
+`L-6` `CarriedOverDays` her yerde `0` · `P-2` kümülatif matrah devri kopuyor ·
+`P-3` dönemler sırasız açılabiliyor
+
+Sistem "şu an"ı biliyor, **zaman içindeki sürekliliği** bilmiyor. En keskin
+sonucu L-1: 1 Ocak'ta izin modülü kendiliğinden kilitleniyor.
+
+### K3 · Süreç yok, alan güncellemesi var
+
+`E-5` (kök) → `E-1` `E-2` `E-3` `P-4`
+
+İşten çıkış tek satırlık `Status` değişikliği. Erişim kesme, yöneticilik devri,
+bekleyen taleplerin kararı, son ay bordrosu — hiçbiri yok. **E-1 (KRİTİK) bu
+kökün doğrudan sonucu.**
+
+### K4 · Doğrulama modül modül elle yazılmış
+
+`X-1` (çapraz) · `C-2` `N-1` doğrulayıcı hiç yok · `E-4` geçersiz TC ·
+`R-1` işe alım tarihi · `A-4` ara dinlenme · `A-5` gelecek tarih ·
+`P-6` 2099 dönemi · `L-5` geçmiş tarihli talep
+
+Ortak yapı yok; doğrulama hatırlanan yere yazılmış. X-1 bunun en somut kanıtı:
+5 modülün 3'ünde enum koruması var, 2'sinde yok ve orada istemci hatası **500**
+oluyor. **Bu madde, kullanıcının middleware/katman talebinin tam karşılığı.**
+
+### K5 · Mevzuat sabit kodlanmış
+
+`R-3` 24 gün · `A-3` günlük 480 dk · `A-4` ara dinlenme · `P-11` `* 0.95m` ·
+`A-6` 09:00 / 08:45
+
+Değerler koda gömülü, kaynağı yazılı değil. Müşavir güncellemesi geldiğinde
+**kod değişikliği + dağıtım** gerektirecek. Yapılandırılabilir hale gelmeli.
+
+### K6 · Eşzamanlılık koruması yok
+
+`P-12` bordro onay/gönderim · `L-7` izin onayında bakiye yarışı (TOCTOU)
+
+İki yönetici aynı anda onaylarsa sonuç tanımsız. Kiracı başına düşük trafik
+bunu bugün gizliyor.
+
+### K7 · Sorgu maliyeti
+
+`R-7` 6 koleksiyon `Include` · `P-10` 2 koleksiyon `Include`
+
+`AsSplitQuery` bu kod tabanında **hiç kullanılmıyor**. Aday/bordro büyüdükçe
+kartezyen çarpım.
+
+---
+
+## 2. Birlikte düzeltilmesi zorunlu zincirler
+
+Bu üç zincirde halkalar tek tek düzeltilirse **hata gizlenir, kaybolmaz**.
+
+```
+ZİNCİR A — para yolu
+A-2 eksik puantaj "tam" sayılıyor
+  └→ P-5 sıfır brüt satır onaylanabiliyor
+       └→ P-1 NEGATİF net ücret üretiliyor ve onaylanıyor
+
+Yalnız P-1 düzeltilirse: negatif engellenir ama eksik puantajlı
+bordro onaylanmaya devam eder — hata sessizleşir.
+
+ZİNCİR B — izin hakkı
+R-2 işe alımda cari yıl bakiyesi oluşmuyor
+R-3 hak ediş 24 gün sabit (müşavir)
+  └→ L-1 yıl devri yok
+       ├→ L-2 yıl aşan izin tek yıla yazılıyor
+       └→ L-6 CarriedOverDays hep 0
+
+Devir mekanizması yazılmadan diğerleri anlamsız.
+
+ZİNCİR C — işten çıkış
+E-5 çıkış bir süreç değil
+  ├→ E-1 KRİTİK: çıkarılan personel giriş yapabiliyor
+  ├→ E-2 pasif yönetici ekibin yöneticisi kalıyor
+  ├→ E-3 pasif personele puantaj girilebiliyor
+  └→ P-4 ay içinde ayrılan bordroya hiç girmiyor
+```
+
+---
+
+## 3. Önerilen düzeltme sırası
+
+| Dalga | İçerik | Neden bu sırada |
+| --- | --- | --- |
+| **0** | **E-1** | Güvenlik. Tek başına ve hızlı ara çözümü var (login'de personel durumu kontrolü). Beklemesi savunulamaz. |
+| **1** | **X-1 + K4** doğrulama katmanı | Çapraz kesen. `GlobalExceptionHandler`'da tek değişiklik 8 noktayı kapatır; ortak doğrulama yapısı sonraki dalgaların hepsini kolaylaştırır. Middleware talebinin ilk somut uygulaması. |
+| **2** | **ZİNCİR A** (A-2 → P-5 → P-1) | Doğrudan para. Yanlış tutar ödenmesi geri alınamayan tek hata sınıfı. |
+| **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
+| **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
+| **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
+| **6** | **K6** eşzamanlılık, **K7** sorgu, kalan ORTA/DÜŞÜK | Bugün müşteriyi vurmuyor; kalite borcu. |
+| **—** | **K5** mevzuat (R-3, A-3, A-4, P-11) | **Müşavir girdisi bekliyor.** Bu arada değerler yapılandırılabilir hale getirilebilir — asıl iş bu, sayının kendisi değil. |
+
+---
+
+## 4. Tam liste
+
+Önem: **KRİTİK** güvenlik/veri kaybı · **YÜKSEK** müşteriye zarar ·
+ORTA veri/kullanım bozukluğu · DÜŞÜK kalite borcu.
+Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
+
+| # | Alan | Önem | Kök | Bulgu |
+| --- | --- | --- | --- | --- |
+| **E-1** | Employees | **KRİTİK** | K3 | İşten çıkarılan personel sisteme giriş yapabiliyor, bordrosunu okuyor |
+| P-1 | Payroll | **YÜKSEK** | — | Negatif net ücret üretilip onaylanabiliyor |
+| P-2 | Payroll | **YÜKSEK** | K2 | Sonradan onaylanan dönem kümülatif GV matrahına yansımıyor |
+| P-3 | Payroll | **YÜKSEK** | K2 | Dönemler sırasız açılabiliyor |
+| P-4 | Payroll | **YÜKSEK** | K3 | Ay içinde ayrılan personel bordroya hiç girmiyor |
+| R-1 | Recruitment | **YÜKSEK** | K4 | İşe alım tarihi hiç doğrulanmıyor (1990 ve 2099 kabul) |
+| R-2 | Recruitment | **YÜKSEK** | K2 | Geçmiş tarihli işe alımda cari yıl izin bakiyesi oluşmuyor |
+| R-3 | Recruitment | **YÜKSEK** | K5 | 24 günlük hak ediş sabit kodlu — mevzuata aykırı görünüyor |
+| R-6 | Recruitment | **YÜKSEK** | — | `hire` transaction'sız; login yaratma patlarsa kurtarma yolu yok |
+| L-1 | Leaves | **YÜKSEK** | K2 | Yıl devri hiç yok — her 1 Ocak'ta modül kilitleniyor |
+| L-2 | Leaves | **YÜKSEK** | K2 | Yıl sınırını aşan izin tamamen başlangıç yılından düşülüyor |
+| A-1 | Attendance | **YÜKSEK** | — | Gece vardiyası kaydedilemiyor (22:00→06:00 reddediliyor) |
+| A-2 | Attendance | **YÜKSEK** | — | Aydaki tek kayıt puantajı "tam" sayıyor → bordro onayı açılıyor |
+| A-3 | Attendance | **YÜKSEK** | K5 | Fazla mesai eşiği günlük 8 saat sabit; haftalık 45 saat yok |
+| E-2 | Employees | **YÜKSEK** | K3 | Pasif yönetici ekibin yöneticisi kalıyor — onay kuyruğu sahipsiz |
+| **X-1** | Çapraz | **YÜKSEK** | K4 | Geçersiz enum değeri **500** döndürüyor; `ArgumentException` haritalanmamış |
+| P-5 | Payroll | ORTA | — | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok |
+| P-6 | Payroll | ORTA | K4 | 2099 gibi uzak gelecek dönemi açılabiliyor |
+| P-7 | Payroll | ORTA | K2 | Maaş her dönem elle giriliyor; önceki dönemden devir yok |
+| P-8 | Payroll | ORTA | K2 | `PreviousTaxBase` oluşturmada dondurulup güncellenmiyor |
+| P-9 | Payroll | ORTA | — | Kümülatif devir filtresi `Result != null`, yorumu "onaylı" diyor |
+| P-10 | Payroll | ORTA | K7 | `BuildDetailAsync` iki koleksiyon `Include` — kartezyen |
+| P-12 | Payroll | ORTA | K6 | Onay/gönderim yollarında eşzamanlılık koruması yok |
+| R-4 | Recruitment | ORTA | — | Tek kelimelik isimde soyad boş kalıyor |
+| R-5 | Recruitment | ORTA | K1 | İşe alım geri alınamıyor |
+| R-7 | Recruitment | ORTA | K7 | `GetCandidateQuery` 6 koleksiyon `Include` — kartezyen |
+| R-9 | Recruitment | ORTA | — | `notes` ve `evaluations` uçlarının hiç testi yok |
+| L-3 | Leaves | ORTA | K1 | Onaylanmış izin iptal edilemiyor — bakiye kilitli |
+| L-4 | Leaves | ORTA | K4 | İzin talebinde vekil olarak kendisi seçilebiliyor |
+| L-5 | Leaves | ORTA | K4 | Geçmiş tarihli talep doğrulanmıyor (bugün tesadüfen engelleniyor) |
+| L-6 | Leaves | ORTA | K2 | `CarriedOverDays` hiç hesaplanmıyor, her yerde `0` |
+| L-7 | Leaves | ORTA | K6 | İzin onayında bakiye yarışı (TOCTOU) |
+| A-4 | Attendance | ORTA | K5 | Ara dinlenme serbest — `break=0` fazla mesaiyi ikiye katlıyor |
+| A-5 | Attendance | ORTA | K4 | Gelecek tarihli puantaj girilebiliyor (2030 kabul) |
+| A-6 | Attendance | ORTA | K5 | Mesai başlangıcı ve erken eşiği sabit kodlu (09:00 / 08:45) |
+| A-7 | Attendance | ORTA | K1 | Onaylanmış bordro dönemine ait puantaj sonradan değişebiliyor |
+| E-3 | Employees | ORTA | K3 | Pasif personele puantaj girilebiliyor |
+| E-4 | Employees | ORTA | K4 | Geçersiz TC kabul ediliyor — yalnız `^\d{11}$` kontrolü |
+| E-5 | Employees | ORTA | K3 | İşten çıkış tek alanlık güncelleme, süreç değil (**E-1'in kökü**) |
+| D-1 | Departments | ORTA | — | Açık pozisyonu olan departman silinebiliyor; pozisyon sahipsiz kalıyor |
+| C-1 | Compliance | ORTA | K2 | `DueDate` hiç kullanılmıyor; süresi geçen belge risk sayılmıyor |
+| C-2 | Compliance | ORTA | K4 | Durum/seviye alanlarında hiç doğrulayıcı yok → X-1 |
+| N-1 | Actions | ORTA | K4 | Öncelik/durum alanlarında hiç doğrulayıcı yok → X-1 |
+| P-11 | Payroll | DÜŞÜK | K5 | SGK kontrol kartında `* 0.95m` sihirli sayısı |
+| R-8 | Recruitment | DÜŞÜK | — | Pozisyon oluştururken departman iki kez sorgulanıyor |
+| R-10 | Recruitment | DÜŞÜK | — | `AuthorName` denormalize; kullanıcı adı değişince not eski adı taşır |
+| L-8 | Leaves | DÜŞÜK | — | `RequireEmployeeId` yüzünden hr-admin kendi izin uçlarını kullanamıyor |
+| A-8 | Attendance | DÜŞÜK | — | Puantaj tipi hem istemciden alınıp hem sunucuda türetiliyor |
+| E-6 | Employees | DÜŞÜK | — | `BulkDeactivate` bulunamayan id'leri sessizce atlıyor |
+
+---
+
+## 5. ÖD'nin kendisi hakkında iki gözlem
+
+**Test sayısı kalite göstergesi değil.** En iyi kapsanan alan Employees'ti
+(38 test) ve **tek KRİTİK bulgu oradan çıktı**. Testler uç nokta düzeyinde
+yazıldığı için her uç tek başına doğru cevap veriyor; "işten çıkış" uçlar arası
+bir süreç olduğu için kimsenin sorumluluğuna girmemiş.
+
+**Bulguların çoğu okumayla değil çalıştırmayla bulundu.** E-1, P-1, L-1, A-1,
+X-1 — hepsi canlı API'ye istek atılarak yakalandı. Kod okuması bunların hiçbirini
+vermezdi; her biri "kod doğru görünüyor ama davranış yanlış" sınıfında. Katman
+1'in çalıştırmayı zorunlu kılması bu yüzden pazarlık konusu değil.
