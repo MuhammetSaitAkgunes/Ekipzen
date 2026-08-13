@@ -43,7 +43,9 @@ Sabit kontrol listesi; maddeler bu projede gerçekten kırılan şeylerden türe
 Bulgular **önce raporlanır, düzeltme onayla yapılır** (kullanıcı kararı).
 Böylece ÖD'nin kapsamı kendiliğinden büyümez.
 
-Her bulgu: `kimlik | katman | önem | durum`.
+Her bulgu: `kimlik | katman | önem | NEREDE (dosya/metot) | durum`.
+Konum bilgisi zorunlu: düzeltme aşamasında bulguyu yeniden araştırmak zorunda
+kalmamak için.
 Önem: **YÜKSEK** (müşteriye zarar verir) · **ORTA** (veri/kullanım bozukluğu) ·
 **DÜŞÜK** (kalite borcu).
 Durum: `açık` · `düzeltildi` · `kabul edildi (gerekçe)` · `dış girdi bekliyor`.
@@ -60,7 +62,7 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 | [Recruitment](recruitment.md) | 10 | 4 | ✅ 2026-08-13 | 10 |
 | [Payroll](payroll.md) | 13 | 12 | ✅ 2026-08-13 | 12 |
 | Employees | 13 | 38 | ⬜ | — |
-| Leaves | 9 | 9 | ⬜ | — |
+| [Leaves](leaves.md) | 9 | 9 | ✅ 2026-08-13 | 8 |
 | Actions | 8 | 5 | ⬜ | — |
 | Dashboard | 7 | 7 | ⬜ | — |
 | Settings | 6 | 4 | ⬜ | — |
