@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İK Pro — Özellik Doğrulama Bulguları</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --primary: #0f766e;
+    --primary-strong: #0b5a54;
+    --primary-soft: #e3f1ef;
+    --accent: #b98a2f;
+    --accent-soft: #f6ecd6;
+    --ink: #14262b;
+    --text: #3a4b50;
+    --muted: #64757c;
+    --subtle: #93a3a8;
+    --line: #dbe3e4;
+    --line-strong: #c3cfd0;
+    --line-soft: #e9efef;
+    --surface: #ffffff;
+    --surface-soft: #f4f7f7;
+    --body: #eef2f2;
+    --success: #157f3d;
+    --success-soft: #e0f3e6;
+    --warning: #b45309;
+    --warning-soft: #fcefdb;
+    --danger: #d92d20;
+    --danger-soft: #fde8e6;
+    --info: #0e7490;
+    --info-soft: #e0f1f6;
+    --focus-ring: 0 0 0 3px rgb(15 118 110 / 0.22);
+    --shadow-sm: 0 1px 2px rgb(20 38 43 / 0.05);
+    --shadow-md: 0 6px 18px rgb(20 38 43 / 0.08);
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --font-ui: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+    --font-data: "IBM Plex Mono", "Consolas", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --primary: #2fbfae;
+      --primary-strong: #52d3c3;
+      --primary-soft: #123331;
+      --accent: #d4a853;
+      --accent-soft: #33290f;
+      --ink: #eef5f4;
+      --text: #bfd0ce;
+      --muted: #8aa3a0;
+      --subtle: #5f7876;
+      --line: #24403d;
+      --line-strong: #33524e;
+      --line-soft: #1c3230;
+      --surface: #11201f;
+      --surface-soft: #172a28;
+      --body: #0b1514;
+      --success: #4ade80;
+      --success-soft: #0c2f1a;
+      --warning: #fbbf24;
+      --warning-soft: #33250a;
+      --danger: #f87171;
+      --danger-soft: #3a1512;
+      --info: #38bdf8;
+      --info-soft: #0c2836;
+      --focus-ring: 0 0 0 3px rgb(47 191 174 / 0.3);
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+      --shadow-md: 0 8px 22px rgb(0 0 0 / 0.32);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --primary: #2fbfae;
+    --primary-strong: #52d3c3;
+    --primary-soft: #123331;
+    --accent: #d4a853;
+    --accent-soft: #33290f;
+    --ink: #eef5f4;
+    --text: #bfd0ce;
+    --muted: #8aa3a0;
+    --subtle: #5f7876;
+    --line: #24403d;
+    --line-strong: #33524e;
+    --line-soft: #1c3230;
+    --surface: #11201f;
+    --surface-soft: #172a28;
+    --body: #0b1514;
+    --success: #4ade80;
+    --success-soft: #0c2f1a;
+    --warning: #fbbf24;
+    --warning-soft: #33250a;
+    --danger: #f87171;
+    --danger-soft: #3a1512;
+    --info: #38bdf8;
+    --info-soft: #0c2836;
+    --focus-ring: 0 0 0 3px rgb(47 191 174 / 0.3);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 8px 22px rgb(0 0 0 / 0.32);
+  }
+
+  body {
+    margin: 0;
+    background: var(--body);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  code {
+    font-family: var(--font-data);
+    font-size: 0.88em;
+    background: var(--surface-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    padding: 0.05em 0.35em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  h1, h2, h3 { color: var(--ink); text-wrap: balance; margin: 0; }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    border-bottom: 3px solid var(--primary);
+    background: var(--surface);
+    margin-bottom: 40px;
+  }
+  .masthead-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 44px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .eyebrow {
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .masthead h1 {
+    font-size: clamp(30px, 4.4vw, 46px);
+    font-weight: 600;
+    letter-spacing: -0.022em;
+    line-height: 1.1;
+  }
+  .standfirst {
+    max-width: 62ch;
+    font-size: 17px;
+    color: var(--text);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--font-data);
+    border-top: 1px solid var(--line-soft);
+    padding-top: 16px;
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- ledger ---------- */
+
+  .ledger {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 48px;
+  }
+  .ledger-cell {
+    background: var(--surface);
+    padding: 20px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ledger-cell .n {
+    font-family: var(--font-data);
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .ledger-cell .k {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .ledger-cell.is-kritik .n { color: var(--danger); }
+  .ledger-cell.is-kritik .k { color: var(--danger); }
+  .ledger-cell.is-yuksek .n { color: var(--warning); }
+  .ledger-cell.is-yuksek .k { color: var(--warning); }
+  .ledger-cell.is-toplam { background: var(--primary-soft); }
+  .ledger-cell.is-toplam .n { color: var(--primary-strong); }
+  .ledger-cell.is-toplam .k { color: var(--primary-strong); }
+
+  /* ---------- sections ---------- */
+
+  section { margin-bottom: 60px; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+  }
+  .sec-head h2 {
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  .sec-head .num {
+    font-family: var(--font-data);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+  .lede {
+    max-width: 68ch;
+    margin: 0 0 26px;
+  }
+
+  /* ---------- root cause cards ---------- */
+
+  .roots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+  }
+  .root {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 18px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .root-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .root h3 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .root .kid {
+    font-family: var(--font-data);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .root p { margin: 0; font-size: 14px; color: var(--text); }
+  .root .count {
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+    margin-top: 2px;
+  }
+  .root.is-major { border-color: var(--primary); }
+
+  /* ---------- chains ---------- */
+
+  .chains {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+    gap: 14px;
+  }
+  .chain {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .chain-name {
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .chain h3 { font-size: 16px; font-weight: 600; }
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .node {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 0;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .node + .node { border-top: 1px solid var(--line-soft); }
+  .node .tag {
+    font-family: var(--font-data);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex: none;
+    margin-top: 1px;
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .node.lvl-2 { padding-left: 18px; }
+  .node.sev-kritik .tag { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+  .node.sev-yuksek .tag { background: var(--warning-soft); border-color: var(--warning); color: var(--warning); }
+  .chain .warn {
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--surface-soft);
+    border-left: 2px solid var(--accent);
+    padding: 10px 12px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  /* ---------- waves ---------- */
+
+  .waves { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+  .wave {
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 18px;
+    padding: 16px 20px;
+    align-items: start;
+  }
+  .wave .w {
+    font-family: var(--font-data);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--primary);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+  .wave .what { font-weight: 600; color: var(--ink); font-size: 15px; }
+  .wave .why { font-size: 14px; color: var(--muted); }
+  .wave.is-blocked { background: var(--surface-soft); }
+  .wave.is-blocked .w { color: var(--subtle); font-size: 16px; }
+  @media (max-width: 720px) {
+    .wave { grid-template-columns: 40px minmax(0, 1fr); }
+    .wave .why { grid-column: 2; }
+  }
+
+  /* ---------- register ---------- */
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .segmented { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .chip:hover { border-color: var(--primary); color: var(--primary); }
+  .chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .chip[aria-pressed="true"] {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  :root[data-theme="dark"] .chip[aria-pressed="true"] { color: #04201d; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .chip[aria-pressed="true"] { color: #04201d; }
+  }
+  .search {
+    flex: 1 1 200px;
+    min-width: 180px;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .search:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--primary); }
+  .tally {
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--line-strong);
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 11px 14px;
+    z-index: 1;
+  }
+  tbody td {
+    border-bottom: 1px solid var(--line-soft);
+    padding: 11px 14px;
+    font-size: 14px;
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.hidden { display: none; }
+  tbody tr:hover td { background: var(--surface-soft); }
+  td.id { font-family: var(--font-data); font-weight: 600; color: var(--ink); white-space: nowrap; }
+  td.alan { color: var(--muted); white-space: nowrap; font-size: 13px; }
+  td.kok { font-family: var(--font-data); font-size: 12px; color: var(--accent); font-weight: 600; }
+  tr.is-kritik td.id { color: var(--danger); }
+
+  .sev {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .sev::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .sev-kritik { background: var(--danger-soft); color: var(--danger); }
+  .sev-yuksek { background: var(--warning-soft); color: var(--warning); }
+  .sev-orta   { background: var(--info-soft); color: var(--info); }
+  .sev-dusuk  { background: var(--surface-soft); color: var(--subtle); border: 1px solid var(--line); }
+
+  .empty { padding: 32px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+  .empty[hidden] { display: none; }
+
+  /* ---------- closing ---------- */
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-top: 2px solid var(--accent);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    padding: 20px;
+  }
+  .note h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .note p { margin: 0; font-size: 14px; }
+
+  footer {
+    margin-top: 48px;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--subtle);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 24px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="eyebrow">Özellik Doğrulama · Birleşik Bulgu Sicili</div>
+    <h1>İK Pro — 11 özellik alanının iki katmanlı doğrulaması</h1>
+    <p class="standfirst">
+      Her alan gerçek API üzerinden baştan sona bir iş hikâyesi olarak yürütüldü (Katman 1),
+      ardından sabit sekiz maddelik kod kalitesi listesiyle tarandı (Katman 2).
+      Bu sayfa düzeltme aşamasının tek giriş noktasıdır.
+    </p>
+    <div class="meta">
+      <span><b>Tarih</b> 13 Ağustos 2026</span>
+      <span><b>Kaynak</b> 6 ÖD belgesi</span>
+      <span><b>Kapsam</b> 11 özellik alanı</span>
+      <span><b>Yöntem</b> Katman 1 canlı + Katman 2 kod</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="ledger">
+    <div class="ledger-cell is-toplam"><span class="n">49</span><span class="k">Toplam bulgu</span></div>
+    <div class="ledger-cell is-kritik"><span class="n">1</span><span class="k">Kritik</span></div>
+    <div class="ledger-cell is-yuksek"><span class="n">15</span><span class="k">Yüksek</span></div>
+    <div class="ledger-cell"><span class="n">25</span><span class="k">Orta</span></div>
+    <div class="ledger-cell"><span class="n">8</span><span class="k">Düşük</span></div>
+    <div class="ledger-cell"><span class="n">7</span><span class="k">Kök neden</span></div>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>Bulgular tek tek değil, yedi kök nedenin belirtisi</h2></div>
+    <p class="lede">
+      49 bulgunun büyük kısmı bağımsız hata değil; aynı yapısal eksiğin farklı modüllerdeki
+      görünümü. Düzeltme planı <b>bulgu bazlı değil kök neden bazlı</b> kurulmalı — yoksa aynı
+      hata bir sonraki modülde yeniden yazılır.
+    </p>
+
+    <div class="roots">
+      <article class="root is-major">
+        <div class="root-top"><h3>Doğrulama modül modül elle yazılmış</h3><span class="kid">K4</span></div>
+        <p>Ortak yapı yok; doğrulama hatırlanan yere yazılmış. 5 modülün 3'ünde enum koruması var,
+           2'sinde yok — orada istemci hatası <b>500</b> oluyor. Middleware/katman talebinizin tam karşılığı.</p>
+        <div class="count">8 bulgu · X-1, C-2, N-1, E-4, R-1, A-5, P-6, L-5</div>
+      </article>
+
+      <article class="root is-major">
+        <div class="root-top"><h3>Takvim kavramı yok</h3><span class="kid">K2</span></div>
+        <p>Sistem "şu an"ı biliyor, <b>zaman içindeki sürekliliği</b> bilmiyor. En keskin sonucu L-1:
+           1 Ocak'ta izin modülü kendiliğinden kilitleniyor.</p>
+        <div class="count">6 bulgu · L-1, L-2, L-6, R-2, P-2, P-3</div>
+      </article>
+
+      <article class="root is-major">
+        <div class="root-top"><h3>Süreç yok, alan güncellemesi var</h3><span class="kid">K3</span></div>
+        <p>İşten çıkış tek satırlık <code>Status</code> değişikliği. Erişim kesme, yöneticilik devri,
+           bekleyen taleplerin kararı, son ay bordrosu — hiçbiri yok. <b>Tek KRİTİK bulgu bu kökün sonucu.</b></p>
+        <div class="count">5 bulgu · E-5 (kök) → E-1, E-2, E-3, P-4</div>
+      </article>
+
+      <article class="root">
+        <div class="root-top"><h3>Mevzuat sabit kodlanmış</h3><span class="kid">K5</span></div>
+        <p>Değerler koda gömülü, kaynağı yazılı değil. Müşavir güncellemesi geldiğinde
+           <b>kod değişikliği + dağıtım</b> gerektirecek.</p>
+        <div class="count">5 bulgu · R-3, A-3, A-4, A-6, P-11</div>
+      </article>
+
+      <article class="root">
+        <div class="root-top"><h3>İleri yön var, geri yön yok</h3><span class="kid">K1</span></div>
+        <p>Her modülde "yap" yolu yazılmış, "geri al / düzelt" yolu yazılmamış. Gerçek İK
+           operasyonunda yanlış giriş kaçınılmazdır; bugün her yanlış giriş <b>kalıcı</b>.</p>
+        <div class="count">4 bulgu · R-5, L-3, E-5, A-7</div>
+      </article>
+
+      <article class="root">
+        <div class="root-top"><h3>Eşzamanlılık koruması yok</h3><span class="kid">K6</span></div>
+        <p>İki yönetici aynı anda onaylarsa sonuç tanımsız. Kiracı başına düşük trafik bunu
+           bugün gizliyor.</p>
+        <div class="count">2 bulgu · P-12, L-7</div>
+      </article>
+
+      <article class="root">
+        <div class="root-top"><h3>Sorgu maliyeti</h3><span class="kid">K7</span></div>
+        <p><code>AsSplitQuery</code> bu kod tabanında <b>hiç kullanılmıyor</b>. Aday ve bordro
+           büyüdükçe kartezyen çarpım.</p>
+        <div class="count">2 bulgu · R-7, P-10</div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>Birlikte düzeltilmesi zorunlu üç zincir</h2></div>
+    <p class="lede">
+      Bu zincirlerde halkalar tek tek düzeltilirse <b>hata gizlenir, kaybolmaz.</b>
+    </p>
+
+    <div class="chains">
+      <article class="chain">
+        <div class="chain-name">Zincir A · Para yolu</div>
+        <h3>Eksik puantajdan negatif maaşa</h3>
+        <div class="flow">
+          <div class="node sev-yuksek"><span class="tag">A-2</span><span>Eksik puantaj "tam" sayılıyor</span></div>
+          <div class="node lvl-2"><span class="tag">P-5</span><span>Sıfır brüt satır onaylanabiliyor</span></div>
+          <div class="node lvl-2 sev-yuksek"><span class="tag">P-1</span><span><b>Negatif net ücret</b> üretiliyor ve onaylanıyor</span></div>
+        </div>
+        <p class="warn">Yalnız P-1 düzeltilirse: negatif engellenir ama eksik puantajlı bordro onaylanmaya devam eder — hata sessizleşir.</p>
+      </article>
+
+      <article class="chain">
+        <div class="chain-name">Zincir B · İzin hakkı</div>
+        <h3>Bakiye üretiminden yıl devrine</h3>
+        <div class="flow">
+          <div class="node sev-yuksek"><span class="tag">R-2</span><span>İşe alımda cari yıl bakiyesi oluşmuyor</span></div>
+          <div class="node sev-yuksek"><span class="tag">R-3</span><span>Hak ediş 24 gün sabit <i>(müşavir)</i></span></div>
+          <div class="node lvl-2 sev-yuksek"><span class="tag">L-1</span><span>Yıl devri yok — 1 Ocak'ta modül kilitleniyor</span></div>
+          <div class="node lvl-2 sev-yuksek"><span class="tag">L-2</span><span>Yıl aşan izin tek yıla yazılıyor</span></div>
+          <div class="node lvl-2"><span class="tag">L-6</span><span><code>CarriedOverDays</code> hep 0</span></div>
+        </div>
+        <p class="warn">Devir mekanizması yazılmadan diğerleri anlamsız.</p>
+      </article>
+
+      <article class="chain">
+        <div class="chain-name">Zincir C · İşten çıkış</div>
+        <h3>Süreç eksikliğinden güvenlik açığına</h3>
+        <div class="flow">
+          <div class="node"><span class="tag">E-5</span><span>Çıkış bir süreç değil, tek alan güncellemesi</span></div>
+          <div class="node lvl-2 sev-kritik"><span class="tag">E-1</span><span><b>Çıkarılan personel giriş yapabiliyor</b>, bordrosunu okuyor</span></div>
+          <div class="node lvl-2 sev-yuksek"><span class="tag">E-2</span><span>Pasif yönetici ekibin yöneticisi kalıyor</span></div>
+          <div class="node lvl-2"><span class="tag">E-3</span><span>Pasif personele puantaj girilebiliyor</span></div>
+          <div class="node lvl-2 sev-yuksek"><span class="tag">P-4</span><span>Ay içinde ayrılan bordroya hiç girmiyor</span></div>
+        </div>
+        <p class="warn">E-1'in kalıcı çözümü E-5'tir; ara çözüm olarak login'e personel durumu kontrolü eklenebilir.</p>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>Önerilen düzeltme sırası</h2></div>
+    <p class="lede">
+      Dalgalar bir sıradır: her biri kendinden sonrakini ya güvenceye alır ya da kolaylaştırır.
+    </p>
+
+    <div class="waves">
+      <div class="wave">
+        <span class="w">0</span>
+        <span class="what">E-1 — çıkarılan personelin erişimi</span>
+        <span class="why">Güvenlik. Tek başına ve hızlı ara çözümü var. Beklemesi savunulamaz.</span>
+      </div>
+      <div class="wave">
+        <span class="w">1</span>
+        <span class="what">X-1 + K4 — doğrulama ve hata katmanı</span>
+        <span class="why">Çapraz kesen. <code>GlobalExceptionHandler</code>'da tek değişiklik 8 noktayı kapatır; ortak doğrulama yapısı sonraki dalgaların hepsini kolaylaştırır. Middleware talebinin ilk somut uygulaması.</span>
+      </div>
+      <div class="wave">
+        <span class="w">2</span>
+        <span class="what">Zincir A — para yolu</span>
+        <span class="why">Doğrudan para. Yanlış tutar ödenmesi geri alınamayan tek hata sınıfı.</span>
+      </div>
+      <div class="wave">
+        <span class="w">3</span>
+        <span class="what">Zincir C — işten çıkış süreci</span>
+        <span class="why">Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada.</span>
+      </div>
+      <div class="wave">
+        <span class="w">4</span>
+        <span class="what">Zincir B — izin devri</span>
+        <span class="why">1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor: devir tavanı, hak ediş kademesi.</span>
+      </div>
+      <div class="wave">
+        <span class="w">5</span>
+        <span class="what">K1 — geri alma yolları</span>
+        <span class="why">Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir.</span>
+      </div>
+      <div class="wave">
+        <span class="w">6</span>
+        <span class="what">K6 eşzamanlılık, K7 sorgu, kalan orta/düşük</span>
+        <span class="why">Bugün müşteriyi vurmuyor; kalite borcu.</span>
+      </div>
+      <div class="wave is-blocked">
+        <span class="w">—</span>
+        <span class="what">K5 — mevzuat değerleri</span>
+        <span class="why"><b>Müşavir girdisi bekliyor.</b> Bu arada değerler yapılandırılabilir hale getirilebilir — asıl iş bu, sayının kendisi değil.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">04</span><h2>Tam sicil — 49 bulgu</h2></div>
+    <p class="lede">
+      Önem derecesine göre sıralı. Konum bilgisi ve canlı kanıtlar alan belgelerindedir
+      (<code>docs/ozellik-dogrulama/</code>).
+    </p>
+
+    <div class="controls">
+      <div class="segmented" role="group" aria-label="Önem derecesine göre filtrele">
+        <button class="chip" data-filter="all" aria-pressed="true">Tümü</button>
+        <button class="chip" data-filter="kritik" aria-pressed="false">Kritik</button>
+        <button class="chip" data-filter="yuksek" aria-pressed="false">Yüksek</button>
+        <button class="chip" data-filter="orta" aria-pressed="false">Orta</button>
+        <button class="chip" data-filter="dusuk" aria-pressed="false">Düşük</button>
+      </div>
+      <input class="search" type="search" id="q" placeholder="Ara: bulgu, alan, kök neden…" aria-label="Bulgularda ara">
+      <span class="tally" id="tally">49 / 49</span>
+    </div>
+
+    <div class="table-scroll">
+      <table id="sicil">
+        <thead>
+          <tr><th scope="col">#</th><th scope="col">Alan</th><th scope="col">Önem</th><th scope="col">Kök</th><th scope="col">Bulgu</th></tr>
+        </thead>
+        <tbody>
+          <tr class="is-kritik" data-sev="kritik"><td class="id">E-1</td><td class="alan">Employees</td><td><span class="sev sev-kritik">KRİTİK</span></td><td class="kok">K3</td><td>İşten çıkarılan personel sisteme giriş yapabiliyor, bordrosunu okuyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">P-1</td><td class="alan">Payroll</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">—</td><td>Negatif net ücret üretilip onaylanabiliyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">P-2</td><td class="alan">Payroll</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K2</td><td>Sonradan onaylanan dönem kümülatif GV matrahına yansımıyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">P-3</td><td class="alan">Payroll</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K2</td><td>Dönemler sırasız açılabiliyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">P-4</td><td class="alan">Payroll</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K3</td><td>Ay içinde ayrılan personel bordroya hiç girmiyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">R-1</td><td class="alan">Recruitment</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K4</td><td>İşe alım tarihi hiç doğrulanmıyor (1990 ve 2099 kabul edildi)</td></tr>
+          <tr data-sev="yuksek"><td class="id">R-2</td><td class="alan">Recruitment</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K2</td><td>Geçmiş tarihli işe alımda cari yıl izin bakiyesi oluşmuyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">R-3</td><td class="alan">Recruitment</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K5</td><td>24 günlük hak ediş sabit kodlu — mevzuata aykırı görünüyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">R-6</td><td class="alan">Recruitment</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">—</td><td><code>hire</code> transaction'sız; login yaratma patlarsa kurtarma yolu yok</td></tr>
+          <tr data-sev="yuksek"><td class="id">L-1</td><td class="alan">Leaves</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K2</td><td>Yıl devri hiç yok — her 1 Ocak'ta modül kilitleniyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">L-2</td><td class="alan">Leaves</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K2</td><td>Yıl sınırını aşan izin tamamen başlangıç yılından düşülüyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">A-1</td><td class="alan">Attendance</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">—</td><td>Gece vardiyası kaydedilemiyor (22:00→06:00 reddediliyor)</td></tr>
+          <tr data-sev="yuksek"><td class="id">A-2</td><td class="alan">Attendance</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">—</td><td>Aydaki tek kayıt puantajı "tam" sayıyor → bordro onayı açılıyor</td></tr>
+          <tr data-sev="yuksek"><td class="id">A-3</td><td class="alan">Attendance</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K5</td><td>Fazla mesai eşiği günlük 8 saat sabit; haftalık 45 saat kuralı yok</td></tr>
+          <tr data-sev="yuksek"><td class="id">E-2</td><td class="alan">Employees</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K3</td><td>Pasif yönetici ekibin yöneticisi kalıyor — onay kuyruğu sahipsiz</td></tr>
+          <tr data-sev="yuksek"><td class="id">X-1</td><td class="alan">Çapraz</td><td><span class="sev sev-yuksek">YÜKSEK</span></td><td class="kok">K4</td><td>Geçersiz enum değeri <b>500</b> döndürüyor; <code>ArgumentException</code> haritalanmamış</td></tr>
+          <tr data-sev="orta"><td class="id">P-5</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">—</td><td>Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok</td></tr>
+          <tr data-sev="orta"><td class="id">P-6</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>2099 gibi uzak gelecek dönemi açılabiliyor</td></tr>
+          <tr data-sev="orta"><td class="id">P-7</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K2</td><td>Maaş her dönem elle giriliyor; önceki dönemden devir yok</td></tr>
+          <tr data-sev="orta"><td class="id">P-8</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K2</td><td><code>PreviousTaxBase</code> oluşturmada dondurulup güncellenmiyor</td></tr>
+          <tr data-sev="orta"><td class="id">P-9</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">—</td><td>Kümülatif devir filtresi <code>Result != null</code>, yorumu "onaylı" diyor</td></tr>
+          <tr data-sev="orta"><td class="id">P-10</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K7</td><td><code>BuildDetailAsync</code> iki koleksiyon <code>Include</code> — kartezyen</td></tr>
+          <tr data-sev="orta"><td class="id">P-12</td><td class="alan">Payroll</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K6</td><td>Onay ve gönderim yollarında eşzamanlılık koruması yok</td></tr>
+          <tr data-sev="orta"><td class="id">R-4</td><td class="alan">Recruitment</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">—</td><td>Tek kelimelik isimde soyad boş kalıyor</td></tr>
+          <tr data-sev="orta"><td class="id">R-5</td><td class="alan">Recruitment</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K1</td><td>İşe alım geri alınamıyor</td></tr>
+          <tr data-sev="orta"><td class="id">R-7</td><td class="alan">Recruitment</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K7</td><td><code>GetCandidateQuery</code> 6 koleksiyon <code>Include</code> — kartezyen</td></tr>
+          <tr data-sev="orta"><td class="id">R-9</td><td class="alan">Recruitment</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">—</td><td><code>notes</code> ve <code>evaluations</code> uçlarının hiç testi yok</td></tr>
+          <tr data-sev="orta"><td class="id">L-3</td><td class="alan">Leaves</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K1</td><td>Onaylanmış izin iptal edilemiyor — bakiye kilitli</td></tr>
+          <tr data-sev="orta"><td class="id">L-4</td><td class="alan">Leaves</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>İzin talebinde vekil olarak kendisi seçilebiliyor</td></tr>
+          <tr data-sev="orta"><td class="id">L-5</td><td class="alan">Leaves</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>Geçmiş tarihli talep doğrulanmıyor (bugün tesadüfen engelleniyor)</td></tr>
+          <tr data-sev="orta"><td class="id">L-6</td><td class="alan">Leaves</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K2</td><td><code>CarriedOverDays</code> hiç hesaplanmıyor, her yerde <code>0</code></td></tr>
+          <tr data-sev="orta"><td class="id">L-7</td><td class="alan">Leaves</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K6</td><td>İzin onayında bakiye yarışı (TOCTOU)</td></tr>
+          <tr data-sev="orta"><td class="id">A-4</td><td class="alan">Attendance</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K5</td><td>Ara dinlenme serbest — <code>break=0</code> fazla mesaiyi ikiye katlıyor</td></tr>
+          <tr data-sev="orta"><td class="id">A-5</td><td class="alan">Attendance</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>Gelecek tarihli puantaj girilebiliyor (2030 kabul edildi)</td></tr>
+          <tr data-sev="orta"><td class="id">A-6</td><td class="alan">Attendance</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K5</td><td>Mesai başlangıcı ve erken eşiği sabit kodlu (09:00 / 08:45)</td></tr>
+          <tr data-sev="orta"><td class="id">A-7</td><td class="alan">Attendance</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K1</td><td>Onaylanmış bordro dönemine ait puantaj sonradan değişebiliyor</td></tr>
+          <tr data-sev="orta"><td class="id">E-3</td><td class="alan">Employees</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K3</td><td>Pasif personele puantaj girilebiliyor</td></tr>
+          <tr data-sev="orta"><td class="id">E-4</td><td class="alan">Employees</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>Geçersiz TC kabul ediliyor — yalnız 11 hane kontrolü var</td></tr>
+          <tr data-sev="orta"><td class="id">E-5</td><td class="alan">Employees</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K3</td><td>İşten çıkış tek alanlık güncelleme, süreç değil — <b>E-1'in kökü</b></td></tr>
+          <tr data-sev="orta"><td class="id">D-1</td><td class="alan">Departments</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">—</td><td>Açık pozisyonu olan departman silinebiliyor; pozisyon sahipsiz kalıyor</td></tr>
+          <tr data-sev="orta"><td class="id">C-1</td><td class="alan">Compliance</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K2</td><td><code>DueDate</code> hiç kullanılmıyor; süresi geçen belge risk sayılmıyor</td></tr>
+          <tr data-sev="orta"><td class="id">C-2</td><td class="alan">Compliance</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>Durum ve seviye alanlarında hiç doğrulayıcı yok → X-1</td></tr>
+          <tr data-sev="orta"><td class="id">N-1</td><td class="alan">Actions</td><td><span class="sev sev-orta">ORTA</span></td><td class="kok">K4</td><td>Öncelik ve durum alanlarında hiç doğrulayıcı yok → X-1</td></tr>
+          <tr data-sev="dusuk"><td class="id">P-11</td><td class="alan">Payroll</td><td><span class="sev sev-dusuk">DÜŞÜK</span></td><td class="kok">K5</td><td>SGK kontrol kartında <code>* 0.95m</code> sihirli sayısı</td></tr>
+          <tr data-sev="dusuk"><td class="id">R-8</td><td class="alan">Recruitment</td><td><span class="sev sev-dusuk">DÜŞÜK</span></td><td class="kok">—</td><td>Pozisyon oluştururken departman iki kez sorgulanıyor</td></tr>
+          <tr data-sev="dusuk"><td class="id">R-10</td><td class="alan">Recruitment</td><td><span class="sev sev-dusuk">DÜŞÜK</span></td><td class="kok">—</td><td><code>AuthorName</code> denormalize; kullanıcı adı değişince not eski adı taşır</td></tr>
+          <tr data-sev="dusuk"><td class="id">L-8</td><td class="alan">Leaves</td><td><span class="sev sev-dusuk">DÜŞÜK</span></td><td class="kok">—</td><td><code>RequireEmployeeId</code> yüzünden hr-admin kendi izin uçlarını kullanamıyor</td></tr>
+          <tr data-sev="dusuk"><td class="id">A-8</td><td class="alan">Attendance</td><td><span class="sev sev-dusuk">DÜŞÜK</span></td><td class="kok">—</td><td>Puantaj tipi hem istemciden alınıp hem sunucuda türetiliyor</td></tr>
+          <tr data-sev="dusuk"><td class="id">E-6</td><td class="alan">Employees</td><td><span class="sev sev-dusuk">DÜŞÜK</span></td><td class="kok">—</td><td><code>BulkDeactivate</code> bulunamayan id'leri sessizce atlıyor</td></tr>
+        </tbody>
+      </table>
+      <p class="empty" id="empty" hidden>Bu filtreye uyan bulgu yok.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">05</span><h2>Yöntem hakkında iki gözlem</h2></div>
+    <div class="notes">
+      <article class="note">
+        <h3>Test sayısı kalite göstergesi değil</h3>
+        <p>En iyi kapsanan alan Employees'ti — 38 test — ve <b>tek KRİTİK bulgu oradan çıktı</b>.
+           Testler uç nokta düzeyinde yazıldığı için her uç tek başına doğru cevap veriyor;
+           "işten çıkış" uçlar arası bir süreç olduğu için kimsenin sorumluluğuna girmemiş.</p>
+      </article>
+      <article class="note">
+        <h3>Bulguların çoğu okumayla değil çalıştırmayla bulundu</h3>
+        <p>E-1, P-1, L-1, A-1, X-1 — hepsi canlı API'ye istek atılarak yakalandı. Kod okuması
+           bunların hiçbirini vermezdi; her biri "kod doğru görünüyor ama davranış yanlış"
+           sınıfında. Katman 1'in çalıştırmayı zorunlu kılması bu yüzden pazarlık konusu değil.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <span>İK Pro · Özellik Doğrulama</span>
+    <span>13.08.2026</span>
+    <span>Kaynak: docs/ozellik-dogrulama/</span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#sicil tbody tr'));
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+    var q = document.getElementById('q');
+    var tally = document.getElementById('tally');
+    var empty = document.getElementById('empty');
+    var sev = 'all';
+
+    function apply() {
+      var term = q.value.trim().toLocaleLowerCase('tr');
+      var shown = 0;
+      rows.forEach(function (row) {
+        var okSev = sev === 'all' || row.dataset.sev === sev;
+        var okTerm = term === '' || row.textContent.toLocaleLowerCase('tr').indexOf(term) !== -1;
+        var visible = okSev && okTerm;
+        row.classList.toggle('hidden', !visible);
+        if (visible) shown++;
+      });
+      tally.textContent = shown + ' / ' + rows.length;
+      empty.hidden = shown !== 0;
+    }
+
+    chips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        sev = chip.dataset.filter;
+        chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+        apply();
+      });
+    });
+
+    q.addEventListener('input', apply);
+  })();
+</script>
+
+</body>
+</html>
