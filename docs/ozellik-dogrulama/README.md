@@ -67,6 +67,6 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 | Dashboard | 7 | 7 | ⬜ | — |
 | Settings | 6 | 4 | ⬜ | — |
 | Compliance | 6 | 5 | ⬜ | — |
-| Attendance | 5 | 6 | ⬜ | — |
+| [Attendance](attendance.md) | 5 | 6 | ✅ 2026-08-13 | 8 |
 | Departments | 4 | — | ⬜ | — |
 | Auth / Tenancy | 15 | 121 | ⬜ (üç fazdır denetleniyor) | — |
