@@ -86,55 +86,27 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Ortak keşif/SQL/log mantığı: log yedeği script'iyle AYNI kümede çalışmak
+# zorunda. İki yerde ayrı ayrı durursa zamanla ayrışır ve sonuç sessiz olur —
+# tam yedeği alınan ama günlüğü alınmayan müşteri felaket anına kadar fark edilmez.
+Import-Module (Join-Path $PSScriptRoot "IKProBackup.psm1") -Force
+
 $script:startedAt = Get-Date
 $script:storageArchives = @()
 $script:offsiteCopies = @()
 
 function Write-DrillResult {
-    <#
-      Sonucu JSON satırı olarak loglar ve başarısızlıkta uyarı gönderir.
-      Uyarı gönderimi ASLA tatbikatın sonucunu değiştirmez (best-effort).
-    #>
     param([bool]$Success, [string]$Message, [hashtable]$Details = @{}, [string]$ForDatabase = "")
 
-    $record = [ordered]@{
-        zaman    = (Get-Date).ToString("o")
-        surenSn  = [int]((Get-Date) - $script:startedAt).TotalSeconds
-        sunucu   = $ServerInstance
-        veritabani = $(if ($ForDatabase) { $ForDatabase } else { "TUMU" })
-        basarili = $Success
-        mesaj    = $Message
-    }
-    foreach ($k in $Details.Keys) { $record[$k] = $Details[$k] }
-    $json = ($record | ConvertTo-Json -Compress -Depth 4)
-
-    if ($LogPath) {
-        try {
-            $dir = Split-Path -Parent $LogPath
-            if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-            Add-Content -Path $LogPath -Value $json -Encoding utf8
-        }
-        catch { Write-Host "UYARI: sonuç loglanamadı — $_" -ForegroundColor Yellow }
-    }
-
-    if (-not $Success -and $AlertWebhookUrl) {
-        try {
-            Invoke-RestMethod -Uri $AlertWebhookUrl -Method Post -ContentType "application/json" `
-                -Body (@{ text = "İK Pro yedek tatbikatı BAŞARISIZ ($(if ($ForDatabase) { $ForDatabase } else { 'tumu' })): $Message" } | ConvertTo-Json) `
-                -TimeoutSec 20 | Out-Null
-            Write-Host "       uyarı gönderildi"
-        }
-        catch { Write-Host "UYARI: uyarı gönderilemedi — $_" -ForegroundColor Yellow }
-    }
+    Write-IKProResult -Islem "tatbikat" -Success $Success -Message $Message -Details $Details `
+        -ServerInstance $ServerInstance -ForDatabase $ForDatabase `
+        -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
 }
 
 function Invoke-Sql {
     param([string]$Query, [string]$OnDatabase = "master", [string]$Separator = "|")
-    # Sütun ayracı açıkça verilir: dosya yolları boşluk içerebilir
-    # ("C:\Program Files\..."), boşlukla ayrıştırma yolu ortadan böler.
-    $output = & sqlcmd -S $ServerInstance -d $OnDatabase -E -b -h -1 -W -s $Separator -Q $Query 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "SQL hatası: $output" }
-    return $output
+    return Invoke-IKProSql -ServerInstance $ServerInstance -Query $Query `
+        -OnDatabase $OnDatabase -Separator $Separator
 }
 
 function Get-TableRowCounts {
@@ -196,7 +168,7 @@ $script:storageArchives = @()
     # saniye hassasiyetinde geri dönüş, o veritabanı için GEÇERSİZDİR. Bu, hiçbir
     # belirti vermeden felaket anına kadar gizli kalır — tatbikatın işi tam olarak
     # böyle sessiz yalanları ortaya çıkarmaktır.
-    $model = "$((Invoke-Sql -Query "SET NOCOUNT ON; SELECT recovery_model_desc FROM sys.databases WHERE name = '$Database';" | Select-Object -First 1))".Trim()
+    $model = Get-IKProRecoveryModel -ServerInstance $ServerInstance -Database $Database
     if ($model -ne "FULL") {
         $mesaj = "Kurtarma modeli $model — log yedeği alınamaz, RPO taahhüdü (1 saat) bu " +
                  "veritabanı için geçersiz. Düzeltme: ALTER DATABASE [$Database] SET RECOVERY FULL;"
@@ -353,51 +325,13 @@ catch {
 }
 }
 
-function Get-DrillTargets {
-    <#
-      Yedeklenecek veritabanlarını PLATFORM tablosundan keşfeder — gerekçesi
-      dosya başlığındaki .DESCRIPTION bölümünde.
-    #>
-    $hedefler = [System.Collections.Generic.List[string]]::new()
-
-    # Platform HER ZAMAN ve İLK sırada: onsuz diğer yedekler sahipsiz kalır.
-    $hedefler.Add($PlatformDatabase)
-
-    $paylasilan = @(Invoke-Sql -Query "SET NOCOUNT ON; SELECT CASE WHEN DB_ID('$SharedDatabase') IS NULL THEN 0 ELSE 1 END;")
-    if (($paylasilan | Select-Object -First 1) -match '1') { $hedefler.Add($SharedDatabase) }
-
-    $satirlar = @(Invoke-Sql -OnDatabase $PlatformDatabase -Query @"
-SET NOCOUNT ON;
-SELECT t.DatabaseName + '|' + CAST(CASE WHEN DB_ID(t.DatabaseName) IS NULL THEN 0 ELSE 1 END AS varchar(1))
-FROM Tenants t
-WHERE t.DatabaseName IS NOT NULL
-ORDER BY t.DatabaseName;
-"@)
-
-    $eksikler = @()
-    foreach ($satir in $satirlar) {
-        $parcalar = "$satir".Trim() -split '\|'
-        if ($parcalar.Count -lt 2) { continue }
-        $ad = $parcalar[0].Trim()
-        if (-not $ad) { continue }
-        if ($parcalar[1].Trim() -eq '1') { $hedefler.Add($ad) } else { $eksikler += $ad }
-    }
-
-    if ($eksikler.Count -gt 0) {
-        # Yedeklenecek bir şey yok ama bu iyi haber DEĞİL: platform o müşterinin
-        # verisinin orada olduğunu sanıyor. Sessizce atlamak, felaket anında
-        # "yedeği hiç yokmuş" sürprizine dönüşür.
-        throw ("Platformda kayıtlı ama sunucuda BULUNMAYAN katalog(lar): {0}. " -f ($eksikler -join ", ")) +
-              "Yedek alınmadan önce bu tutarsızlık giderilmelidir."
-    }
-
-    return $hedefler
-}
-
 try {
     if (-not (Test-Path $BackupPath)) { New-Item -ItemType Directory -Path $BackupPath -Force | Out-Null }
 
-    $hedefler = @(if ($Database) { $Database } else { Get-DrillTargets })
+    $hedefler = @(if ($Database) { $Database } else {
+        Get-IKProBackupTargets -ServerInstance $ServerInstance `
+            -PlatformDatabase $PlatformDatabase -SharedDatabase $SharedDatabase
+    })
 
     Write-Host ("Tatbikat edilecek veritabanı sayısı: {0}" -f $hedefler.Count)
     Write-Host ("  {0}" -f ($hedefler -join ", "))

@@ -71,7 +71,29 @@ sıkılaştırılmış kurulum SIMPLE gelir. İki yerden kapatıldı:
 | --- | --- | --- | --- |
 | Tam (FULL) | Günlük | 30 gün | Gece düşük trafikte |
 | Fark (DIFFERENTIAL) | 6 saatte bir | 7 gün | Geri yükleme süresini kısaltır |
-| İşlem günlüğü (LOG) | **Saatlik** (RPO = 1 saat) | 7 gün | FULL recovery model zorunlu (bkz. yukarısı) |
+| İşlem günlüğü (LOG) | **Saatlik** (RPO = 1 saat) | 7 gün | `backup-log.ps1`; FULL recovery model zorunlu (bkz. yukarısı) |
+
+### Script'ler
+
+| Script | Ne yapar | Nasıl zamanlanır |
+| --- | --- | --- |
+| `backup-restore-drill.ps1` | Tam yedek + geri yükleme tatbikatı + satır doğrulaması, tüm veritabanları için | Günlük (02:00) |
+| `backup-log.ps1` | İşlem günlüğü yedeği + saklama temizliği, tüm veritabanları için | **Saatlik** |
+| `IKProBackup.psm1` | Ortak keşif/SQL/log mantığı | — |
+| `register-backup-task.ps1` | Yukarıdaki iki görevi Görev Zamanlayıcı'ya kaydeder | Bir kez, yönetici olarak |
+
+> **Keşif mantığı neden ortak modülde:** iki script AYNI veritabanı kümesi
+> üzerinde çalışmak zorunda. Ayrı ayrı yazılsalardı zamanla ayrışırlardı ve sonuç
+> sessiz olurdu — tam yedeği alınan ama günlüğü alınmayan bir müşteri, felaket
+> anına kadar fark edilmez.
+
+> **`backup-log.ps1` kırık zinciri kendi onarır.** Log yedeği geçerli bir tam
+> yedeğe dayanmadan alınamaz (Msg 4214). Script bunun sebebini tahmin etmeye
+> çalışmaz — dener, hata alırsa TABAN tam yedeği alıp bir kez yeniden dener.
+> Sebep birden çok olabilir: yeni provizyonlanan kiracı, kurtarma modelinin
+> SIMPLE'a alınıp geri döndürülmesi (zincir kırılır ama `msdb`'deki eski tam
+> yedek kaydı durur — "tam yedeği var mı?" diye sormak burada YANILTIR), ya da
+> veritabanının yedekten geri yüklenmiş olması.
 
 > **Kaç veritabanı?** İki sabit + kiracı sayısı kadar:
 > - `IKProPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar.
@@ -429,13 +451,15 @@ işaret satırları sonrasında temizlendi.
 - ✅ **RPO/RTO belirlendi (2026-08-13):** RPO 1 saat; RTO tek müşteri 4 saat,
   tüm sistem bir sonraki mesai gününün sonu. Gerekçeler ve teknik ön koşul
   (FULL kurtarma modeli) yukarıda.
-- ⬜ **Saatlik log yedeği HENÜZ ZAMANLANMADI.** RPO 1 saat, kurulduğu an değil
-  karar verildiği an geçerli olmaz: bugün yalnız elle çalıştırılan tam yedek var.
-  `register-backup-task.ps1` tam yedeği zamanlıyor; **log yedeği için ayrı bir
-  saatlik görev gerekiyor** ve henüz yazılmadı. Bu kurulmadan RPO taahhüdü
-  kâğıt üstündedir.
-- ⬜ **Zamanlanmış görev kurulmadı** — yukarıdaki komut operatör tarafından
-  çalıştırılmalı.
+- ✅ **Saatlik log yedeği YAZILDI ve KOŞTURULDU (2026-08-13).** `backup-log.ps1`
+  tüm veritabanlarının işlem günlüğünü alır, süresi dolan `.trn` dosyalarını
+  temizler ve kırık zinciri kendi kendine onarır. `register-backup-task.ps1`
+  artık **iki görevi birden** kaydeder (günlük tam yedek + saatlik günlük);
+  saatlik olan isteğe bağlı değildir — RPO 1 saat yalnız onunla gerçek olur.
+- ⬜ **Zamanlanmış görevler HENÜZ KAYDEDİLMEDİ** — script `-WhatIf` ile denendi
+  ama gerçek kayıt yönetici hakkı ve operatör kararı gerektiriyor:
+  `pwsh scripts/register-backup-task.ps1 -BackupPath "<yol>" -LogPath "<yol>\yedek.jsonl"`.
+  **Bu yapılmadan RPO/RTO taahhütleri kâğıt üstündedir.**
 - ⬜ **Off-site hedefi seçilmedi** — `-OffsitePath` için gerçek bir ağ paylaşımı
   veya nesne depolama belirlenmeli; SYSTEM hesabının o hedefe erişebildiği
   doğrulanmalı.

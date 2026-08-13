@@ -18,11 +18,12 @@
   (kiracı katalogları). 3. adım atlanırsa müşteriler 503 alır (kasıtlı) ve durum
   açılış logunda + `GET /api/tenants/schema-status`'ta görünür.
 - **Faz 3 başladı.** Yedekleme tüm kiracı kataloglarını kapsıyor, tatbikatı
-  gerçekten koşturuldu (nokta-zaman geri yükleme dahil) ve **RPO/RTO belirlendi:
-  RPO 1 saat; RTO tek müşteri 4 saat, tüm sistem mesai içi.** Kalanlar: saatlik
-  log yedeğinin zamanlanması (RPO bu kurulmadan kâğıt üstünde), off-site hedefi,
-  zamanlanmış görev, ve `freeze → geri yükle → rebuild-directory → unfreeze`
-  zincirinin uçtan uca tatbikatı.
+  gerçekten koşturuldu (nokta-zaman geri yükleme dahil), **RPO/RTO belirlendi**
+  (RPO 1 saat; RTO tek müşteri 4 saat, tüm sistem mesai içi) ve **saatlik log
+  yedeği script'i yazılıp koşturuldu**. Kalanlar: zamanlanmış görevlerin gerçekten
+  KAYDEDİLMESİ (yönetici hakkı + operatör kararı), off-site hedefi seçimi, ve
+  `freeze → geri yükle → rebuild-directory → unfreeze` zincirinin uçtan uca
+  tatbikatı. **Görevler kaydedilmeden RPO/RTO kâğıt üstündedir.**
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
   `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
   yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
@@ -128,6 +129,42 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 3 (3): saatlik log yedeği — RPO'yu gerçek yapan parça
+
+RPO 1 saat kararı verilmişti ama sistemde yalnız elle çalıştırılan tam yedek
+vardı; yani taahhüt kâğıt üstündeydi. `backup-log.ps1` yazıldı.
+
+- **Ortak modül `IKProBackup.psm1`.** Keşif/SQL/log mantığı tek yere alındı ve
+  `backup-restore-drill.ps1` de ona taşındı. Gerekçe: iki script AYNI veritabanı
+  kümesinde çalışmak zorunda; ayrı ayrı yazılsalardı zamanla ayrışırlardı ve
+  sonuç sessiz olurdu — tam yedeği alınan ama günlüğü alınmayan müşteri, felaket
+  anına kadar fark edilmez. (Modülü yazıp drill'i taşımamak, tam da uyardığım
+  duruma düşmek olurdu.)
+- **Saklama temizliği:** süresi dolan `.trn` dosyaları siliniyor. `.bak`
+  dosyalarına DOKUNULMUYOR — bir log zinciri dayandığı tam yedek olmadan işe
+  yaramaz; yanlışlıkla temeli silmek, elde binlerce günlük olup hiçbirini
+  kullanamamak demektir.
+- **`register-backup-task.ps1` artık İKİ görev kaydediyor** (günlük tam yedek +
+  saatlik günlük). Saatlik olan isteğe bağlı değil: seçenek sunmak, RPO'yu
+  sessizce 24 saate çıkaran ayarın atlanmasına davetiye olurdu.
+
+**Yol boyunca bir varsayımım yanlış çıktı ve düzeltildi.** Script önce "bu
+veritabanının tam yedeği var mı?" diye `msdb`'ye soruyordu. `IKPro_globex` bu
+kontrolü GEÇTİ ama `BACKUP LOG` yine de patladı (Msg 4214): kurtarma modelini
+SIMPLE'a alıp FULL'e döndürmek **log zincirini kırıyor**, oysa `msdb`'deki eski
+tam yedek kaydı yerinde duruyor. Sebebi tahmin etmek yerine duruma tepki verecek
+şekilde yeniden yazıldı: dene → 4214 alırsan TABAN tam yedeği al → bir kez
+yeniden dene. Bu, sebebi ne olursa olsun (yeni kiracı, model dönüşü, geri
+yükleme) çalışır.
+
+**Uçtan uca kanıtlandı:** `IKPro_globex`'e işaret satırı eklendi, script'in
+ÜRETTİĞİ dosyalardan (TABAN.bak + iki .trn) ayrı bir ada geri yükleme yapıldı ve
+işaret satırı geri geldi. Yani otomasyonun bıraktığı dosyalar gerçekten
+kullanılabilir bir zincir oluşturuyor — elle hazırlanmış dosyalar değil.
+
+Tüm tatbikat artıkları (kopya veritabanları, işaret satırları, yedek dosyaları)
+temizlendi.
 
 ### 2026-08-13 — Faz 3 (2): RPO/RTO kararı + kurtarma modeli tuzağı
 

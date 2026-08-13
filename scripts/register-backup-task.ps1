@@ -1,10 +1,20 @@
 ﻿<#
 .SYNOPSIS
-    Yedekleme tatbikatını Windows Görev Zamanlayıcı'ya günlük görev olarak kaydeder.
+    Yedekleme görevlerini Windows Görev Zamanlayıcı'ya kaydeder.
 
 .DESCRIPTION
-    backup-restore-drill.ps1'i her gün belirtilen saatte çalıştıran bir zamanlanmış
-    görev oluşturur. Elle çalıştırılan yedek, er ya da geç çalıştırılmayan yedektir.
+    İKİ görev kaydedilir; ikisi de zorunludur ve ayrı ayrı seçilemez:
+
+      1. GÜNLÜK TAM YEDEK + TATBİKAT (backup-restore-drill.ps1)
+      2. SAATLİK İŞLEM GÜNLÜĞÜ YEDEĞİ (backup-log.ps1)
+
+    İkincisi neden isteğe bağlı değil: RPO taahhüdümüz 1 saat ve bunu SADECE
+    saatlik günlük yedeği sağlar. Yalnız günlük tam yedek alınırsa gerçek RPO
+    24 saate çıkar — üstelik bu, kimse fark etmeden olur. "Yedeğim var" diyen
+    ama bir günlük veriyi kaybeden kurulum, tam olarak bu ayarın atlanmasıyla
+    oluşur; bu yüzden burada seçenek sunulmuyor.
+
+    Elle çalıştırılan yedek, er ya da geç çalıştırılmayan yedektir.
 
     YÖNETİCİ HAKKI GEREKİR: görev SYSTEM hesabıyla çalışacak şekilde kaydedilir,
     çünkü SQL Server yedek dizinine yazma izni kullanıcı hesabında genelde yoktur.
@@ -35,10 +45,12 @@
     Başarısızlıkta POST edilecek adres (Slack/Teams uyumlu {text} gövdesi).
 
 .PARAMETER At
-    Günlük çalışma saati. Varsayılan 02:00 (düşük trafik).
+    Günlük tam yedeğin çalışma saati. Varsayılan 02:00 (düşük trafik).
+    Saatlik günlük yedeği bundan bağımsız, her saat başı çalışır.
 
 .PARAMETER TaskName
-    Görev adı. Varsayılan: IKPro-YedekTatbikati
+    Günlük görevin adı. Varsayılan: IKPro-YedekTatbikati
+    Saatlik görev "<TaskName>-Log" adıyla kaydedilir.
 
 .EXAMPLE
     # Önce ne yapacağını gör:
@@ -87,30 +99,68 @@ if ($AlertWebhookUrl) { $argList += @("-AlertWebhookUrl", "`"$AlertWebhookUrl`""
 
 $arguments = $argList -join " "
 
-Write-Host "Görev adı  : $TaskName"
-Write-Host "Çalışma    : her gün $At"
-Write-Host "Komut      : powershell.exe $arguments"
+# Saatlik günlük yedeği: aynı yollar, aynı log dosyası, aynı uyarı hedefi.
+$logScript = Join-Path $PSScriptRoot "backup-log.ps1"
+if (-not (Test-Path $logScript)) {
+    Write-Error "Günlük yedeği script'i bulunamadı: $logScript"
+    exit 1
+}
+$logArgList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$logScript`"",
+    "-BackupPath", "`"$BackupPath`"")
+if ($Database) { $logArgList += @("-Database", "`"$Database`"") }
+if ($LogPath) { $logArgList += @("-LogPath", "`"$LogPath`"") }
+if ($AlertWebhookUrl) { $logArgList += @("-AlertWebhookUrl", "`"$AlertWebhookUrl`"") }
+$logArguments = $logArgList -join " "
+$logTaskName = "$TaskName-Log"
+
+Write-Host "Görev 1 (günlük tam yedek + tatbikat)"
+Write-Host "  ad       : $TaskName"
+Write-Host "  çalışma  : her gün $At"
+Write-Host "  komut    : powershell.exe $arguments"
+Write-Host ""
+Write-Host "Görev 2 (saatlik işlem günlüğü — RPO 1 saat bunun üzerinde durur)"
+Write-Host "  ad       : $logTaskName"
+Write-Host "  çalışma  : her saat başı"
+Write-Host "  komut    : powershell.exe $logArguments"
 Write-Host ""
 
-if ($PSCmdlet.ShouldProcess($TaskName, "Zamanlanmış görev kaydet")) {
+# SYSTEM: SQL Server yedek dizinine yazma izni kullanıcı hesabında genelde yok.
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+if ($PSCmdlet.ShouldProcess($TaskName, "Günlük tam yedek görevini kaydet")) {
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments
     $trigger = New-ScheduledTaskTrigger -Daily -At $At
-    # SYSTEM: SQL Server yedek dizinine yazma izni kullanıcıda genelde yok.
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable `
         -DontStopOnIdleEnd -ExecutionTimeLimit (New-TimeSpan -Hours 4)
 
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
         -Principal $principal -Settings $settings -Force | Out-Null
 
-    Write-Host "Görev kaydedildi." -ForegroundColor Green
+    Write-Host "Günlük görev kaydedildi." -ForegroundColor Green
+}
+
+if ($PSCmdlet.ShouldProcess($logTaskName, "Saatlik günlük yedeği görevini kaydet")) {
+    $logAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $logArguments
+    # Bugünün başından itibaren saat başı, süresiz. Süre sınırı 1 saatten KISA
+    # tutulur: bir koşum takılırsa bir sonrakiyle üst üste binmemeli.
+    $logTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date `
+        -RepetitionInterval (New-TimeSpan -Hours 1)
+    $logSettings = New-ScheduledTaskSettingsSet -StartWhenAvailable `
+        -DontStopOnIdleEnd -ExecutionTimeLimit (New-TimeSpan -Minutes 45) `
+        -MultipleInstances IgnoreNew
+
+    Register-ScheduledTask -TaskName $logTaskName -Action $logAction -Trigger $logTrigger `
+        -Principal $principal -Settings $logSettings -Force | Out-Null
+
+    Write-Host "Saatlik görev kaydedildi." -ForegroundColor Green
+}
+
+if (-not $WhatIfPreference) {
     Write-Host ""
-    Write-Host "Doğrulama — görevi hemen elle tetikleyip sonucu görün:"
-    Write-Host "  Start-ScheduledTask -TaskName $TaskName"
-    Write-Host "  Get-ScheduledTaskInfo -TaskName $TaskName | Select LastRunTime, LastTaskResult"
-    Write-Host ""
-    Write-Host "LastTaskResult 0 = başarılı. Sıfırdan farklıysa log dosyasına bakın."
+    Write-Host "Kaldırmak için:" -ForegroundColor Yellow
+    Write-Host "  Unregister-ScheduledTask -TaskName $TaskName -Confirm:`$false"
+    Write-Host "  Unregister-ScheduledTask -TaskName $logTaskName -Confirm:`$false"
 }
 else {
-    Write-Host "(Deneme modu — görev kaydedilmedi.)"
+    Write-Host "(Deneme modu - görevler kaydedilmedi.)"
 }
