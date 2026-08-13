@@ -54,12 +54,12 @@
 
 .EXAMPLE
     # Önce ne yapacağını gör:
-    pwsh scripts/register-backup-task.ps1 -BackupPath "C:\SQLYedek" -WhatIf
+    powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" -WhatIf
 
 .EXAMPLE
     # Yönetici PowerShell'de kaydet:
-    pwsh scripts/register-backup-task.ps1 -BackupPath "C:\SQLYedek" `
-        -OffsitePath "\\yedek-sunucu\ikpro" -LogPath "C:\SQLYedek\tatbikat.jsonl"
+    powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
+        -OffsitePath "\\yedek-sunucu\ikpro" -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl"
 
 .EXAMPLE
     # Kaldırmak için:

@@ -47,11 +47,11 @@
 
 .EXAMPLE
     # Tüm veritabanları (platform + paylaşılan + her müşteri):
-    pwsh scripts/backup-restore-drill.ps1 -BackupPath C:\SQLYedek
+    powershell -File scripts\backup-restore-drill.ps1 -BackupPath C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro
 
 .EXAMPLE
     # Yalnız tek bir müşteri:
-    pwsh scripts/backup-restore-drill.ps1 -Database IKPro_acme -BackupPath C:\SQLYedek
+    powershell -File scripts\backup-restore-drill.ps1 -Database IKPro_acme -BackupPath C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro
 
 .OUTPUTS
     Çıkış kodu 0 = TÜM veritabanlarının tatbikatı başarılı. 1 = en az biri

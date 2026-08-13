@@ -130,6 +130,32 @@
 
 ## Kayıtlar (yeni → eski)
 
+### 2026-08-13 — Faz 3 (4): operatör komutlarındaki üç tuzak düzeltildi
+
+Kullanıcı belgedeki kurulum komutunu çalıştırdı ve patladı. Üç ayrı hata vardı,
+üçü de dokümantasyondan geliyordu:
+
+1. **`pwsh` bu makinede kurulu değil.** PowerShell 7 Windows'ta kurulu gelmez;
+   script'ler Windows PowerShell 5.1 ile çalışıyor. Belgedeki ve script
+   yardımlarındaki tüm `pwsh` örnekleri `powershell -File` oldu.
+2. **Komut worktree dizininden çalıştırıldı.** `.claude/worktrees/…` farklı bir
+   dalın kopyası ve `scripts/` klasörünü hiç içermiyor. Belgeye "ana depo
+   kökünden çalıştırın" notu eklendi.
+3. **`C:\SQLYedek` yolu çalışmaz.** Yedeği alan sizin hesabınız değil, SQL
+   Server servis hesabı (`NT Service\MSSQLSERVER`). Yeni açılan bir klasöre
+   servisin yazma izni olmaz ve yedek "Operating system error 3/5" ile düşer.
+   Tüm örnekler SQL Server'ın kendi yedek klasörünün altını kullanacak şekilde
+   değiştirildi; başka klasör için `icacls` komutu yazıldı.
+
+Ayrıca belgede **eskimiş örnekler** vardı: `-Database IKProDb` /
+`-Database IKProPlatform` ile iki ayrı çağrı ve iki ayrı zamanlanmış görev
+(`-Db`, `-Platform`). Bu artık yanlış — script hepsini platformdan keşfediyor ve
+tek `register` çağrısı iki görevi (günlük + saatlik) birden kuruyor. Ad vermek
+diğer müşterileri yedeksiz bırakır; örnekler bunu öğretiyordu.
+
+Belgeye "Script'leri çalıştırmadan önce — üç tuzak" bölümü eklendi ve
+dokümantasyondaki komut `-WhatIf` ile bire bir denenerek doğrulandı.
+
 ### 2026-08-13 — Faz 3 (3): saatlik log yedeği — RPO'yu gerçek yapan parça
 
 RPO 1 saat kararı verilmişti ama sistemde yalnız elle çalıştırılan tam yedek

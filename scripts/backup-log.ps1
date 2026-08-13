@@ -44,7 +44,7 @@
     YALNIZ bu veritabanının günlüğünü al (keşif yapılmaz).
 
 .EXAMPLE
-    pwsh scripts/backup-log.ps1 -BackupPath "C:\SQLYedek"
+    powershell -File scripts\backup-log.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro"
 
 .OUTPUTS
     Çıkış kodu 0 = tüm veritabanlarının günlüğü alındı. 1 = en az biri

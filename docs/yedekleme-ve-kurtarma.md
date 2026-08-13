@@ -73,6 +73,46 @@ sıkılaştırılmış kurulum SIMPLE gelir. İki yerden kapatıldı:
 | Fark (DIFFERENTIAL) | 6 saatte bir | 7 gün | Geri yükleme süresini kısaltır |
 | İşlem günlüğü (LOG) | **Saatlik** (RPO = 1 saat) | 7 gün | `backup-log.ps1`; FULL recovery model zorunlu (bkz. yukarısı) |
 
+### Script'leri çalıştırmadan önce — üç tuzak
+
+Bunların üçü de gerçekten yaşandı; buraya yazılmalarının sebebi bu.
+
+**1. `pwsh` değil `powershell`.** `pwsh` PowerShell 7'dir ve Windows'ta
+**kurulu gelmez**. Script'ler Windows PowerShell 5.1 ile çalışır:
+
+```
+powershell -ExecutionPolicy Bypass -File "scriptsackup-restore-drill.ps1" ...
+```
+
+**2. Doğru dizinde olun.** Depoda git worktree'leri varsa (`.claude/worktrees/…`)
+onlar farklı bir dalın kopyasıdır ve `scripts/` klasörünü içermeyebilir. Komutları
+**ana depo kökünden** çalıştırın.
+
+**3. Yedek klasörüne yazan SİZ değil, SQL Server servis hesabısınız.**
+`BACKUP DATABASE` işini `NT Service\MSSQLSERVER` yapar. Yeni açtığınız bir
+klasöre (ör. `C:\SQLYedek`) sizin yazma izniniz olması yetmez; servis hesabının
+izni yoksa yedek şu hatayla düşer:
+
+```
+Cannot open backup device '...'. Operating system error 3 / 5
+```
+
+En güvenli yol, SQL Server'ın **kendi varsayılan yedek klasörünün altını**
+kullanmaktır (izin zaten vardır):
+
+```sql
+SELECT CAST(SERVERPROPERTY('InstanceDefaultBackupPath') AS nvarchar(400));
+```
+
+Başka bir klasör (ör. ayrı bir disk) kullanacaksanız izni açıkça verin:
+
+```
+icacls "D:\Yedek\IKPro" /grant "NT Service\MSSQLSERVER:(OI)(CI)F"
+```
+
+**Zamanlanmış görevi kaydetmek ayrıca YÖNETİCİ hakkı ister** — görev SYSTEM
+hesabıyla çalışacak şekilde kaydedilir.
+
 ### Script'ler
 
 | Script | Ne yapar | Nasıl zamanlanır |
@@ -120,16 +160,15 @@ diskteki yedek, disk arızasında veriyle birlikte gider.
 
 `scripts/backup-restore-drill.ps1` yedek alır, **ayrı bir veritabanı adına**
 (`<ad>_RestoreDrill`) geri yükler, tablo satır sayılarını kaynakla karşılaştırır
-ve kopyayı düşürür. **İki veritabanı da tatbik edilmelidir** — platform küçüktür
-ama kiracı kimliğini ve e-posta→kiracı yönlendirmesini tuttuğu için, o olmadan
-geri yüklenen kiracı verisine kimse erişemez.
+ve kopyayı düşürür.
+
+**Veritabanı adı VERMEYİN** — script hepsini platformdan keşfeder (platform +
+paylaşılan katalog + her müşteri kataloğu). Tek ad vermek yalnız hedefli bir
+tatbikat içindir ve **diğer müşterileri yedeksiz bırakır**.
 
 ```powershell
-# Kiracı verisi
-pwsh scripts/backup-restore-drill.ps1 -Database IKProDb -BackupPath C:\yedek
-
-# Platform veritabanı (kiracı kimliği ve yönlendirme)
-pwsh scripts/backup-restore-drill.ps1 -Database IKProPlatform -BackupPath C:\yedek
+powershell -ExecutionPolicy Bypass -File scripts\backup-restore-drill.ps1 `
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro"
 ```
 
 > **Tuzak — yedek klasörü izni:** `BackupPath`, sizin değil **SQL Server servis
@@ -223,23 +262,23 @@ curl -X POST https://<api-host>/api/tenants/<tenantId>/freeze   -H "X-Platform-K
 ```sql
 -- 2) Kuyruk log yedeğini al: son yedekten ŞU ANA kadarki işlemleri kurtarır.
 --    Bu adım atlanırsa son yedekten sonraki her şey kaybolur.
-BACKUP LOG [IKPro_acme] TO DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
+BACKUP LOG [IKPro_acme] TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_kuyruk.trn'
     WITH NORECOVERY;
 
 -- 3) FULL → DIFF → LOG zinciri. NORECOVERY, zincir bitene kadar veritabanını
 --    kullanıma AÇMAZ; son adımda STOPAT ile istenen ana kadar ilerlenir.
 RESTORE DATABASE [IKPro_acme]
-    FROM DISK = 'C:\SQLYedek\IKPro_acme_FULL.bak'
+    FROM DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_FULL.bak'
     WITH NORECOVERY, REPLACE;
 
 RESTORE DATABASE [IKPro_acme]
-    FROM DISK = 'C:\SQLYedek\IKPro_acme_DIFF.bak'
+    FROM DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_DIFF.bak'
     WITH NORECOVERY;
 
 -- 4) Hedef ana kadar log uygula. STOPAT'ı yanlış yazmak sessizce fazla/eksik
 --    veri getirir — müşteriyle birlikte kararlaştırın ve buraya not düşün.
 RESTORE LOG [IKPro_acme]
-    FROM DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
+    FROM DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_kuyruk.trn'
     WITH RECOVERY, STOPAT = '2026-08-13T09:45:00';
 ```
 
@@ -293,30 +332,16 @@ politikası uygulanmaz.
 
 ## Tam kurulum (dört bileşen birlikte)
 
-Kiracı verisi veritabanı:
+Tek komut; veritabanı adı verilmez, hepsi keşfedilir:
 
 ```powershell
-pwsh scripts/backup-restore-drill.ps1 `
-  -Database IKProDb `
-  -BackupPath "C:\SQLYedek" `
+powershell -ExecutionPolicy Bypass -File scripts\backup-restore-drill.ps1 `
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
   -StoragePath "C:\IKPro\App_Data\storage" `
   -OffsitePath "\\yedek-sunucu\ikpro" `
-  -LogPath "C:\SQLYedek\tatbikat.jsonl" `
+  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl" `
   -AlertWebhookUrl "https://hooks.slack.com/services/..."
 ```
-
-Platform veritabanı (kiracı kimliği ve yönlendirme — dosya bileşeni yok):
-
-```powershell
-pwsh scripts/backup-restore-drill.ps1 `
-  -Database IKProPlatform `
-  -BackupPath "C:\SQLYedek" `
-  -OffsitePath "\\yedek-sunucu\ikpro" `
-  -LogPath "C:\SQLYedek\tatbikat.jsonl" `
-  -AlertWebhookUrl "https://hooks.slack.com/services/..."
-```
-
-**İkisinin de başarılı olması gerekmektedir.** Platform olmadan, geri yüklenen verilere kimse erişemez.
 
 | Bileşen | Parametre | Ne sağlar |
 | --- | --- | --- |
@@ -327,57 +352,47 @@ pwsh scripts/backup-restore-drill.ps1 `
 
 ## Otomatik zamanlama
 
-Kiracı verisi veritabanı:
+Tek komut **iki görevi birden** kaydeder: günlük tam yedek + tatbikat, ve
+**saatlik işlem günlüğü**. İkincisi isteğe bağlı değildir — RPO 1 saat yalnız
+onunla gerçek olur.
 
 ```powershell
 # 1) Önce ne yapacağını gör (sistemi değiştirmez):
-pwsh scripts/register-backup-task.ps1 -Database IKProDb -BackupPath "C:\SQLYedek" `
-  -TaskName "IKPro-YedekTatbikati-Db" -WhatIf
+powershell -ExecutionPolicy Bypass -File scripts\register-backup-task.ps1 `
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
+  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl" -WhatIf
 
-# 2) YÖNETİCİ PowerShell'de kaydet:
-pwsh scripts/register-backup-task.ps1 -Database IKProDb -BackupPath "C:\SQLYedek" `
-  -TaskName "IKPro-YedekTatbikati-Db" `
-  -StoragePath "C:\IKPro\App_Data\storage" -OffsitePath "\\yedek-sunucu\ikpro" `
-  -LogPath "C:\SQLYedek\tatbikat.jsonl"
+# 2) YÖNETİCİ PowerShell'de kaydet (-WhatIf'i kaldırın):
+powershell -ExecutionPolicy Bypass -File scripts\register-backup-task.ps1 `
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
+  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl" `
+  -StoragePath "C:\IKPro\App_Data\storage" `
+  -OffsitePath "\\yedek-sunucu\ikpro"
 ```
 
-Platform veritabanı (kiracı kimliği ve yönlendirme):
+Görevleri hemen tetikleyip doğrulayın — **ikisi de 0 dönmelidir:**
 
 ```powershell
-# 1) Önce ne yapacağını gör (sistemi değiştirmez):
-pwsh scripts/register-backup-task.ps1 -Database IKProPlatform -BackupPath "C:\SQLYedek" `
-  -TaskName "IKPro-YedekTatbikati-Platform" -WhatIf
+Start-ScheduledTask -TaskName IKPro-YedekTatbikati
+Get-ScheduledTaskInfo -TaskName IKPro-YedekTatbikati | Select LastRunTime, LastTaskResult
 
-# 2) YÖNETİCİ PowerShell'de kaydet:
-pwsh scripts/register-backup-task.ps1 -Database IKProPlatform -BackupPath "C:\SQLYedek" `
-  -TaskName "IKPro-YedekTatbikati-Platform" `
-  -OffsitePath "\\yedek-sunucu\ikpro" -LogPath "C:\SQLYedek\tatbikat.jsonl"
-```
-
-Zamanlanmış görevleri hemen tetikleyip doğrula — **her iki görev de başarılı dönmelidir:**
-
-```powershell
-# 3) Kiracı verisi zamanlaması:
-Start-ScheduledTask -TaskName IKPro-YedekTatbikati-Db
-Get-ScheduledTaskInfo -TaskName IKPro-YedekTatbikati-Db | Select LastRunTime, LastTaskResult
-
-# 4) Platform zamanlaması:
-Start-ScheduledTask -TaskName IKPro-YedekTatbikati-Platform
-Get-ScheduledTaskInfo -TaskName IKPro-YedekTatbikati-Platform | Select LastRunTime, LastTaskResult
+Start-ScheduledTask -TaskName IKPro-YedekTatbikati-Log
+Get-ScheduledTaskInfo -TaskName IKPro-YedekTatbikati-Log | Select LastRunTime, LastTaskResult
 ```
 
 `LastTaskResult` **0** = başarılı. Görevler SYSTEM hesabıyla kaydedilir, çünkü SQL
 Server yedek dizinine yazma izni kullanıcı hesabında genelde yoktur.
 
-**Neden ayrı görev adları:** Script `Register-ScheduledTask ... -Force` ile çağırıyor
-(satır ~97). Aynı ad kullanılırsa `-Force`, ikinci çağrı birinci görevi sessizce siler.
-Operatör bu adımları izlerse kiracı verisi zamanlaması kaybolur.
+**Görev adları:** günlük görev `IKPro-YedekTatbikati`, saatlik görev
+`<aynı ad>-Log`. Tek bir `register` çağrısı ikisini birden kurar; ayrı ayrı
+kaydetmeye çalışmayın — script `-Force` kullandığı için aynı adla ikinci bir
+çağrı birinciyi sessizce siler.
 
 Kaldırmak için her iki görevi de silin:
 
 ```powershell
-Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Db -Confirm:$false
-Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Platform -Confirm:$false
+Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati -Confirm:$false
+Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Log -Confirm:$false
 ```
 
 > **Not:** Zamanlanmış görev bu depoda **kaydedilmedi** — sistemde kalıcı
@@ -393,7 +408,7 @@ edilmemiş yedek, olmayan yedektir.
 ### 1) Otomatik tatbikat (yedek → geri yükle → satır sayısı doğrula)
 
 ```
-pwsh scripts/backup-restore-drill.ps1 -BackupPath <yedek-klasörü> -LogPath <log>
+powershell -File scripts\backup-restore-drill.ps1 -BackupPath <yedek-klasörü> -LogPath <log>
 ```
 
 | Veritabanı | Tablo | Satır | Sonuç |
@@ -458,7 +473,7 @@ işaret satırları sonrasında temizlendi.
   saatlik olan isteğe bağlı değildir — RPO 1 saat yalnız onunla gerçek olur.
 - ⬜ **Zamanlanmış görevler HENÜZ KAYDEDİLMEDİ** — script `-WhatIf` ile denendi
   ama gerçek kayıt yönetici hakkı ve operatör kararı gerektiriyor:
-  `pwsh scripts/register-backup-task.ps1 -BackupPath "<yol>" -LogPath "<yol>\yedek.jsonl"`.
+  `powershell -File scripts\register-backup-task.ps1 -BackupPath "<yol>" -LogPath "<yol>\yedek.jsonl"`.
   **Bu yapılmadan RPO/RTO taahhütleri kâğıt üstündedir.**
 - ⬜ **Off-site hedefi seçilmedi** — `-OffsitePath` için gerçek bir ağ paylaşımı
   veya nesne depolama belirlenmeli; SYSTEM hesabının o hedefe erişebildiği
