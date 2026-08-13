@@ -130,6 +130,40 @@
 
 ## Kayıtlar (yeni → eski)
 
+### 2026-08-13 — Faz 3 (6): uygulama katmanı kurtarma tatbikatı — 3 eksik bulundu
+
+Belgede yazan tam prosedür (`freeze → geri yükle → rebuild-directory →
+unfreeze`) çalışan bir uygulamayla, gerçek bir kiracı üzerinde denendi.
+
+**Senaryo:** `IKPro_globex`'te tam yedek + kurtarma noktası; sonra bir aday işe
+alındı (kiracı kataloğunda personel + kullanıcı, PLATFORM'da dizin kaydı);
+ardından "kaza" olarak tüm personel silindi.
+
+**Prosedür üç yerde eksikti:**
+
+1. **`freeze` yerinde geri yükleme için yetmiyor.** Uygulama isteklerini kesiyor
+   ama bağlantı havuzunu kapatmıyor; ilk geri yükleme denemesi "Exclusive access
+   could not be obtained" ile düştü. `SET SINGLE_USER WITH ROLLBACK IMMEDIATE`
+   şart — ve sonunda `SET MULTI_USER` da, çünkü geri yükleme bunu kendi yapmıyor.
+2. **Saatlik log yedeği kurtarmanın ORTASINDA araya girdi.** Zamanlanmış görev
+   11:00'de `BACKUP LOG` aldı; benim kuyruk yedeğim artık tam yedeğe oturmadı
+   (`Msg 4305`). Çözüm prosedüre yazıldı: ya görevi kurtarma boyunca durdurun,
+   ya da araya giren log'ları `msdb`'den okuyup zincire ekleyin (ikincisi daha
+   güvenli — hiçbir işlem atlanmaz). Prosedür artık dosya adı tahmin etmek
+   yerine zinciri `msdb`'den okumayı söylüyor.
+3. **Hedef an tam yedeğin anına eşitse log uygulanmaz** (`Msg 4335`).
+
+**`rebuild-directory`'nin neden zorunlu olduğu somutlaştı.** Geri yüklemeden
+sonra dizinde `YENI.PERSONEL@GLOBEX.LOCAL` duruyordu — kurtarma noktasından
+sonra işe alınmıştı, yani kiracı kataloğunda artık yok ama platformda var. Bu
+öksüz kayıt login'i var olmayan bir hesaba yönlendirir. `rebuild-directory`
+dizini kiracının kendi veritabanından yeniden kurup temizledi; o e-postayla
+giriş artık doğru şekilde 401 dönüyor.
+
+**Yalıtım kanıtlandı:** tatbikat boyunca demo kiracısı hiç etkilenmedi —
+donduğunda diğer kiracı 200 döndü, kurtarma bitince globex hizmete döndü.
+Ayrılmanın vaadi buydu ve çalıştığı görüldü.
+
 ### 2026-08-13 — Faz 3 (5): zamanlanmış görevler kuruldu, SQL yetkisi verildi
 
 Görevler kaydedildi (`IKPro-YedekTatbikati` + `-Log`) ama ilk koşum başarısız

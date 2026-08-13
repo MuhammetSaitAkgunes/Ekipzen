@@ -315,27 +315,65 @@ curl -X POST https://<api-host>/api/tenants/<tenantId>/freeze   -H "X-Platform-K
 ```
 
 ```sql
--- 2) Kuyruk log yedeğini al: son yedekten ŞU ANA kadarki işlemleri kurtarır.
+-- 2) ZORUNLU: veritabanını TEK KULLANICIYA al.
+--    `freeze` yeni UYGULAMA isteklerini keser ama uygulamanın BAĞLANTI HAVUZUNU
+--    kapatmaz; SQL Server özel erişim alamaz ve geri yükleme şu hatayla düşer:
+--       "Exclusive access could not be obtained because the database is in use."
+--    Bu adım tatbikatta bulundu — prosedürde eksikti.
+ALTER DATABASE [IKPro_acme] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+-- 3) Kuyruk log yedeğini al: son yedekten ŞU ANA kadarki işlemleri kurtarır.
 --    Bu adım atlanırsa son yedekten sonraki her şey kaybolur.
-BACKUP LOG [IKPro_acme] TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_kuyruk.trn'
+BACKUP LOG [IKPro_acme] TO DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
     WITH NORECOVERY;
 
--- 3) FULL → DIFF → LOG zinciri. NORECOVERY, zincir bitene kadar veritabanını
---    kullanıma AÇMAZ; son adımda STOPAT ile istenen ana kadar ilerlenir.
+-- 4) ZİNCİRİ msdb'DEN OKUYUN, dosya adı tahmin etmeyin. Hangi tam yedek ve
+--    hangi log'lar hangi sırada uygulanacak, tek doğru kaynak burasıdır:
+SELECT CONVERT(varchar(19), b.backup_finish_date, 120) AS bitis,
+       b.type,                    -- D = tam, I = fark, L = log
+       m.physical_device_name
+FROM msdb.dbo.backupset b
+JOIN msdb.dbo.backupmediafamily m ON m.media_set_id = b.media_set_id
+WHERE b.database_name = 'IKPro_acme'
+ORDER BY b.backup_finish_date;
+
+-- 5) Tam yedek + ARADAKİ TÜM log'lar sırayla. NORECOVERY, zincir bitene kadar
+--    veritabanını kullanıma AÇMAZ; son adımda RECOVERY ile açılır.
 RESTORE DATABASE [IKPro_acme]
-    FROM DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_FULL.bak'
+    FROM DISK = 'C:\SQLYedek\IKPro_acme_FULL.bak'
     WITH NORECOVERY, REPLACE;
 
-RESTORE DATABASE [IKPro_acme]
-    FROM DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_DIFF.bak'
+RESTORE LOG [IKPro_acme]
+    FROM DISK = 'C:\SQLYedek\IKPro_acme_20260813-110002.trn'
     WITH NORECOVERY;
 
--- 4) Hedef ana kadar log uygula. STOPAT'ı yanlış yazmak sessizce fazla/eksik
---    veri getirir — müşteriyle birlikte kararlaştırın ve buraya not düşün.
+-- Hedef ana kadar rol-ileri. STOPAT'ı yanlış yazmak sessizce fazla/eksik veri
+-- getirir — müşteriyle birlikte kararlaştırın ve buraya not düşün.
 RESTORE LOG [IKPro_acme]
-    FROM DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\IKPro_acme_kuyruk.trn'
+    FROM DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
     WITH RECOVERY, STOPAT = '2026-08-13T09:45:00';
+
+-- 6) Tekrar çok kullanıcıya aç. Geri yükleme bunu KENDİ YAPMAZ; unutulursa
+--    uygulama bağlanamaz ve kiracı çözüldüğü hâlde erişilemez kalır.
+ALTER DATABASE [IKPro_acme] SET MULTI_USER;
 ```
+
+> **Tatbikatta çıkan iki tuzak — ikisi de sessiz:**
+>
+> **(a) Saatlik log yedeği kurtarmanın ORTASINDA araya girer.** Zamanlanmış görev
+> her saat başı `BACKUP LOG` alıyor. Kurtarma sırasında çalışırsa sizin kuyruk
+> yedeğiniz artık tam yedeğe oturmaz ve geri yükleme `Msg 4305 — the log ...
+> begins at LSN ..., which is too recent` ile düşer. İki çözüm: kurtarma boyunca
+> görevi durdurun
+> (`Disable-ScheduledTask -TaskName IKPro-YedekTatbikati-Log`, sonunda
+> `Enable-ScheduledTask`), **ya da** araya giren log'ları da yukarıdaki `msdb`
+> sorgusundan görüp sıraya ekleyin. İkincisi daha güvenlidir — hiçbir işlem
+> atlanmaz.
+>
+> **(b) Hedef an tam yedeğin anından ÖNCEYSE** `Msg 4335 — the specified STOPAT
+> time is too early` alırsınız. Geri yükleme geriye saramaz; o an için DAHA ESKİ
+> bir tam yedek gerekir. Hedef an, kullandığınız tam yedeğin bitiş anına eşitse
+> log uygulamayın — tam yedeği doğrudan `WITH RECOVERY` ile açın.
 
 ```bash
 # 5) Şema kontrolü: geri yüklenen veritabanı ESKİ bir şemada olabilir.
@@ -508,13 +546,62 @@ hedef canlı katalogdur ve öncesinde `freeze`, sonrasında `rebuild-directory` 
 `unfreeze` adımları gelir (yukarıdaki prosedüre bakın). Tatbikat kopyası ve
 işaret satırları sonrasında temizlendi.
 
+### 3) Uygulama katmanı kurtarma zinciri — uçtan uca (2026-08-13)
+
+İlk iki tatbikat yalnız veritabanı katmanını kapsıyordu. Bu tatbikat, belgede
+yazan **tam prosedürü** çalışan bir uygulamayla denedi:
+`freeze → geri yükle → rebuild-directory → unfreeze`.
+
+**Senaryo.** `IKPro_globex` kiracısında: tam yedek alındı ve kurtarma noktası
+işaretlendi (10:58:25). Sonra bir aday işe alındı — bu, kiracı kataloğunda
+personel + kullanıcı, PLATFORM'da ise dizin kaydı yarattı. Ardından "kaza" olarak
+tüm personel silindi.
+
+**Sonuçlar:**
+
+| Adım | Sonuç |
+| --- | --- |
+| `freeze` | Kiracı **403**; aynı anda diğer kiracı (demo) **200** — hiç etkilenmedi |
+| Yerinde geri yükleme | **İLK DENEMEDE BAŞARISIZ** — "Exclusive access could not be obtained" |
+| `SINGLE_USER` + geri yükleme | Başarılı; silinen personel geri geldi |
+| `rebuild-directory` | 3 kayıt yazıldı; **öksüz dizin kaydı temizlendi** |
+| `unfreeze` | Kiracı hizmete döndü, admin girişi çalıştı |
+| Yalıtım | Demo kiracısı tatbikat boyunca hiç etkilenmedi |
+
+**Üç eksik bulundu ve prosedüre eklendi:**
+
+1. **`freeze` yerinde geri yükleme için YETMİYOR.** Uygulama isteklerini keser
+   ama bağlantı havuzunu kapatmaz; `SET SINGLE_USER WITH ROLLBACK IMMEDIATE`
+   şart, ve sonunda `SET MULTI_USER` unutulmamalı (geri yükleme bunu kendi
+   yapmaz).
+2. **Saatlik log yedeği kurtarmanın ortasında araya girdi** (11:00) ve kuyruk
+   yedeğini zincirden düşürdü (`Msg 4305`).
+3. **Hedef an tam yedeğin anına eşitse log uygulanmaz** — denenirse `Msg 4335`.
+
+**`rebuild-directory` adımının neden zorunlu olduğu somutlaştı.** Geri yüklemeden
+sonra dizin şu hâldeydi:
+
+```
+dizinde: CEM.OZ@…, DENIZ.KAYA@…, GLOBEX-ADMIN@…, YENI.PERSONEL@…
+                                                  ^^^^^^^^^^^^^^
+                          kurtarma noktasından SONRA işe alınmıştı;
+                          kiracı kataloğunda artık YOK, dizinde VAR
+```
+
+Bu öksüz kayıt, login'i var olmayan bir hesaba yönlendirir. `rebuild-directory`
+dizini kiracının kendi veritabanından yeniden kurdu ve kaydı temizledi; o
+e-postayla giriş denemesi artık doğru şekilde **401** dönüyor.
+
 ### Bir sonraki tatbikatta yapılması gerekenler
 
 - Gerçek boyutta veriyle koşturun: demo ölçeğinde 4 saniye süren işlem, RTO
   hedefini sınamaz.
 - `-OffsitePath` ile ikinci kopyayı da doğrulayın.
-- `freeze` → geri yükle → `rebuild-directory` → `unfreeze` zincirini **uçtan uca**
-  deneyin; bu tatbikat yalnız veritabanı katmanını kapsadı.
+- Kurtarma boyunca saatlik log görevini durdurmayı (ya da araya giren log'ları
+  zincire eklemeyi) **prosedürün parçası olarak** deneyin — bu tatbikatta o
+  adım bilinmediği için ilk geri yükleme denemesi kırıldı.
+- Evrak dosyalarının (`-StoragePath` zip'leri) geri yüklenmesini de deneyin; bu
+  tatbikat yalnız veritabanı + uygulama katmanını kapsadı, dosya katmanını değil.
 
 ## Kalan eksikler
 
