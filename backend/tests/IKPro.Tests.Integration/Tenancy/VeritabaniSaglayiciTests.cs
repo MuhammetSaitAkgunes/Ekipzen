@@ -43,6 +43,15 @@ public sealed class VeritabaniSaglayiciTests(IKProApiFactory factory) : TenancyT
             // davranışını ortamdan ortama değiştirirdi.
             (await HarmanlamaOkuAsync(ad)).Should().Be("Turkish_CI_AS");
 
+            // Kurtarma modeli de açıkça verilmeli. SIMPLE'da işlem günlüğü yedeği
+            // ALINAMAZ; yani RESTORE ... STOPAT imkânsız hale gelir ve RPO taahhüdü
+            // (1 saat) sessizce çöker. Model sunucunun `model` veritabanından miras
+            // alınsaydı bu, sunucudan sunucuya değişirdi — üstelik hiçbir belirti
+            // vermeden, ta ki felaket anına kadar.
+            (await KurtarmaModeliOkuAsync(ad)).Should().Be("FULL",
+                "log yedeği alınamayan bir kiracı veritabanı, saniye hassasiyetinde " +
+                "geri yükleme vaadini sessizce geçersiz kılar");
+
             await saglayici.DropAsync(ad, CancellationToken.None);
             (await saglayici.ExistsAsync(ad, CancellationToken.None)).Should().BeFalse();
         }
@@ -110,7 +119,13 @@ public sealed class VeritabaniSaglayiciTests(IKProApiFactory factory) : TenancyT
         }
     }
 
-    private static async Task<string> HarmanlamaOkuAsync(string ad)
+    private static Task<string> KurtarmaModeliOkuAsync(string ad) =>
+        SistemDegeriOkuAsync("SELECT recovery_model_desc FROM sys.databases WHERE name = @ad;", ad);
+
+    private static Task<string> HarmanlamaOkuAsync(string ad) =>
+        SistemDegeriOkuAsync("SELECT collation_name FROM sys.databases WHERE name = @ad;", ad);
+
+    private static async Task<string> SistemDegeriOkuAsync(string sorgu, string ad)
     {
         var kurucu = new SqlConnectionStringBuilder(IKProApiFactory.TestConnectionString)
         {
@@ -119,7 +134,7 @@ public sealed class VeritabaniSaglayiciTests(IKProApiFactory factory) : TenancyT
         await using var baglanti = new SqlConnection(kurucu.ConnectionString);
         await baglanti.OpenAsync();
         await using var komut = baglanti.CreateCommand();
-        komut.CommandText = "SELECT collation_name FROM sys.databases WHERE name = @ad;";
+        komut.CommandText = sorgu;
         komut.Parameters.AddWithValue("@ad", ad);
         return (string)(await komut.ExecuteScalarAsync())!;
     }

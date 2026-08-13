@@ -191,6 +191,21 @@ $script:storageArchives = @()
     # trafik alan bir üretim veritabanında tatbikat sürekli yanlış alarm verirdi.
     $before = Get-TableRowCounts -OnDatabase $Database
 
+    # RPO ÖN KOŞULU: SIMPLE kurtarma modelinde işlem günlüğü yedeği ALINAMAZ.
+    # Yani "en fazla 1 saatlik veri kaybı" taahhüdü ve RESTORE ... STOPAT ile
+    # saniye hassasiyetinde geri dönüş, o veritabanı için GEÇERSİZDİR. Bu, hiçbir
+    # belirti vermeden felaket anına kadar gizli kalır — tatbikatın işi tam olarak
+    # böyle sessiz yalanları ortaya çıkarmaktır.
+    $model = "$((Invoke-Sql -Query "SET NOCOUNT ON; SELECT recovery_model_desc FROM sys.databases WHERE name = '$Database';" | Select-Object -First 1))".Trim()
+    if ($model -ne "FULL") {
+        $mesaj = "Kurtarma modeli $model — log yedeği alınamaz, RPO taahhüdü (1 saat) bu " +
+                 "veritabanı için geçersiz. Düzeltme: ALTER DATABASE [$Database] SET RECOVERY FULL;"
+        Write-Host "       $mesaj" -ForegroundColor Red
+        Write-DrillResult -Success $false -Message $mesaj -ForDatabase $Database
+        return $false
+    }
+    Write-Host "       kurtarma modeli: FULL (log yedeği mümkün)"
+
     Write-Host "[1/5] Yedek alınıyor: $backupFile"
     Invoke-Sql -Query "BACKUP DATABASE [$Database] TO DISK = N'$backupFile' WITH INIT, CHECKSUM, STATS = 25;" | Out-Null
 

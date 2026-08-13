@@ -18,13 +18,52 @@ zorunludur.
 Bu iki sayı ticari taahhüdünüzü belirler; müşteri sözleşmesine yazılmadan önce
 kararlaştırılmalıdır.
 
-| Hedef | Anlamı | Öneri |
-| --- | --- | --- |
-| **RPO** (Recovery Point Objective) | En fazla ne kadarlık veri kaybını göze alıyorsunuz? | ≤ 1 saat → saatlik log yedeği gerekir |
-| **RTO** (Recovery Time Objective) | Hizmet en geç ne kadar sürede geri gelmeli? | ≤ 4 saat |
+**Karar verildi — 2026-08-13.**
 
-> ⬜ **Karar bekliyor:** RPO ve RTO değerleri henüz belirlenmedi. Bunlar
-> belirlenmeden yedek sıklığı ve saklama süresi netleşemez.
+| Hedef | Değer | Anlamı |
+| --- | --- | --- |
+| **RPO** | **1 saat** | Felaket anında en fazla 1 saatlik veri kaybı. Saatlik işlem günlüğü yedeği zorunlu. |
+| **RTO — tek müşteri** | **4 saat** | Bir müşterinin verisi bozulduğunda (yanlış silme, veri bozulması) o müşteri 4 saat içinde geri gelir. Diğerleri hiç etkilenmez. |
+| **RTO — tüm sistem** | **bir sonraki mesai gününün sonu** | Sunucu/veri merkezi kaybında. |
+
+### Bu sayılar neden böyle — ve neyi taahhüt ETMİYOR
+
+**RPO 1 saat.** Kaybedilen saatte tipik olarak birkaç izin talebi, o sabahın
+puantaj girişleri ve personel kartı düzenlemeleri olur. En sinsisi sonuncusudur:
+izin ve puantaj yeniden girilir, ama "dün kartta neyi değiştirmiştim" kimse
+hatırlamaz. Bordro ise kaynak veriden yeniden koşturulabilir — kayıp değil,
+tekrar iştir. Log yedeği küçük olduğu için 1 saat, disk açısından neredeyse
+bedava; daha sık almak da mümkündür ve karar ileride sıkılaştırılabilir.
+
+**RTO neden iki tane:** kiracı başına veritabanına geçtikten sonra tek müşteriyi
+geri yüklemek, diğerlerine hiç dokunmadan yapılan **küçük** bir iştir (tatbikatta
+demo ölçeğinde saniyeler). Tüm sunucuyu geri yüklemek ise müşteri sayısıyla
+büyür. İkisine aynı sayıyı vermek, birini abartmak diğerini gizlemek olurdu.
+
+> ⚠️ **"Tüm sistem" için mesai içi taahhüdünün sebebi teknik değil:**
+> `RTO = fark etme + karar verme + geri yükleme + doğrulama`. Bugün **fark etme**
+> ayağı yok — uyarı webhook'u yapılandırılmadı, zamanlanmış yedek görevi
+> kurulmadı, nöbet tutan kimse yok. Gece 03:00'te disk giderse bu, sabah ilk
+> müşteri arayınca öğrenilir. Daha sıkı bir RTO ancak şunlar kurulduktan sonra
+> taahhüt edilebilir: otomatik uyarı + zamanlanmış yedek + off-site kopya +
+> nöbet. Bunlar kurulmadan yazılacak "4 saat" bir taahhüt değil, temenni olurdu.
+
+### RPO'nun teknik ön koşulu: FULL kurtarma modeli
+
+Saatlik log yedeği **yalnız FULL recovery model'de** mümkündür. SIMPLE'da işlem
+günlüğü yedeği alınamaz; o veritabanı için RPO sessizce "son tam/fark yedeği"ne
+geriler ve `RESTORE … STOPAT` imkânsız olur.
+
+Bu ortama bağlı bir tuzaktı: `CREATE DATABASE` kurtarma modelini sunucunun
+`model` veritabanından **miras alır** ve SQL Server Express ile pek çok
+sıkılaştırılmış kurulum SIMPLE gelir. İki yerden kapatıldı:
+
+1. **Provizyon** kurtarma modelini açıkça `FULL` yapar (harmanlamayla aynı
+   gerekçe: ortam varsayılanına güvenilmez). Testi: `VeritabaniSaglayiciTests`.
+2. **Yedek tatbikatı** her veritabanının FULL olduğunu doğrular; değilse o
+   veritabanı için **başarısız** olur ve düzeltme komutunu yazar. Platform ve
+   paylaşılan katalog EF tarafından oluşturulduğu için provizyon yolundan
+   geçmez — bu kontrol onları da kapsar.
 
 ## Yedek planı
 
@@ -32,7 +71,7 @@ kararlaştırılmalıdır.
 | --- | --- | --- | --- |
 | Tam (FULL) | Günlük | 30 gün | Gece düşük trafikte |
 | Fark (DIFFERENTIAL) | 6 saatte bir | 7 gün | Geri yükleme süresini kısaltır |
-| İşlem günlüğü (LOG) | RPO'ya göre (ör. saatlik) | 7 gün | Yalnız FULL recovery model'de |
+| İşlem günlüğü (LOG) | **Saatlik** (RPO = 1 saat) | 7 gün | FULL recovery model zorunlu (bkz. yukarısı) |
 
 > **Kaç veritabanı?** İki sabit + kiracı sayısı kadar:
 > - `IKProPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar.
@@ -387,7 +426,14 @@ işaret satırları sonrasında temizlendi.
 
 ## Kalan eksikler
 
-- ⬜ **RPO/RTO belirlenmedi** — ticari karar; sözleşmeye yazılmadan önce netleşmeli.
+- ✅ **RPO/RTO belirlendi (2026-08-13):** RPO 1 saat; RTO tek müşteri 4 saat,
+  tüm sistem bir sonraki mesai gününün sonu. Gerekçeler ve teknik ön koşul
+  (FULL kurtarma modeli) yukarıda.
+- ⬜ **Saatlik log yedeği HENÜZ ZAMANLANMADI.** RPO 1 saat, kurulduğu an değil
+  karar verildiği an geçerli olmaz: bugün yalnız elle çalıştırılan tam yedek var.
+  `register-backup-task.ps1` tam yedeği zamanlıyor; **log yedeği için ayrı bir
+  saatlik görev gerekiyor** ve henüz yazılmadı. Bu kurulmadan RPO taahhüdü
+  kâğıt üstündedir.
 - ⬜ **Zamanlanmış görev kurulmadı** — yukarıdaki komut operatör tarafından
   çalıştırılmalı.
 - ⬜ **Off-site hedefi seçilmedi** — `-OffsitePath` için gerçek bir ağ paylaşımı

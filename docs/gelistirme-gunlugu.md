@@ -17,11 +17,12 @@
   migrate, (2) `IKProPlatform` migrate, (3) **`POST /api/tenants/migrate`**
   (kiracı katalogları). 3. adım atlanırsa müşteriler 503 alır (kasıtlı) ve durum
   açılış logunda + `GET /api/tenants/schema-status`'ta görünür.
-- **Faz 3 başladı.** Yedekleme artık tüm kiracı kataloglarını kapsıyor ve
-  **tatbikatı gerçekten koşturuldu** (nokta-zaman geri yükleme dahil). Kalanlar:
-  off-site hedefi seçimi, zamanlanmış görevin kurulması, RPO/RTO kararı ve
-  `freeze → geri yükle → rebuild-directory → unfreeze` zincirinin uçtan uca
-  tatbikatı.
+- **Faz 3 başladı.** Yedekleme tüm kiracı kataloglarını kapsıyor, tatbikatı
+  gerçekten koşturuldu (nokta-zaman geri yükleme dahil) ve **RPO/RTO belirlendi:
+  RPO 1 saat; RTO tek müşteri 4 saat, tüm sistem mesai içi.** Kalanlar: saatlik
+  log yedeğinin zamanlanması (RPO bu kurulmadan kâğıt üstünde), off-site hedefi,
+  zamanlanmış görev, ve `freeze → geri yükle → rebuild-directory → unfreeze`
+  zincirinin uçtan uca tatbikatı.
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
   `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
   yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
@@ -127,6 +128,46 @@
 ---
 
 ## Kayıtlar (yeni → eski)
+
+### 2026-08-13 — Faz 3 (2): RPO/RTO kararı + kurtarma modeli tuzağı
+
+**Karar:** RPO **1 saat**; RTO **tek müşteri 4 saat**, **tüm sistem bir sonraki
+mesai gününün sonu**.
+
+- **RPO 1 saat:** kaybedilen saatte tipik olarak birkaç izin talebi, o sabahın
+  puantajı ve personel kartı düzenlemeleri olur. En sinsisi sonuncusu — izin ve
+  puantaj yeniden girilir ama "dün kartta neyi değiştirmiştim" kimse hatırlamaz.
+  Bordro kaynak veriden yeniden koşturulabilir, yani kayıp değil tekrar iştir.
+- **RTO neden iki tane:** kiracı başına veritabanından sonra tek müşteriyi geri
+  yüklemek diğerlerine dokunmadan yapılan küçük bir iş; tüm sunucu ise müşteri
+  sayısıyla büyür. Tek sayı vermek birini abartıp diğerini gizlemek olurdu.
+- **"Tüm sistem" neden mesai içi:** `RTO = fark etme + karar + geri yükleme +
+  doğrulama` ve bugün **fark etme ayağı yok** (uyarı webhook'u, zamanlanmış görev
+  ve nöbet kurulmadı). Daha sıkı bir sayı taahhüt değil temenni olurdu.
+
+**Kararın açtığı gizli tuzak bulundu ve kapatıldı.** Saatlik log yedeği yalnız
+FULL kurtarma modelinde mümkün; SIMPLE'da işlem günlüğü yedeği ALINAMAZ ve
+`RESTORE … STOPAT` imkânsız olur. Oysa `CREATE DATABASE` kurtarma modelini
+sunucunun `model` veritabanından **miras alıyordu** — bu makinede FULL olduğu
+için tatbikat çalışmıştı, ama SQL Server Express ve pek çok sıkılaştırılmış
+kurulum SIMPLE gelir. Yani RPO taahhüdü başka bir sunucuda **sessizce** geçersiz
+olurdu; belirti ancak felaket anında çıkardı. Harmanlama sorununun birebir aynısı.
+
+İki yerden kapatıldı:
+1. Provizyon `ALTER DATABASE … SET RECOVERY FULL` ile modeli açıkça sabitliyor
+   (`VeritabaniSaglayiciTests` doğruluyor).
+2. Yedek tatbikatı her veritabanının FULL olduğunu kontrol ediyor; değilse o
+   veritabanı için başarısız oluyor ve düzeltme komutunu yazıyor. Platform ve
+   paylaşılan katalog EF tarafından oluşturulduğu için provizyon yolundan
+   geçmez — bu kontrol onları da kapsar.
+
+Kontrolün gerçekten çalıştığı **kanıtlandı**: `IKPro_globex` geçici olarak
+SIMPLE'a alındı, tatbikat onu yakalayıp çıkış kodu 1 döndürdü, sonra FULL'e
+geri alındı.
+
+**Dürüst not:** RPO 1 saat şu an **kâğıt üstündedir** — saatlik log yedeği henüz
+zamanlanmadı. `register-backup-task.ps1` tam yedeği zamanlıyor; log yedeği için
+ayrı bir saatlik görev gerekiyor ve yazılmadı. Belgeye açık madde olarak eklendi.
 
 ### 2026-08-13 — Faz 3 (1): yedekleme tüm kiracıları kapsıyor + tatbikat koşturuldu
 

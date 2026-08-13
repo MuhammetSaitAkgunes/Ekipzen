@@ -26,6 +26,24 @@ public sealed partial class SqlServerTenantDatabaseProvisioner(
     /// </summary>
     private const string Harmanlama = "Turkish_CI_AS";
 
+    /// <summary>
+    /// Kurtarma modeli de AÇIKÇA verilir — harmanlamayla aynı gerekçe, ama sonucu
+    /// daha ağır.
+    ///
+    /// <c>CREATE DATABASE</c> kurtarma modelini sunucunun <c>model</c>
+    /// veritabanından miras alır. Bir sunucuda FULL, diğerinde SIMPLE olabilir
+    /// (SQL Server Express ve pek çok sıkılaştırılmış kurulum SIMPLE gelir).
+    /// SIMPLE'da <b>işlem günlüğü yedeği alınamaz</b>; dolayısıyla
+    /// <c>RESTORE … STOPAT</c> ile saniye hassasiyetinde geri dönüş imkânsızdır ve
+    /// RPO, son tam/fark yedeğine kadar geriler.
+    ///
+    /// En kötüsü bunun SESSİZ olması: her şey normal görünür, sorun ancak felaket
+    /// anında "log yedeği yok" olarak ortaya çıkar. RPO taahhüdümüz (1 saat) buna
+    /// bağlı olduğu için model ortamdan miras alınmaz, burada sabitlenir.
+    /// Yedek tatbikatı da her veritabanının FULL olduğunu ayrıca doğrular.
+    /// </summary>
+    private const string KurtarmaModeli = "FULL";
+
     [GeneratedRegex(@"^[A-Za-z0-9_]{1,128}$")]
     private static partial Regex GecerliAd();
 
@@ -52,13 +70,25 @@ public sealed partial class SqlServerTenantDatabaseProvisioner(
         }
 
         await using var baglanti = await MasterAcAsync(cancellationToken);
-        await using var komut = baglanti.CreateCommand();
-        // Enterpolasyon burada KAÇINILMAZ: CREATE DATABASE parametre kabul etmez.
-        // Güvenlik Dogrula()'dan gelir — köşeli parantez tek başına yeterli değildir
-        // (ad ']' içerirse kaçış kırılır), bu yüzden desen zaten ']' kabul etmiyor.
-        komut.CommandText = $"CREATE DATABASE [{ad}] COLLATE {Harmanlama};";
-        await komut.ExecuteNonQueryAsync(cancellationToken);
-        logger.LogInformation("Kiracı veritabanı oluşturuldu: {Ad} ({Harmanlama})", ad, Harmanlama);
+
+        await using (var olustur = baglanti.CreateCommand())
+        {
+            // Enterpolasyon burada KAÇINILMAZ: CREATE DATABASE parametre kabul etmez.
+            // Güvenlik Dogrula()'dan gelir — köşeli parantez tek başına yeterli değildir
+            // (ad ']' içerirse kaçış kırılır), bu yüzden desen zaten ']' kabul etmiyor.
+            olustur.CommandText = $"CREATE DATABASE [{ad}] COLLATE {Harmanlama};";
+            await olustur.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (var kurtarma = baglanti.CreateCommand())
+        {
+            kurtarma.CommandText = $"ALTER DATABASE [{ad}] SET RECOVERY {KurtarmaModeli};";
+            await kurtarma.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        logger.LogInformation(
+            "Kiracı veritabanı oluşturuldu: {Ad} ({Harmanlama}, RECOVERY {Model})",
+            ad, Harmanlama, KurtarmaModeli);
     }
 
     public async Task DropAsync(string databaseName, CancellationToken cancellationToken)
