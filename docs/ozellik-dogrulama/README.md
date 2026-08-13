@@ -58,7 +58,7 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 | Özellik | Uç | Test | ÖD | Açık bulgu |
 | --- | --- | --- | --- | --- |
 | [Recruitment](recruitment.md) | 10 | 4 | ✅ 2026-08-13 | 10 |
-| Payroll | 13 | 12 | ⬜ | — |
+| [Payroll](payroll.md) | 13 | 12 | ✅ 2026-08-13 | 12 |
 | Employees | 13 | 38 | ⬜ | — |
 | Leaves | 9 | 9 | ⬜ | — |
 | Actions | 8 | 5 | ⬜ | — |
