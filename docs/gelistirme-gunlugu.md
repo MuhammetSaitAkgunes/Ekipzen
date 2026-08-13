@@ -130,6 +130,30 @@
 
 ## Kayıtlar (yeni → eski)
 
+### 2026-08-13 — Faz 3 (5): zamanlanmış görevler kuruldu, SQL yetkisi verildi
+
+Görevler kaydedildi (`IKPro-YedekTatbikati` + `-Log`) ama ilk koşum başarısız
+oldu. Log dosyası sebebi söyledi: `Login failed for user 'NT AUTHORITY\SYSTEM'`.
+
+**Teşhis yanıltıcı mesajın ardındaydı.** `EXECUTE AS` ile bakıldı: SYSTEM login'i
+VAR ve `CONNECT SQL` yetkisi de var; gerçek sebep **hata 916** — hiçbir kullanıcı
+veritabanına erişemiyor. sqlcmd bunu "Login failed" diye gösteriyor.
+
+**Veritabanı-başına yetki neden çözüm değil:** yedek hesabı bugün var olmayan
+kiracı veritabanlarına da erişmek zorunda. Her yeni müşteride biri yetki vermezse
+yedekleme o müşteri için SESSİZCE kırılır — yani yedeklemenin çalışması
+"kimsenin unutmaması"na bağlı hale gelir. Sunucu seviyesinde yetki gerekli.
+
+**Karar (kullanıcı onayıyla):** `NT AUTHORITY\SYSTEM` sysadmin yapıldı.
+Alternatifi (ayrı hizmet hesabı) belgeye yazıldı ve script'e `-TaskUser`
+parametresi eklendi; uygulama ile veritabanı aynı makinede olduğu için güvenlik
+dengesi açıkça not edildi.
+
+Ek olarak script kayıttan sonra "SON ADIM" uyarısını yazıyor (sysadmin verilmeden
+görevler çalışır ama başarısız olur) ve belgeye üretim notu eklendi: script'ler
+kullanıcı profilinde/OneDrive'da durmamalı — SYSTEM görevi profil ve bulut
+senkronuna bağımlı hale gelir.
+
 ### 2026-08-13 — Faz 3 (4): operatör komutlarındaki üç tuzak düzeltildi
 
 Kullanıcı belgedeki kurulum komutunu çalıştırdı ve patladı. Üç ayrı hata vardı,

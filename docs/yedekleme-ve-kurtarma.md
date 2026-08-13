@@ -106,6 +106,14 @@ ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];
 >
 > Bu hesap için Görev Zamanlayıcı şifre soracaktır.
 
+> **Üretim notu — script'ler kullanıcı profilinde durmasın.** Geliştirme
+> makinesinde depo `C:\Users\<kullanıcı>\OneDrive\...` altında olabilir ve bu
+> bugün çalışır. Üretimde olmaz: SYSTEM olarak koşan görev kullanıcı profiline
+> ve OneDrive'a bağımlı hale gelir — dosya "yalnız bulutta" işaretlenirse
+> (Files On-Demand) görev sessizce başarısız olur, kullanıcı profili silinirse
+> yedekleme durur. Script'leri `C:\IKPro\scripts` gibi profil dışı bir yola
+> kopyalayın ve görevleri oradan kaydedin.
+
 ### Script'leri çalıştırmadan önce — üç tuzak
 
 Bunların üçü de gerçekten yaşandı; buraya yazılmalarının sebebi bu.
