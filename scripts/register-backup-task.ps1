@@ -52,6 +52,12 @@
     Günlük görevin adı. Varsayılan: IKPro-YedekTatbikati
     Saatlik görev "<TaskName>-Log" adıyla kaydedilir.
 
+.PARAMETER TaskUser
+    Görevin çalışacağı Windows hesabı. Varsayılan SYSTEM (şifre saklamaz).
+    Hangisi seçilirse seçilsin, o hesabın SQL Server'da SYSADMIN olması gerekir:
+    yedek script'i tüm kiracı veritabanlarını okur, tatbikat için veritabanı
+    oluşturup düşürür ve HENÜZ VAR OLMAYAN kiracıları da kapsamak zorundadır.
+
 .EXAMPLE
     # Önce ne yapacağını gör:
     powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" -WhatIf
@@ -77,7 +83,12 @@ param(
     [string]$StoragePath,
     [string]$AlertWebhookUrl,
     [string]$At = "02:00",
-    [string]$TaskName = "IKPro-YedekTatbikati"
+    [string]$TaskName = "IKPro-YedekTatbikati",
+
+    # Görevin çalışacağı Windows hesabı. Varsayılan SYSTEM (şifre saklamayı
+    # gerektirmez). HANGİSİ SEÇİLİRSE SEÇİLSİN, o hesabın SQL Server'da sysadmin
+    # yetkisi olmalıdır — bkz. yedekleme-ve-kurtarma.md, "beşinci tuzak".
+    [string]$TaskUser = "SYSTEM"
 )
 
 $ErrorActionPreference = "Stop"
@@ -139,8 +150,20 @@ Write-Host "  çalışma  : her saat başı"
 Write-Host "  komut    : powershell.exe $logArguments"
 Write-Host ""
 
-# SYSTEM: SQL Server yedek dizinine yazma izni kullanıcı hesabında genelde yok.
-$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+# Görev hesabı. SYSTEM varsayılandır çünkü şifre saklamayı gerektirmez; ayrı bir
+# hizmet hesabı verilirse Görev Zamanlayıcı şifresini soracaktır.
+#
+# DİKKAT: bu hesabın SQL Server'da SYSADMIN olması gerekir. Yedek script'i tüm
+# kiracı veritabanlarını okur, geri yükleme tatbikatı için veritabanı oluşturup
+# düşürür ve HENÜZ VAR OLMAYAN (yeni provizyonlanacak) kiracıları da kapsamak
+# zorundadır. Veritabanı-başına yetki vermek bu yüzden çalışmaz: her yeni müşteri
+# yedeklemeyi sessizce kırardı.
+$principal = if ($TaskUser -eq "SYSTEM") {
+    New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+}
+else {
+    New-ScheduledTaskPrincipal -UserId $TaskUser -LogonType Password -RunLevel Highest
+}
 
 if ($PSCmdlet.ShouldProcess($TaskName, "Günlük tam yedek görevini kaydet")) {
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments
@@ -171,6 +194,14 @@ if ($PSCmdlet.ShouldProcess($logTaskName, "Saatlik günlük yedeği görevini ka
 }
 
 if (-not $WhatIfPreference) {
+    Write-Host ""
+    Write-Host "SON ADIM — bu yapılmadan görevler ÇALIŞIR AMA BAŞARISIZ OLUR:" -ForegroundColor Yellow
+    $sqlHesap = if ($TaskUser -eq "SYSTEM") { "NT AUTHORITY\SYSTEM" } else { $TaskUser }
+    Write-Host "  Görev hesabının SQL Server'da sysadmin olması gerekir. Kontrol/verme:" -ForegroundColor Yellow
+    Write-Host "    sqlcmd -S localhost -E -Q `"ALTER SERVER ROLE sysadmin ADD MEMBER [$sqlHesap];`"" -ForegroundColor Yellow
+    Write-Host "  Gerekçe: yedek script'i TÜM kiracı veritabanlarını okur ve henüz var" -ForegroundColor Yellow
+    Write-Host "  olmayanları da kapsamak zorundadır; veritabanı-başına yetki her yeni" -ForegroundColor Yellow
+    Write-Host "  müşteride sessizce kırılırdı." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Kaldırmak için:" -ForegroundColor Yellow
     Write-Host "  Unregister-ScheduledTask -TaskName $TaskName -Confirm:`$false"

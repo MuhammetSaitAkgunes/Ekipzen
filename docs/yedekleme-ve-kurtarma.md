@@ -73,6 +73,39 @@ sıkılaştırılmış kurulum SIMPLE gelir. İki yerden kapatıldı:
 | Fark (DIFFERENTIAL) | 6 saatte bir | 7 gün | Geri yükleme süresini kısaltır |
 | İşlem günlüğü (LOG) | **Saatlik** (RPO = 1 saat) | 7 gün | `backup-log.ps1`; FULL recovery model zorunlu (bkz. yukarısı) |
 
+**5. Görevi çalıştıran hesabın SQL Server'da SYSADMIN olması gerekir.**
+Görev SYSTEM ile kaydedilir ve SYSTEM sunucuya bağlanabilir — ama varsayılan
+olarak **hiçbir kullanıcı veritabanına erişemez**. Sonuç, ilk koşumda:
+
+```
+Login failed for user 'NT AUTHORITY\SYSTEM'
+(gerçek sebep: hata 916 — "not able to access the database")
+```
+
+**Neden veritabanı-başına yetki vermek ÇÖZMEZ:** yedek hesabı, bugün var olmayan
+kiracı veritabanlarına da erişmek zorundadır. Her yeni müşteri provizyonlandığında
+biri gidip yetki vermezse yedekleme o müşteri için **sessizce** kırılır — yani
+yedeklemenin çalışması, kimsenin unutmamasına bağlı hale gelir. Sunucu seviyesinde
+yetki bu yüzden gereklidir:
+
+```sql
+-- SYSTEM ile çalıştıracaksanız (varsayılan):
+ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];
+```
+
+> **Güvenlik dengesi — bilinçli seçin.** Bu, o makinede SYSTEM olarak çalışan
+> HER ŞEYE SQL Server üzerinde tam yetki verir. Adanmış bir veritabanı
+> sunucusunda bu zaten fiilen böyledir (SYSTEM veri dosyalarına erişebilir) ve
+> yedekleme otomasyonu için standart yaklaşımdır. Uygulama ile veritabanının aynı
+> makinede olduğu bir kurulumda ise yüzey genişler; o durumda görevi **ayrı bir
+> hizmet hesabıyla** çalıştırıp sysadmin'i yalnız ona verin:
+>
+> ```powershell
+> ... register-backup-task.ps1 -TaskUser "ALANADI\ikpro-yedek" ...
+> ```
+>
+> Bu hesap için Görev Zamanlayıcı şifre soracaktır.
+
 ### Script'leri çalıştırmadan önce — üç tuzak
 
 Bunların üçü de gerçekten yaşandı; buraya yazılmalarının sebebi bu.
@@ -115,10 +148,12 @@ hesabıyla çalışacak şekilde kaydedilir; bu yükseltilmiş hak ister. Sıra 
 
 ```powershell
 # a) Önce ne yapacağını gör — sistemi DEĞİŞTİRMEZ, yönetici gerekmez:
-powershell -ExecutionPolicy Bypass -File scriptsegister-backup-task.ps1 -BackupPath "<yol>" -WhatIf
+powershell -ExecutionPolicy Bypass -File scripts
+egister-backup-task.ps1 -BackupPath "<yol>" -WhatIf
 
 # b) Sonra YÖNETİCİ PowerShell'de, -WhatIf OLMADAN çalıştır:
-powershell -ExecutionPolicy Bypass -File scriptsegister-backup-task.ps1 -BackupPath "<yol>"
+powershell -ExecutionPolicy Bypass -File scripts
+egister-backup-task.ps1 -BackupPath "<yol>"
 ```
 
 (b) adımı atlanırsa görev **hiç oluşmaz** ve doğrulama komutu
