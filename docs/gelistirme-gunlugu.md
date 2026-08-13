@@ -17,13 +17,27 @@
   migrate, (2) `IKProPlatform` migrate, (3) **`POST /api/tenants/migrate`**
   (kiracı katalogları). 3. adım atlanırsa müşteriler 503 alır (kasıtlı) ve durum
   açılış logunda + `GET /api/tenants/schema-status`'ta görünür.
-- **Faz 3 başladı.** Yedekleme tüm kiracı kataloglarını kapsıyor, tatbikatı
-  gerçekten koşturuldu (nokta-zaman geri yükleme dahil), **RPO/RTO belirlendi**
-  (RPO 1 saat; RTO tek müşteri 4 saat, tüm sistem mesai içi) ve **saatlik log
-  yedeği script'i yazılıp koşturuldu**. Kalanlar: zamanlanmış görevlerin gerçekten
-  KAYDEDİLMESİ (yönetici hakkı + operatör kararı), off-site hedefi seçimi, ve
-  `freeze → geri yükle → rebuild-directory → unfreeze` zincirinin uçtan uca
-  tatbikatı. **Görevler kaydedilmeden RPO/RTO kâğıt üstündedir.**
+- **⏸️ Faz 3 GEÇİCİ OLARAK RAFA KALDIRILDI (2026-08-13, kullanıcı kararı).**
+  Önce birkaç revizyon yapılacak; Faz 3'ün kalan maddesi sonraya bırakıldı.
+
+  **Faz 3'te tamamlananlar:** yedekleme tüm kiracı kataloglarını kapsıyor
+  (keşif platform tablosundan), RPO/RTO belirlendi (RPO 1 saat; RTO tek müşteri
+  4 saat, tüm sistem mesai içi), saatlik log yedeği script'i yazıldı,
+  **zamanlanmış görevler kuruldu ve SYSTEM olarak başarıyla koştu**, üç tatbikat
+  gerçekten çalıştırıldı (tam yedek/geri yükleme, nokta-zaman `STOPAT`, ve
+  uygulama katmanı `freeze → geri yükle → rebuild-directory → unfreeze`).
+
+  **⚠️ Bilinçli olarak ertelenen tek madde — off-site kopya.** Yedekler şu an
+  SQL Server'ın kendi klasöründe, yani **kaynakla aynı diskte**. Disk arızasında
+  veriyle birlikte giderler; bugünkü kurulum disk kaybına karşı koruma
+  SAĞLAMIYOR. `-OffsitePath` parametresi hazır ve kopyayı boyut olarak
+  doğruluyor; eksik olan yalnız gerçek bir hedef (ağ paylaşımı / nesne depolama)
+  ve SYSTEM hesabının oraya erişiminin doğrulanması. Üretime çıkmadan önce
+  kapatılmalı.
+
+  Ayrıca bir sonraki tatbikatta: **evrak dosyalarının** (`-StoragePath` zip'leri)
+  geri yüklenmesi hiç denenmedi — tatbikatlar veritabanı ve uygulama katmanını
+  kapsadı, dosya katmanını değil.
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
   `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
   yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
