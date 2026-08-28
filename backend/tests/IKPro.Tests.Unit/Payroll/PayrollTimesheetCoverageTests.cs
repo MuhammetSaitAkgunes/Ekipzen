@@ -12,6 +12,7 @@ public sealed class PayrollTimesheetCoverageTests
             new DateOnly(2026, 9, 1),
             new DateOnly(2026, 9, 7),
             new DateOnly(2026, 9, 1),
+            null,
             new HashSet<DateOnly> { new(2026, 9, 7) },
             new HashSet<DateOnly> { new(2026, 9, 1), new(2026, 9, 2) },
             [(new DateOnly(2026, 9, 3), new DateOnly(2026, 9, 4))]);
@@ -27,6 +28,7 @@ public sealed class PayrollTimesheetCoverageTests
             new DateOnly(2026, 9, 1),
             new DateOnly(2026, 9, 4),
             new DateOnly(2026, 9, 1),
+            null,
             new HashSet<DateOnly>(),
             new HashSet<DateOnly>
             {
@@ -44,10 +46,31 @@ public sealed class PayrollTimesheetCoverageTests
             new DateOnly(2026, 9, 1),
             new DateOnly(2026, 9, 4),
             new DateOnly(2026, 9, 3),
+            null,
             new HashSet<DateOnly>(),
             new HashSet<DateOnly> { new(2026, 9, 3), new(2026, 9, 4) },
             []);
 
         complete.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsComplete_DoesNotRequireDatesAfterTerminationDate()
+    {
+        var complete = PayrollTimesheetCoverage.IsComplete(
+            new DateOnly(2026, 9, 1),
+            new DateOnly(2026, 9, 30),
+            new DateOnly(2026, 9, 1),
+            new DateOnly(2026, 9, 4),
+            new HashSet<DateOnly>(),
+            new HashSet<DateOnly>
+            {
+                new(2026, 9, 1), new(2026, 9, 2),
+                new(2026, 9, 3), new(2026, 9, 4),
+            },
+            []);
+
+        complete.Should().BeTrue(
+            "işten ayrılma tarihinden sonraki günler puantaj kapsamına girmez");
     }
 }

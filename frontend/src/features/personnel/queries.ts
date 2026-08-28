@@ -56,10 +56,10 @@ export const useSaveEmployee = () => {
 export const useBulkDeactivate = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (ids: number[]) =>
+    mutationFn: ({ ids, terminationDate }: { ids: number[]; terminationDate: string }) =>
       apiFetch<{ deactivated: number }>("/employees/bulk-deactivate", {
         method: "POST",
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids, terminationDate }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
   });

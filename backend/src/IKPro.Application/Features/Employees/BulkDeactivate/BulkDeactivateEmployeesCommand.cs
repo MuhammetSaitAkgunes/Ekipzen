@@ -7,13 +7,17 @@ using Microsoft.EntityFrameworkCore;
 namespace IKPro.Application.Features.Employees.BulkDeactivate;
 
 /// <summary>Seçili personelleri pasife alır (personnel.js "Pasife al" toplu aksiyonu).</summary>
-public sealed record BulkDeactivateEmployeesCommand(IReadOnlyList<int> Ids) : IRequest<int>;
+public sealed record BulkDeactivateEmployeesCommand(
+    IReadOnlyList<int> Ids,
+    DateOnly? TerminationDate) : IRequest<int>;
 
 public sealed class BulkDeactivateEmployeesCommandValidator : AbstractValidator<BulkDeactivateEmployeesCommand>
 {
     public BulkDeactivateEmployeesCommandValidator()
     {
         RuleFor(x => x.Ids).NotEmpty().WithMessage("En az bir personel seçilmeli.");
+        RuleFor(x => x.TerminationDate).NotNull()
+            .WithMessage("İşten ayrılma tarihi zorunludur.");
     }
 }
 
@@ -29,9 +33,15 @@ public sealed class BulkDeactivateEmployeesCommandHandler(
             .Where(e => request.Ids.Contains(e.Id) && e.Status == EmployeeStatus.Active)
             .ToListAsync(cancellationToken);
 
+        if (employees.Any(employee => request.TerminationDate < employee.HireDate))
+        {
+            throw new ArgumentException("İşten ayrılma tarihi işe giriş tarihinden önce olamaz.");
+        }
+
         foreach (var employee in employees)
         {
             employee.Status = EmployeeStatus.Passive;
+            employee.TerminationDate = request.TerminationDate;
         }
 
         await context.SaveChangesAsync(cancellationToken);

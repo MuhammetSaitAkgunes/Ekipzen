@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IKPro.Application.Features.Employees.SetStatus;
 
-public sealed record SetEmployeeStatusCommand(int Id, string Status) : IRequest;
+public sealed record SetEmployeeStatusCommand(int Id, string Status, DateOnly? TerminationDate = null)
+    : IRequest;
 
 public sealed class SetEmployeeStatusCommandValidator : AbstractValidator<SetEmployeeStatusCommand>
 {
@@ -16,6 +17,11 @@ public sealed class SetEmployeeStatusCommandValidator : AbstractValidator<SetEmp
         RuleFor(x => x.Status)
             .Must(s => s is "active" or "passive")
             .WithMessage("Durum 'active' veya 'passive' olmalı.");
+
+        RuleFor(x => x.TerminationDate)
+            .NotNull()
+            .When(x => x.Status == "passive")
+            .WithMessage("Pasife alınan personel için işten ayrılma tarihi zorunludur.");
     }
 }
 
@@ -30,7 +36,16 @@ public sealed class SetEmployeeStatusCommandHandler(
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Personel", request.Id);
 
-        employee.Status = EmployeeMappings.ParseStatus(request.Status);
+        var status = EmployeeMappings.ParseStatus(request.Status);
+        if (status == EmployeeStatus.Passive && request.TerminationDate < employee.HireDate)
+        {
+            throw new ArgumentException("İşten ayrılma tarihi işe giriş tarihinden önce olamaz.");
+        }
+
+        employee.Status = status;
+        employee.TerminationDate = status == EmployeeStatus.Passive
+            ? request.TerminationDate
+            : null;
         await context.SaveChangesAsync(cancellationToken);
 
         // Personel durumu yalnız İK tablosunda kalırsa işten çıkarılan kullanıcı

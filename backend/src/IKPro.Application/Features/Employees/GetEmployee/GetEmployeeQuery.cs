@@ -48,6 +48,7 @@ public sealed class GetEmployeeQueryHandler(IApplicationDbContext context, ICurr
             nationalId,
             employee.Status.ToDto(),
             employee.HireDate,
+            employee.TerminationDate,
             employee.DepartmentId,
             employee.Department?.Name ?? string.Empty,
             employee.ManagerId,

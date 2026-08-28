@@ -7,8 +7,13 @@ import { ImportModal } from "./ImportModal";
 import { PersonnelModal } from "./PersonnelModal";
 import { useBulkDeactivate, useDepartments, useEmployees, type EmployeeFilters } from "./queries";
 
-const formatDate = (value?: string): string =>
+const formatDate = (value?: string | null): string =>
   value ? new Date(value).toLocaleDateString("tr-TR") : "";
+
+const todayInputValue = (): string => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+};
 
 export function PersonnelPage() {
   const { user } = useAuth();
@@ -18,6 +23,7 @@ export function PersonnelPage() {
   const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState<EmployeeFilters>({ search: "", departmentId: "", status: "" });
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [terminationDate, setTerminationDate] = useState(todayInputValue);
   const [cardId, setCardId] = useState<number | null | undefined>(undefined); // undefined: kapalı, null: yeni kayıt
   const [importOpen, setImportOpen] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -67,9 +73,13 @@ export function PersonnelPage() {
   };
 
   const deactivateSelected = async () => {
+    if (!terminationDate) {
+      showToast("İşten ayrılma tarihi seçilmeli.", "error");
+      return;
+    }
     const count = selected.size;
     try {
-      await bulkDeactivate.mutateAsync([...selected]);
+      await bulkDeactivate.mutateAsync({ ids: [...selected], terminationDate });
       showToast(`${count} personel pasife alındı.`, "success");
       setSelected(new Set());
     } catch {
@@ -145,9 +155,20 @@ export function PersonnelPage() {
               <i aria-hidden="true" className="fa-solid fa-file-excel" /> Seçilenleri dışa aktar
             </button>
             {isHrAdmin && (
+              <>
+                <label htmlFor="bulk-termination-date">Ayrılış tarihi</label>
+                <input
+                  id="bulk-termination-date"
+                  type="date"
+                  className="filter-select"
+                  max={todayInputValue()}
+                  value={terminationDate}
+                  onChange={(event) => setTerminationDate(event.target.value)}
+                />
               <button className="btn btn-secondary btn-sm" onClick={deactivateSelected}>
                 <i aria-hidden="true" className="fa-solid fa-user-slash" /> Pasife al
               </button>
+              </>
             )}
             <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Seçimi temizle</button>
           </div>
@@ -169,6 +190,7 @@ export function PersonnelPage() {
                 <th>Departman</th>
                 <th>TC Kimlik</th>
                 <th>İşe Giriş</th>
+                <th>İşten Ayrılma</th>
                 <th>Durum</th>
                 <th style={{ textAlign: "right" }} className="csv-skip">İşlemler</th>
               </tr>
@@ -197,6 +219,7 @@ export function PersonnelPage() {
                   <td><strong>{employee.department}</strong></td>
                   <td className="mono">{employee.nationalIdMasked}</td>
                   <td>{formatDate(employee.hireDate)}</td>
+                  <td>{formatDate(employee.terminationDate)}</td>
                   <td>
                     <span className={`badge badge-${employee.status}`}>
                       {employee.status === "active" ? "Aktif" : "Pasif"}

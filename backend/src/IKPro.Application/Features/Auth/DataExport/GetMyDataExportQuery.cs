@@ -8,7 +8,8 @@ namespace IKPro.Application.Features.Auth.DataExport;
 public sealed record AccountInfo(string UserId, string Name, string Email, IReadOnlyList<string> Roles);
 
 public sealed record EmployeeInfo(
-    string FullName, string Title, string DepartmentName, DateOnly HireDate, string Status,
+    string FullName, string Title, string DepartmentName, DateOnly HireDate,
+    DateOnly? TerminationDate, string Status,
     DateOnly? BirthDate, string? Gender, string? MaritalStatus, string? MobilePhone,
     string? PersonalEmail, string? HomeAddress, string? Iban, string? BankName);
 
@@ -68,7 +69,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
                 var p = employee.Profile;
                 employeeInfo = new EmployeeInfo(
                     employee.FullName, employee.Title, employee.Department?.Name ?? "",
-                    employee.HireDate, employee.Status.ToString(),
+                    employee.HireDate, employee.TerminationDate, employee.Status.ToString(),
                     p?.BirthDate, p?.Gender, p?.MaritalStatus, p?.MobilePhone,
                     p?.PersonalEmail, p?.HomeAddress, p?.Iban, p?.BankName);
             }

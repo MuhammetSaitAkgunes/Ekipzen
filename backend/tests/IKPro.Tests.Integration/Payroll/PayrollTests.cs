@@ -156,6 +156,16 @@ public sealed class PayrollTests(IKProApiFactory factory)
         await SeedCompleteTimesheetsAsync(admin, employees.Items, 2026, 9, ahmetEmployeeId);
 
         var departmentId = employees.Items.First().DepartmentId;
+        var departingEmployee = await CreateEmployeeAsync(
+            admin, "Ayrılan", "Personel", departmentId, "2026-09-01");
+        await SeedEmployeeTimesheetsAsync(
+            admin, departingEmployee.Id, departingEmployee.Name,
+            new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 15));
+        (await admin.PatchAsJsonAsync($"/api/employees/{departingEmployee.Id}/status", new
+        {
+            status = "passive",
+            terminationDate = "2026-09-15",
+        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
         var futureEmployee = await CreateEmployeeAsync(
             admin, "Gelecek", "Çalışan", departmentId, "2026-10-15");
         var incompleteEmployee = await CreateEmployeeAsync(
@@ -170,6 +180,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
         period.Status.Should().Be("draft");
         period.Rows.Should().NotBeEmpty("aktif personel için girdi satırları üretilir");
         period.Rows.Select(r => r.Name).Should().Contain(["Ahmet Yılmaz", "Ece Arslan", "Ayşe Demir"]);
+        period.Rows.Select(r => r.Name).Should().Contain(departingEmployee.Name,
+            "ay içinde ayrılan personelin son bordrosu üretilir");
         period.Rows.Select(r => r.Name).Should().NotContain("Selin Koç", "pasif personel döneme girmez");
         period.Rows.Select(r => r.Name).Should().NotContain(futureEmployee.Name,
             "dönem sonundan sonra işe başlayan çalışan bordroya giremez");
@@ -178,6 +190,9 @@ public sealed class PayrollTests(IKProApiFactory factory)
         ahmetRow.OvertimeHours.Should().Be(2, "puantaj özetindeki 120 dk fazla mesai saate çevrilir");
         ahmetRow.TimesheetComplete.Should().BeTrue();
         ahmetRow.ApprovalStatus.Should().Be("Ön Hesap");
+        period.Rows.Single(row => row.EmployeeId == departingEmployee.Id)
+            .TimesheetComplete.Should().BeTrue(
+                "ayrılış tarihinden sonraki günler puantajda beklenmez");
         var incompleteRow = period.Rows.Single(r => r.EmployeeId == incompleteEmployee.Id);
         incompleteRow.TimesheetComplete.Should().BeFalse();
 
@@ -353,6 +368,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
                 "önceki dönemin GV matrahı kümülatife devrolur");
         nextPeriod.Rows.Select(r => r.Name).Should().Contain(futureEmployee.Name,
             "dönem içinde işe başlayan aktif çalışan bordroya girer");
+        nextPeriod.Rows.Select(r => r.Name).Should().NotContain(departingEmployee.Name,
+            "ayrılış ayından sonraki bordrolara pasif personel taşınmaz");
 
         (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 8 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict,
@@ -525,5 +542,35 @@ public sealed class PayrollTests(IKProApiFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var page = (await response.Content.ReadFromJsonAsync<PagedResult<EmployeeListItemDto>>())!;
         return page.Items.First().Id;
+    }
+
+    private static async Task SeedEmployeeTimesheetsAsync(
+        HttpClient admin,
+        int employeeId,
+        string employeeName,
+        DateOnly start,
+        DateOnly end)
+    {
+        for (var date = start; date <= end; date = date.AddDays(1))
+        {
+            if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            {
+                continue;
+            }
+
+            var response = await admin.PostAsJsonAsync("/api/attendance", new
+            {
+                employeeId,
+                model = new
+                {
+                    workDate = date.ToString("yyyy-MM-dd"),
+                    checkIn = "09:00",
+                    checkOut = "18:00",
+                    breakMinutes = 60,
+                },
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created,
+                $"{employeeName} {date:yyyy-MM-dd} puantajı hazırlanmalı");
+        }
     }
 }

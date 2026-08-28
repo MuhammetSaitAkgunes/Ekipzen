@@ -55,11 +55,14 @@ test("satır seçilince bulk bar görünür, pasife al isteği gider", async () 
   await screen.findByText("Ahmet Yılmaz");
   await userEvent.click(screen.getByLabelText("Ahmet Yılmaz kaydını seç"));
   expect(screen.getByText("1 kişi seçildi")).toBeInTheDocument();
+  const terminationDate = screen.getByLabelText("Ayrılış tarihi");
+  await userEvent.clear(terminationDate);
+  await userEvent.type(terminationDate, "2026-08-15");
   await userEvent.click(screen.getByRole("button", { name: /Pasife al/ }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(([u]) => String(u).includes("bulk-deactivate"));
     expect(posted).toBeTruthy();
-    expect(JSON.parse(String(posted![1]?.body))).toEqual({ ids: [1] });
+    expect(JSON.parse(String(posted![1]?.body))).toEqual({ ids: [1], terminationDate: "2026-08-15" });
   });
 });
 

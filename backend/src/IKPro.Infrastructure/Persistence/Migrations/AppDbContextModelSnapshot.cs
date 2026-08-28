@@ -701,6 +701,9 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
+                    b.Property<DateOnly?>("TerminationDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(128)

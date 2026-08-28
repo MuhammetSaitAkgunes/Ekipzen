@@ -4686,6 +4686,8 @@ export interface components {
         };
         BulkDeactivateEmployeesCommand: {
             ids?: number[] | null;
+            /** Format: date */
+            terminationDate?: string | null;
         };
         CandidateDetailDto: {
             /** Format: int32 */
@@ -5008,6 +5010,8 @@ export interface components {
             status?: string | null;
             /** Format: date */
             hireDate?: string;
+            /** Format: date */
+            terminationDate?: string | null;
             /** Format: int32 */
             departmentId?: number;
             department?: string | null;
@@ -5041,6 +5045,8 @@ export interface components {
             initials?: string | null;
             /** Format: date */
             hireDate?: string;
+            /** Format: date */
+            terminationDate?: string | null;
         };
         EmployeeListItemDtoPagedResult: {
             items?: components["schemas"]["EmployeeListItemDto"][] | null;
@@ -5699,6 +5705,8 @@ export interface components {
         };
         SetStatusBody: {
             status?: string | null;
+            /** Format: date */
+            terminationDate?: string | null;
         };
         SettingsDto: {
             company?: components["schemas"]["CompanyProfileDto"];

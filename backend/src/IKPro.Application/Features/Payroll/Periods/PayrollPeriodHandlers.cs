@@ -80,22 +80,31 @@ public sealed class CreatePayrollPeriodCommandHandler(
         var settings = await PayrollSettingsResolver.ResolveAsync(
             context, new DateOnly(request.Year, request.Month, 1), cancellationToken);
 
-        var periodEnd = new DateOnly(request.Year, request.Month, 1).AddMonths(1).AddDays(-1);
+        var periodStart = new DateOnly(request.Year, request.Month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
         var employees = await context.Employees
             .AsNoTracking()
-            .Where(e => e.Status == EmployeeStatus.Active && e.HireDate <= periodEnd)
+            .Where(e => e.HireDate <= periodEnd
+                        && (e.Status == EmployeeStatus.Active
+                            || (e.Status == EmployeeStatus.Passive
+                                && e.TerminationDate != null
+                                && e.TerminationDate >= periodStart)))
             .Select(e => new
             {
                 e.Id,
                 e.HireDate,
+                e.TerminationDate,
                 HasIban = e.Profile != null && e.Profile.Iban != null,
             })
             .ToListAsync(cancellationToken);
 
         var timesheetCoverage = await PayrollTimesheetCoverage.CalculateAsync(
             context,
-            employees.ToDictionary(e => e.Id, e => e.HireDate),
+            employees.ToDictionary(
+                employee => employee.Id,
+                employee => new PayrollEmploymentPeriod(
+                    employee.HireDate, employee.TerminationDate)),
             request.Year,
             request.Month,
             cancellationToken);

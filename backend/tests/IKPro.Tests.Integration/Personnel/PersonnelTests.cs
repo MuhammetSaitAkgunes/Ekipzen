@@ -218,13 +218,27 @@ public sealed class PersonnelTests(IKProApiFactory factory)
         var departments = await GetAsync<List<DepartmentDto>>(client, "/api/departments");
         var id = await CreateMinimalEmployeeAsync(client, departments[0].Id, "Toplu", "Pasif");
 
-        var bulkResponse = await client.PostAsJsonAsync("/api/employees/bulk-deactivate", new { ids = new[] { id } });
+        (await client.PostAsJsonAsync(
+                "/api/employees/bulk-deactivate", new { ids = new[] { id } }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest,
+                "pasife alma etkin işten ayrılma tarihi olmadan yapılamaz");
+
+        var terminationDate = new DateOnly(2026, 8, 15);
+        var bulkResponse = await client.PostAsJsonAsync("/api/employees/bulk-deactivate", new
+        {
+            ids = new[] { id },
+            terminationDate,
+        });
         bulkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}")).Status.Should().Be("passive");
+        var passive = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}");
+        passive.Status.Should().Be("passive");
+        passive.TerminationDate.Should().Be(terminationDate);
 
         var statusResponse = await client.PatchAsJsonAsync($"/api/employees/{id}/status", new { status = "active" });
         statusResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}")).Status.Should().Be("active");
+        var active = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}");
+        active.Status.Should().Be("active");
+        active.TerminationDate.Should().BeNull("yeniden aktifleştirmede eski ayrılış tarihi taşınmaz");
     }
 
     [Fact]
@@ -241,7 +255,11 @@ public sealed class PersonnelTests(IKProApiFactory factory)
         try
         {
             var deactivate = await admin.PatchAsJsonAsync(
-                $"/api/employees/{employeeId}/status", new { status = "passive" });
+                $"/api/employees/{employeeId}/status", new
+                {
+                    status = "passive",
+                    terminationDate = "2026-08-15",
+                });
             deactivate.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
             (await employeeClient.GetAsync("/api/me")).StatusCode.Should().Be(

@@ -76,6 +76,7 @@ public sealed class GetEmployeesQueryHandler(IApplicationDbContext context, ICur
                 DepartmentName = e.Department!.Name,
                 e.Status,
                 e.HireDate,
+                e.TerminationDate,
             })
             .ToListAsync(cancellationToken);
 
@@ -96,7 +97,8 @@ public sealed class GetEmployeesQueryHandler(IApplicationDbContext context, ICur
                     e.DepartmentName,
                     e.Status.ToDto(),
                     employee.Initials,
-                    e.HireDate);
+                    e.HireDate,
+                    e.TerminationDate);
             })
             .ToList();
 

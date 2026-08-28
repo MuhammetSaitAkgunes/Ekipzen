@@ -124,7 +124,8 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public async Task<IActionResult> SetStatus(
         int id, SetStatusBody body, CancellationToken cancellationToken)
     {
-        await sender.Send(new SetEmployeeStatusCommand(id, body.Status), cancellationToken);
+        await sender.Send(
+            new SetEmployeeStatusCommand(id, body.Status, body.TerminationDate), cancellationToken);
         return NoContent();
     }
 
@@ -177,5 +178,5 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         return File(download.Content, download.ContentType, download.FileName);
     }
 
-    public sealed record SetStatusBody(string Status);
+    public sealed record SetStatusBody(string Status, DateOnly? TerminationDate = null);
 }

@@ -14,12 +14,14 @@ public static class PayrollRowReadiness
         IReadOnlyCollection<PayrollEmployee> rows,
         CancellationToken cancellationToken)
     {
-        var hireDates = rows.ToDictionary(
+        var employmentPeriods = rows.ToDictionary(
             row => row.EmployeeId,
-            row => row.Employee?.HireDate
-                ?? throw new InvalidOperationException("Puantaj kontrolü için çalışan bilgisi yüklenmelidir."));
+            row => row.Employee is { } employee
+                ? new PayrollEmploymentPeriod(employee.HireDate, employee.TerminationDate)
+                : throw new InvalidOperationException(
+                    "Puantaj kontrolü için çalışan bilgisi yüklenmelidir."));
         var coverage = await PayrollTimesheetCoverage.CalculateAsync(
-            context, hireDates, period.Year, period.Month, cancellationToken);
+            context, employmentPeriods, period.Year, period.Month, cancellationToken);
 
         foreach (var row in rows)
         {

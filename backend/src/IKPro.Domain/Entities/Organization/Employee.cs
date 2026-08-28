@@ -20,6 +20,9 @@ public class Employee : AuditableEntity
     public EmployeeStatus Status { get; set; } = EmployeeStatus.Active;
     public DateOnly HireDate { get; set; }
 
+    /// <summary>Son çalışma günü; yalnız pasif personelde doludur.</summary>
+    public DateOnly? TerminationDate { get; set; }
+
     public int DepartmentId { get; set; }
     public Department? Department { get; set; }
 

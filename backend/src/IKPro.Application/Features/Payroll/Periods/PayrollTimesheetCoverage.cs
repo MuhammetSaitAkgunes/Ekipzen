@@ -4,28 +4,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IKPro.Application.Features.Payroll.Periods;
 
+public sealed record PayrollEmploymentPeriod(DateOnly HireDate, DateOnly? TerminationDate);
+
 /// <summary>
 /// Bordro puantaj yeterliliğini sunucu tarafında hesaplar. Bir çalışanın dönemdeki
 /// beklenen iş günlerinin her biri puantaj kaydı veya onaylı izinle karşılanmalıdır;
-/// hafta sonları, tatiller ve işe girişten önceki günler beklenen güne dahil edilmez.
+/// hafta sonları, tatiller, işe girişten önceki ve ayrılıştan sonraki günler dahil edilmez.
 /// </summary>
 public static class PayrollTimesheetCoverage
 {
     public static async Task<IReadOnlyDictionary<int, bool>> CalculateAsync(
         IApplicationDbContext context,
-        IReadOnlyDictionary<int, DateOnly> employeeHireDates,
+        IReadOnlyDictionary<int, PayrollEmploymentPeriod> employmentPeriods,
         int year,
         int month,
         CancellationToken cancellationToken)
     {
-        if (employeeHireDates.Count == 0)
+        if (employmentPeriods.Count == 0)
         {
             return new Dictionary<int, bool>();
         }
 
         var periodStart = new DateOnly(year, month, 1);
         var periodEnd = periodStart.AddMonths(1).AddDays(-1);
-        var employeeIds = employeeHireDates.Keys.ToArray();
+        var employeeIds = employmentPeriods.Keys.ToArray();
 
         var holidays = (await context.Holidays
                 .AsNoTracking()
@@ -61,12 +63,13 @@ public static class PayrollTimesheetCoverage
                     .Select(l => (l.StartDate, l.EndDate))
                     .ToList());
 
-        return employeeHireDates.ToDictionary(
+        return employmentPeriods.ToDictionary(
             pair => pair.Key,
             pair => IsComplete(
                 periodStart,
                 periodEnd,
-                pair.Value,
+                pair.Value.HireDate,
+                pair.Value.TerminationDate,
                 holidays,
                 attendanceByEmployee.GetValueOrDefault(pair.Key) ?? [],
                 leavesByEmployee.GetValueOrDefault(pair.Key) ?? []));
@@ -77,17 +80,21 @@ public static class PayrollTimesheetCoverage
         DateOnly periodStart,
         DateOnly periodEnd,
         DateOnly hireDate,
+        DateOnly? terminationDate,
         IReadOnlySet<DateOnly> holidays,
         IReadOnlySet<DateOnly> attendanceDates,
         IReadOnlyList<(DateOnly Start, DateOnly End)> approvedLeaves)
     {
         var effectiveStart = hireDate > periodStart ? hireDate : periodStart;
-        if (effectiveStart > periodEnd)
+        var effectiveEnd = terminationDate is { } endDate && endDate < periodEnd
+            ? endDate
+            : periodEnd;
+        if (effectiveStart > effectiveEnd)
         {
             return true;
         }
 
-        for (var date = effectiveStart; date <= periodEnd; date = date.AddDays(1))
+        for (var date = effectiveStart; date <= effectiveEnd; date = date.AddDays(1))
         {
             if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday || holidays.Contains(date))
             {

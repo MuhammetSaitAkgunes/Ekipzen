@@ -15,7 +15,8 @@ public sealed record EmployeeListItemDto(
     string Department,
     string Status,
     string Initials,
-    DateOnly HireDate);
+    DateOnly HireDate,
+    DateOnly? TerminationDate);
 
 /// <summary>Personel kartının profil grupları (personnel.js form sekmeleri).</summary>
 public sealed record EmployeeProfileDto(
@@ -71,6 +72,7 @@ public sealed record EmployeeDetailDto(
     string? NationalId,
     string Status,
     DateOnly HireDate,
+    DateOnly? TerminationDate,
     int DepartmentId,
     string Department,
     int? ManagerId,
