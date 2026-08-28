@@ -61,7 +61,7 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 | --- | --- | --- | --- | --- |
 | [Recruitment](recruitment.md) | 10 | 4 | ✅ 2026-08-13 | 10 |
 | [Payroll](payroll.md) | 13 | 12 | ✅ 2026-08-13 | 12 |
-| [Employees](employees.md) | 13 | 38 | ✅ 2026-08-13 | 6 |
+| [Employees](employees.md) | 13 | 39 | ✅ 2026-08-28 | 5 açık / 1 çözülmüş |
 | [Leaves](leaves.md) | 9 | 9 | ✅ 2026-08-13 | 8 |
 | [Actions](kalan-alanlar.md) | 8 | 5 | ✅ 2026-08-13 | 1 |
 | [Dashboard](kalan-alanlar.md) | 7 | 7 | ✅ 2026-08-13 | 0 |
@@ -72,5 +72,5 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 | Auth / Tenancy | 15 | 121 | ⬜ (üç fazdır denetleniyor) | — |
 | **Çapraz kesen** | — | — | ✅ 2026-08-13 | **1** (X-1) |
 
-**Toplam: 49 açık bulgu — 1 KRİTİK, 15 YÜKSEK.**
+**Toplam: 49 tespit · 48 açık bulgu — 0 KRİTİK, 15 YÜKSEK.**
 Hepsi tek listede: [**bulgular.md**](bulgular.md) — düzeltme planı buradan yürür.

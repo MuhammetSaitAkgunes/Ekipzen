@@ -5,6 +5,7 @@ using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Features.Auth;
 using IKPro.Domain.Constants;
 using IKPro.Domain.Entities.Tenancy;
+using IKPro.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -186,6 +187,58 @@ public sealed class IdentityService(
         };
         using var kapsam = tenantScopeFactory.Create(tenantId);
         await CreateInvitedUserAsync(kapsam, user, Roles.Employee, companyName, cancellationToken);
+    }
+
+    public async Task SetEmployeeAccessAsync(
+        int employeeId, bool isActive, CancellationToken cancellationToken)
+    {
+        var tenantId = currentTenant.TenantIdOrThrow();
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.Users
+            .FirstOrDefaultAsync(u => u.EmployeeId == employeeId, cancellationToken);
+
+        // Her personelin login hesabı olmak zorunda değildir. Bu durumda personel
+        // durumu yine kaydedilir; eşitlenecek bir Identity kaydı yoktur.
+        if (user is null)
+        {
+            return;
+        }
+
+        if (user.IsActive != isActive)
+        {
+            user.IsActive = isActive;
+            var result = await kullanicilar.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                throw new ValidationException(result.Errors
+                    .Select(e => new ValidationFailure("status", e.Description)));
+            }
+        }
+
+        if (isActive)
+        {
+            return;
+        }
+
+        // Access token stateless olduğu için HTTP kapısı personel durumunu her
+        // istekte yeniden denetler. Refresh token'lar ise kalıcıdır ve burada
+        // topluca iptal edilerek reaktivasyondan sonra eski oturumun dirilmesi önlenir.
+        var now = DateTime.UtcNow;
+        var activeTokens = await platform.RefreshTokens
+            .Where(t => t.TenantId == tenantId && t.UserId == user.Id && t.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in activeTokens)
+        {
+            token.RevokedAtUtc = now;
+        }
+
+        if (activeTokens.Count > 0)
+        {
+            await platform.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task ResendInviteAsync(int tenantId, string email, CancellationToken cancellationToken)
@@ -421,6 +474,22 @@ public sealed class IdentityService(
         // refresh onu atlıyordu — dondurulmuş bir kiracının kullanıcısı elindeki
         // refresh token'la oturumunu süresiz uzatabiliyordu.
         await accessGuard.EnsureAccessibleAsync(user.TenantId, cancellationToken);
+
+        // Identity hesabı yanlışlıkla aktif kalsa bile pasif/eksik personel için
+        // yeni access veya refresh token üretilmez. HTTP middleware aynı kuralı
+        // önceden alınmış access token'lar için uygular.
+        if (user.EmployeeId is int employeeId)
+        {
+            var appContext = kapsam.Services.GetRequiredService<IApplicationDbContext>();
+            var employeeActive = await appContext.Employees
+                .AsNoTracking()
+                .AnyAsync(e => e.Id == employeeId && e.Status == EmployeeStatus.Active, cancellationToken);
+
+            if (!employeeActive)
+            {
+                throw new UnauthorizedException("Personel hesabı pasif durumda.");
+            }
+        }
 
         var (kullanicilar, _) = KimlikServisleri(kapsam);
         var roles = await kullanicilar.GetRolesAsync(user);

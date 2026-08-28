@@ -57,6 +57,12 @@ public interface IIdentityService
     /// </summary>
     Task CreateEmployeeLoginAsync(int employeeId, string name, string email, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Personel durumuyla bağlı Identity hesabını eşitler. Pasife alınırken mevcut
+    /// refresh token'ları da iptal edilir. Login'i olmayan personelde no-op'tur.
+    /// </summary>
+    Task SetEmployeeAccessAsync(int employeeId, bool isActive, CancellationToken cancellationToken);
+
     /// <summary>Refresh token rotasyonu: eskisini iptal eder, yeni çift üretir.</summary>
     Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
 

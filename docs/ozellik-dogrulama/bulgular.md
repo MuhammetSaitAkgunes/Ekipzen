@@ -1,7 +1,8 @@
 # Bulgular — Birleşik Liste
 
-**Tarih:** 2026-08-13 · **Kaynak:** 6 ÖD belgesi, 11 özellik alanı
-**Toplam: 49 bulgu — 1 KRİTİK · 15 YÜKSEK · 25 ORTA · 8 DÜŞÜK**
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kaynak:** 6 ÖD
+belgesi, 11 özellik alanı
+**Tespit edilen: 49 · Açık: 48 — 0 KRİTİK · 15 YÜKSEK · 25 ORTA · 8 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -13,7 +14,7 @@ ve hangi sırayla** var.
 | [Recruitment](recruitment.md) | 10 | — | 4 |
 | [Leaves](leaves.md) | 8 | — | 2 |
 | [Attendance](attendance.md) | 8 | — | 3 |
-| [Employees](employees.md) | 6 | **1** | 1 |
+| [Employees](employees.md) | 5 açık / 6 tespit | — | 1 |
 | [Kalan alanlar](kalan-alanlar.md) | 5 | — | 1 |
 
 ---
@@ -120,7 +121,7 @@ E-5 çıkış bir süreç değil
 
 | Dalga | İçerik | Neden bu sırada |
 | --- | --- | --- |
-| **0** | **E-1** | Güvenlik. Tek başına ve hızlı ara çözümü var (login'de personel durumu kontrolü). Beklemesi savunulamaz. |
+| **0 — tamamlandı 2026-08-28** | **E-1** | Mevcut access token, yeni login ve refresh erişimi kesildi; reaktivasyon eski token'ı diriltmiyor. |
 | **1** | **X-1 + K4** doğrulama katmanı | Çapraz kesen. `GlobalExceptionHandler`'da tek değişiklik 8 noktayı kapatır; ortak doğrulama yapısı sonraki dalgaların hepsini kolaylaştırır. Middleware talebinin ilk somut uygulaması. |
 | **2** | **ZİNCİR A** (A-2 → P-5 → P-1) | Doğrudan para. Yanlış tutar ödenmesi geri alınamayan tek hata sınıfı. |
 | **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
@@ -139,7 +140,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 
 | # | Alan | Önem | Kök | Bulgu |
 | --- | --- | --- | --- | --- |
-| **E-1** | Employees | **KRİTİK** | K3 | İşten çıkarılan personel sisteme giriş yapabiliyor, bordrosunu okuyor |
+| **E-1** | Employees | **ÇÖZÜLDÜ 2026-08-28** | K3 | Pasifleştirmede mevcut/yeni oturum ve refresh erişimi kesiliyor; kalıcı süreç kapsamı E-5'te sürüyor |
 | P-1 | Payroll | **YÜKSEK** | — | Negatif net ücret üretilip onaylanabiliyor |
 | P-2 | Payroll | **YÜKSEK** | K2 | Sonradan onaylanan dönem kümülatif GV matrahına yansımıyor |
 | P-3 | Payroll | **YÜKSEK** | K2 | Dönemler sırasız açılabiliyor |

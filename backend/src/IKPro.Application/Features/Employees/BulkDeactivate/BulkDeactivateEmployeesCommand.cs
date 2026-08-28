@@ -17,7 +17,9 @@ public sealed class BulkDeactivateEmployeesCommandValidator : AbstractValidator<
     }
 }
 
-public sealed class BulkDeactivateEmployeesCommandHandler(IApplicationDbContext context)
+public sealed class BulkDeactivateEmployeesCommandHandler(
+    IApplicationDbContext context,
+    IIdentityService identityService)
     : IRequestHandler<BulkDeactivateEmployeesCommand, int>
 {
     public async Task<int> Handle(BulkDeactivateEmployeesCommand request, CancellationToken cancellationToken)
@@ -33,6 +35,14 @@ public sealed class BulkDeactivateEmployeesCommandHandler(IApplicationDbContext 
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Login'i olan personellerin Identity hesabını da kapat ve refresh
+        // token'larını iptal et. Login'i olmayan personeller no-op'tur.
+        foreach (var employee in employees)
+        {
+            await identityService.SetEmployeeAccessAsync(employee.Id, false, cancellationToken);
+        }
+
         return employees.Count;
     }
 }

@@ -1,5 +1,8 @@
+using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace IKPro.API.Middleware;
 
@@ -47,7 +50,10 @@ public sealed class TenantAccessMiddleware(RequestDelegate next)
 {
     private const string TenantClaimType = "tenant";
 
-    public async Task InvokeAsync(HttpContext context, ITenantAccessGuard accessGuard)
+    public async Task InvokeAsync(
+        HttpContext context,
+        ITenantAccessGuard accessGuard,
+        IApplicationDbContext applicationDb)
     {
         var endpoint = context.GetEndpoint();
 
@@ -71,6 +77,22 @@ public sealed class TenantAccessMiddleware(RequestDelegate next)
         // GlobalExceptionHandler (UseExceptionHandler, bu middleware'den ÖNCE
         // pipeline'a eklendi) onu 403'e çevirir.
         await accessGuard.EnsureAccessibleAsync(tenantId, context.RequestAborted);
+
+        // JWT stateless'tir: personel pasife alınmadan önce üretilmiş access token
+        // aksi halde süresi dolana kadar çalışır. Bağlı personel her korumalı istekte
+        // aktif olmalı; hr-admin gibi personel bağı olmayan hesaplar bu kontrolden geçer.
+        var employeeClaim = context.User.FindFirst("employeeId")?.Value;
+        if (int.TryParse(employeeClaim, out var employeeId))
+        {
+            var employeeActive = await applicationDb.Employees
+                .AsNoTracking()
+                .AnyAsync(e => e.Id == employeeId && e.Status == EmployeeStatus.Active, context.RequestAborted);
+
+            if (!employeeActive)
+            {
+                throw new UnauthorizedException("Personel hesabı pasif durumda.");
+            }
+        }
 
         await next(context);
     }

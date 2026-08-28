@@ -6,6 +6,12 @@
 
 ## Şu an neredeyiz
 
+- **2026-08-28 — Faz 2b merge hazırlığı:** E-1 kritik erişim açığı yerelde
+  kapatıldı. Pasif personelin mevcut access token'ı, yeni login'i ve refresh
+  token'ı reddediliyor; reaktivasyon eski refresh token'ını diriltmiyor. Release
+  build 0 uyarı/0 hata; 66 unit + 182 integration test yeşil. Değişiklikler henüz
+  henüz push/merge edilmedi; push ve merge ayrı kullanıcı onayına tabidir.
+
 - **Aktif iş:** **Faz 2b — kiracı başına ayrı veritabanı.** Dal
   `claude/faz2b-ayrilma`, plan `docs/superpowers/plans/2026-08-12-faz2b-ayrilma.md`.
   **FAZ 2b TAMAMLANDI (Görev 0–7).** Her kiracı kendi veritabanında

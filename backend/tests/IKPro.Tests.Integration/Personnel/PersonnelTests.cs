@@ -227,6 +227,61 @@ public sealed class PersonnelTests(IKProApiFactory factory)
         (await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}")).Status.Should().Be("active");
     }
 
+    [Fact]
+    public async Task PassiveEmployee_LosesCurrentSession_LoginAndRefreshAccess()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var employeeAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+        var employeeId = employeeAuth.User.EmployeeId!.Value;
+
+        var employeeClient = factory.CreateClient();
+        employeeClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", employeeAuth.Token);
+
+        try
+        {
+            var deactivate = await admin.PatchAsJsonAsync(
+                $"/api/employees/{employeeId}/status", new { status = "passive" });
+            deactivate.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await employeeClient.GetAsync("/api/me")).StatusCode.Should().Be(
+                HttpStatusCode.Unauthorized,
+                "pasife alınmadan önceki access token anında kesilmeli");
+
+            (await _client.PostAsJsonAsync("/api/auth/login", new
+            {
+                email = "ahmet.yilmaz@hrmaster.local",
+                password = DemoPassword,
+            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+                "pasif personel yeni oturum açamamalı");
+
+            (await _client.PostAsJsonAsync("/api/auth/refresh", new
+            {
+                refreshToken = employeeAuth.RefreshToken,
+            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+                "pasife alınırken mevcut refresh token iptal edilmeli");
+        }
+        finally
+        {
+            var reactivate = await admin.PatchAsJsonAsync(
+                $"/api/employees/{employeeId}/status", new { status = "active" });
+            reactivate.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        }
+
+        (await _client.PostAsJsonAsync("/api/auth/refresh", new
+        {
+            refreshToken = employeeAuth.RefreshToken,
+        })).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "reaktivasyon eski refresh token'ı yeniden geçerli kılmamalı");
+
+        (await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            email = "ahmet.yilmaz@hrmaster.local",
+            password = DemoPassword,
+        })).StatusCode.Should().Be(HttpStatusCode.OK,
+            "reaktive edilen personel yeni bir oturum açabilmeli");
+    }
+
     // --- departmanlar ---
 
     [Fact]
@@ -307,6 +362,14 @@ public sealed class PersonnelTests(IKProApiFactory factory)
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
         return client;
+    }
+
+    private async Task<AuthResponse> LoginAsync(string email)
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/auth/login", new { email, password = DemoPassword });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string url)

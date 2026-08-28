@@ -1,7 +1,7 @@
 # Employees (Personel) — Özellik Doğrulama
 
-**Tarih:** 2026-08-13 · **Kapsam:** 13 uç nokta, `Features/Employees` +
-`EmployeesController` · **Mevcut test:** 38 (en iyi kapsanan alan)
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kapsam:** 13 uç
+nokta, `Features/Employees` + `EmployeesController` · **Mevcut test:** 39
 
 **Neden bu alan seçildi:** kapsaması en yüksek alan. Yöntem açısından da bilgi
 verici: iyi test edilmiş bir alanda ÖD ne bulur?
@@ -16,7 +16,7 @@ bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 
 | # | Katman | Önem | Bulgu | Nerede |
 | --- | --- | --- | --- | --- |
-| **E-1** | Mantık | **KRİTİK** | **İşten çıkarılan personel sisteme giriş yapabiliyor** ve bordro/izin kayıtlarını okumaya devam ediyor | `SetEmployeeStatusCommandHandler`; `IdentityService.LoginAsync` personel durumuna hiç bakmıyor |
+| **E-1** | Mantık | **ÇÖZÜLDÜ** (eski KRİTİK) | Pasif personelin mevcut/yeni oturumu ve refresh token erişimi kesiliyor | `TenantAccessMiddleware`; `IdentityService`; durum komutları; integration testi |
 | E-2 | Mantık | **YÜKSEK** | Pasif yönetici ekibin yöneticisi olarak kalıyor — onay kuyruğu sahipsiz | `SetEmployeeStatusCommandHandler`, `BulkDeactivateEmployeesCommandHandler` |
 | E-3 | Mantık | ORTA | Pasif personele puantaj girilebiliyor | `CreateAttendanceEntryCommandHandler` — durum kontrolü yok |
 | E-4 | Mantık | ORTA | **Geçersiz TC kabul ediliyor** (`11111111111` → 201); yalnız 11 hane kontrolü var | `EmployeeUpsertModel` → `NationalIdRegex = ^\d{11}$` |
@@ -68,6 +68,14 @@ sürdürmesi demektir; KVKK açısından da erişim yetkisinin gereksiz sürdür
 > Not: kiracı seviyesindeki erişim kapısı (`ITenantAccessGuard`) çalışıyor —
 > dondurulmuş kiracının kullanıcıları giremiyor. Eksik olan **personel
 > seviyesinde** karşılığı.
+
+**Çözüm — 2026-08-28:** Tekli ve toplu pasifleştirme artık bağlı Identity
+hesabını kapatıyor ve açık refresh token'larını iptal ediyor. Token üretimi aktif
+personel koşuluna bağlandı; korumalı isteklerde personel durumu yeniden denetlenerek
+pasifleştirmeden önce verilmiş access token da anında reddediliyor. Reaktivasyon
+eski refresh token'ı yeniden geçerli kılmıyor. Bu akış
+`PassiveEmployee_LosesCurrentSession_LoginAndRefreshAccess` integration testiyle
+ve tam backend paketiyle doğrulandı (66 unit + 182 integration).
 
 ### E-2 · Pasif yönetici ekibin yöneticisi olarak kalıyor — YÜKSEK
 
@@ -135,8 +143,12 @@ daraltması, TC doğrulama (biçim), mükerrer TC, tam kart CRUD, evrak yükleme
 indirme, foto, içe aktarma (önizleme + hatalı satır + mükerrer), toplu pasife
 alma.
 
-**Hiç test edilmemiş davranışlar:** pasif personelin giriş yapabilmesi (E-1),
-pasif yöneticinin ekip bağı (E-2), pasif personele puantaj (E-3), geçersiz TC
+**Yeni kapsanan davranış:** pasif personelin mevcut access token'ı, yeni login'i
+ve mevcut refresh token'ı reddediliyor; reaktivasyon sonrası yalnız yeni login
+başarılı oluyor (E-1).
+
+**Hâlâ test edilmemiş davranışlar:** pasif yöneticinin ekip bağı (E-2), pasif
+personele puantaj (E-3), geçersiz TC
 algoritması (E-4), işten çıkışın yan etkileri (E-5).
 
 **Yöntem açısından not:** bu alanın 38 testi var ve hiçbiri E-1'i yakalamıyor.
@@ -149,10 +161,8 @@ olarak bunu yakalamak için var.
 
 ## Sonraki adım
 
-1. **E-1** — güvenlik; en yüksek öncelik. Kalıcı çözüm E-5 (işten çıkış süreci) ama
-   ara çözüm olarak login'e personel durumu kontrolü eklenebilir
-2. **E-5** — işten çıkış sürecinin tasarlanması (E-1/E-2/E-3'ü birlikte kapatır,
+1. **E-5** — işten çıkış sürecinin tasarlanması (E-2/E-3'ü birlikte kapatır,
    Payroll P-4 ve Leaves ile de kesişir)
-3. **E-2** — yöneticilik devri
-4. **E-4** — TC algoritma doğrulaması
-5. **E-3, E-6**
+2. **E-2** — yöneticilik devri
+3. **E-4** — TC algoritma doğrulaması
+4. **E-3, E-6**

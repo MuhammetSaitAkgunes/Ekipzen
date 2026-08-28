@@ -1,6 +1,7 @@
 using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +19,9 @@ public sealed class SetEmployeeStatusCommandValidator : AbstractValidator<SetEmp
     }
 }
 
-public sealed class SetEmployeeStatusCommandHandler(IApplicationDbContext context)
+public sealed class SetEmployeeStatusCommandHandler(
+    IApplicationDbContext context,
+    IIdentityService identityService)
     : IRequestHandler<SetEmployeeStatusCommand>
 {
     public async Task Handle(SetEmployeeStatusCommand request, CancellationToken cancellationToken)
@@ -29,5 +32,14 @@ public sealed class SetEmployeeStatusCommandHandler(IApplicationDbContext contex
 
         employee.Status = EmployeeMappings.ParseStatus(request.Status);
         await context.SaveChangesAsync(cancellationToken);
+
+        // Personel durumu yalnız İK tablosunda kalırsa işten çıkarılan kullanıcı
+        // yeni token almaya devam eder. Önce personeli kaydediyoruz: ikinci adım
+        // aksarsa HTTP erişim kapısı yine pasif personeli anında reddeder; güvenli
+        // yönde başarısız olur ve işlem tekrarlandığında kimlik tarafı tamamlanır.
+        await identityService.SetEmployeeAccessAsync(
+            employee.Id,
+            employee.Status == EmployeeStatus.Active,
+            cancellationToken);
     }
 }
