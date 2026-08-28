@@ -15,7 +15,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | Kapı | İçerik | Durum | Ticari etkisi |
 | --- | --- | --- | --- |
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
-| 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | 🟡 Yerelde geliştirildi ve doğrulandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
+| 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı; senkronizasyon onaylandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
 | 2 | Bordro ve parasal doğruluk | ⬜ Sırada | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
 | 3 | Personel yaşam döngüsü ve işlem bütünlüğü | ⬜ Planlandı | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
@@ -95,6 +95,8 @@ kararı. Kapı 2 ve Kapı 5 kapanmadan ücretli pilot önerilmez.
 
 ## Çalışma kuralı
 
-Her kapı ayrı ve küçük yerel commitlerle ilerler. Push ve merge birbirinden
-bağımsızdır ve her işlem için kullanıcıdan açık onay alınır. Onay isteğinde
-kaynak/hedef ref, commitler, dosyalar ve doğrulama sonuçları raporlanır.
+Her kapı ayrı ve küçük yerel commitlerle ilerler. Geliştirme ve doğrulama
+tamamlandığında kaynak/hedef ref, commitler, dosyalar, test sonuçları ve yapılacak
+Git işlemleri tek paket olarak raporlanır. Kullanıcının tek açık onayı, yalnız bu
+raporlanan feature push + merge + hedef push zincirini yetkilendirir; kapsam
+kendiliğinden başka dal, commit, tag veya remote'a genişletilemez.

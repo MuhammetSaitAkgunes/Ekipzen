@@ -11,8 +11,8 @@
   `X-1`, `C-2`, `N-1` yerelde kapatıldı: enum komut/filtreleri alan bazlı 400
   ProblemDetails dönüyor; merkezi `ArgumentException` güvenlik ağı iç ayrıntıyı
   sızdırmadan 400 üretiyor. Release build 0 uyarı/0 hata; 66 unit + 190
-  integration test yeşil. Henüz push/merge edilmedi; push ve merge ayrı
-  kullanıcı onayına tabidir.
+  integration test yeşil. Feature push + `main` merge + `main` push
+  senkronizasyon paketi kullanıcı tarafından onaylandı.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal
   `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`
