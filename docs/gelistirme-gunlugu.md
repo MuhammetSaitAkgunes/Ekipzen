@@ -7,12 +7,16 @@
 ## Şu an neredeyiz
 
 - **Aktif iş — Kapı 2 bordro/parasal doğruluk:** Dal
-  `codex/payroll-money-gate`, yol haritası `docs/gelistirme-kapilari.md`.
-  İlk dilim `A-2 → P-5 → P-1` yerelde kapatıldı: beklenen iş günleri işe giriş,
-  hafta sonu, tatil, puantaj ve onaylı izinden sunucuda hesaplanıyor; gelecekte
-  işe başlayacak çalışan dönem dışında; sıfır brüt ve sıfır/negatif net onaya
-  kapalı. Backend build 0 uyarı/0 hata; 70 unit + 190 integration,
-  frontend lint/build + 146 test yeşil. Yerel
+  `codex/payroll-period-sequencing`, yol haritası
+  `docs/gelistirme-kapilari.md`. İlk dilim `A-2 → P-5 → P-1`
+  `main@cc1cd18` üzerinde senkronlandı. İkinci dilimde `P-2 → P-3 → P-8 →
+  P-9` kapatıldı: dönemler yalnız ileri yönde ve önceki dönem
+  onaylı/kapalıyken açılıyor; tenant bazlı SQL Server application lock aynı
+  anda iki farklı dönemin açılmasını engelliyor; önceki vergi matrahı yalnız
+  onaylı satır ve nihai dönemlerden sunucuda türetiliyor; onaylı satırlar ve
+  nihai dönemler açıkça filtreleniyor. Paralel oluşturma entegrasyon testinde
+  bir istek `201`, diğeri `409` alıyor. Release backend build 0 uyarı/0 hata;
+  70 unit + 190 integration, frontend lint/build + 146 test yeşil. Yerel
   commitlerden sonra tek senkronizasyon onayı istenecek.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal

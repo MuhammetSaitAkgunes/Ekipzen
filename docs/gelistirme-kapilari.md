@@ -16,7 +16,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | --- | --- | --- | --- |
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
 | 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı; senkronizasyon onaylandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
-| 2 | Bordro ve parasal doğruluk | 🟡 İlk dilim tamamlandı; yerel doğrulama yeşil | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
+| 2 | Bordro ve parasal doğruluk | 🟡 İki dilim tamamlandı; son dilim sırada | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
 | 3 | Personel yaşam döngüsü ve işlem bütünlüğü | ⬜ Planlandı | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
@@ -60,7 +60,19 @@ sıfır brüt veya sıfır/negatif net satır `Eksik Veri` kalıyor ve onayda 40
 Kanıt: backend build 0 uyarı/0 hata, 70 unit + 190 integration; frontend
 lint/build ve 146 test yeşil. `A-2`, `P-5`, `P-1` kapandı.
 
-**Sıradaki dilim:** `P-3 → P-2/P-8/P-9` dönem sırası ve kümülatif matrah.
+**İkinci dilim tamamlandı (2026-08-28):** yeni dönem yalnız en son dönem
+onaylanmış/kapatılmış ve istenen ay kronolojik olarak daha ileri ise açılıyor.
+`PreviousTaxBase` satır girdi sözleşmesinden kaldırıldı; oluşturma, detay,
+güncelleme, kontrol ve onay aynı sunucu hesabını kullanıyor. Kaynak yalnız aynı
+yıldaki onaylı/kapatılmış önceki dönemlerin onaylı satırlarıdır. Eski istemcinin
+matrah göndermesi değeri değiştirmiyor. `P-2`, `P-3`, `P-8`, `P-9` kapandı.
+Dönem oluşturma tenant bazlı SQL Server transaction-owned application lock
+altında serileştiriliyor; çoklu API instance'ında iki farklı ay eşzamanlı
+istendiğinde yalnız biri açılıyor, diğeri kilit sonrasında 409 alıyor.
+
+
+**Sıradaki ve son dilim:** `P-4`, `P-10`, `P-12` — ay içinde ayrılan personel,
+sorgu büyümesi ve eşzamanlı onay/gönderim koruması.
 
 Çıkış ölçütü: parasal altın senaryolar; eksik puantaj ve negatif net için red
 testleri; dönem sırası/kümülatif matrah regresyonları; eşzamanlı onay testi.

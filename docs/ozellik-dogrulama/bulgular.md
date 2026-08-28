@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kaynak:** 6 ÖD
 belgesi, 11 özellik alanı
-**Tespit edilen: 49 · Açık: 42 — 0 KRİTİK · 12 YÜKSEK · 22 ORTA · 8 DÜŞÜK**
+**Tespit edilen: 49 · Açık: 38 — 0 KRİTİK · 10 YÜKSEK · 20 ORTA · 8 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -10,7 +10,7 @@ ve hangi sırayla** var.
 
 | Alan | Bulgu | KRİTİK | YÜKSEK |
 | --- | --- | --- | --- |
-| [Payroll](payroll.md) | 12 | — | 4 |
+| [Payroll](payroll.md) | 6 açık / 12 tespit | — | 1 |
 | [Recruitment](recruitment.md) | 10 | — | 4 |
 | [Leaves](leaves.md) | 8 | — | 2 |
 | [Attendance](attendance.md) | 8 | — | 3 |
@@ -124,6 +124,7 @@ E-5 çıkış bir süreç değil
 | **0 — tamamlandı 2026-08-28** | **E-1** | Mevcut access token, yeni login ve refresh erişimi kesildi; reaktivasyon eski token'ı diriltmiyor. |
 | **1 — tamamlandı 2026-08-28** | **X-1 + K4** doğrulama katmanı | Actions, Compliance ve Recruitment enum girdileri validator kapsamında; merkezi 400 güvenlik ağı var. |
 | **2 — tamamlandı 2026-08-28** | **ZİNCİR A** (A-2 → P-5 → P-1) | Puantaj sunucu sahipli; sıfır brüt ve sıfır/negatif net onaya kapalı. |
+| **2b — tamamlandı 2026-08-28** | **P-3 → P-2/P-8/P-9** | Dönemler tenant bazlı dağıtık kilitle kronolojik/final duruma bağlı; kümülatif matrah sunucu sahipli. |
 | **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
 | **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
@@ -142,8 +143,8 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | --- | --- | --- | --- | --- |
 | **E-1** | Employees | **ÇÖZÜLDÜ 2026-08-28** | K3 | Pasifleştirmede mevcut/yeni oturum ve refresh erişimi kesiliyor; kalıcı süreç kapsamı E-5'te sürüyor |
 | **P-1** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Sıfır/negatif net uyarılıyor, `Eksik Veri` kalıyor ve onayda 409 alıyor |
-| P-2 | Payroll | **YÜKSEK** | K2 | Sonradan onaylanan dönem kümülatif GV matrahına yansımıyor |
-| P-3 | Payroll | **YÜKSEK** | K2 | Dönemler sırasız açılabiliyor |
+| **P-2** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K2 | Kümülatif matrah kritik yolların tamamında onaylı önceki dönemlerden türetiliyor |
+| **P-3** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K2 | Geri dönem ve son dönem final olmadan ileri dönem açılması 409 |
 | P-4 | Payroll | **YÜKSEK** | K3 | Ay içinde ayrılan personel bordroya hiç girmiyor |
 | R-1 | Recruitment | **YÜKSEK** | K4 | İşe alım tarihi hiç doğrulanmıyor (1990 ve 2099 kabul) |
 | R-2 | Recruitment | **YÜKSEK** | K2 | Geçmiş tarihli işe alımda cari yıl izin bakiyesi oluşmuyor |
@@ -159,10 +160,10 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | **P-5** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Sıfır brüt uyarılıyor, `Eksik Veri` kalıyor ve onayda 409 alıyor |
 | P-6 | Payroll | ORTA | K4 | 2099 gibi uzak gelecek dönemi açılabiliyor |
 | P-7 | Payroll | ORTA | K2 | Maaş her dönem elle giriliyor; önceki dönemden devir yok |
-| P-8 | Payroll | ORTA | K2 | `PreviousTaxBase` oluşturmada dondurulup güncellenmiyor |
-| P-9 | Payroll | ORTA | — | Kümülatif devir filtresi `Result != null`, yorumu "onaylı" diyor |
+| **P-8** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K2 | `PreviousTaxBase` istemciden kaldırıldı ve onaysız satırlarda canlı türetiliyor |
+| **P-9** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Satır ve dönem onay durumu açıkça filtreleniyor |
 | P-10 | Payroll | ORTA | K7 | `BuildDetailAsync` iki koleksiyon `Include` — kartezyen |
-| P-12 | Payroll | ORTA | K6 | Onay/gönderim yollarında eşzamanlılık koruması yok |
+| P-12 | Payroll | ORTA | K6 | Satır onayı/dönem gönderiminde eşzamanlılık koruması yok; dönem oluşturma yarışı kapalı |
 | R-4 | Recruitment | ORTA | — | Tek kelimelik isimde soyad boş kalıyor |
 | R-5 | Recruitment | ORTA | K1 | İşe alım geri alınamıyor |
 | R-7 | Recruitment | ORTA | K7 | `GetCandidateQuery` 6 koleksiyon `Include` — kartezyen |

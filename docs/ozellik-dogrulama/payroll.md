@@ -20,14 +20,14 @@ vergi demektir; hata aylar sonra fark edilir ve fatura üreticiye çıkar.
 | # | Katman | Önem | Bulgu | Durum |
 | --- | --- | --- | --- | --- |
 | P-1 | Mantık | **YÜKSEK** | **Negatif net ücret** üretilebiliyor ve onaylanabiliyor | **çözüldü 2026-08-28** |
-| P-2 | Mantık | **YÜKSEK** | Sonradan onaylanan dönem, önce açılmış dönemin **kümülatif GV matrahına yansımıyor** | açık |
-| P-3 | Mantık | **YÜKSEK** | Dönemler **sırasız** açılabiliyor (Aralık'tan sonra Kasım) | açık |
+| P-2 | Mantık | **YÜKSEK** | Sonradan onaylanan dönem, önce açılmış dönemin **kümülatif GV matrahına yansımıyor** | **çözüldü 2026-08-28** |
+| P-3 | Mantık | **YÜKSEK** | Dönemler **sırasız** açılabiliyor (Aralık'tan sonra Kasım) | **çözüldü 2026-08-28** |
 | P-4 | Mantık | **YÜKSEK** | Ay içinde işten ayrılan personel bordroya **hiç girmiyor** | açık |
 | P-5 | Mantık | ORTA | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok | **çözüldü 2026-08-28** |
 | P-6 | Mantık | ORTA | 2099 gibi uzak gelecek dönemi açılabiliyor | açık |
 | P-7 | Mantık | ORTA | Maaş her dönem elle giriliyor; önceki dönemden devir yok | açık |
-| P-8 | Kod | ORTA | `PreviousTaxBase` dönem **oluşturulurken** dondurulup bir daha güncellenmiyor | açık |
-| P-9 | Kod | ORTA | Kümülatif devir filtresi `Result != null`, yorumu "onaylı" diyor — ölçüt uyuşmuyor | açık |
+| P-8 | Kod | ORTA | `PreviousTaxBase` dönem **oluşturulurken** dondurulup bir daha güncellenmiyor | **çözüldü 2026-08-28** |
+| P-9 | Kod | ORTA | Kümülatif devir filtresi `Result != null`, yorumu "onaylı" diyor — ölçüt uyuşmuyor | **çözüldü 2026-08-28** |
 | P-10 | Kod | ORTA | `BuildDetailAsync` iki koleksiyon `Include` — kartezyen çarpım | açık |
 | P-11 | Kod | DÜŞÜK | SGK kontrol kartında `* 0.95m` sihirli sayısı, gerekçesi yok | açık |
 | P-12 | Kod | ORTA | Onay/gönderim yollarında eşzamanlılık koruması yok | açık |
@@ -99,6 +99,12 @@ Kök neden P-8 ile aynı: `PreviousTaxBase` dönem **oluşturulurken** bir kez
 hesaplanıp satıra yazılıyor; sonradan onaylanan önceki dönemler bu değeri
 güncellemiyor.
 
+**Çözüm (2026-08-28):** daha ileri dönem, en son dönem onaylanmadan açılamıyor;
+kümülatif matrah ayrıca dönem oluşturma, canlı detay, satır güncelleme, kontrol
+ve onay anında sunucuda yeniden türetiliyor. Böylece önceki dönem sonucu sonradan
+değişse bile onaysız satır eski snapshot'a bağlı kalmıyor. İstemci matrahı
+değiştiremiyor.
+
 ### P-3 · Dönemler sırasız açılabiliyor — YÜKSEK
 
 `2030/12` açıldıktan sonra `2030/11` açılabildi (201). Doğrulayıcı yalnız
@@ -106,6 +112,16 @@ yıl (2000–2100) ve ay (1–12) aralığına bakıyor; **önceki dönemin duru
 sorgulanmıyor.**
 
 Tek başına da hatalı ama asıl zararı P-2'yi mümkün kılması.
+
+**Çözüm (2026-08-28):** `PayrollPeriodSequence`, en son dönemden önceki/eşit
+bir ayı ve en son dönem `approved/closed` olmadan daha ileri bir ayı 409 ile
+reddediyor. Ay atlamaya izin veriliyor; kronolojik geri dönüşe izin verilmiyor.
+Bu davranış dönem yaşam döngüsü entegrasyon testinde kanıtlandı.
+Aynı tenant için dönem oluşturmanın tamamı `sp_getapplock` tabanlı, transaction
+sahipli dağıtık kilit altında çalışıyor. İki farklı ileri ay eşzamanlı istendiğinde
+entegrasyon testi tam bir `201` ve bir `409` görüyor. `P-12` yalnız satır onayı ve
+dönem gönderiminin eşzamanlılığı için açık kalıyor.
+
 
 ### P-4 · Ay içinde ayrılan personel bordroya hiç girmiyor — YÜKSEK
 
@@ -148,8 +164,12 @@ sürdürülemez hem de **unutulan satır sıfır maaşla onaylanabilir** (P-5).
 | --- | --- | --- |
 | 1 | Kiracı izolasyonu | ✅ Tüm erişim `IApplicationDbContext` üzerinden; global filtre kapsıyor |
 | 2 | Yetki kapsamı | ✅ Dönem yönetimi `HrAdminOnly`; `payroll/my` `PayrollAccess` + kendi kaydı |
-| 3 | Doğrulama | ❌ P-5, P-6, P-3 |
+| 3 | Doğrulama | ⚠️ P-6 açık; P-3 ve P-5 kapalı |
 | 4 | İşlem sınırı | ⚠️ Tek `SaveChanges` kullanılıyor (iyi), ama **eşzamanlılık koruması yok** — P-12 |
+
+**Çözüm (2026-08-28):** `PayrollCumulativeTaxBase`, değeri onaysız satırlar
+için her kritik yolda yeniden türetiyor. `PayrollRowInputModel`, OpenAPI tipi ve
+düzenleme formu artık `PreviousTaxBase` kabul etmiyor; gösterim salt-okur.
 | 5 | N+1 / kartezyen | ❌ P-10 |
 | 6 | Hata zarfı | ✅ 404/409 doğru; mesajlar iç detay sızdırmıyor |
 | 7 | Audit izi | ⚠️ `PayrollEmployees` audit trigger'ı var; **dönem durum geçişleri** ayrı iz bırakmıyor |
@@ -159,6 +179,10 @@ sürdürülemez hem de **unutulan satır sıfır maaşla onaylanabilir** (P-5).
 
 Değer dönem **oluşturulurken** hesaplanıp satıra yazılıyor. Sonradan:
 önceki dönem onaylanırsa, düzeltilirse ya da yeni bir dönem araya girerse
+
+**Çözüm (2026-08-28):** sorgu artık hem satırın `ApprovalStatus.Approved`
+olmasını hem de ait olduğu dönemin `Approved/Closed` olmasını açıkça istiyor;
+`Result != null` yalnız sonuç varlığı güvenlik koşulu olarak kaldı.
 **güncellenmiyor**. Doğrusu ya okuma anında türetmek ya da önceki dönem
 onaylandığında sonraki dönemleri yeniden hesaplamaktır.
 
@@ -194,24 +218,21 @@ olabilir. Bordro, son yazanın kazanmasının kabul edilebilir olmadığı bir a
 
 ### Test boşluğu
 
-Mevcut 12 test şunları kapsıyor: parite senaryosu, asgari ücret neti, dönem
-yaşam döngüsü, ayar sürümleme, yetki kapıları.
+Otomatik testler parite/asgari ücret, dönem yaşam döngüsü, kümülatif matrah,
+dönem sırası, negatif/sıfır net kapıları, ayar sürümleme, yetki, pusula PDF ve
+çalışanın kendi bordrolarını kapsıyor.
 
-**Hiç test edilmemiş davranışlar:** kümülatif matrah devri (P-2), dönem sırası
-(P-3), ayrılan personelin bordrosu (P-4), negatif/sıfır net (P-1, P-5),
-eşzamanlı onay (P-12), `payslip` PDF ucu, `settings` güncelleme sonrası
-onaylı dönemin değişmediği.
+**Açık test boşlukları:** ayrılan personelin son ay bordrosu (P-4), eşzamanlı
+onay/gönderim (P-12) ve ayar güncellemesinin onaylı snapshot'a etkisizliği.
 
 ---
 
 ## Sonraki adım
 
-Bulgular **düzeltilmedi** (akış kararı: önce tüm alanların raporu, düzeltme en
-sonda). Önem sırası:
+Kapı 2'nin son dilim sırası:
 
-1. **P-1** — negatif net ücret onay kapısından geçmemeli
-2. **P-2 + P-3 + P-8 + P-9** — aynı kök: kümülatif devir ve dönem sırası
-3. **P-4** — ayrılan personelin bordrosu
-4. **P-12** — eşzamanlılık
-5. **P-5, P-7** — sıfır maaş / maaş devri (birlikte tasarlanmalı)
-6. **P-6, P-10, P-11** — kalite borcu
+1. **P-4** — ayrılan personelin son ay bordrosu
+2. **P-12** — onay/gönderim eşzamanlılığı
+3. **P-10** — büyüyen bordro detay sorgusu
+4. **P-7** — maaş devri ürün kararı
+5. **P-6, P-11** — dönem üst sınırı ve açıklanmamış eşik
