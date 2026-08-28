@@ -22,15 +22,15 @@ vergi demektir; hata aylar sonra fark edilir ve fatura üreticiye çıkar.
 | P-1 | Mantık | **YÜKSEK** | **Negatif net ücret** üretilebiliyor ve onaylanabiliyor | **çözüldü 2026-08-28** |
 | P-2 | Mantık | **YÜKSEK** | Sonradan onaylanan dönem, önce açılmış dönemin **kümülatif GV matrahına yansımıyor** | **çözüldü 2026-08-28** |
 | P-3 | Mantık | **YÜKSEK** | Dönemler **sırasız** açılabiliyor (Aralık'tan sonra Kasım) | **çözüldü 2026-08-28** |
-| P-4 | Mantık | **YÜKSEK** | Ay içinde işten ayrılan personel bordroya **hiç girmiyor** | açık |
+| P-4 | Mantık | **YÜKSEK** | Ay içinde işten ayrılan personel bordroya **hiç girmiyor** | **çözüldü 2026-08-28** |
 | P-5 | Mantık | ORTA | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok | **çözüldü 2026-08-28** |
 | P-6 | Mantık | ORTA | 2099 gibi uzak gelecek dönemi açılabiliyor | açık |
 | P-7 | Mantık | ORTA | Maaş her dönem elle giriliyor; önceki dönemden devir yok | açık |
 | P-8 | Kod | ORTA | `PreviousTaxBase` dönem **oluşturulurken** dondurulup bir daha güncellenmiyor | **çözüldü 2026-08-28** |
 | P-9 | Kod | ORTA | Kümülatif devir filtresi `Result != null`, yorumu "onaylı" diyor — ölçüt uyuşmuyor | **çözüldü 2026-08-28** |
-| P-10 | Kod | ORTA | `BuildDetailAsync` iki koleksiyon `Include` — kartezyen çarpım | açık |
+| P-10 | Kod | ORTA | `BuildDetailAsync` iki koleksiyon `Include` — kartezyen çarpım | **çözüldü 2026-08-28** |
 | P-11 | Kod | DÜŞÜK | SGK kontrol kartında `* 0.95m` sihirli sayısı, gerekçesi yok | açık |
-| P-12 | Kod | ORTA | Onay/gönderim yollarında eşzamanlılık koruması yok | açık |
+| P-12 | Kod | ORTA | Onay/gönderim yollarında eşzamanlılık koruması yok | **çözüldü 2026-08-28** |
 
 **Doğru çalışan, kanıtlanmış davranışlar:**
 
@@ -136,6 +136,13 @@ Dönem oluşturulurken satırlar yalnız aktif personel için üretiliyor:
 bildirimi bordroya girmez. Ayrılan personelin son ay bordrosu, İK'nın en kritik
 işlemlerinden biridir.
 
+**Çözüm (2026-08-28):** `Employee.TerminationDate` etkin son çalışma gününü
+saklıyor; pasife alırken zorunlu, yeniden aktifleştirmede temizleniyor. Dönem
+seçimi işe giriş/ayrılış aralığına göre yapılıyor. Ayrılıştan sonraki günler
+puantaj eksiği sayılmıyor; çalışan son ay bordrosuna giriyor, sonraki döneme
+taşınmıyor. Ayrılış tarihi bilinmeyen eski pasif kayıtlar yanlışlıkla bordroya
+alınmıyor. Kalan tam işten çıkış süreci `E-5` / Kapı 3 kapsamındadır.
+
 ### P-5 · Sıfır brüt maaşlı satır onaylanabiliyor — ORTA
 
 `GrossSalary` doğrulaması yalnız `>= 0`. Sıfır maaş, veri girilmemiş satırın
@@ -165,12 +172,12 @@ sürdürülemez hem de **unutulan satır sıfır maaşla onaylanabilir** (P-5).
 | 1 | Kiracı izolasyonu | ✅ Tüm erişim `IApplicationDbContext` üzerinden; global filtre kapsıyor |
 | 2 | Yetki kapsamı | ✅ Dönem yönetimi `HrAdminOnly`; `payroll/my` `PayrollAccess` + kendi kaydı |
 | 3 | Doğrulama | ⚠️ P-6 açık; P-3 ve P-5 kapalı |
-| 4 | İşlem sınırı | ⚠️ Tek `SaveChanges` kullanılıyor (iyi), ama **eşzamanlılık koruması yok** — P-12 |
+| 4 | İşlem sınırı | ✅ Dönem mutasyonları tenant bazlı transaction-owned application lock ile serileştiriliyor |
 
 **Çözüm (2026-08-28):** `PayrollCumulativeTaxBase`, değeri onaysız satırlar
 için her kritik yolda yeniden türetiyor. `PayrollRowInputModel`, OpenAPI tipi ve
 düzenleme formu artık `PreviousTaxBase` kabul etmiyor; gösterim salt-okur.
-| 5 | N+1 / kartezyen | ❌ P-10 |
+| 5 | N+1 / kartezyen | ✅ Dönem/ayar ve çalışan satırları iki açık sorguda; koleksiyon çarpımı yok |
 | 6 | Hata zarfı | ✅ 404/409 doğru; mesajlar iç detay sızdırmıyor |
 | 7 | Audit izi | ⚠️ `PayrollEmployees` audit trigger'ı var; **dönem durum geçişleri** ayrı iz bırakmıyor |
 | 8 | Test boşluğu | ❌ Aşağıya bakınız |
@@ -201,6 +208,10 @@ olmalı.
 kullanılmıyor. 200 personel × 7 vergi dilimi = **1.400 satır**, her dönem
 görüntülemede.
 
+**Çözüm (2026-08-28):** uygulama katmanına relational-provider bağımlılığı
+eklemek yerine dönem + vergi dilimleri ve çalışan + sonuç satırları iki açık
+EF sorgusuna ayrıldı. Böylece sorgu maliyeti çarpım yerine toplamsal büyüyor.
+
 ### P-11 · Açıklanmamış sihirli sayı — DÜŞÜK
 
 ```csharp
@@ -216,23 +227,27 @@ r.SgkBase <= parameters.SgkBaseMin * 0.95m
 son yazan kazanır, ve dönem "gönderildi" sayılırken bir satır arada değişmiş
 olabilir. Bordro, son yazanın kazanmasının kabul edilebilir olmadığı bir alandır.
 
+
+**Çözüm (2026-08-28):** düzenleme, toplu kontrol, satır onayı ve dönem gönderimi
+aynı `payroll-period:{id}` dağıtık kilidini kullanıyor. Çoklu API instance'ında
+çift satır onayı ve çift dönem gönderimi serileştiriliyor; entegrasyon testi her
+iki senaryoda bir başarılı yanıt ve bir 409 görüyor.
 ### Test boşluğu
 
 Otomatik testler parite/asgari ücret, dönem yaşam döngüsü, kümülatif matrah,
 dönem sırası, negatif/sıfır net kapıları, ayar sürümleme, yetki, pusula PDF ve
 çalışanın kendi bordrolarını kapsıyor.
 
-**Açık test boşlukları:** ayrılan personelin son ay bordrosu (P-4), eşzamanlı
-onay/gönderim (P-12) ve ayar güncellemesinin onaylı snapshot'a etkisizliği.
+**Açık test boşluğu:** ayar güncellemesinin onaylı snapshot'a etkisizliğinin
+ayrı bir regresyon senaryosuyla kanıtlanması.
 
 ---
 
 ## Sonraki adım
 
-Kapı 2'nin son dilim sırası:
+Kapı 2'nin zorunlu üç dilimi tamamlandı. Kalan bordro adayları:
 
-1. **P-4** — ayrılan personelin son ay bordrosu
-2. **P-12** — onay/gönderim eşzamanlılığı
-3. **P-10** — büyüyen bordro detay sorgusu
-4. **P-7** — maaş devri ürün kararı
-5. **P-6, P-11** — dönem üst sınırı ve açıklanmamış eşik
+1. **P-7** — maaş devri ürün kararı
+2. **P-6** — dönem üst sınırı
+3. **P-11** — açıklanmamış SGK kontrol eşiği; müşavir girdisi gerekli
+4. **Kapı 3 / E-5** — yöneticilik, izin ve kıdem/ihbar yan etkileri

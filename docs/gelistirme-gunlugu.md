@@ -6,18 +6,16 @@
 
 ## Şu an neredeyiz
 
-- **Aktif iş — Kapı 2 bordro/parasal doğruluk:** Dal
-  `codex/payroll-period-sequencing`, yol haritası
-  `docs/gelistirme-kapilari.md`. İlk dilim `A-2 → P-5 → P-1`
-  `main@cc1cd18` üzerinde senkronlandı. İkinci dilimde `P-2 → P-3 → P-8 →
-  P-9` kapatıldı: dönemler yalnız ileri yönde ve önceki dönem
-  onaylı/kapalıyken açılıyor; tenant bazlı SQL Server application lock aynı
-  anda iki farklı dönemin açılmasını engelliyor; önceki vergi matrahı yalnız
-  onaylı satır ve nihai dönemlerden sunucuda türetiliyor; onaylı satırlar ve
-  nihai dönemler açıkça filtreleniyor. Paralel oluşturma entegrasyon testinde
-  bir istek `201`, diğeri `409` alıyor. Release backend build 0 uyarı/0 hata;
-  70 unit + 190 integration, frontend lint/build + 146 test yeşil. Yerel
-  commitlerden sonra tek senkronizasyon onayı istenecek.
+- **Aktif iş — Kapı 2 son dilimi tamamlandı:** Dal `codex/payroll-final-gate`.
+  `main@93500c1` üzerindeki ilk iki dilime ek olarak `P-4`, `P-10`, `P-12`
+  yerelde kapatıldı. Personel ayrılış tarihi migration/API/UI boyunca tutuluyor;
+  son ay bordrosuna giriyor, sonraki aya taşınmıyor ve puantaj ayrılış gününde
+  kesiliyor. Bordro detay sorgusu ikiye ayrıldı. Düzenleme, kontrol, onay ve
+  gönderim tenant/veritabanı dönem kilidiyle serileştirildi; çift onay ve çift
+  gönderimde bir başarı/bir 409 kanıtlandı. Yerel kod commitleri `88f0ffe` ve
+  `2cb7660`. Release backend build 0 uyarı/0 hata; 71 unit + 190 integration,
+  frontend lint/build + 146 test yeşil. Doküman commitinden sonra tek
+  senkronizasyon onayı istenecek.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal
   `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`

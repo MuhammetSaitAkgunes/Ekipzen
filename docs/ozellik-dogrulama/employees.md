@@ -122,13 +122,13 @@ hata kurumdan geri döner. Mükerrer TC kontrolü var ama **geçersiz TC** kontr
 
 ### E-5 · İşten çıkış bir süreç olarak ele alınmamış — ORTA (E-1/E-2/E-3'ün kökü)
 
-`SetEmployeeStatusCommand` tek bir alanı değiştiriyor. Oysa işten çıkış en az
-şunları gerektirir: Identity hesabının kapatılması, refresh token'ların iptali,
-bekleyen izin taleplerinin kararı, yöneticilik bağlarının devri, son ay
-bordrosunun oluşturulması (Payroll P-4), ve kıdem/ihbar hesabı.
+İşten çıkış erişim kesme, zorunlu etkin ayrılış tarihi ve son ay bordrosu
+açısından tamamlandı (`E-1`, Payroll `P-4`). Yeniden aktifleştirme ayrılış
+tarihini temizliyor; eski refresh token'ı diriltmiyor.
 
-Bugün bunların **hiçbiri** yok. Bu yüzden E-1, E-2 ve E-3 ayrı hatalar değil,
-aynı eksiğin belirtileri.
+Bekleyen izin taleplerinin kararı, yöneticilik bağlarının devri ve kıdem/ihbar
+hesabı hâlâ tek bir orkestre süreç değil. Bu nedenle `E-5`, `E-2` ve `E-3`
+için kök bulgu olarak açık kalıyor.
 
 ### E-6 · Toplu pasife almada sessiz atlama — DÜŞÜK
 
@@ -138,14 +138,14 @@ sayısıdır. Var olmayan ya da zaten pasif id'ler sessizce atlanıyor; çağır
 
 ### Test boşluğu
 
-38 test şunları iyi kapsıyor: dizin listeleme/filtreleme, rol matrisi, kapsam
+39 test şunları iyi kapsıyor: dizin listeleme/filtreleme, rol matrisi, kapsam
 daraltması, TC doğrulama (biçim), mükerrer TC, tam kart CRUD, evrak yükleme/
 indirme, foto, içe aktarma (önizleme + hatalı satır + mükerrer), toplu pasife
 alma.
 
 **Yeni kapsanan davranış:** pasif personelin mevcut access token'ı, yeni login'i
-ve mevcut refresh token'ı reddediliyor; reaktivasyon sonrası yalnız yeni login
-başarılı oluyor (E-1).
+ve mevcut refresh token'ı reddediliyor; ayrılış tarihi zorunlu kaydediliyor;
+reaktivasyonda tarih temizleniyor ve yalnız yeni login başarılı oluyor.
 
 **Hâlâ test edilmemiş davranışlar:** pasif yöneticinin ekip bağı (E-2), pasif
 personele puantaj (E-3), geçersiz TC
@@ -161,8 +161,8 @@ olarak bunu yakalamak için var.
 
 ## Sonraki adım
 
-1. **E-5** — işten çıkış sürecinin tasarlanması (E-2/E-3'ü birlikte kapatır,
-   Payroll P-4 ve Leaves ile de kesişir)
+1. **E-5** — kalan işten çıkış sürecinin tasarlanması (E-2/E-3'ü birlikte
+   kapatır ve Leaves ile kesişir; Payroll P-4 kapandı)
 2. **E-2** — yöneticilik devri
 3. **E-4** — TC algoritma doğrulaması
 4. **E-3, E-6**

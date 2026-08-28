@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kaynak:** 6 ÖD
 belgesi, 11 özellik alanı
-**Tespit edilen: 49 · Açık: 38 — 0 KRİTİK · 10 YÜKSEK · 20 ORTA · 8 DÜŞÜK**
+**Tespit edilen: 49 · Açık: 35 — 0 KRİTİK · 9 YÜKSEK · 18 ORTA · 8 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -10,7 +10,7 @@ ve hangi sırayla** var.
 
 | Alan | Bulgu | KRİTİK | YÜKSEK |
 | --- | --- | --- | --- |
-| [Payroll](payroll.md) | 6 açık / 12 tespit | — | 1 |
+| [Payroll](payroll.md) | 3 açık / 12 tespit | — | — |
 | [Recruitment](recruitment.md) | 10 | — | 4 |
 | [Leaves](leaves.md) | 8 | — | 2 |
 | [Attendance](attendance.md) | 8 | — | 3 |
@@ -45,11 +45,10 @@ sonucu L-1: 1 Ocak'ta izin modülü kendiliğinden kilitleniyor.
 
 ### K3 · Süreç yok, alan güncellemesi var
 
-`E-5` (kök) → `E-1` `E-2` `E-3` `P-4`
+`E-5` (kök) → `E-1` `E-2` `E-3`; `P-4` tarihli son bordro açısından kapandı
 
-İşten çıkış tek satırlık `Status` değişikliği. Erişim kesme, yöneticilik devri,
-bekleyen taleplerin kararı, son ay bordrosu — hiçbiri yok. **E-1 (KRİTİK) bu
-kökün doğrudan sonucu.**
+İşten çıkış artık erişimi kesiyor, etkin tarihi ve son ay bordrosunu koruyor.
+Yöneticilik devri, bekleyen talepler ve kıdem/ihbar hâlâ süreç değil.
 
 ### K4 · Doğrulama modül modül elle yazılmış
 
@@ -71,17 +70,17 @@ Değerler koda gömülü, kaynağı yazılı değil. Müşavir güncellemesi gel
 
 ### K6 · Eşzamanlılık koruması yok
 
-`P-12` bordro onay/gönderim · `L-7` izin onayında bakiye yarışı (TOCTOU)
+`L-7` izin onayında bakiye yarışı (TOCTOU). Bordro `P-12` kapandı.
 
-İki yönetici aynı anda onaylarsa sonuç tanımsız. Kiracı başına düşük trafik
-bunu bugün gizliyor.
+İki yönetici aynı izni aynı anda onaylarsa sonuç tanımsız. Kiracı başına düşük
+trafik bunu bugün gizliyor.
 
 ### K7 · Sorgu maliyeti
 
-`R-7` 6 koleksiyon `Include` · `P-10` 2 koleksiyon `Include`
+`R-7` 6 koleksiyon `Include`. Bordro `P-10` kapandı.
 
-`AsSplitQuery` bu kod tabanında **hiç kullanılmıyor**. Aday/bordro büyüdükçe
-kartezyen çarpım.
+Aday büyüdükçe kartezyen çarpım riski sürüyor; bordro detayı sağlayıcıdan
+bağımsız iki açık sorguya ayrıldı.
 
 ---
 
@@ -125,6 +124,7 @@ E-5 çıkış bir süreç değil
 | **1 — tamamlandı 2026-08-28** | **X-1 + K4** doğrulama katmanı | Actions, Compliance ve Recruitment enum girdileri validator kapsamında; merkezi 400 güvenlik ağı var. |
 | **2 — tamamlandı 2026-08-28** | **ZİNCİR A** (A-2 → P-5 → P-1) | Puantaj sunucu sahipli; sıfır brüt ve sıfır/negatif net onaya kapalı. |
 | **2b — tamamlandı 2026-08-28** | **P-3 → P-2/P-8/P-9** | Dönemler tenant bazlı dağıtık kilitle kronolojik/final duruma bağlı; kümülatif matrah sunucu sahipli. |
+| **2c — tamamlandı 2026-08-28** | **P-4/P-10/P-12** | Etkin ayrılış tarihi son ay bordrosunu koruyor; detay sorgusu ayrık; dönem mutasyonları dağıtık kilitli. |
 | **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
 | **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
@@ -145,7 +145,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | **P-1** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Sıfır/negatif net uyarılıyor, `Eksik Veri` kalıyor ve onayda 409 alıyor |
 | **P-2** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K2 | Kümülatif matrah kritik yolların tamamında onaylı önceki dönemlerden türetiliyor |
 | **P-3** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K2 | Geri dönem ve son dönem final olmadan ileri dönem açılması 409 |
-| P-4 | Payroll | **YÜKSEK** | K3 | Ay içinde ayrılan personel bordroya hiç girmiyor |
+| **P-4** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K3 | Etkin ayrılış tarihiyle son ay bordroya giriyor; sonraki ay ve tarih bilinmeyen eski pasifler dışarıda |
 | R-1 | Recruitment | **YÜKSEK** | K4 | İşe alım tarihi hiç doğrulanmıyor (1990 ve 2099 kabul) |
 | R-2 | Recruitment | **YÜKSEK** | K2 | Geçmiş tarihli işe alımda cari yıl izin bakiyesi oluşmuyor |
 | R-3 | Recruitment | **YÜKSEK** | K5 | 24 günlük hak ediş sabit kodlu — mevzuata aykırı görünüyor |
@@ -162,8 +162,8 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | P-7 | Payroll | ORTA | K2 | Maaş her dönem elle giriliyor; önceki dönemden devir yok |
 | **P-8** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K2 | `PreviousTaxBase` istemciden kaldırıldı ve onaysız satırlarda canlı türetiliyor |
 | **P-9** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Satır ve dönem onay durumu açıkça filtreleniyor |
-| P-10 | Payroll | ORTA | K7 | `BuildDetailAsync` iki koleksiyon `Include` — kartezyen |
-| P-12 | Payroll | ORTA | K6 | Satır onayı/dönem gönderiminde eşzamanlılık koruması yok; dönem oluşturma yarışı kapalı |
+| **P-10** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K7 | Ayar/vergi dilimleri ve çalışan satırları ayrı sorgulanıyor; kartezyen çarpım yok |
+| **P-12** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | K6 | Tüm dönem mutasyonları ortak dağıtık kilitte; çift onay/gönderimde tek başarı |
 | R-4 | Recruitment | ORTA | — | Tek kelimelik isimde soyad boş kalıyor |
 | R-5 | Recruitment | ORTA | K1 | İşe alım geri alınamıyor |
 | R-7 | Recruitment | ORTA | K7 | `GetCandidateQuery` 6 koleksiyon `Include` — kartezyen |
