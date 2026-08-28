@@ -16,6 +16,13 @@ public sealed class CreateEmployeeCommandValidator : AbstractValidator<CreateEmp
     public CreateEmployeeCommandValidator()
     {
         RuleFor(x => x.Model).NotNull().SetValidator(new EmployeeUpsertModelValidator());
+
+        When(x => x.Model is not null, () =>
+        {
+            RuleFor(x => x.Model!.Status)
+                .Equal("active")
+                .WithMessage("Yeni personel aktif oluşturulmalı; pasife alma için durum işlemini kullanın.");
+        });
     }
 }
 

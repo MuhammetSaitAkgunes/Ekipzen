@@ -29,6 +29,13 @@ public sealed class UpdateEmployeeCommandHandler(IApplicationDbContext context, 
             ?? throw new NotFoundException("Personel", request.Id);
 
         var model = request.Model;
+        var requestedStatus = EmployeeMappings.ParseStatus(model.Status);
+        if (requestedStatus != employee.Status)
+        {
+            throw new ConflictException(
+                "Personel durumu genel güncelleme ile değiştirilemez; ayrılış tarihi ve erişim eşitlemesi için durum işlemini kullanın.");
+        }
+
         await EmployeeUpsertGuards.EnsureReferencesAsync(context, model, employee.Id, cancellationToken);
 
         employee.FirstName = model.FirstName.Trim();
@@ -38,7 +45,6 @@ public sealed class UpdateEmployeeCommandHandler(IApplicationDbContext context, 
         employee.DepartmentId = model.DepartmentId;
         employee.ManagerId = model.ManagerId;
         employee.HireDate = model.HireDate;
-        employee.Status = EmployeeMappings.ParseStatus(model.Status);
         employee.Profile = EmployeeUpsertGuards.MapProfile(
             employee.Profile ?? new EmployeeProfile { EmployeeId = employee.Id }, model.Profile);
 

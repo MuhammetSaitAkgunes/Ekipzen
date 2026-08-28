@@ -195,6 +195,71 @@ public sealed class PersonnelTests(IKProApiFactory factory)
     }
 
     [Fact]
+    public async Task StatusChanges_MustUseDedicatedEndpoint()
+    {
+        var client = await AuthedClientAsync("ik@hrmaster.local");
+        var departments = await GetAsync<List<DepartmentDto>>(client, "/api/departments");
+        var departmentId = departments[0].Id;
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+
+        var passiveCreate = await client.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Dogrudan",
+            lastName = $"Pasif{suffix}",
+            title = "Test Personeli",
+            departmentId,
+            hireDate = "2024-01-01",
+            status = "passive",
+        });
+        passiveCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            "ayrilis tarihi olmayan pasif personel olusturulamamali");
+
+        var employeeId = await CreateMinimalEmployeeAsync(
+            client, departmentId, "Durum", $"Kapisi{suffix}");
+
+        var bypassAttempt = await client.PutAsJsonAsync($"/api/employees/{employeeId}", new
+        {
+            firstName = "Durum",
+            lastName = $"Kapisi{suffix}",
+            title = "Degistirildi",
+            departmentId,
+            hireDate = "2024-01-01",
+            status = "passive",
+        });
+        bypassAttempt.StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "genel guncelleme ayrilis tarihi ve Identity erisim esitlemesini atlamamali");
+
+        var unchanged = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{employeeId}");
+        unchanged.Status.Should().Be("active");
+        unchanged.TerminationDate.Should().BeNull();
+        unchanged.Title.Should().Be("Test Personeli");
+
+        var terminationDate = new DateOnly(2026, 8, 15);
+        (await client.PatchAsJsonAsync($"/api/employees/{employeeId}/status", new
+        {
+            status = "passive",
+            terminationDate,
+        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var passiveEdit = await client.PutAsJsonAsync($"/api/employees/{employeeId}", new
+        {
+            firstName = "Durum",
+            lastName = $"Kapisi{suffix}",
+            title = "Pasif Kayit Duzenlendi",
+            departmentId,
+            hireDate = "2024-01-01",
+            status = "passive",
+        });
+        passiveEdit.StatusCode.Should().Be(HttpStatusCode.OK,
+            "pasif personelin ozluk bilgileri ayni durum korunarak duzenlenebilmeli");
+
+        var edited = (await passiveEdit.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+        edited.Status.Should().Be("passive");
+        edited.TerminationDate.Should().Be(terminationDate);
+        edited.Title.Should().Be("Pasif Kayit Duzenlendi");
+    }
+
+    [Fact]
     public async Task CreateEmployee_AsManager_Returns403()
     {
         var client = await AuthedClientAsync("ece.arslan@hrmaster.local");
