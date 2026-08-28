@@ -135,6 +135,7 @@ public static class DependencyInjection
             });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IDatabaseLock, SqlServerDatabaseLock>();
         services.AddScoped<IWorkingDayCalculator, SqlWorkingDayCalculator>();
         services.AddSingleton<Domain.Services.IPayrollEngine, Domain.Services.PayrollEngine>();
         services.AddSingleton<Application.Features.Payroll.Payslips.IPayslipGenerator, Pdf.QuestPdfPayslipGenerator>();

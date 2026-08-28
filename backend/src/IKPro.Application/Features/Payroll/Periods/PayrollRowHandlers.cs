@@ -22,7 +22,6 @@ public sealed record PayrollRowInputModel(
     decimal MealAllowance = 0m,
     decimal BenefitPay = 0m,
     decimal SpecialDeductions = 0m,
-    decimal PreviousTaxBase = 0m,
     bool IbanComplete = true,
     string? Notes = null);
 
@@ -35,7 +34,6 @@ public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRow
         RuleFor(x => x.OvertimeHours).InclusiveBetween(0, 300);
         RuleFor(x => x.PremiumPay).GreaterThanOrEqualTo(0m);
         RuleFor(x => x.SpecialDeductions).GreaterThanOrEqualTo(0m);
-        RuleFor(x => x.PreviousTaxBase).GreaterThanOrEqualTo(0m);
         RuleFor(x => x.Notes).MaximumLength(1000);
     }
 }
@@ -73,12 +71,13 @@ public sealed class UpdatePayrollRowCommandHandler(IApplicationDbContext context
         row.MealAllowance = m.MealAllowance;
         row.BenefitPay = m.BenefitPay;
         row.SpecialDeductions = m.SpecialDeductions;
-        row.PreviousTaxBase = m.PreviousTaxBase;
         row.IbanComplete = m.IbanComplete;
         row.Notes = m.Notes;
 
         await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
             context, row.Period!, [row], cancellationToken);
+        await PayrollCumulativeTaxBase.RefreshAsync(
+            context, [row], row.Period!.Year, row.Period.Month, cancellationToken);
         var parameters = row.Period!.Settings!.ToEngineParameters();
         var calculation = engine.Calculate(row.ToEngineInput(), parameters);
 
@@ -117,6 +116,8 @@ public sealed class RunPayrollCheckCommandHandler(IApplicationDbContext context,
             .ToList();
         await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
             context, period, pendingRows, cancellationToken);
+        await PayrollCumulativeTaxBase.RefreshAsync(
+            context, pendingRows, period.Year, period.Month, cancellationToken);
         var parameters = period.Settings!.ToEngineParameters();
 
         foreach (var row in pendingRows)
@@ -154,6 +155,8 @@ public sealed class ApprovePayrollRowCommandHandler(IApplicationDbContext contex
 
         await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
             context, row.Period!, [row], cancellationToken);
+        await PayrollCumulativeTaxBase.RefreshAsync(
+            context, [row], row.Period!.Year, row.Period.Month, cancellationToken);
         var parameters = row.Period!.Settings!.ToEngineParameters();
         var calc = engine.Calculate(row.ToEngineInput(), parameters);
         PayrollRowReadiness.EnsureApprovable(row, calc);

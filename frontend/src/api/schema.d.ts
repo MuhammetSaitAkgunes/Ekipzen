@@ -5492,8 +5492,6 @@ export interface components {
             benefitPay?: number;
             /** Format: double */
             specialDeductions?: number;
-            /** Format: double */
-            previousTaxBase?: number;
             ibanComplete?: boolean;
             notes?: string | null;
         };

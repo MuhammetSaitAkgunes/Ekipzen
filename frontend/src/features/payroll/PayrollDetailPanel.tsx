@@ -30,7 +30,6 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     mealAllowance: String(row.mealAllowance ?? 0),
     benefitPay: String(row.benefitPay ?? 0),
     specialDeductions: String(row.specialDeductions ?? 0),
-    previousTaxBase: String(row.previousTaxBase ?? 0),
     ibanComplete: row.ibanComplete ?? true,
     notes: row.notes ?? "",
   });
@@ -62,7 +61,6 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           mealAllowance: parse(form.mealAllowance),
           benefitPay: parse(form.benefitPay),
           specialDeductions: parse(form.specialDeductions),
-          previousTaxBase: parse(form.previousTaxBase),
           ibanComplete: form.ibanComplete,
           notes: form.notes || null,
         },
@@ -110,7 +108,6 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     ["mealAllowance", "Yemek yardımı"],
     ["benefitPay", "Yan hak / ek ödeme"],
     ["specialDeductions", "Özel kesinti"],
-    ["previousTaxBase", "Önceki GV matrahı"],
   ];
 
   return (

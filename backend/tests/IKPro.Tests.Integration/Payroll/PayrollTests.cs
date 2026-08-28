@@ -184,6 +184,10 @@ public sealed class PayrollTests(IKProApiFactory factory)
         (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict, "aynı dönem ikinci kez açılamaz");
 
+        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "en son dönem onaylanmadan ileri dönem açılamaz");
+
         // İstemci eski sözleşmedeki bayrağı gönderse dahi sunucu eksik puantajı
         // yeniden hesaplar ve onayı reddeder.
         var bypassResponse = await admin.PutAsJsonAsync(
@@ -230,7 +234,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
         (await admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
 
-        // --- Ahmet girdileri = parite senaryosu pr-001 ---
+        // Önceki matrah da eski sözleşmedeki gibi gönderilse bile ilk dönemin
+        // sunucu matrahı sıfır kalır.
         var updateResponse = await admin.PutAsJsonAsync(
             $"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
             {
@@ -249,8 +254,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
         var updatedRow = (await updateResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
 
         updatedRow.ApprovalStatus.Should().Be("Kontrol");
-        // Bkz. yukarıdaki not: istisna düzeltmesi neti 0,33 TL yükseltir (92.876,1774 → 92.876,5074).
-        updatedRow.NetPay.Should().BeApproximately(92876.5074m, 0.01m, "istisna düzeltmesi sonrası");
+        updatedRow.PreviousTaxBase.Should().Be(0m, "istemci kümülatif matrahı değiştiremez");
+        updatedRow.NetPay.Should().BeGreaterThan(100000m, "ilk dönemde önceki vergi matrahı yoktur");
         updatedRow.EmployerCost.Should().BeApproximately(167996.5m, 0.01m);
         updatedRow.Warnings.Should().Contain("Kontrol bekliyor");
 
@@ -291,6 +296,10 @@ public sealed class PayrollTests(IKProApiFactory factory)
                 .StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
+        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "tüm satırlar onaylansa bile dönem gönderilmeden yenisi açılamaz");
+
         // --- submit → dönem onaylanır ve kilitlenir ---
         var submitResponse = await admin.PostAsync($"/api/payroll/periods/{period.Id}/submit", null);
         submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -314,15 +323,26 @@ public sealed class PayrollTests(IKProApiFactory factory)
         var finalPeriod = await GetAsync<PayrollPeriodDetailDto>(admin, $"/api/payroll/periods/{period.Id}");
         var approvedAhmet = finalPeriod.Rows.Single(r => r.Id == ahmetRow.Id);
 
-        var octoberResponse = await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 });
-        octoberResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var october = (await octoberResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!;
+        // İki farklı ileri ay aynı anda istense bile tenant başına kilit yalnız
+        // birini açar; diğeri kilit sonrasında güncel sırayı görüp 409 alır.
+        var concurrentResponses = await Task.WhenAll(
+            admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 }),
+            admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 11 }));
+        concurrentResponses.Count(response => response.StatusCode == HttpStatusCode.Created).Should().Be(1);
+        concurrentResponses.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
+        var nextPeriod = (await concurrentResponses
+            .Single(response => response.StatusCode == HttpStatusCode.Created)
+            .Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!;
 
-        october.Rows.Single(r => r.Name == "Ahmet Yılmaz").PreviousTaxBase
-            .Should().BeApproximately(312000m + approvedAhmet.IncomeTaxBase, 0.01m,
+        nextPeriod.Rows.Single(r => r.Name == "Ahmet Yılmaz").PreviousTaxBase
+            .Should().BeApproximately(approvedAhmet.IncomeTaxBase, 0.01m,
                 "önceki dönemin GV matrahı kümülatife devrolur");
-        october.Rows.Select(r => r.Name).Should().Contain(futureEmployee.Name,
+        nextPeriod.Rows.Select(r => r.Name).Should().Contain(futureEmployee.Name,
             "dönem içinde işe başlayan aktif çalışan bordroya girer");
+
+        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 8 }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "en son dönemden geriye doğru dönem açılamaz");
 
         // --- pusula PDF: çalışan kendisininkini indirir, başkasınınkini indiremez ---
         var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
@@ -341,9 +361,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
 
         // --- /my: çalışan kendi onaylı bordrolarını görür ---
         var myPayslips = await GetAsync<List<MyPayslipDto>>(employee, "/api/payroll/my");
-        // Pusuladaki net, onaylı satırın snapshot'ıdır; istisna düzeltmesiyle 0,33 TL arttı.
         myPayslips.Should().Contain(p =>
-            p.PeriodName == "Eylül 2026" && Math.Abs(p.NetPay - 92876.5074m) < 0.01m);
+            p.PeriodName == "Eylül 2026" && Math.Abs(p.NetPay - approvedAhmet.NetPay) < 0.01m);
     }
 
     [Fact]

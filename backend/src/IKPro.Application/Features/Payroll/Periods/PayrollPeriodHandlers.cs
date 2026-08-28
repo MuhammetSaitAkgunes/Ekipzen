@@ -50,10 +50,20 @@ public sealed class CreatePayrollPeriodCommandValidator : AbstractValidator<Crea
     }
 }
 
-public sealed class CreatePayrollPeriodCommandHandler(IApplicationDbContext context, IPayrollEngine engine)
+public sealed class CreatePayrollPeriodCommandHandler(
+    IApplicationDbContext context,
+    IPayrollEngine engine,
+    IDatabaseLock databaseLock)
     : IRequestHandler<CreatePayrollPeriodCommand, PayrollPeriodDetailDto>
 {
-    public async Task<PayrollPeriodDetailDto> Handle(
+    public Task<PayrollPeriodDetailDto> Handle(
+        CreatePayrollPeriodCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync(
+            "payroll-period-create",
+            lockedCancellationToken => CreateAsync(request, lockedCancellationToken),
+            cancellationToken);
+
+    private async Task<PayrollPeriodDetailDto> CreateAsync(
         CreatePayrollPeriodCommand request, CancellationToken cancellationToken)
     {
         if (await context.PayrollPeriods.AnyAsync(
@@ -62,6 +72,9 @@ public sealed class CreatePayrollPeriodCommandHandler(IApplicationDbContext cont
             throw new ConflictException(
                 $"{PayrollMappings.PeriodName(request.Year, request.Month)} dönemi zaten var.");
         }
+
+        await PayrollPeriodSequence.EnsureCanCreateAsync(
+            context, request.Year, request.Month, cancellationToken);
 
         // Dönemin kendi ayının ilk günü: o tarihte yürürlükteki parametre seti kullanılır.
         var settings = await PayrollSettingsResolver.ResolveAsync(
@@ -87,25 +100,6 @@ public sealed class CreatePayrollPeriodCommandHandler(IApplicationDbContext cont
             request.Month,
             cancellationToken);
 
-        // Kümülatif GV matrahı devri: aynı yılın EN SON onaylı döneminin
-        // (elle girilmiş taban dahil) dönem-sonu kümülatifi = PreviousTaxBase + IncomeTaxBase.
-        var priorRows = await context.PayrollEmployees
-            .Where(pe => pe.Period!.Year == request.Year
-                         && pe.Period.Month < request.Month
-                         && pe.Result != null)
-            .Select(pe => new
-            {
-                pe.EmployeeId,
-                pe.Period!.Month,
-                CumulativeAfter = pe.PreviousTaxBase + pe.Result!.IncomeTaxBase,
-            })
-            .ToListAsync(cancellationToken);
-        var previousBases = priorRows
-            .GroupBy(x => x.EmployeeId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(x => x.Month).First().CumulativeAfter);
-
         // Fazla mesai puantaj özetinden beslenir (plan Faz 5 → Faz 6 bağlantısı).
         var attendance = await context.MonthlyAttendanceSummaries
             .Where(s => s.Year == request.Year && s.Month == request.Month)
@@ -130,12 +124,14 @@ public sealed class CreatePayrollPeriodCommandHandler(IApplicationDbContext cont
                 GrossSalary = 0m, // maaş girdisi İK tarafından doldurulur
                 WorkedDays = settings.DefaultWorkedDays,
                 OvertimeHours = summary is null ? 0 : (int)Math.Round(summary.TotalOvertimeMinutes / 60.0),
-                PreviousTaxBase = previousBases.GetValueOrDefault(employee.Id, 0m),
                 IbanComplete = employee.HasIban,
                 TimesheetComplete = timesheetCoverage.GetValueOrDefault(employee.Id),
                 ApprovalStatus = PayrollApprovalStatus.PreCalc,
             });
         }
+
+        await PayrollCumulativeTaxBase.RefreshAsync(
+            context, period.Employees.ToList(), request.Year, request.Month, cancellationToken);
 
         context.PayrollPeriods.Add(period);
         await context.SaveChangesAsync(cancellationToken);
@@ -178,6 +174,8 @@ public static class PayrollPeriodProjector
             .ToList();
         await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
             context, period, pendingRows, cancellationToken);
+        await PayrollCumulativeTaxBase.RefreshAsync(
+            context, pendingRows, period.Year, period.Month, cancellationToken);
 
         var parameters = period.Settings!.ToEngineParameters();
 
