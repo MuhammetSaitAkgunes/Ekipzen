@@ -164,12 +164,19 @@ public static class PayrollPeriodProjector
         var period = await context.PayrollPeriods
             .AsNoTracking()
             .Include(p => p.Settings)!.ThenInclude(s => s!.TaxBrackets)
-            .Include(p => p.Employees).ThenInclude(pe => pe.Employee)!.ThenInclude(e => e!.Department)
-            .Include(p => p.Employees).ThenInclude(pe => pe.Result)
             .FirstOrDefaultAsync(p => p.Id == periodId, cancellationToken)
             ?? throw new NotFoundException("Bordro dönemi", periodId);
 
-        var pendingRows = period.Employees
+        // Ayarlar/vergi dilimleri ile çalışan satırlarını ayrı sorgulamak,
+        // iki koleksiyon Include kaynaklı çalışan × vergi dilimi çarpımını önler.
+        var employeeRows = await context.PayrollEmployees
+            .AsNoTracking()
+            .Where(row => row.PayrollPeriodId == periodId)
+            .Include(row => row.Employee)!.ThenInclude(employee => employee!.Department)
+            .Include(row => row.Result)
+            .ToListAsync(cancellationToken);
+
+        var pendingRows = employeeRows
             .Where(row => row.ApprovalStatus != PayrollApprovalStatus.Approved)
             .ToList();
         await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
@@ -179,7 +186,7 @@ public static class PayrollPeriodProjector
 
         var parameters = period.Settings!.ToEngineParameters();
 
-        var rows = period.Employees
+        var rows = employeeRows
             .OrderBy(pe => pe.Employee!.FirstName).ThenBy(pe => pe.Employee!.LastName)
             .Select(pe => ToRow(pe, engine, parameters))
             .ToList();

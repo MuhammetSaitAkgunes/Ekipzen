@@ -290,7 +290,15 @@ public sealed class PayrollTests(IKProApiFactory factory)
             })).StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        foreach (var row in checkedPeriod.Rows)
+        // Aynı satıra iki eşzamanlı onay geldiğinde dönem kilidi işlemleri
+        // serileştirir: yalnız biri snapshot üretir, diğeri güncel durumu görür.
+        var concurrentApprovals = await Task.WhenAll(
+            admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null),
+            admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null));
+        concurrentApprovals.Count(response => response.StatusCode == HttpStatusCode.OK).Should().Be(1);
+        concurrentApprovals.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
+
+        foreach (var row in checkedPeriod.Rows.Where(row => row.Id != ahmetRow.Id))
         {
             (await admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{row.Id}/approve", null))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
@@ -300,10 +308,16 @@ public sealed class PayrollTests(IKProApiFactory factory)
             .StatusCode.Should().Be(HttpStatusCode.Conflict,
                 "tüm satırlar onaylansa bile dönem gönderilmeden yenisi açılamaz");
 
-        // --- submit → dönem onaylanır ve kilitlenir ---
-        var submitResponse = await admin.PostAsync($"/api/payroll/periods/{period.Id}/submit", null);
-        submitResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await submitResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!
+        // Eşzamanlı iki submit de aynı dönem kilidini paylaşır; yalnız ilk geçiş
+        // dönemi kapatır, ikincisi kapanmış durumu görüp 409 alır.
+        var concurrentSubmissions = await Task.WhenAll(
+            admin.PostAsync($"/api/payroll/periods/{period.Id}/submit", null),
+            admin.PostAsync($"/api/payroll/periods/{period.Id}/submit", null));
+        concurrentSubmissions.Count(response => response.StatusCode == HttpStatusCode.OK).Should().Be(1);
+        concurrentSubmissions.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
+        var approvedSubmission = concurrentSubmissions.Single(
+            response => response.StatusCode == HttpStatusCode.OK);
+        (await approvedSubmission.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!
             .Status.Should().Be("approved");
 
         (await admin.PutAsJsonAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new

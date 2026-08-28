@@ -49,10 +49,21 @@ public sealed class UpdatePayrollRowCommandValidator : AbstractValidator<UpdateP
     }
 }
 
-public sealed class UpdatePayrollRowCommandHandler(IApplicationDbContext context, IPayrollEngine engine)
+public sealed class UpdatePayrollRowCommandHandler(
+    IApplicationDbContext context,
+    IPayrollEngine engine,
+    IDatabaseLock databaseLock)
     : IRequestHandler<UpdatePayrollRowCommand, PayrollRowDto>
 {
-    public async Task<PayrollRowDto> Handle(UpdatePayrollRowCommand request, CancellationToken cancellationToken)
+    public Task<PayrollRowDto> Handle(
+        UpdatePayrollRowCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync(
+            PayrollRowGuards.LockResource(request.PeriodId),
+            lockedCancellationToken => UpdateAsync(request, lockedCancellationToken),
+            cancellationToken);
+
+    private async Task<PayrollRowDto> UpdateAsync(
+        UpdatePayrollRowCommand request, CancellationToken cancellationToken)
     {
         var row = await PayrollRowGuards.GetMutableRowAsync(
             context, request.PeriodId, request.RowId, cancellationToken);
@@ -97,10 +108,20 @@ public sealed class UpdatePayrollRowCommandHandler(IApplicationDbContext context
 /// <summary>Onaysız satırların durumunu toplu günceller: eksik veri → Eksik Veri, değilse Onaya Hazır.</summary>
 public sealed record RunPayrollCheckCommand(int PeriodId) : IRequest<PayrollPeriodDetailDto>;
 
-public sealed class RunPayrollCheckCommandHandler(IApplicationDbContext context, IPayrollEngine engine)
+public sealed class RunPayrollCheckCommandHandler(
+    IApplicationDbContext context,
+    IPayrollEngine engine,
+    IDatabaseLock databaseLock)
     : IRequestHandler<RunPayrollCheckCommand, PayrollPeriodDetailDto>
 {
-    public async Task<PayrollPeriodDetailDto> Handle(
+    public Task<PayrollPeriodDetailDto> Handle(
+        RunPayrollCheckCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync(
+            PayrollRowGuards.LockResource(request.PeriodId),
+            lockedCancellationToken => CheckAsync(request, lockedCancellationToken),
+            cancellationToken);
+
+    private async Task<PayrollPeriodDetailDto> CheckAsync(
         RunPayrollCheckCommand request, CancellationToken cancellationToken)
     {
         var period = await context.PayrollPeriods
@@ -139,10 +160,20 @@ public sealed class RunPayrollCheckCommandHandler(IApplicationDbContext context,
 
 public sealed record ApprovePayrollRowCommand(int PeriodId, int RowId) : IRequest<PayrollRowDto>;
 
-public sealed class ApprovePayrollRowCommandHandler(IApplicationDbContext context, IPayrollEngine engine)
+public sealed class ApprovePayrollRowCommandHandler(
+    IApplicationDbContext context,
+    IPayrollEngine engine,
+    IDatabaseLock databaseLock)
     : IRequestHandler<ApprovePayrollRowCommand, PayrollRowDto>
 {
-    public async Task<PayrollRowDto> Handle(
+    public Task<PayrollRowDto> Handle(
+        ApprovePayrollRowCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync(
+            PayrollRowGuards.LockResource(request.PeriodId),
+            lockedCancellationToken => ApproveAsync(request, lockedCancellationToken),
+            cancellationToken);
+
+    private async Task<PayrollRowDto> ApproveAsync(
         ApprovePayrollRowCommand request, CancellationToken cancellationToken)
     {
         var row = await PayrollRowGuards.GetMutableRowAsync(
@@ -194,10 +225,20 @@ public sealed class ApprovePayrollRowCommandHandler(IApplicationDbContext contex
 /// <summary>Tüm satırlar onaylıysa dönemi kapatır (Approved).</summary>
 public sealed record SubmitPayrollPeriodCommand(int PeriodId) : IRequest<PayrollPeriodDetailDto>;
 
-public sealed class SubmitPayrollPeriodCommandHandler(IApplicationDbContext context, IPayrollEngine engine)
+public sealed class SubmitPayrollPeriodCommandHandler(
+    IApplicationDbContext context,
+    IPayrollEngine engine,
+    IDatabaseLock databaseLock)
     : IRequestHandler<SubmitPayrollPeriodCommand, PayrollPeriodDetailDto>
 {
-    public async Task<PayrollPeriodDetailDto> Handle(
+    public Task<PayrollPeriodDetailDto> Handle(
+        SubmitPayrollPeriodCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync(
+            PayrollRowGuards.LockResource(request.PeriodId),
+            lockedCancellationToken => SubmitAsync(request, lockedCancellationToken),
+            cancellationToken);
+
+    private async Task<PayrollPeriodDetailDto> SubmitAsync(
         SubmitPayrollPeriodCommand request, CancellationToken cancellationToken)
     {
         var period = await context.PayrollPeriods
@@ -223,6 +264,8 @@ public sealed class SubmitPayrollPeriodCommandHandler(IApplicationDbContext cont
 /// <summary>Satır/dönem ortak korumaları.</summary>
 public static class PayrollRowGuards
 {
+    public static string LockResource(int periodId) => $"payroll-period:{periodId}";
+
     public static void EnsurePeriodOpen(PayrollPeriod period)
     {
         if (period.Status is PayrollPeriodStatus.Approved or PayrollPeriodStatus.Closed)
