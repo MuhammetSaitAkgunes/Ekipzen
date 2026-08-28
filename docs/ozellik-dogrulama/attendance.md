@@ -14,7 +14,7 @@ her hata **paraya dönüşüyor**.
 | # | Katman | Önem | Bulgu | Nerede |
 | --- | --- | --- | --- | --- |
 | A-1 | Mantık | **YÜKSEK** | **Gece vardiyası kaydedilemiyor** (22:00→06:00 reddediliyor) | `AttendanceEntryModelValidator` + `AttendanceCalculator.Compute` |
-| A-2 | Mantık | **YÜKSEK** | Aydaki **tek kayıt** puantajı "tam" sayıyor → bordro onayı açılıyor | `CreatePayrollPeriodCommandHandler` → `TimesheetComplete = summary.TotalDays > 0` |
+| A-2 | Mantık | **ÇÖZÜLDÜ 2026-08-28** | Beklenen iş günlerinin tamamı sunucuda puantaj/onaylı izinle karşılanıyor | `PayrollTimesheetCoverage` + tüm bordro onay yolları |
 | A-3 | Mantık | **YÜKSEK** | Fazla mesai eşiği **günlük 8 saat sabit**; haftalık 45 saat kuralı uygulanmıyor | `AttendanceCalculator.StandardWorkMinutes = 480` |
 | A-4 | Mantık | ORTA | Ara dinlenme serbest — `break=0` fazla mesaiyi şişiriyor | `AttendanceEntryModelValidator` (0–480 arası her değer) |
 | A-5 | Mantık | ORTA | **Gelecek tarihli** puantaj girilebiliyor (2030 kabul edildi) | `AttendanceEntryModelValidator` — `WorkDate` üst sınırı yok |
@@ -67,6 +67,13 @@ Canlı doğrulandı: 21 iş günü olan bir ayda **4 kayıt** (biri devamsız) g
 kapıdan biri**. Yani ayın 21 gününden 4'ü girilmiş bir personelin bordrosu
 onaylanabiliyor ve eksiklik hiçbir yerde görünmüyor. Kontrol kartında "Eksik
 Puantaj" sayacı da bu bayrağa dayandığı için **0 gösterir**.
+
+**Çözüm (2026-08-28):** beklenen iş günleri işe giriş tarihi, hafta sonu ve
+tatillerden türetiliyor; puantaj kayıtları ile onaylı izinler birleşik kapsam
+olarak sayılıyor. Bayrak API girdi modelinden ve arayüzdeki düzenlenebilir
+checkbox'tan kaldırıldı. Dönem oluşturma, güncelleme, kontrol ve onay aynı
+hesabı kullanıyor. Eksik puantajı `timesheetComplete=true` göndererek aşma
+girişimi entegrasyon testiyle reddediliyor.
 
 ### A-3 · Fazla mesai eşiği günlük 8 saat sabit — YÜKSEK
 

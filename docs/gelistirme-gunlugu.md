@@ -6,13 +6,14 @@
 
 ## Şu an neredeyiz
 
-- **Aktif iş — Kapı 1 API doğrulama sözleşmesi:** Dal
-  `codex/api-validation-gate`, yol haritası `docs/gelistirme-kapilari.md`.
-  `X-1`, `C-2`, `N-1` yerelde kapatıldı: enum komut/filtreleri alan bazlı 400
-  ProblemDetails dönüyor; merkezi `ArgumentException` güvenlik ağı iç ayrıntıyı
-  sızdırmadan 400 üretiyor. Release build 0 uyarı/0 hata; 66 unit + 190
-  integration test yeşil. Feature push + `main` merge + `main` push
-  senkronizasyon paketi kullanıcı tarafından onaylandı.
+- **Aktif iş — Kapı 2 bordro/parasal doğruluk:** Dal
+  `codex/payroll-money-gate`, yol haritası `docs/gelistirme-kapilari.md`.
+  İlk dilim `A-2 → P-5 → P-1` yerelde kapatıldı: beklenen iş günleri işe giriş,
+  hafta sonu, tatil, puantaj ve onaylı izinden sunucuda hesaplanıyor; gelecekte
+  işe başlayacak çalışan dönem dışında; sıfır brüt ve sıfır/negatif net onaya
+  kapalı. Backend build 0 uyarı/0 hata; 70 unit + 190 integration,
+  frontend lint/build + 146 test yeşil. Yerel
+  commitlerden sonra tek senkronizasyon onayı istenecek.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal
   `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`

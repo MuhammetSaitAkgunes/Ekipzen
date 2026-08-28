@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kaynak:** 6 ÖD
 belgesi, 11 özellik alanı
-**Tespit edilen: 49 · Açık: 45 — 0 KRİTİK · 14 YÜKSEK · 23 ORTA · 8 DÜŞÜK**
+**Tespit edilen: 49 · Açık: 42 — 0 KRİTİK · 12 YÜKSEK · 22 ORTA · 8 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -123,7 +123,7 @@ E-5 çıkış bir süreç değil
 | --- | --- | --- |
 | **0 — tamamlandı 2026-08-28** | **E-1** | Mevcut access token, yeni login ve refresh erişimi kesildi; reaktivasyon eski token'ı diriltmiyor. |
 | **1 — tamamlandı 2026-08-28** | **X-1 + K4** doğrulama katmanı | Actions, Compliance ve Recruitment enum girdileri validator kapsamında; merkezi 400 güvenlik ağı var. |
-| **2** | **ZİNCİR A** (A-2 → P-5 → P-1) | Doğrudan para. Yanlış tutar ödenmesi geri alınamayan tek hata sınıfı. |
+| **2 — tamamlandı 2026-08-28** | **ZİNCİR A** (A-2 → P-5 → P-1) | Puantaj sunucu sahipli; sıfır brüt ve sıfır/negatif net onaya kapalı. |
 | **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
 | **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
@@ -141,7 +141,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | # | Alan | Önem | Kök | Bulgu |
 | --- | --- | --- | --- | --- |
 | **E-1** | Employees | **ÇÖZÜLDÜ 2026-08-28** | K3 | Pasifleştirmede mevcut/yeni oturum ve refresh erişimi kesiliyor; kalıcı süreç kapsamı E-5'te sürüyor |
-| P-1 | Payroll | **YÜKSEK** | — | Negatif net ücret üretilip onaylanabiliyor |
+| **P-1** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Sıfır/negatif net uyarılıyor, `Eksik Veri` kalıyor ve onayda 409 alıyor |
 | P-2 | Payroll | **YÜKSEK** | K2 | Sonradan onaylanan dönem kümülatif GV matrahına yansımıyor |
 | P-3 | Payroll | **YÜKSEK** | K2 | Dönemler sırasız açılabiliyor |
 | P-4 | Payroll | **YÜKSEK** | K3 | Ay içinde ayrılan personel bordroya hiç girmiyor |
@@ -152,11 +152,11 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | L-1 | Leaves | **YÜKSEK** | K2 | Yıl devri hiç yok — her 1 Ocak'ta modül kilitleniyor |
 | L-2 | Leaves | **YÜKSEK** | K2 | Yıl sınırını aşan izin tamamen başlangıç yılından düşülüyor |
 | A-1 | Attendance | **YÜKSEK** | — | Gece vardiyası kaydedilemiyor (22:00→06:00 reddediliyor) |
-| A-2 | Attendance | **YÜKSEK** | — | Aydaki tek kayıt puantajı "tam" sayıyor → bordro onayı açılıyor |
+| **A-2** | Attendance | **ÇÖZÜLDÜ 2026-08-28** | — | Beklenen iş günleri puantaj/onaylı izinle sunucuda hesaplanıyor; istemci bayrağı yok |
 | A-3 | Attendance | **YÜKSEK** | K5 | Fazla mesai eşiği günlük 8 saat sabit; haftalık 45 saat yok |
 | E-2 | Employees | **YÜKSEK** | K3 | Pasif yönetici ekibin yöneticisi kalıyor — onay kuyruğu sahipsiz |
 | **X-1** | Çapraz | **ÇÖZÜLDÜ 2026-08-28** | K4 | Geçersiz enum alan bazlı 400; merkezi güvenlik ağı ayrıntı sızdırmayan 400 döndürüyor |
-| P-5 | Payroll | ORTA | — | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok |
+| **P-5** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Sıfır brüt uyarılıyor, `Eksik Veri` kalıyor ve onayda 409 alıyor |
 | P-6 | Payroll | ORTA | K4 | 2099 gibi uzak gelecek dönemi açılabiliyor |
 | P-7 | Payroll | ORTA | K2 | Maaş her dönem elle giriliyor; önceki dönemden devir yok |
 | P-8 | Payroll | ORTA | K2 | `PreviousTaxBase` oluşturmada dondurulup güncellenmiyor |

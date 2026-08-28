@@ -19,11 +19,11 @@ vergi demektir; hata aylar sonra fark edilir ve fatura üreticiye çıkar.
 
 | # | Katman | Önem | Bulgu | Durum |
 | --- | --- | --- | --- | --- |
-| P-1 | Mantık | **YÜKSEK** | **Negatif net ücret** üretilebiliyor ve onaylanabiliyor | açık |
+| P-1 | Mantık | **YÜKSEK** | **Negatif net ücret** üretilebiliyor ve onaylanabiliyor | **çözüldü 2026-08-28** |
 | P-2 | Mantık | **YÜKSEK** | Sonradan onaylanan dönem, önce açılmış dönemin **kümülatif GV matrahına yansımıyor** | açık |
 | P-3 | Mantık | **YÜKSEK** | Dönemler **sırasız** açılabiliyor (Aralık'tan sonra Kasım) | açık |
 | P-4 | Mantık | **YÜKSEK** | Ay içinde işten ayrılan personel bordroya **hiç girmiyor** | açık |
-| P-5 | Mantık | ORTA | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok | açık |
+| P-5 | Mantık | ORTA | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok | **çözüldü 2026-08-28** |
 | P-6 | Mantık | ORTA | 2099 gibi uzak gelecek dönemi açılabiliyor | açık |
 | P-7 | Mantık | ORTA | Maaş her dönem elle giriliyor; önceki dönemden devir yok | açık |
 | P-8 | Kod | ORTA | `PreviousTaxBase` dönem **oluşturulurken** dondurulup bir daha güncellenmiyor | açık |
@@ -77,6 +77,11 @@ Ve IBAN/puantaj tamamlanmış bir satırda **onay 200 döndü** — yani negatif
    Ancak formül kararı müşavirindir — burada **kontrol açığı** kayda geçiyor,
    formül hükmü değil.
 
+**Çözüm (2026-08-28):** motor negatif/sıfır net için açık uyarı üretiyor;
+merkezi `PayrollRowReadiness` neti `<= 0` olan satırı hem kontrol durumunda
+`Eksik Veri` bırakıyor hem onay anında 409 ile durduruyor. Formülün mevzuat
+doğruluğu hâlâ mali müşavir kapsamındadır; kapanan bulgu onay açığıdır.
+
 ### P-2 · Kümülatif gelir vergisi matrahı devri kopuyor — YÜKSEK
 
 Senaryo (gerçekten çalıştırıldı):
@@ -120,6 +125,10 @@ işlemlerinden biridir.
 `GrossSalary` doğrulaması yalnız `>= 0`. Sıfır maaş, veri girilmemiş satırın
 işaretidir; onaylanabilmesi "unutulan personel" hatasını sessizleştirir.
 (Dönem oluşturulurken tüm satırlar zaten `GrossSalary = 0` ile doğuyor.)
+
+**Çözüm (2026-08-28):** brüt maaşı `<= 0` olan satır `Eksik Veri` kalır,
+"Brüt maaş sıfır" uyarısı üretir ve onayda 409 alır. Gerekçeli istisna akışı
+ayrıca tasarlanana kadar otomatik onaya bilinçli olarak kapalıdır.
 
 ### P-6 · Uzak gelecek dönemi açılabiliyor — ORTA
 

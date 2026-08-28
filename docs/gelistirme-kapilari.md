@@ -16,7 +16,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | --- | --- | --- | --- |
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
 | 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı; senkronizasyon onaylandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
-| 2 | Bordro ve parasal doğruluk | ⬜ Sırada | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
+| 2 | Bordro ve parasal doğruluk | 🟡 İlk dilim tamamlandı; yerel doğrulama yeşil | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
 | 3 | Personel yaşam döngüsü ve işlem bütünlüğü | ⬜ Planlandı | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
@@ -51,6 +51,16 @@ net bordro uyarısız onaylanamaz. İkinci dilim `P-3 → P-2/P-8/P-9`: dönem s
 ve kümülatif vergi matrahı tek doğruluk kaynağına bağlanır. Son dilim `P-4`,
 `P-10`, `P-12`: ay içinde ayrılan personel, sorgu büyümesi ve eşzamanlı onay
 koruması.
+
+**İlk dilim tamamlandı (2026-08-28):** puantaj tamlığı artık istemci bayrağı
+değil; sunucu işe giriş tarihi, hafta sonu, tatil, puantaj kaydı ve onaylı izin
+birleşiminden hesaplıyor. Dönem sonundan sonra işe başlayan aktif çalışan döneme
+alınmıyor. Güncelleme, toplu kontrol ve onay yolları puantajı yeniden hesaplıyor;
+sıfır brüt veya sıfır/negatif net satır `Eksik Veri` kalıyor ve onayda 409 alıyor.
+Kanıt: backend build 0 uyarı/0 hata, 70 unit + 190 integration; frontend
+lint/build ve 146 test yeşil. `A-2`, `P-5`, `P-1` kapandı.
+
+**Sıradaki dilim:** `P-3 → P-2/P-8/P-9` dönem sırası ve kümülatif matrah.
 
 Çıkış ölçütü: parasal altın senaryolar; eksik puantaj ve negatif net için red
 testleri; dönem sırası/kümülatif matrah regresyonları; eşzamanlı onay testi.
