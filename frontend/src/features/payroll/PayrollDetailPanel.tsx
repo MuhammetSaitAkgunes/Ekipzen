@@ -32,7 +32,6 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     specialDeductions: String(row.specialDeductions ?? 0),
     previousTaxBase: String(row.previousTaxBase ?? 0),
     ibanComplete: row.ibanComplete ?? true,
-    timesheetComplete: row.timesheetComplete ?? true,
     notes: row.notes ?? "",
   });
 
@@ -65,7 +64,6 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           specialDeductions: parse(form.specialDeductions),
           previousTaxBase: parse(form.previousTaxBase),
           ibanComplete: form.ibanComplete,
-          timesheetComplete: form.timesheetComplete,
           notes: form.notes || null,
         },
       });
@@ -168,9 +166,11 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
             <label className="leg-item">
               <input type="checkbox" checked={form.ibanComplete} onChange={set("ibanComplete")} /> IBAN tamam
             </label>
-            <label className="leg-item">
-              <input type="checkbox" checked={form.timesheetComplete} onChange={set("timesheetComplete")} /> Puantaj tamam
-            </label>
+            <span className={`status-pill ${row.timesheetComplete ? "approved" : "pending"}`}>
+              {row.timesheetComplete
+                ? "Puantaj sistem tarafından tamamlandı"
+                : "Puantaj sistem kontrolünde eksik"}
+            </span>
           </div>
         </section>
       )}

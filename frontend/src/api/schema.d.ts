@@ -5495,7 +5495,6 @@ export interface components {
             /** Format: double */
             previousTaxBase?: number;
             ibanComplete?: boolean;
-            timesheetComplete?: boolean;
             notes?: string | null;
         };
         PayrollSettingsDto: {

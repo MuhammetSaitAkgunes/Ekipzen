@@ -24,7 +24,6 @@ public sealed record PayrollRowInputModel(
     decimal SpecialDeductions = 0m,
     decimal PreviousTaxBase = 0m,
     bool IbanComplete = true,
-    bool TimesheetComplete = true,
     string? Notes = null);
 
 public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRowInputModel>
@@ -76,17 +75,20 @@ public sealed class UpdatePayrollRowCommandHandler(IApplicationDbContext context
         row.SpecialDeductions = m.SpecialDeductions;
         row.PreviousTaxBase = m.PreviousTaxBase;
         row.IbanComplete = m.IbanComplete;
-        row.TimesheetComplete = m.TimesheetComplete;
         row.Notes = m.Notes;
 
-        // Girdi değişti: eksikse Eksik Veri, değilse Kontrol aşamasına döner.
-        row.ApprovalStatus = (!m.IbanComplete || !m.TimesheetComplete)
-            ? PayrollApprovalStatus.MissingData
-            : PayrollApprovalStatus.Control;
+        await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
+            context, row.Period!, [row], cancellationToken);
+        var parameters = row.Period!.Settings!.ToEngineParameters();
+        var calculation = engine.Calculate(row.ToEngineInput(), parameters);
+
+        // Girdi değişti: tüm sunucu kapıları açıksa Kontrol, değilse Eksik Veri.
+        row.ApprovalStatus = PayrollRowReadiness.IsReady(row, calculation)
+            ? PayrollApprovalStatus.Control
+            : PayrollApprovalStatus.MissingData;
 
         await context.SaveChangesAsync(cancellationToken);
 
-        var parameters = row.Period!.Settings!.ToEngineParameters();
         return PayrollPeriodProjector.ToRow(row, engine, parameters);
     }
 }
@@ -103,17 +105,26 @@ public sealed class RunPayrollCheckCommandHandler(IApplicationDbContext context,
         RunPayrollCheckCommand request, CancellationToken cancellationToken)
     {
         var period = await context.PayrollPeriods
-            .Include(p => p.Employees)
+            .Include(p => p.Settings)!.ThenInclude(s => s!.TaxBrackets)
+            .Include(p => p.Employees).ThenInclude(row => row.Employee)
             .FirstOrDefaultAsync(p => p.Id == request.PeriodId, cancellationToken)
             ?? throw new NotFoundException("Bordro dönemi", request.PeriodId);
 
         PayrollRowGuards.EnsurePeriodOpen(period);
 
-        foreach (var row in period.Employees.Where(r => r.ApprovalStatus != PayrollApprovalStatus.Approved))
+        var pendingRows = period.Employees
+            .Where(r => r.ApprovalStatus != PayrollApprovalStatus.Approved)
+            .ToList();
+        await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
+            context, period, pendingRows, cancellationToken);
+        var parameters = period.Settings!.ToEngineParameters();
+
+        foreach (var row in pendingRows)
         {
-            row.ApprovalStatus = (!row.IbanComplete || !row.TimesheetComplete)
-                ? PayrollApprovalStatus.MissingData
-                : PayrollApprovalStatus.ReadyForApproval;
+            var calculation = engine.Calculate(row.ToEngineInput(), parameters);
+            row.ApprovalStatus = PayrollRowReadiness.IsReady(row, calculation)
+                ? PayrollApprovalStatus.ReadyForApproval
+                : PayrollApprovalStatus.MissingData;
         }
 
         period.Status = PayrollPeriodStatus.Control;
@@ -141,13 +152,11 @@ public sealed class ApprovePayrollRowCommandHandler(IApplicationDbContext contex
             throw new ConflictException("Satır zaten onaylı.");
         }
 
-        if (!row.IbanComplete || !row.TimesheetComplete)
-        {
-            throw new ConflictException("Eksik verili satır onaylanamaz (IBAN/puantaj tamamlanmalı).");
-        }
-
+        await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
+            context, row.Period!, [row], cancellationToken);
         var parameters = row.Period!.Settings!.ToEngineParameters();
         var calc = engine.Calculate(row.ToEngineInput(), parameters);
+        PayrollRowReadiness.EnsureApprovable(row, calc);
 
         var result = row.Result ?? new PayrollResult { PayrollEmployeeId = row.Id };
         result.HourlyRate = calc.HourlyRate;

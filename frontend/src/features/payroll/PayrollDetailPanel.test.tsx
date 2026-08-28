@@ -39,6 +39,8 @@ test("panel satır bilgileri ve uyarılarıyla açılır", async () => {
   expect(screen.getByRole("heading", { name: "Ahmet Yılmaz" })).toBeInTheDocument();
   expect(screen.getByText("Kontrol bekliyor")).toBeInTheDocument();
   expect(screen.getByText("Bordro Pusulası Önizleme")).toBeInTheDocument();
+  expect(screen.getByText("Puantaj sistem tarafından tamamlandı")).toBeInTheDocument();
+  expect(screen.queryByRole("checkbox", { name: "Puantaj tamam" })).not.toBeInTheDocument();
 });
 
 test("girdi kaydetme PUT row ucuna doğru gövdeyle gider", async () => {
@@ -54,6 +56,7 @@ test("girdi kaydetme PUT row ucuna doğru gövdeyle gider", async () => {
     expect(put).toBeTruthy();
     const body = JSON.parse(String(put![1]?.body));
     expect(body).toMatchObject({ grossSalary: 120000, workedDays: 30, overtimeHours: 12 });
+    expect(body).not.toHaveProperty("timesheetComplete");
   });
 });
 

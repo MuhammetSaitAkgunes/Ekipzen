@@ -149,4 +149,18 @@ public sealed class PayrollEngineParityTests
         result.StampTax.Should().BeApproximately(
             Math.Max(30000m * 0.00759m - 250.7m, 0m), Tolerance);
     }
+
+    [Fact]
+    public void Calculate_FlagsZeroGrossAndNegativeNet()
+    {
+        var result = _engine.Calculate(
+            new PayrollInput(
+                GrossSalary: 0m, WorkedDays: 30, OvertimeHours: 0m,
+                PremiumPay: 0m, RoadAllowance: 0m, MealAllowance: 0m, BenefitPay: 0m,
+                SpecialDeductions: 100m, PreviousTaxBase: 0m),
+            DefaultParameters);
+
+        result.NetPay.Should().BeNegative();
+        result.Warnings.Should().Contain(["Brüt maaş sıfır", "Net ödeme negatif"]);
+    }
 }

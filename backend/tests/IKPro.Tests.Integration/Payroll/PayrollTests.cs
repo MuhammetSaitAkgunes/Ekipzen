@@ -148,13 +148,18 @@ public sealed class PayrollTests(IKProApiFactory factory)
     {
         var admin = await AuthedClientAsync("ik@hrmaster.local");
         var ahmetEmployeeId = await FindEmployeeIdAsync(admin, "Ahmet");
+        var employees = await GetAsync<PagedResult<EmployeeListItemDto>>(
+            admin, "/api/employees?pageSize=100");
 
-        // Eylül 2026 puantajı: Ahmet 09:00–20:00 → 120 dk fazla mesai (bordroya beslenecek).
-        (await admin.PostAsJsonAsync("/api/attendance", new
-        {
-            employeeId = ahmetEmployeeId,
-            model = new { workDate = "2026-09-01", checkIn = "09:00", checkOut = "20:00", breakMinutes = 60 },
-        })).StatusCode.Should().Be(HttpStatusCode.Created);
+        // Mevcut çalışanların tüm beklenen iş günlerini tamamla; Ahmet'in ilk günü
+        // 09:00–20:00 olduğundan 120 dk fazla mesai bordroya beslenecek.
+        await SeedCompleteTimesheetsAsync(admin, employees.Items, 2026, 9, ahmetEmployeeId);
+
+        var departmentId = employees.Items.First().DepartmentId;
+        var futureEmployee = await CreateEmployeeAsync(
+            admin, "Gelecek", "Çalışan", departmentId, "2026-10-15");
+        var incompleteEmployee = await CreateEmployeeAsync(
+            admin, "Eksik", "Puantaj", departmentId, "2026-09-30");
 
         // --- dönem oluştur ---
         var createResponse = await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 });
@@ -166,14 +171,64 @@ public sealed class PayrollTests(IKProApiFactory factory)
         period.Rows.Should().NotBeEmpty("aktif personel için girdi satırları üretilir");
         period.Rows.Select(r => r.Name).Should().Contain(["Ahmet Yılmaz", "Ece Arslan", "Ayşe Demir"]);
         period.Rows.Select(r => r.Name).Should().NotContain("Selin Koç", "pasif personel döneme girmez");
+        period.Rows.Select(r => r.Name).Should().NotContain(futureEmployee.Name,
+            "dönem sonundan sonra işe başlayan çalışan bordroya giremez");
 
         var ahmetRow = period.Rows.Single(r => r.Name == "Ahmet Yılmaz");
         ahmetRow.OvertimeHours.Should().Be(2, "puantaj özetindeki 120 dk fazla mesai saate çevrilir");
         ahmetRow.TimesheetComplete.Should().BeTrue();
         ahmetRow.ApprovalStatus.Should().Be("Ön Hesap");
+        var incompleteRow = period.Rows.Single(r => r.EmployeeId == incompleteEmployee.Id);
+        incompleteRow.TimesheetComplete.Should().BeFalse();
 
         (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict, "aynı dönem ikinci kez açılamaz");
+
+        // İstemci eski sözleşmedeki bayrağı gönderse dahi sunucu eksik puantajı
+        // yeniden hesaplar ve onayı reddeder.
+        var bypassResponse = await admin.PutAsJsonAsync(
+            $"/api/payroll/periods/{period.Id}/rows/{incompleteRow.Id}", new
+            {
+                grossSalary = 50000,
+                workedDays = 30,
+                overtimeHours = 0,
+                ibanComplete = true,
+                timesheetComplete = true,
+            });
+        bypassResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var bypassRow = (await bypassResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
+        bypassRow.TimesheetComplete.Should().BeFalse();
+        bypassRow.ApprovalStatus.Should().Be("Eksik Veri");
+        (await admin.PostAsync(
+                $"/api/payroll/periods/{period.Id}/rows/{incompleteRow.Id}/approve", null))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // Eksik tek iş günü tamamlandığında sonraki kontrol sunucu bayrağını açar.
+        (await admin.PostAsJsonAsync("/api/attendance", new
+        {
+            employeeId = incompleteEmployee.Id,
+            model = new
+            {
+                workDate = "2026-09-30", checkIn = "09:00", checkOut = "18:00", breakMinutes = 60,
+            },
+        })).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var refreshedPeriod = await GetAsync<PayrollPeriodDetailDto>(
+            admin, $"/api/payroll/periods/{period.Id}");
+        refreshedPeriod.Rows.Single(r => r.Id == incompleteRow.Id).TimesheetComplete.Should().BeTrue();
+
+        // Sıfır brüt ve bunun ürettiği negatif net, puantaj tam olsa da onaylanamaz.
+        var zeroResponse = await admin.PutAsJsonAsync(
+            $"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
+            {
+                grossSalary = 0, workedDays = 30, overtimeHours = 0,
+                specialDeductions = 100, ibanComplete = true,
+            });
+        var zeroRow = (await zeroResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
+        zeroRow.ApprovalStatus.Should().Be("Eksik Veri");
+        zeroRow.Warnings.Should().Contain(["Brüt maaş sıfır", "Net ödeme negatif"]);
+        (await admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         // --- Ahmet girdileri = parite senaryosu pr-001 ---
         var updateResponse = await admin.PutAsJsonAsync(
@@ -189,7 +244,6 @@ public sealed class PayrollTests(IKProApiFactory factory)
                 specialDeductions = 1800,
                 previousTaxBase = 312000,
                 ibanComplete = true,
-                timesheetComplete = true,
             });
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var updatedRow = (await updateResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
@@ -228,7 +282,6 @@ public sealed class PayrollTests(IKProApiFactory factory)
                 workedDays = 30,
                 overtimeHours = 0,
                 ibanComplete = true,
-                timesheetComplete = true,
             })).StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
@@ -268,6 +321,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
         october.Rows.Single(r => r.Name == "Ahmet Yılmaz").PreviousTaxBase
             .Should().BeApproximately(312000m + approvedAhmet.IncomeTaxBase, 0.01m,
                 "önceki dönemin GV matrahı kümülatife devrolur");
+        october.Rows.Select(r => r.Name).Should().Contain(futureEmployee.Name,
+            "dönem içinde işe başlayan aktif çalışan bordroya girer");
 
         // --- pusula PDF: çalışan kendisininkini indirir, başkasınınkini indiremez ---
         var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
@@ -328,6 +383,68 @@ public sealed class PayrollTests(IKProApiFactory factory)
         var response = await client.GetAsync(url);
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"GET {url}");
         return (await response.Content.ReadFromJsonAsync<T>())!;
+    }
+
+    private static async Task SeedCompleteTimesheetsAsync(
+        HttpClient admin,
+        IReadOnlyCollection<EmployeeListItemDto> employees,
+        int year,
+        int month,
+        int overtimeEmployeeId)
+    {
+        var periodStart = new DateOnly(year, month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+        foreach (var employee in employees.Where(e =>
+                     e.Status == "active" && e.HireDate <= periodEnd))
+        {
+            var firstRequiredDate = employee.HireDate > periodStart ? employee.HireDate : periodStart;
+            for (var date = firstRequiredDate; date <= periodEnd; date = date.AddDays(1))
+            {
+                if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                {
+                    continue;
+                }
+
+                var checkOut = employee.Id == overtimeEmployeeId && date == periodStart
+                    ? "20:00"
+                    : "18:00";
+                var response = await admin.PostAsJsonAsync("/api/attendance", new
+                {
+                    employeeId = employee.Id,
+                    model = new
+                    {
+                        workDate = date.ToString("yyyy-MM-dd"),
+                        checkIn = "09:00",
+                        checkOut,
+                        breakMinutes = 60,
+                    },
+                });
+                response.StatusCode.Should().Be(HttpStatusCode.Created,
+                    $"{employee.Name} {date:yyyy-MM-dd} puantajı hazırlanmalı");
+            }
+        }
+    }
+
+    private static async Task<EmployeeDetailDto> CreateEmployeeAsync(
+        HttpClient admin,
+        string firstName,
+        string lastName,
+        int departmentId,
+        string hireDate)
+    {
+        var response = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName,
+            lastName,
+            title = "Test Uzmanı",
+            departmentId,
+            hireDate,
+            status = "active",
+            profile = new { iban = "TR120006400000112345678901" },
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
     }
 
     /// <summary>Mevcut ayarları temel alıp yalnızca istenen alanları değiştiren PUT gövdesi.</summary>

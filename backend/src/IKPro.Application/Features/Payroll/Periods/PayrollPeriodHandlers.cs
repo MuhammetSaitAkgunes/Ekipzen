@@ -67,11 +67,25 @@ public sealed class CreatePayrollPeriodCommandHandler(IApplicationDbContext cont
         var settings = await PayrollSettingsResolver.ResolveAsync(
             context, new DateOnly(request.Year, request.Month, 1), cancellationToken);
 
+        var periodEnd = new DateOnly(request.Year, request.Month, 1).AddMonths(1).AddDays(-1);
+
         var employees = await context.Employees
             .AsNoTracking()
-            .Where(e => e.Status == EmployeeStatus.Active)
-            .Select(e => new { e.Id, HasIban = e.Profile != null && e.Profile.Iban != null })
+            .Where(e => e.Status == EmployeeStatus.Active && e.HireDate <= periodEnd)
+            .Select(e => new
+            {
+                e.Id,
+                e.HireDate,
+                HasIban = e.Profile != null && e.Profile.Iban != null,
+            })
             .ToListAsync(cancellationToken);
+
+        var timesheetCoverage = await PayrollTimesheetCoverage.CalculateAsync(
+            context,
+            employees.ToDictionary(e => e.Id, e => e.HireDate),
+            request.Year,
+            request.Month,
+            cancellationToken);
 
         // Kümülatif GV matrahı devri: aynı yılın EN SON onaylı döneminin
         // (elle girilmiş taban dahil) dönem-sonu kümülatifi = PreviousTaxBase + IncomeTaxBase.
@@ -118,7 +132,7 @@ public sealed class CreatePayrollPeriodCommandHandler(IApplicationDbContext cont
                 OvertimeHours = summary is null ? 0 : (int)Math.Round(summary.TotalOvertimeMinutes / 60.0),
                 PreviousTaxBase = previousBases.GetValueOrDefault(employee.Id, 0m),
                 IbanComplete = employee.HasIban,
-                TimesheetComplete = summary is not null && summary.TotalDays > 0,
+                TimesheetComplete = timesheetCoverage.GetValueOrDefault(employee.Id),
                 ApprovalStatus = PayrollApprovalStatus.PreCalc,
             });
         }
@@ -158,6 +172,12 @@ public static class PayrollPeriodProjector
             .Include(p => p.Employees).ThenInclude(pe => pe.Result)
             .FirstOrDefaultAsync(p => p.Id == periodId, cancellationToken)
             ?? throw new NotFoundException("Bordro dönemi", periodId);
+
+        var pendingRows = period.Employees
+            .Where(row => row.ApprovalStatus != PayrollApprovalStatus.Approved)
+            .ToList();
+        await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
+            context, period, pendingRows, cancellationToken);
 
         var parameters = period.Settings!.ToEngineParameters();
 

@@ -123,6 +123,9 @@ public sealed class PayrollEngine : IPayrollEngine
         var warnings = new List<string>();
         if (!input.TimesheetComplete) warnings.Add("Puantaj eksik");
         if (!input.IbanComplete) warnings.Add("IBAN eksik");
+        if (input.GrossSalary <= 0m) warnings.Add("Brüt maaş sıfır");
+        if (netPay < 0m) warnings.Add("Net ödeme negatif");
+        else if (netPay == 0m) warnings.Add("Net ödeme sıfır");
         if (sgkBase >= parameters.SgkBaseMax) warnings.Add("SGK tavan kontrolü");
 
         // JS 190000 sabitini kullanır; parite için ilk dilim limiti esas alınır (aynı değer).
