@@ -1,6 +1,8 @@
 using FluentAssertions;
 using IKPro.Application.Features.Attendance;
 using IKPro.Application.Features.Auth;
+using IKPro.Application.Features.Departments;
+using IKPro.Application.Features.Employees;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -157,6 +159,56 @@ public sealed class AttendanceTests(IKProApiFactory factory)
         // Çalışan rolü puantaj modülüne giremez (routes.js: hr-admin+manager).
         var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
         (await employee.GetAsync("/api/attendance/live")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Entries_MustStayWithinEmploymentDates()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+
+        var createEmployeeResponse = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Puantaj",
+            lastName = $"Sinir{suffix}",
+            title = "Test Uzmani",
+            departmentId = departments[0].Id,
+            hireDate = "2026-08-01",
+            status = "active",
+        });
+        createEmployeeResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var employee = (await createEmployeeResponse.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+
+        var historical = await CreateEntryAsync(
+            admin, employee.Id, "2026-08-10", "09:00", "18:00");
+
+        (await admin.PatchAsJsonAsync($"/api/employees/{employee.Id}/status", new
+        {
+            status = "passive",
+            terminationDate = "2026-08-15",
+        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await PostEntryAsync(admin, employee.Id, "2026-08-14", "09:00", "18:00"))
+            .StatusCode.Should().Be(HttpStatusCode.Created,
+                "ayrilis tarihi dahil gecmis puantaj duzeltmeleri korunmali");
+
+        (await PostEntryAsync(admin, employee.Id, "2026-08-16", "09:00", "18:00"))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "ayrilis sonrasi puantaj olusturulamamali");
+
+        (await PostEntryAsync(admin, employee.Id, "2026-07-31", "09:00", "18:00"))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "ise giris oncesi puantaj olusturulamamali");
+
+        (await admin.PutAsJsonAsync($"/api/attendance/{historical.Id}", new
+        {
+            workDate = "2026-08-16",
+            checkIn = "09:00",
+            checkOut = "18:00",
+            breakMinutes = 60,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "mevcut bir satir istihdam araligi disina tasinamamali");
     }
 
     // --- yardımcılar ---

@@ -1,6 +1,7 @@
 using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Application.Features.Employees;
 using IKPro.Application.Features.Employees.Files;
 using IKPro.Domain.Entities.Attendance;
 using MediatR;
@@ -57,6 +58,9 @@ public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext co
     {
         await EmployeeAccessGuard.EnsureCanAccessAsync(
             context, currentUser, request.EmployeeId, cancellationToken);
+
+        await EmployeeEmploymentGuard.EnsureDateIsWithinEmploymentAsync(
+            context, request.EmployeeId, request.Model.WorkDate, cancellationToken);
 
         var exists = await context.AttendanceRecords.AnyAsync(
             a => a.EmployeeId == request.EmployeeId && a.WorkDate == request.Model.WorkDate,
@@ -134,6 +138,9 @@ public sealed class UpdateAttendanceEntryCommandHandler(IApplicationDbContext co
 
         await EmployeeAccessGuard.EnsureCanAccessAsync(
             context, currentUser, record.EmployeeId, cancellationToken);
+
+        await EmployeeEmploymentGuard.EnsureDateIsWithinEmploymentAsync(
+            context, record.EmployeeId, request.Model.WorkDate, cancellationToken);
 
         // Tarih değişiyorsa gün başına tek kayıt kuralı korunur.
         if (record.WorkDate != request.Model.WorkDate)
