@@ -1,3 +1,4 @@
+using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Enums;
@@ -10,6 +11,16 @@ namespace IKPro.Application.Features.Recruitment.Queries;
 
 public sealed record GetCandidatesQuery(string? Search = null, string? Status = null)
     : IRequest<IReadOnlyList<CandidateListItemDto>>;
+
+public sealed class GetCandidatesQueryValidator : AbstractValidator<GetCandidatesQuery>
+{
+    public GetCandidatesQueryValidator()
+    {
+        RuleFor(x => x.Status)
+            .Must(s => string.IsNullOrWhiteSpace(s) || RecruitmentMappings.IsStatus(s))
+            .WithMessage("Aday durumu filtresi: Yeni | Mülakat | Teklif | Red | İşe Alındı.");
+    }
+}
 
 public sealed class GetCandidatesQueryHandler(IApplicationDbContext context)
     : IRequestHandler<GetCandidatesQuery, IReadOnlyList<CandidateListItemDto>>

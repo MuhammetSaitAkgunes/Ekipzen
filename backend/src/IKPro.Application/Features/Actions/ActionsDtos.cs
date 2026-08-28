@@ -39,6 +39,12 @@ public sealed record SearchResultDto(
 
 public static class ActionsMappings
 {
+    public static bool IsPriority(string? value)
+        => value is "high" or "medium" or "low";
+
+    public static bool IsStatus(string? value)
+        => value is "open" or "week" or "done";
+
     /// <summary>Frontend öncelik etiketi: high | medium | low.</summary>
     public static string ToDto(this ActionPriority priority) => priority switch
     {

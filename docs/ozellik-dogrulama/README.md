@@ -59,18 +59,18 @@ düzeltilmiş ya da gerekçesiyle kabul edilmiş olmalıdır.
 
 | Özellik | Uç | Test | ÖD | Açık bulgu |
 | --- | --- | --- | --- | --- |
-| [Recruitment](recruitment.md) | 10 | 4 | ✅ 2026-08-13 | 10 |
+| [Recruitment](recruitment.md) | 10 | 5 | ✅ 2026-08-28 | 10 |
 | [Payroll](payroll.md) | 13 | 12 | ✅ 2026-08-13 | 12 |
 | [Employees](employees.md) | 13 | 39 | ✅ 2026-08-28 | 5 açık / 1 çözülmüş |
 | [Leaves](leaves.md) | 9 | 9 | ✅ 2026-08-13 | 8 |
-| [Actions](kalan-alanlar.md) | 8 | 5 | ✅ 2026-08-13 | 1 |
+| [Actions](kalan-alanlar.md) | 8 | 8 | ✅ 2026-08-28 | 0 açık / 1 çözülmüş |
 | [Dashboard](kalan-alanlar.md) | 7 | 7 | ✅ 2026-08-13 | 0 |
 | [Settings](kalan-alanlar.md) | 6 | 4 | ✅ 2026-08-13 | 0 |
-| [Compliance](kalan-alanlar.md) | 6 | 5 | ✅ 2026-08-13 | 2 |
+| [Compliance](kalan-alanlar.md) | 6 | 8 | ✅ 2026-08-28 | 1 açık / 1 çözülmüş |
 | [Attendance](attendance.md) | 5 | 6 | ✅ 2026-08-13 | 8 |
 | [Departments](kalan-alanlar.md) | 4 | — | ✅ 2026-08-13 | 1 |
 | Auth / Tenancy | 15 | 121 | ⬜ (üç fazdır denetleniyor) | — |
-| **Çapraz kesen** | — | — | ✅ 2026-08-13 | **1** (X-1) |
+| **Çapraz kesen** | — | 1 | ✅ 2026-08-28 | 0 açık / **1 çözülmüş** (X-1) |
 
-**Toplam: 49 tespit · 48 açık bulgu — 0 KRİTİK, 15 YÜKSEK.**
+**Toplam: 49 tespit · 45 açık bulgu — 0 KRİTİK, 14 YÜKSEK.**
 Hepsi tek listede: [**bulgular.md**](bulgular.md) — düzeltme planı buradan yürür.

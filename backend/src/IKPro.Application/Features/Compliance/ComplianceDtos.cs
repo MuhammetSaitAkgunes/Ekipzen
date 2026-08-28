@@ -37,6 +37,12 @@ public sealed record ComplianceReadinessDto(
 
 public static class ComplianceMappings
 {
+    public static bool IsStatus(string? value)
+        => value is "Eksik" or "İncelemede" or "Süresi Yaklaşıyor" or "Tamamlandı";
+
+    public static bool IsLevel(string? value)
+        => value is "high" or "medium" or "low";
+
     /// <summary>Enum kataloğu (plan Ek A): Eksik | İncelemede | Süresi Yaklaşıyor | Tamamlandı.</summary>
     public static string ToLabel(this ComplianceStatus status) => status switch
     {

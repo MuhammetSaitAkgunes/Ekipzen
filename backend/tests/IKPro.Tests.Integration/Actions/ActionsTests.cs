@@ -97,6 +97,41 @@ public sealed class ActionsTests(IKProApiFactory factory)
         badge.OpenCount.Should().Be(all.Count(a => a.Status != "done"));
     }
 
+    [Theory]
+    [InlineData("/api/actions?priority=urgent", "Priority")]
+    [InlineData("/api/actions?status=closed", "Status")]
+    public async Task Actions_InvalidEnumFilters_ReturnValidationProblem(
+        string url, string property)
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        await AssertValidationProblemAsync(await admin.GetAsync(url), property);
+    }
+
+    [Fact]
+    public async Task Actions_InvalidEnumCommands_ReturnValidationProblem()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+
+        await AssertValidationProblemAsync(await admin.PostAsJsonAsync("/api/actions", new
+        {
+            title = "Geçersiz öncelik testi",
+            source = "Kalite",
+            owner = "İK Operasyon",
+            priority = "urgent",
+        }), "Priority");
+
+        await AssertValidationProblemAsync(await admin.PutAsJsonAsync("/api/actions/1", new
+        {
+            title = "Geçersiz öncelik testi",
+            source = "Kalite",
+            owner = "İK Operasyon",
+            priority = "urgent",
+        }), "Priority");
+
+        await AssertValidationProblemAsync(await admin.PatchAsJsonAsync(
+            "/api/actions/1/status", new { status = "closed" }), "Status");
+    }
+
     [Fact]
     public async Task Actions_RoleMatrix_EmployeeReadsButCannotMutate()
     {
@@ -200,5 +235,16 @@ public sealed class ActionsTests(IKProApiFactory factory)
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"durum geçişi {status} → {body}");
         return (await response.Content.ReadFromJsonAsync<GlobalActionDto>())!;
+    }
+
+    private static async Task AssertValidationProblemAsync(
+        HttpResponseMessage response, string property)
+    {
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+
+        var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        problem.GetProperty("errors").EnumerateObject()
+            .Should().Contain(error => error.Name.Equals(property, StringComparison.OrdinalIgnoreCase));
     }
 }

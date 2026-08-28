@@ -179,6 +179,20 @@ public sealed class RecruitmentTests(IKProApiFactory factory)
     }
 
     [Fact]
+    public async Task CandidatePool_InvalidStatusFilter_ReturnsValidationProblem()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+
+        var response = await admin.GetAsync("/api/candidates?status=completed");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+        var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        problem.GetProperty("errors").EnumerateObject()
+            .Should().Contain(error => error.Name.Equals("Status", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Recruitment_IsHrAdminOnly()
     {
         var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");

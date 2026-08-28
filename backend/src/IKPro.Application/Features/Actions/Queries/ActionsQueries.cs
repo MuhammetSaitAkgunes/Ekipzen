@@ -1,3 +1,4 @@
+using FluentValidation;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Enums;
 using MediatR;
@@ -14,6 +15,19 @@ public sealed record GetGlobalActionsQuery(
     string? Source = null,
     string? Owner = null,
     string? Status = null) : IRequest<IReadOnlyList<GlobalActionDto>>;
+
+public sealed class GetGlobalActionsQueryValidator : AbstractValidator<GetGlobalActionsQuery>
+{
+    public GetGlobalActionsQueryValidator()
+    {
+        RuleFor(x => x.Priority)
+            .Must(p => string.IsNullOrWhiteSpace(p) || ActionsMappings.IsPriority(p))
+            .WithMessage("Öncelik filtresi: high | medium | low.");
+        RuleFor(x => x.Status)
+            .Must(s => string.IsNullOrWhiteSpace(s) || ActionsMappings.IsStatus(s))
+            .WithMessage("Durum filtresi: open | week | done.");
+    }
+}
 
 public sealed class GetGlobalActionsQueryHandler(IApplicationDbContext context)
     : IRequestHandler<GetGlobalActionsQuery, IReadOnlyList<GlobalActionDto>>

@@ -26,6 +26,12 @@ public sealed class CreateComplianceDocumentCommandValidator
         RuleFor(x => x.EmployeeId).GreaterThan(0);
         RuleFor(x => x.DocumentName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.OwnerName).MaximumLength(128);
+        RuleFor(x => x.Status)
+            .Must(ComplianceMappings.IsStatus)
+            .WithMessage("Belge durumu: Eksik | İncelemede | Süresi Yaklaşıyor | Tamamlandı.");
+        RuleFor(x => x.Level)
+            .Must(ComplianceMappings.IsLevel)
+            .WithMessage("Risk seviyesi: high | medium | low.");
     }
 }
 
@@ -85,6 +91,9 @@ public sealed class UpdateComplianceDocumentCommandValidator
     public UpdateComplianceDocumentCommandValidator()
     {
         RuleFor(x => x.DocumentName).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Level)
+            .Must(ComplianceMappings.IsLevel)
+            .WithMessage("Risk seviyesi: high | medium | low.");
     }
 }
 
@@ -112,6 +121,17 @@ public sealed class UpdateComplianceDocumentCommandHandler(IApplicationDbContext
 
 public sealed record SetComplianceStatusCommand(int Id, string Status)
     : IRequest<ComplianceDocumentDto>;
+
+public sealed class SetComplianceStatusCommandValidator
+    : AbstractValidator<SetComplianceStatusCommand>
+{
+    public SetComplianceStatusCommandValidator()
+    {
+        RuleFor(x => x.Status)
+            .Must(ComplianceMappings.IsStatus)
+            .WithMessage("Belge durumu: Eksik | İncelemede | Süresi Yaklaşıyor | Tamamlandı.");
+    }
+}
 
 public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext context)
     : IRequestHandler<SetComplianceStatusCommand, ComplianceDocumentDto>

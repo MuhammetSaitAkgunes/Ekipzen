@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kaynak:** 6 ÖD
 belgesi, 11 özellik alanı
-**Tespit edilen: 49 · Açık: 48 — 0 KRİTİK · 15 YÜKSEK · 25 ORTA · 8 DÜŞÜK**
+**Tespit edilen: 49 · Açık: 45 — 0 KRİTİK · 14 YÜKSEK · 23 ORTA · 8 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -15,7 +15,7 @@ ve hangi sırayla** var.
 | [Leaves](leaves.md) | 8 | — | 2 |
 | [Attendance](attendance.md) | 8 | — | 3 |
 | [Employees](employees.md) | 5 açık / 6 tespit | — | 1 |
-| [Kalan alanlar](kalan-alanlar.md) | 5 | — | 1 |
+| [Kalan alanlar](kalan-alanlar.md) | 2 açık / 5 tespit | — | — |
 
 ---
 
@@ -122,7 +122,7 @@ E-5 çıkış bir süreç değil
 | Dalga | İçerik | Neden bu sırada |
 | --- | --- | --- |
 | **0 — tamamlandı 2026-08-28** | **E-1** | Mevcut access token, yeni login ve refresh erişimi kesildi; reaktivasyon eski token'ı diriltmiyor. |
-| **1** | **X-1 + K4** doğrulama katmanı | Çapraz kesen. `GlobalExceptionHandler`'da tek değişiklik 8 noktayı kapatır; ortak doğrulama yapısı sonraki dalgaların hepsini kolaylaştırır. Middleware talebinin ilk somut uygulaması. |
+| **1 — tamamlandı 2026-08-28** | **X-1 + K4** doğrulama katmanı | Actions, Compliance ve Recruitment enum girdileri validator kapsamında; merkezi 400 güvenlik ağı var. |
 | **2** | **ZİNCİR A** (A-2 → P-5 → P-1) | Doğrudan para. Yanlış tutar ödenmesi geri alınamayan tek hata sınıfı. |
 | **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
@@ -155,7 +155,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | A-2 | Attendance | **YÜKSEK** | — | Aydaki tek kayıt puantajı "tam" sayıyor → bordro onayı açılıyor |
 | A-3 | Attendance | **YÜKSEK** | K5 | Fazla mesai eşiği günlük 8 saat sabit; haftalık 45 saat yok |
 | E-2 | Employees | **YÜKSEK** | K3 | Pasif yönetici ekibin yöneticisi kalıyor — onay kuyruğu sahipsiz |
-| **X-1** | Çapraz | **YÜKSEK** | K4 | Geçersiz enum değeri **500** döndürüyor; `ArgumentException` haritalanmamış |
+| **X-1** | Çapraz | **ÇÖZÜLDÜ 2026-08-28** | K4 | Geçersiz enum alan bazlı 400; merkezi güvenlik ağı ayrıntı sızdırmayan 400 döndürüyor |
 | P-5 | Payroll | ORTA | — | Sıfır brüt maaşlı satır onaylanabiliyor, uyarı yok |
 | P-6 | Payroll | ORTA | K4 | 2099 gibi uzak gelecek dönemi açılabiliyor |
 | P-7 | Payroll | ORTA | K2 | Maaş her dönem elle giriliyor; önceki dönemden devir yok |
@@ -181,8 +181,8 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | E-5 | Employees | ORTA | K3 | İşten çıkış tek alanlık güncelleme, süreç değil (**E-1'in kökü**) |
 | D-1 | Departments | ORTA | — | Açık pozisyonu olan departman silinebiliyor; pozisyon sahipsiz kalıyor |
 | C-1 | Compliance | ORTA | K2 | `DueDate` hiç kullanılmıyor; süresi geçen belge risk sayılmıyor |
-| C-2 | Compliance | ORTA | K4 | Durum/seviye alanlarında hiç doğrulayıcı yok → X-1 |
-| N-1 | Actions | ORTA | K4 | Öncelik/durum alanlarında hiç doğrulayıcı yok → X-1 |
+| C-2 | Compliance | **ÇÖZÜLDÜ 2026-08-28** | K4 | Durum/seviye komutları ve filtreleri FluentValidation kapsamında |
+| N-1 | Actions | **ÇÖZÜLDÜ 2026-08-28** | K4 | Öncelik/durum komutları ve filtreleri FluentValidation kapsamında |
 | P-11 | Payroll | DÜŞÜK | K5 | SGK kontrol kartında `* 0.95m` sihirli sayısı |
 | R-8 | Recruitment | DÜŞÜK | — | Pozisyon oluştururken departman iki kez sorgulanıyor |
 | R-10 | Recruitment | DÜŞÜK | — | `AuthorName` denormalize; kullanıcı adı değişince not eski adı taşır |

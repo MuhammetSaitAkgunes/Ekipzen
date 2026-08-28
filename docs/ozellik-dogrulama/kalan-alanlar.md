@@ -1,6 +1,6 @@
 # Kalan Alanlar — Özellik Doğrulama
 
-**Tarih:** 2026-08-13 · **Kapsam:** Departments (4 uç), Compliance (6),
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kapsam:** Departments (4 uç), Compliance (6),
 Actions (8), Settings (6), Dashboard (7) · **Mevcut test:** sırasıyla ~4, 5, 5, 4, 7
 
 Bu beş alan tek belgede toplandı: hepsi düşük iş riskli ve bulgu sayısı az.
@@ -12,11 +12,11 @@ Bu beş alan tek belgede toplandı: hepsi düşük iş riskli ve bulgu sayısı 
 
 | # | Alan | Katman | Önem | Bulgu | Nerede |
 | --- | --- | --- | --- | --- | --- |
-| **X-1** | Tümü | Kod | **YÜKSEK** | **Geçersiz enum değeri 500 döndürüyor** — `ArgumentException` haritalanmamış | `GlobalExceptionHandler`; 8 `Parse*` yardımcısı |
+| **X-1** | Tümü | Kod | **ÇÖZÜLDÜ** (eski YÜKSEK) | Geçersiz enum alan bazlı 400; güvenlik ağı ayrıntı sızdırmayan 400 döndürüyor | `GlobalExceptionHandler`; validator'lar; integration testi |
 | D-1 | Departments | Mantık | ORTA | Açık pozisyonu olan departman silinebiliyor; pozisyon **sahipsiz kalıyor** | `DeleteDepartmentCommandHandler` — yalnız personel kontrolü var |
 | C-1 | Compliance | Mantık | ORTA | **Son tarih (`DueDate`) hiç kullanılmıyor**; süresi geçen belge kendiliğinden risk olmuyor | `vw_ComplianceReadiness`; durum tamamen elle |
-| C-2 | Compliance | Kod | ORTA | Durum/seviye alanlarında **hiç doğrulayıcı yok** → X-1'in canlı örneği | `Compliance/Commands` — `.Must(` yok |
-| N-1 | Actions | Kod | ORTA | Öncelik/durum alanlarında **hiç doğrulayıcı yok** → X-1 | `Actions/…` — `.Must(` yok |
+| C-2 | Compliance | Kod | **ÇÖZÜLDÜ** | Durum/seviye komutları ve filtreleri FluentValidation kapsamında | `Compliance/Commands`, `Compliance/Queries` |
+| N-1 | Actions | Kod | **ÇÖZÜLDÜ** | Öncelik/durum komutları ve filtreleri FluentValidation kapsamında | `Actions/Commands`, `Actions/Queries` |
 
 **Doğru çalışan, kanıtlanmış davranışlar:**
 
@@ -31,7 +31,7 @@ Bu beş alan tek belgede toplandı: hepsi düşük iş riskli ve bulgu sayısı 
 
 ---
 
-## X-1 · Geçersiz enum değeri 500 döndürüyor — YÜKSEK (sistemik)
+## X-1 · Geçersiz enum değeri 500 döndürüyor — ÇÖZÜLDÜ 2026-08-28
 
 Canlı yakalandı:
 
@@ -43,6 +43,12 @@ System.ArgumentException: Geçersiz belge durumu: completed
   (Eksik|İncelemede|Süresi Yaklaşıyor|Tamamlandı)
   at ComplianceMappings.ParseStatus(String value)
 ```
+
+**Çözüm:** Actions ve Compliance içindeki tüm durum/öncelik/seviye komut ve
+filtreleri alan bazlı FluentValidation kurallarına alındı; Recruitment filtresinde
+kalan aynı boşluk da kapatıldı. Savunma katmanı olarak `ArgumentException`
+merkezi handler'da iç mesajı istemciye taşımadan 400'e eşleniyor. RFC 7807 hata
+zarfı, alan anahtarları ve güvenlik ağı 8 yeni integration testiyle doğrulandı.
 
 **Kök neden:** `GlobalExceptionHandler` `ArgumentException`'ı **haritalamıyor**;
 haritalanan tipler `ValidationException`, `NotFoundException`, `ConflictException`,
@@ -121,18 +127,16 @@ kullanıcıya değil.
 | --- | --- | --- |
 | 1 | Kiracı izolasyonu | ✅ Tümü global filtre üzerinden; `vw_ComplianceReadiness` `TenantId` taşıyor |
 | 2 | Yetki kapsamı | ✅ Politika dağılımı doğru ve ince ayarlı (Actions'ta durum/silme ayrımı iyi örnek) |
-| 3 | Doğrulama | ❌ X-1, C-2, N-1 |
+| 3 | Doğrulama | ✅ X-1, C-2, N-1 kapandı; enum alanları validator + merkezi güvenlik ağıyla korunuyor |
 | 4 | İşlem sınırı | ✅ Tek varlık işlemleri; çok adımlı yazma yok |
 | 5 | N+1 / kartezyen | ✅ Dashboard sorguları view/agregasyon üzerinden |
-| 6 | Hata zarfı | ❌ X-1 — haritalanmamış istisna 500'e düşüyor |
+| 6 | Hata zarfı | ✅ Geçersiz istek 400 ProblemDetails; iç `ArgumentException` mesajı sızmıyor |
 | 7 | Audit izi | ✅ `ComplianceDocuments` trigger kapsamında; `audit-logs` ucu var |
-| 8 | Test boşluğu | ⚠️ Geçersiz enum girdisi (X-1) hiçbir alanda test edilmemiş; departman-pozisyon ilişkisi (D-1) ve son tarih mantığı (C-1) test edilmemiş |
+| 8 | Test boşluğu | ⚠️ Enum regresyonları kapandı; departman-pozisyon ilişkisi (D-1) ve son tarih mantığı (C-1) test edilmemiş |
 
 ---
 
 ## Sonraki adım
 
-1. **X-1** — iki katmanlı düzeltme; tek bir yerde (`GlobalExceptionHandler`)
-   yapılacak değişiklik 8 noktayı birden güvenceye alır
-2. **C-1** — son tarih mantığı (ürün kararı: eşik kaç gün?)
-3. **D-1** — pozisyon kontrolü, personel kontrolünün yanına
+1. **C-1** — son tarih mantığı (ürün kararı: eşik kaç gün?)
+2. **D-1** — pozisyon kontrolü, personel kontrolünün yanına

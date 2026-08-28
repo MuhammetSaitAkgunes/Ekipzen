@@ -66,6 +66,12 @@ public sealed class GlobalExceptionHandler(
                 Title = exception.Message,
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10"
             },
+            ArgumentException => new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Geçersiz istek.",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+            },
             _ => new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,

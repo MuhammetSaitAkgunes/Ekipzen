@@ -53,6 +53,9 @@ public sealed record RecruitmentFunnelDto(
 
 public static class RecruitmentMappings
 {
+    public static bool IsStatus(string? value)
+        => value is "Yeni" or "Mülakat" or "Teklif" or "Red" or "İşe Alındı";
+
     /// <summary>Frontend pipeline etiketleri: Yeni | Mülakat | Teklif | Red | İşe Alındı.</summary>
     public static string ToDto(this CandidateStatus status) => status switch
     {

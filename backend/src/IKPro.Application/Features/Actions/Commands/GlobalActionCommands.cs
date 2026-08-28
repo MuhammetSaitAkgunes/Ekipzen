@@ -29,6 +29,9 @@ public sealed class CreateGlobalActionCommandValidator : AbstractValidator<Creat
         RuleFor(x => x.SourceRoute).MaximumLength(64);
         RuleFor(x => x.Due).MaximumLength(64);
         RuleFor(x => x.RecommendedAction).MaximumLength(512);
+        RuleFor(x => x.Priority)
+            .Must(ActionsMappings.IsPriority)
+            .WithMessage("Öncelik: high | medium | low.");
     }
 }
 
@@ -75,6 +78,9 @@ public sealed class UpdateGlobalActionCommandValidator : AbstractValidator<Updat
         RuleFor(x => x.Title).NotEmpty().MaximumLength(256);
         RuleFor(x => x.Source).NotEmpty().MaximumLength(64);
         RuleFor(x => x.Owner).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.Priority)
+            .Must(ActionsMappings.IsPriority)
+            .WithMessage("Öncelik: high | medium | low.");
     }
 }
 
@@ -104,6 +110,17 @@ public sealed class UpdateGlobalActionCommandHandler(IApplicationDbContext conte
 // --- durum geçişi (open → week → done, ileri yönlü) ---
 
 public sealed record SetGlobalActionStatusCommand(int Id, string Status) : IRequest<GlobalActionDto>;
+
+public sealed class SetGlobalActionStatusCommandValidator
+    : AbstractValidator<SetGlobalActionStatusCommand>
+{
+    public SetGlobalActionStatusCommandValidator()
+    {
+        RuleFor(x => x.Status)
+            .Must(ActionsMappings.IsStatus)
+            .WithMessage("Aksiyon durumu: open | week | done.");
+    }
+}
 
 public sealed class SetGlobalActionStatusCommandHandler(IApplicationDbContext context)
     : IRequestHandler<SetGlobalActionStatusCommand, GlobalActionDto>

@@ -1,3 +1,4 @@
+using FluentValidation;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Constants;
 using IKPro.Domain.Enums;
@@ -15,6 +16,20 @@ public sealed record GetComplianceDocumentsQuery(
     string? Status = null,
     string? Level = null,
     string? Search = null) : IRequest<IReadOnlyList<ComplianceDocumentDto>>;
+
+public sealed class GetComplianceDocumentsQueryValidator
+    : AbstractValidator<GetComplianceDocumentsQuery>
+{
+    public GetComplianceDocumentsQueryValidator()
+    {
+        RuleFor(x => x.Status)
+            .Must(s => string.IsNullOrWhiteSpace(s) || ComplianceMappings.IsStatus(s))
+            .WithMessage("Belge durumu filtresi: Eksik | İncelemede | Süresi Yaklaşıyor | Tamamlandı.");
+        RuleFor(x => x.Level)
+            .Must(l => string.IsNullOrWhiteSpace(l) || ComplianceMappings.IsLevel(l))
+            .WithMessage("Risk seviyesi filtresi: high | medium | low.");
+    }
+}
 
 public sealed class GetComplianceDocumentsQueryHandler(
     IApplicationDbContext context, ICurrentUser currentUser)

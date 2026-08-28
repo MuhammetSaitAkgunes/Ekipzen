@@ -100,6 +100,42 @@ public sealed class ComplianceTests(IKProApiFactory factory)
         searched.Should().OnlyContain(d => d.Document.Contains("KVKK"));
     }
 
+    [Theory]
+    [InlineData("/api/compliance/documents?status=completed", "Status")]
+    [InlineData("/api/compliance/documents?level=urgent", "Level")]
+    public async Task Documents_InvalidEnumFilters_ReturnValidationProblem(
+        string url, string property)
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        await AssertValidationProblemAsync(await admin.GetAsync(url), property);
+    }
+
+    [Fact]
+    public async Task Documents_InvalidEnumCommands_ReturnValidationProblem()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var ahmetId = await EmployeeIdAsync(admin, "Ahmet Yılmaz");
+
+        await AssertValidationProblemAsync(await admin.PostAsJsonAsync(
+            "/api/compliance/documents", new
+            {
+                employeeId = ahmetId,
+                documentName = "Geçersiz enum testi",
+                status = "completed",
+                level = "urgent",
+            }), "Status", "Level");
+
+        await AssertValidationProblemAsync(await admin.PutAsJsonAsync(
+            "/api/compliance/documents/1", new
+            {
+                documentName = "Geçersiz enum testi",
+                level = "urgent",
+            }), "Level");
+
+        await AssertValidationProblemAsync(await admin.PatchAsJsonAsync(
+            "/api/compliance/documents/1/status", new { status = "completed" }), "Status");
+    }
+
     [Fact]
     public async Task Documents_ManagerSeesOnlyOwnTeam_EmployeeForbidden()
     {
@@ -206,5 +242,20 @@ public sealed class ComplianceTests(IKProApiFactory factory)
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"PATCH {url} → {body}");
         return (await response.Content.ReadFromJsonAsync<ComplianceDocumentDto>())!;
+    }
+
+    private static async Task AssertValidationProblemAsync(
+        HttpResponseMessage response, params string[] properties)
+    {
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+
+        var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        var errors = problem.GetProperty("errors").EnumerateObject().Select(error => error.Name).ToList();
+        foreach (var property in properties)
+        {
+            errors.Should().Contain(
+                error => error.Equals(property, StringComparison.OrdinalIgnoreCase));
+        }
     }
 }
