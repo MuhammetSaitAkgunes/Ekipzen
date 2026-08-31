@@ -1,8 +1,8 @@
 # Bulgular — Birleşik Liste
 
-**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kaynak:** 6 ÖD
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-31 · **Kaynak:** 6 ÖD
 belgesi, 11 özellik alanı
-**Tespit edilen: 49 · Açık: 35 — 0 KRİTİK · 9 YÜKSEK · 18 ORTA · 8 DÜŞÜK**
+**Tespit edilen: 49 · Açık: 34 — 0 KRİTİK · 8 YÜKSEK · 18 ORTA · 8 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -14,7 +14,7 @@ ve hangi sırayla** var.
 | [Recruitment](recruitment.md) | 10 | — | 4 |
 | [Leaves](leaves.md) | 8 | — | 2 |
 | [Attendance](attendance.md) | 8 | — | 3 |
-| [Employees](employees.md) | 5 açık / 6 tespit | — | 1 |
+| [Employees](employees.md) | 4 açık / 6 tespit | — | — |
 | [Kalan alanlar](kalan-alanlar.md) | 2 açık / 5 tespit | — | — |
 
 ---
@@ -45,10 +45,10 @@ sonucu L-1: 1 Ocak'ta izin modülü kendiliğinden kilitleniyor.
 
 ### K3 · Süreç yok, alan güncellemesi var
 
-`E-5` (kök) → `E-1` ve `E-3` kapandı; `E-2` ile kalan süreç açık. `P-4` kapandı.
+`E-5` (kök) → `E-1`, `E-2` ve `E-3` kapandı. `P-4` kapandı.
 
 İşten çıkış artık erişimi kesiyor, etkin tarihi ve son ay bordrosunu koruyor.
-Yöneticilik devri, bekleyen talepler ve kıdem/ihbar hâlâ süreç değil.
+Yöneticilik ve bekleyen onay devri korunuyor; kıdem/ihbar hâlâ süreç değil.
 
 ### K4 · Doğrulama modül modül elle yazılmış
 
@@ -109,7 +109,7 @@ Devir mekanizması yazılmadan diğerleri anlamsız.
 ZİNCİR C — işten çıkış
 E-5 çıkış bir süreç değil
   ├→ E-1 ÇÖZÜLDÜ: erişim ve refresh kesiliyor
-  ├→ E-2 pasif yönetici ekibin yöneticisi kalıyor
+  ├→ E-2 ÇÖZÜLDÜ: ekip, onay kapsamı ve yönetici rolü halefe devrediliyor
   ├→ E-3 ÇÖZÜLDÜ: puantaj istihdam tarih aralığıyla sınırlı
   └→ P-4 ÇÖZÜLDÜ: ayrılış ayı bordroda korunuyor
 ```
@@ -125,7 +125,7 @@ E-5 çıkış bir süreç değil
 | **2 — tamamlandı 2026-08-28** | **ZİNCİR A** (A-2 → P-5 → P-1) | Puantaj sunucu sahipli; sıfır brüt ve sıfır/negatif net onaya kapalı. |
 | **2b — tamamlandı 2026-08-28** | **P-3 → P-2/P-8/P-9** | Dönemler tenant bazlı dağıtık kilitle kronolojik/final duruma bağlı; kümülatif matrah sunucu sahipli. |
 | **2c — tamamlandı 2026-08-28** | **P-4/P-10/P-12** | Etkin ayrılış tarihi son ay bordrosunu koruyor; detay sorgusu ayrık; dönem mutasyonları dağıtık kilitli. |
-| **3 — sürüyor; E-3/R-6 tamamlandı 2026-08-31** | **R-6 + ZİNCİR C** | İşe alım telafi edilebilir, puantaj istihdam dönemine bağlı; E-2/E-5 yöneticilik devri sırada. |
+| **3 — sürüyor; E-2/E-3/R-6 tamamlandı 2026-08-31** | **R-6 + ZİNCİR C** | İşe alım telafi edilebilir, puantaj istihdam dönemine bağlı, yöneticilik devri güvenli; E-5 sırada. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
 | **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
 | **6** | **K6** eşzamanlılık, **K7** sorgu, kalan ORTA/DÜŞÜK | Bugün müşteriyi vurmuyor; kalite borcu. |
@@ -155,7 +155,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | A-1 | Attendance | **YÜKSEK** | — | Gece vardiyası kaydedilemiyor (22:00→06:00 reddediliyor) |
 | **A-2** | Attendance | **ÇÖZÜLDÜ 2026-08-28** | — | Beklenen iş günleri puantaj/onaylı izinle sunucuda hesaplanıyor; istemci bayrağı yok |
 | A-3 | Attendance | **YÜKSEK** | K5 | Fazla mesai eşiği günlük 8 saat sabit; haftalık 45 saat yok |
-| E-2 | Employees | **YÜKSEK** | K3 | Pasif yönetici ekibin yöneticisi kalıyor — onay kuyruğu sahipsiz |
+| **E-2** | Employees | **ÇÖZÜLDÜ 2026-08-31** | K3 | Halef zorunlu; ekip/onay kapsamı ve dayanıklı yönetici rolü atomik niyetle devrediliyor |
 | **X-1** | Çapraz | **ÇÖZÜLDÜ 2026-08-28** | K4 | Geçersiz enum alan bazlı 400; merkezi güvenlik ağı ayrıntı sızdırmayan 400 döndürüyor |
 | **P-5** | Payroll | **ÇÖZÜLDÜ 2026-08-28** | — | Sıfır brüt uyarılıyor, `Eksik Veri` kalıyor ve onayda 409 alıyor |
 | P-6 | Payroll | ORTA | K4 | 2099 gibi uzak gelecek dönemi açılabiliyor |

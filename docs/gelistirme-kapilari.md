@@ -17,7 +17,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
 | 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı; senkronizasyon onaylandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
 | 2 | Bordro ve parasal doğruluk | ✅ Üç dilim tamamlandı; senkronizasyon bekliyor | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
-| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3` ve `R-6` tamamlandı; `E-2/E-5` sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
+| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2` tamamlandı; `E-5` sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
 | 6 | Pilot müşteri ve satış kapısı | ⬜ Kapalı | Ürünün kontrollü ücretli pilotta desteklenebilir olduğunu kanıtlar |
@@ -107,8 +107,20 @@ aday detayında görünür; İK düzeltilmiş e-postayla güvenli retry yapabili
 üçüncü denemede hesabı tamamladığı uçtan uca kanıtlandı. Kanıt: Release backend
 0 uyarı/0 hata, 71 unit + 193 integration; frontend lint/build + 147 test.
 
-Kapı 3’ün sıradaki işi `E-2/E-5`: pasif yöneticinin ekibini ve bekleyen onayları
-açık bir devir kuralıyla yeni sahibine aktarmak.
+**Kapı 3 / E-2 tamamlandı (2026-08-31):** ekibi bulunan yönetici halef
+seçilmeden pasife alınamıyor ve toplu pasifleştirme bu kapıyı aşamıyor. Aktif,
+giriş hesabı bağlı bir doğrudan rapor terfi ettirilebiliyor; ekip bağları ve
+bekleyen izin onay kapsamı aynı veritabanı commit'inde yeni yöneticiye geçiyor.
+Yönetici rolleri kalıcı ve idempotent provizyon işleriyle veriliyor/alınıyor;
+ilk doğrudan çalışan ataması otomatik terfi, son çalışanın ayrılması otomatik
+rol geri alma üretiyor. HR-admin rolü korunuyor ve eski rolü taşıyan access
+token, güncel organizasyon rolüyle eşleşmiyorsa anında reddediliyor. React
+arayüzü ayrılış tarihi, ekip/onay etkisi ve uygun halefleri gösteren tekil
+işten çıkış akışını sunuyor. Kanıt: backend build 0 uyarı/0 hata, 71 unit +
+195 integration; frontend lint/build + 148 test.
+
+Kapı 3’ün sıradaki işi `E-5`: kıdem/ihbar ve kalan işten çıkış yan etkilerini
+açık sahiplik ve geri alma kurallarıyla tamamlamak.
 
 Çıkış ölçütü: işe giriş/çıkış uçtan uca süreç testleri, idempotanslık, yarım kalan
 işlem için kurtarma yolu ve açık sahiplik kuralları.

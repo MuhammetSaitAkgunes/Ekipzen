@@ -1,7 +1,7 @@
 # Employees (Personel) — Özellik Doğrulama
 
-**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-28 · **Kapsam:** 13 uç
-nokta, `Features/Employees` + `EmployeesController` · **Mevcut test:** 39
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-31 · **Kapsam:** 14 uç
+nokta, `Features/Employees` + `EmployeesController` · **Mevcut test:** 41
 
 **Neden bu alan seçildi:** kapsaması en yüksek alan. Yöntem açısından da bilgi
 verici: iyi test edilmiş bir alanda ÖD ne bulur?
@@ -17,7 +17,7 @@ bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 | # | Katman | Önem | Bulgu | Nerede |
 | --- | --- | --- | --- | --- |
 | **E-1** | Mantık | **ÇÖZÜLDÜ** (eski KRİTİK) | Pasif personelin mevcut/yeni oturumu ve refresh token erişimi kesiliyor | `TenantAccessMiddleware`; `IdentityService`; durum komutları; integration testi |
-| E-2 | Mantık | **YÜKSEK** | Pasif yönetici ekibin yöneticisi olarak kalıyor — onay kuyruğu sahipsiz | `SetEmployeeStatusCommandHandler`, `BulkDeactivateEmployeesCommandHandler` |
+| **E-2** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Halef zorunlu; ekip/onay kapsamı ve yönetici rolü güvenle devrediliyor | status/offboarding/upsert + Identity provizyonu + integration/UI testleri |
 | **E-3** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Puantaj yalnız personelin etkin çalışma tarih aralığında kabul ediliyor | create/update + integration testleri |
 | E-4 | Mantık | ORTA | **Geçersiz TC kabul ediliyor** (`11111111111` → 201); yalnız 11 hane kontrolü var | `EmployeeUpsertModel` → `NationalIdRegex = ^\d{11}$` |
 | E-5 | Kod | ORTA | İşten çıkış **tek alanlık bir güncelleme**; süreç olarak ele alınmıyor | `SetEmployeeStatusCommand` |
@@ -77,14 +77,24 @@ eski refresh token'ı yeniden geçerli kılmıyor. Bu akış
 `PassiveEmployee_LosesCurrentSession_LoginAndRefreshAccess` integration testiyle
 ve tam backend paketiyle doğrulandı (66 unit + 182 integration).
 
-### E-2 · Pasif yönetici ekibin yöneticisi olarak kalıyor — YÜKSEK
+### E-2 · Yöneticilik ve onay devri — ÇÖZÜLDÜ (2026-08-31)
 
-Canlı: yönetici pasife alındı → ekibindeki personelin `managerId` değişmedi.
+Eski canlı bulgu: yönetici pasife alındı → ekibindeki personelin `managerId` değişmedi.
 
 Sonuçları: izin onay kuyruğu **sahipsiz** kalır (o yöneticinin ekibi için karar
 verecek kimse yoktur), `ScopeFor` kapsamı pasif bir kişiye bağlı kalır, ve
 E-1 ile birleşince **pasif bir yönetici ekibinin taleplerini onaylamaya devam
 edebilir**.
+
+**Çözüm:** ekibi bulunan yönetici halef seçilmeden veya bulk yoluyla pasife
+alınamıyor. Aktif ve giriş hesabı bağlı halef seçildiğinde ekip bağlarıyla
+bekleyen izin kapsamı aynı commit'te devrediliyor. Doğrudan rapor terfi ederse
+kendi kendisinin yöneticisi olmayacak şekilde ayrılan yöneticinin üstüne
+bağlanıyor; daha derin alt ekip döngü riski nedeniyle reddediliyor. İlk ekip
+ataması ve son ekip ayrılışı Identity rolünü kalıcı/idempotent işlerle
+eşitliyor; HR-admin korunuyor. Eski rolü taşıyan access token anında 401 alıp
+güncel rol için refresh'e zorlanıyor. Backend yaşam döngüsü ve React halef
+modalı otomatik testlerle kanıtlandı.
 
 ### E-3 · Çalışma dönemi dışında puantaj — ÇÖZÜLDÜ (2026-08-31)
 
@@ -121,15 +131,15 @@ hata kurumdan geri döner. Mükerrer TC kontrolü var ama **geçersiz TC** kontr
 | 7 | Audit izi | ✅ Trigger + interceptor; `BulkDeactivate` bunun için bilinçli olarak change tracker kullanıyor |
 | 8 | Test boşluğu | ❌ Aşağıda |
 
-### E-5 · İşten çıkış bir süreç olarak ele alınmamış — ORTA (E-1/E-2'nin kökü)
+### E-5 · İşten çıkışın kalan süreç yan etkileri — ORTA
 
 İşten çıkış erişim kesme, zorunlu etkin ayrılış tarihi ve son ay bordrosu
 açısından tamamlandı (`E-1`, Payroll `P-4`). Yeniden aktifleştirme ayrılış
 tarihini temizliyor; eski refresh token'ı diriltmiyor.
 
-Bekleyen izin taleplerinin kararı, yöneticilik bağlarının devri ve kıdem/ihbar
-hesabı hâlâ tek bir orkestre süreç değil. Bu nedenle `E-5` ve `E-2` kök
-bulguları açık kalıyor; `E-3` çalışma tarihi kapısıyla kapandı.
+Bekleyen izin kapsamı ve yöneticilik devri artık orkestre ediliyor (`E-2`).
+Kıdem/ihbar, kalan izin hakkının finansal kapanışı ve hatalı çıkışın kontrollü
+geri alınması hâlâ açık olduğundan `E-5` devam ediyor.
 
 ### E-6 · Toplu pasife almada sessiz atlama — DÜŞÜK
 
@@ -139,17 +149,18 @@ sayısıdır. Var olmayan ya da zaten pasif id'ler sessizce atlanıyor; çağır
 
 ### Test boşluğu
 
-39 test şunları iyi kapsıyor: dizin listeleme/filtreleme, rol matrisi, kapsam
+41 test şunları iyi kapsıyor: dizin listeleme/filtreleme, rol matrisi, kapsam
 daraltması, TC doğrulama (biçim), mükerrer TC, tam kart CRUD, evrak yükleme/
 indirme, foto, içe aktarma (önizleme + hatalı satır + mükerrer), toplu pasife
 alma.
 
 **Yeni kapsanan davranış:** pasif personelin mevcut access token'ı, yeni login'i
 ve mevcut refresh token'ı reddediliyor; ayrılış tarihi zorunlu kaydediliyor;
-reaktivasyonda tarih temizleniyor; puantaj yalnız etkin çalışma aralığında kabul ediliyor.
+reaktivasyonda tarih temizleniyor; puantaj yalnız etkin çalışma aralığında kabul
+ediliyor; halef, ekip/onay devri, rol terfi/geri alma ve eski rol tokenı doğrulanıyor.
 
-**Hâlâ test edilmemiş davranışlar:** pasif yöneticinin ekip bağı (E-2), geçersiz
-TC algoritması (E-4) ve işten çıkışın kalan yan etkileri (E-5).
+**Hâlâ test edilmemiş davranışlar:** geçersiz TC algoritması (E-4) ve işten
+çıkışın kalan finansal/geri alma yan etkileri (E-5).
 
 **Yöntem açısından not:** bu alanın 38 testi var ve hiçbiri E-1'i yakalamıyor.
 Sebep, testlerin **uç nokta** düzeyinde yazılmış olması: her uç tek başına doğru
@@ -161,7 +172,6 @@ olarak bunu yakalamak için var.
 
 ## Sonraki adım
 
-1. **E-2** — yöneticilik devri ve bekleyen onayların yeni sahibine aktarılması
-2. **E-5** — kalan işten çıkış süreci (Leaves ve kıdem/ihbar ile kesişir)
-3. **E-4** — TC algoritma doğrulaması
-4. **E-6**
+1. **E-5** — kalan işten çıkış süreci (Leaves ve kıdem/ihbar ile kesişir)
+2. **E-4** — TC algoritma doğrulaması
+3. **E-6**

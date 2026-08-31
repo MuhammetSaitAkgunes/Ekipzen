@@ -6,16 +6,17 @@
 
 ## Şu an neredeyiz
 
-- **Aktif iş — Kapı 2 son dilimi tamamlandı:** Dal `codex/payroll-final-gate`.
-  `main@93500c1` üzerindeki ilk iki dilime ek olarak `P-4`, `P-10`, `P-12`
-  yerelde kapatıldı. Personel ayrılış tarihi migration/API/UI boyunca tutuluyor;
-  son ay bordrosuna giriyor, sonraki aya taşınmıyor ve puantaj ayrılış gününde
-  kesiliyor. Bordro detay sorgusu ikiye ayrıldı. Düzenleme, kontrol, onay ve
-  gönderim tenant/veritabanı dönem kilidiyle serileştirildi; çift onay ve çift
-  gönderimde bir başarı/bir 409 kanıtlandı. Yerel kod commitleri `88f0ffe` ve
-  `2cb7660`. Release backend build 0 uyarı/0 hata; 71 unit + 190 integration,
-  frontend lint/build + 146 test yeşil. Doküman commitinden sonra tek
-  senkronizasyon onayı istenecek.
+- **Aktif iş — Kapı 3 / E-2 tamamlandı:** Dal
+  `codex/gate3-employment-integrity`, taban `main@9933f4d`. Ekibi olan yönetici
+  halefsiz veya bulk yoluyla pasife alınamıyor; ekip ve bekleyen izin kapsamı
+  aynı commit'te uygun halefe geçiyor. İlk ekip ataması otomatik yönetici
+  terfisi, son ekip ayrılışı otomatik rol geri alma üretiyor; Identity dış etkisi
+  dayanıklı/idempotent provizyon işidir. HR-admin korunuyor ve eski rol claim'li
+  token güncel organizasyonla uyuşmadığında anında reddediliyor. React tekil
+  işten çıkış modalı ayrılış tarihi, ekip/onay etkisi ve halef seçimini sunuyor.
+  Backend build 0 uyarı/0 hata; 71 unit + 195 integration; frontend 148 test,
+  lint ve production build yeşil. Sıradaki ürün işi `E-5`; bu dilimin yerel
+  commitlerinden sonra GitHub senkronizasyonu tek paket onayına sunulacak.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal
   `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`
