@@ -1,12 +1,12 @@
 # Employees (Personel) — Özellik Doğrulama
 
-**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-31 · **Kapsam:** 14 uç
-nokta, `Features/Employees` + `EmployeesController` · **Mevcut test:** 41
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-31 · **Kapsam:** 15 uç
+nokta, `Features/Employees` + `EmployeesController` · **Mevcut test:** 42
 
 **Neden bu alan seçildi:** kapsaması en yüksek alan. Yöntem açısından da bilgi
 verici: iyi test edilmiş bir alanda ÖD ne bulur?
 
-**Cevap:** en ağır güvenlik bulgusu burada çıktı. 38 test, **davranışın kendisini**
+**Cevap:** en ağır güvenlik bulgusu burada çıktı. 42 test, **davranışın kendisini**
 değil, uçların tek tek doğru cevap verdiğini ölçüyor. "İşten çıkış" bir uç değil
 bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 
@@ -20,8 +20,8 @@ bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 | **E-2** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Halef zorunlu; ekip/onay kapsamı ve yönetici rolü güvenle devrediliyor | status/offboarding/upsert + Identity provizyonu + integration/UI testleri |
 | **E-3** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Puantaj yalnız personelin etkin çalışma tarih aralığında kabul ediliyor | create/update + integration testleri |
 | E-4 | Mantık | ORTA | **Geçersiz TC kabul ediliyor** (`11111111111` → 201); yalnız 11 hane kontrolü var | `EmployeeUpsertModel` → `NationalIdRegex = ^\d{11}$` |
-| E-5 | Kod | ORTA | İşten çıkış **tek alanlık bir güncelleme**; süreç olarak ele alınmıyor | `SetEmployeeStatusCommand` |
-| E-6 | Kod | DÜŞÜK | `BulkDeactivate` yalnız aktifleri sayıyor, bulunamayan id'leri raporlamıyor | `BulkDeactivateEmployeesCommandHandler` |
+| **E-5** | Kod | **KISMEN ÇÖZÜLDÜ 2026-08-31** | Kalıcı, geri alınabilir süreç ve uzman kaynaklı finansal kapanış tamam; otomatik yasal hesap `E-5C` kararlarını bekliyor | `EmployeeOffboardingWorkflow`; `EmployeeOffboardingCase` |
+| **E-6** | Kod | **ÇÖZÜLDÜ 2026-08-31** | Toplu pasifleştirme süreç kapısını aşmasın diye devre dışı; arayüzde yalnız raporlama seçimi kaldı | `EmployeesController`; `PersonnelPage` |
 
 **Doğru çalışan, kanıtlanmış davranışlar:**
 
@@ -29,9 +29,9 @@ bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 - Yetki politikaları doğru dağıtılmış: yazma uçları `HrAdminOnly`, okuma uçları
   `Management` + satır kapsamı; `import/*` yalnız hr-admin
 - **Silme ucu yok** — personel yalnız pasife alınıyor (doğru: özlük verisi silinmez)
-- `BulkDeactivate` `ExecuteUpdate` yerine change tracker kullanıyor ki **audit
-  interceptor ve trigger devrede kalsın** — bilinçli ve doğru bir tercih, yorumda da yazılı
-- Evrak/foto yükleme, içe aktarma ve directory kapsamı 38 testle iyi kapsanmış
+- Toplu seçim yalnız CSV raporlaması için korunuyor; toplu pasifleştirme işten
+  çıkış vakasının finansal ve organizasyonel kontrollerini aşamıyor
+- Evrak/foto yükleme, içe aktarma ve directory kapsamı otomatik testlerle iyi kapsanmış
 
 ---
 
@@ -125,27 +125,34 @@ hata kurumdan geri döner. Mükerrer TC kontrolü var ama **geçersiz TC** kontr
 | 1 | Kiracı izolasyonu | ✅ Global filtre; evrak erişimi kiracı satırından geçiyor |
 | 2 | Yetki kapsamı | ✅ Politikalar doğru dağıtılmış; `ScopeFor` okuma uçlarında |
 | 3 | Doğrulama | ❌ E-4 |
-| 4 | İşlem sınırı | ⚠️ E-5 — işten çıkış çok adımlı bir süreç olmalıyken tek alan güncellemesi |
+| 4 | İşlem sınırı | ✅ Vaka, iş verisi ve kalıcı Identity niyeti tek işlem sınırında |
 | 5 | N+1 / kartezyen | ✅ Liste sorgusu projeksiyonlu ve sayfalı |
 | 6 | Hata zarfı | ✅ 403/404/409 doğru |
-| 7 | Audit izi | ✅ Trigger + interceptor; `BulkDeactivate` bunun için bilinçli olarak change tracker kullanıyor |
+| 7 | Audit izi | ✅ Trigger + interceptor + silinmeyen, sürümlü işten çıkış vakası |
 | 8 | Test boşluğu | ❌ Aşağıda |
 
-### E-5 · İşten çıkışın kalan süreç yan etkileri — ORTA
+### E-5 · İşten çıkış kapanışı — KISMEN ÇÖZÜLDÜ (2026-08-31)
 
-İşten çıkış erişim kesme, zorunlu etkin ayrılış tarihi ve son ay bordrosu
-açısından tamamlandı (`E-1`, Payroll `P-4`). Yeniden aktifleştirme ayrılış
-tarihini temizliyor; eski refresh token'ı diriltmiyor.
+`E-5A+B` ile işten çıkış kalıcı ve sürümlü `Taslak → Tamamlandı → Geri Alındı`
+vakasına dönüştü. Taslak; ayrılış/çıkış bilgisi, halef, kullanılmayan izin,
+kıdem/ihbar, dış uzman referansı ve notları saklıyor. Tamamlama; vaka sürümü,
+personel durumu, etkin ayrılış, ekip devri ve Identity erişim kapatma niyetini
+tek işlemde kaydediyor. Geri alma; organizasyon anlık görüntüsü değişmişse 409
+veriyor; değişmemişse ekip, durum ve erişim niyetini telafi ediyor. Geçmiş vaka
+silinmediği için karar ve tersine çevirme gerekçesi izlenebilir.
 
-Bekleyen izin kapsamı ve yöneticilik devri artık orkestre ediliyor (`E-2`).
-Kıdem/ihbar, kalan izin hakkının finansal kapanışı ve hatalı çıkışın kontrollü
-geri alınması hâlâ açık olduğundan `E-5` devam ediyor.
+Uygulama hukuki tutar hesaplamıyor. Kullanılmayan izin, kıdem ve ihbar değerleri
+kaynağı/referansı görünen dış uzman onaylı finansal anlık görüntü olarak
+saklanıyor. `E-5C`; etkin ücret/yan hak kaynağı, izin yıl devri doğruluğu ve
+uzman onaylı tarih etkili sürümlü kurallar tanımlandıktan sonra otomatik hesap
+seçeneğini değerlendirecek.
 
-### E-6 · Toplu pasife almada sessiz atlama — DÜŞÜK
+### E-6 · Toplu pasife alma kapısı — ÇÖZÜLDÜ (2026-08-31)
 
-`BulkDeactivate` yalnız `Active` olanları sayıyor ve dönüş değeri işlenen
-sayısıdır. Var olmayan ya da zaten pasif id'ler sessizce atlanıyor; çağıran
-"20 seçtim, 17 işlendi" farkının sebebini göremiyor.
+Toplu pasifleştirme ucu geçerli yükte 409 döndürüyor ve arayüz bu eylemi
+sunmuyor. Böylece bulunamayan kimliklerin sessiz atlanması kadar önemli olan
+halef, finansal kapanış ve geri alma kontrollerinin topluca aşılması da
+engellendi. Toplu seçim yalnız CSV raporlamasında kullanılıyor.
 
 ### Test boşluğu
 
@@ -159,10 +166,14 @@ ve mevcut refresh token'ı reddediliyor; ayrılış tarihi zorunlu kaydediliyor;
 reaktivasyonda tarih temizleniyor; puantaj yalnız etkin çalışma aralığında kabul
 ediliyor; halef, ekip/onay devri, rol terfi/geri alma ve eski rol tokenı doğrulanıyor.
 
-**Hâlâ test edilmemiş davranışlar:** geçersiz TC algoritması (E-4) ve işten
-çıkışın kalan finansal/geri alma yan etkileri (E-5).
+**Yeni kapsanan davranış:** taslak kaydı, sürümlü tamamlama/geri alma, finansal
+anlık görüntü toplamı, Identity erişim kapatma/açma, stale sürüm reddi,
+organizasyon sapmasında güvenli 409 ve onarım sonrası ekip/rol geri yükleme.
 
-**Yöntem açısından not:** bu alanın 38 testi var ve hiçbiri E-1'i yakalamıyor.
+**Hâlâ test edilmemiş davranış:** geçersiz TC algoritması (E-4). `E-5C`
+otomatik yasal hesap değildir; ürün ve uzman karar girdisi bekleyen yeni dilimdir.
+
+**Yöntem açısından not:** ilk incelemede bu alanın 38 testi vardı ve hiçbiri E-1'i yakalamıyordu.
 Sebep, testlerin **uç nokta** düzeyinde yazılmış olması: her uç tek başına doğru
 cevap veriyor. "İşten çıkış" ise uçlar arası bir **süreç**; hiçbir tek ucun
 sorumluluğunda olmadığı için kimsenin testine girmemiş. ÖD'nin Katman 1'i tam
@@ -172,6 +183,5 @@ olarak bunu yakalamak için var.
 
 ## Sonraki adım
 
-1. **E-5** — kalan işten çıkış süreci (Leaves ve kıdem/ihbar ile kesişir)
+1. **E-5C karar paketi** — etkin ücret/yan hak, izin devri ve sürümlü uzman kuralları
 2. **E-4** — TC algoritma doğrulaması
-3. **E-6**

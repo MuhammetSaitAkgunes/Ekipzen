@@ -141,7 +141,8 @@ saklıyor; pasife alırken zorunlu, yeniden aktifleştirmede temizleniyor. Döne
 seçimi işe giriş/ayrılış aralığına göre yapılıyor. Ayrılıştan sonraki günler
 puantaj eksiği sayılmıyor; çalışan son ay bordrosuna giriyor, sonraki döneme
 taşınmıyor. Ayrılış tarihi bilinmeyen eski pasif kayıtlar yanlışlıkla bordroya
-alınmıyor. Kalan tam işten çıkış süreci `E-5` / Kapı 3 kapsamındadır.
+alınmıyor. Kalıcı vaka, dış uzman finansal anlık görüntüsü ve kontrollü geri alma
+`E-5A+B` ile tamamlandı; otomatik hesap `E-5C` karar girdilerini bekliyor.
 
 ### P-5 · Sıfır brüt maaşlı satır onaylanabiliyor — ORTA
 
@@ -250,4 +251,5 @@ Kapı 2'nin zorunlu üç dilimi tamamlandı. Kalan bordro adayları:
 1. **P-7** — maaş devri ürün kararı
 2. **P-6** — dönem üst sınırı
 3. **P-11** — açıklanmamış SGK kontrol eşiği; müşavir girdisi gerekli
-4. **Kapı 3 / E-5** — yöneticilik, izin ve kıdem/ihbar yan etkileri
+4. **Kapı 3 / E-5C** — otomatik hesap için etkin ücret/yan hak, doğru izin
+   devri ve uzman onaylı sürümlü kurallar

@@ -6,17 +6,22 @@
 
 ## Şu an neredeyiz
 
-- **Aktif iş — Kapı 3 / E-2 tamamlandı:** Dal
-  `codex/gate3-employment-integrity`, taban `main@9933f4d`. Ekibi olan yönetici
-  halefsiz veya bulk yoluyla pasife alınamıyor; ekip ve bekleyen izin kapsamı
-  aynı commit'te uygun halefe geçiyor. İlk ekip ataması otomatik yönetici
-  terfisi, son ekip ayrılışı otomatik rol geri alma üretiyor; Identity dış etkisi
-  dayanıklı/idempotent provizyon işidir. HR-admin korunuyor ve eski rol claim'li
-  token güncel organizasyonla uyuşmadığında anında reddediliyor. React tekil
-  işten çıkış modalı ayrılış tarihi, ekip/onay etkisi ve halef seçimini sunuyor.
-  Backend build 0 uyarı/0 hata; 71 unit + 195 integration; frontend 148 test,
-  lint ve production build yeşil. Sıradaki ürün işi `E-5`; bu dilimin yerel
-  commitlerinden sonra GitHub senkronizasyonu tek paket onayına sunulacak.
+- **Aktif iş — Kapı 3 / E-5A+B tamamlandı:** Dal
+  `codex/gate3-offboarding-closure`, taban `main@835aac7`. İşten çıkış artık
+  kalıcı `Taslak → Tamamlandı → Geri Alındı` vakasıdır. Tamamlama; personel
+  durumu, etkin ayrılış tarihi, ekip/halef devri, dış uzman kaynaklı finansal
+  kapanış anlık görüntüsü ve Identity erişim kapatma niyetini tek işlemde
+  kaydeder. Geri alma; sürüm ve organizasyon sapmasını 409 ile korur, önceki
+  durumu/ekibi geri yükler ve yeni oturum gerektiren dayanıklı erişim açma işi
+  üretir. Genel durum ve toplu pasifleştirme yolları süreç kapısını aşamaz.
+  React çalışma alanı taslak kaydı, sürümlü tamamlama, finansal özet ve gerekçeli
+  geri alma sunar; uygulama yasal tutar hesaplamaz. Yerel commitler `bd58a51`,
+  `6b67ef0` ve `36e3730`. Release build 0 uyarı/0 hata; 71 unit + 195 integration
+  ve frontend 149 test, lint, production build yeşil. GitHub senkronizasyon
+  paketi hazırlanıyor.
+  Sıradaki ürün kararı `E-5C`: sürümlü uzman kuralları, etkin ücret/yan hak
+  kaynağı ve izin yıl devri doğruluğu sağlanmadan otomatik kıdem/ihbar hesabı
+  açılmayacak.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal
   `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`

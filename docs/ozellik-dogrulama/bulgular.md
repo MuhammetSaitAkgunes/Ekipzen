@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-31 · **Kaynak:** 6 ÖD
 belgesi, 11 özellik alanı
-**Tespit edilen: 49 · Açık: 34 — 0 KRİTİK · 8 YÜKSEK · 18 ORTA · 8 DÜŞÜK**
+**Tespit edilen: 49 · Açık: 31 — 0 KRİTİK · 7 YÜKSEK · 19 ORTA · 5 DÜŞÜK**
 
 Bu belge, düzeltme aşamasının tek giriş noktasıdır. Bulguların gerekçeleri,
 canlı kanıtları ve kod alıntıları alan belgelerindedir; burada **ne yapılacağı
@@ -14,7 +14,7 @@ ve hangi sırayla** var.
 | [Recruitment](recruitment.md) | 10 | — | 4 |
 | [Leaves](leaves.md) | 8 | — | 2 |
 | [Attendance](attendance.md) | 8 | — | 3 |
-| [Employees](employees.md) | 4 açık / 6 tespit | — | — |
+| [Employees](employees.md) | 2 açık / 6 tespit | — | — |
 | [Kalan alanlar](kalan-alanlar.md) | 2 açık / 5 tespit | — | — |
 
 ---
@@ -47,8 +47,10 @@ sonucu L-1: 1 Ocak'ta izin modülü kendiliğinden kilitleniyor.
 
 `E-5` (kök) → `E-1`, `E-2` ve `E-3` kapandı. `P-4` kapandı.
 
-İşten çıkış artık erişimi kesiyor, etkin tarihi ve son ay bordrosunu koruyor.
-Yöneticilik ve bekleyen onay devri korunuyor; kıdem/ihbar hâlâ süreç değil.
+İşten çıkış artık erişimi kesiyor, etkin tarihi/son ay bordrosunu koruyor,
+yöneticilik ve bekleyen onay devrini sürdürüyor. Kalıcı, geri alınabilir vaka
+ve dış uzman finansal anlık görüntüsü tamamlandı; otomatik yasal hesap uzman
+onaylı sürümlü kuralları bekliyor.
 
 ### K4 · Doğrulama modül modül elle yazılmış
 
@@ -107,11 +109,12 @@ R-3 hak ediş 24 gün sabit (müşavir)
 Devir mekanizması yazılmadan diğerleri anlamsız.
 
 ZİNCİR C — işten çıkış
-E-5 çıkış bir süreç değil
+E-5 kök süreç açığı
   ├→ E-1 ÇÖZÜLDÜ: erişim ve refresh kesiliyor
   ├→ E-2 ÇÖZÜLDÜ: ekip, onay kapsamı ve yönetici rolü halefe devrediliyor
   ├→ E-3 ÇÖZÜLDÜ: puantaj istihdam tarih aralığıyla sınırlı
-  └→ P-4 ÇÖZÜLDÜ: ayrılış ayı bordroda korunuyor
+  ├→ P-4 ÇÖZÜLDÜ: ayrılış ayı bordroda korunuyor
+  └→ E-5A+B ÇÖZÜLDÜ: kalıcı vaka, finansal anlık görüntü ve kontrollü geri alma
 ```
 
 ---
@@ -125,7 +128,7 @@ E-5 çıkış bir süreç değil
 | **2 — tamamlandı 2026-08-28** | **ZİNCİR A** (A-2 → P-5 → P-1) | Puantaj sunucu sahipli; sıfır brüt ve sıfır/negatif net onaya kapalı. |
 | **2b — tamamlandı 2026-08-28** | **P-3 → P-2/P-8/P-9** | Dönemler tenant bazlı dağıtık kilitle kronolojik/final duruma bağlı; kümülatif matrah sunucu sahipli. |
 | **2c — tamamlandı 2026-08-28** | **P-4/P-10/P-12** | Etkin ayrılış tarihi son ay bordrosunu koruyor; detay sorgusu ayrık; dönem mutasyonları dağıtık kilitli. |
-| **3 — sürüyor; E-2/E-3/R-6 tamamlandı 2026-08-31** | **R-6 + ZİNCİR C** | İşe alım telafi edilebilir, puantaj istihdam dönemine bağlı, yöneticilik devri güvenli; E-5 sırada. |
+| **3 — E-5C kararları bekliyor; E-2/E-3/R-6/E-5A+B tamamlandı 2026-08-31** | **R-6 + ZİNCİR C** | İşe alım telafi edilebilir; işten çıkış kalıcı, geri alınabilir ve dış uzman finansal anlık görüntüsüyle kapanabilir. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
 | **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
 | **6** | **K6** eşzamanlılık, **K7** sorgu, kalan ORTA/DÜŞÜK | Bugün müşteriyi vurmuyor; kalite borcu. |
@@ -179,7 +182,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | A-7 | Attendance | ORTA | K1 | Onaylanmış bordro dönemine ait puantaj sonradan değişebiliyor |
 | **E-3** | Employees | **ÇÖZÜLDÜ 2026-08-31** | K3 | Puantaj yalnız işe giriş–etkin ayrılış tarih aralığında kabul ediliyor |
 | E-4 | Employees | ORTA | K4 | Geçersiz TC kabul ediliyor — yalnız `^\d{11}$` kontrolü |
-| E-5 | Employees | ORTA | K3 | İşten çıkış tek alanlık güncelleme, süreç değil (**E-1'in kökü**) |
+| **E-5** | Employees | **KISMEN ÇÖZÜLDÜ 2026-08-31** | K3 | Kalıcı/sürümlü vaka, dış uzman finansal anlık görüntüsü ve kontrollü geri alma tamam; otomatik yasal hesap E-5C kararlarını bekliyor |
 | D-1 | Departments | ORTA | — | Açık pozisyonu olan departman silinebiliyor; pozisyon sahipsiz kalıyor |
 | C-1 | Compliance | ORTA | K2 | `DueDate` hiç kullanılmıyor; süresi geçen belge risk sayılmıyor |
 | C-2 | Compliance | **ÇÖZÜLDÜ 2026-08-28** | K4 | Durum/seviye komutları ve filtreleri FluentValidation kapsamında |
@@ -189,7 +192,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | R-10 | Recruitment | DÜŞÜK | — | `AuthorName` denormalize; kullanıcı adı değişince not eski adı taşır |
 | L-8 | Leaves | DÜŞÜK | — | `RequireEmployeeId` yüzünden hr-admin kendi izin uçlarını kullanamıyor |
 | A-8 | Attendance | DÜŞÜK | — | Puantaj tipi hem istemciden alınıp hem sunucuda türetiliyor |
-| E-6 | Employees | DÜŞÜK | — | `BulkDeactivate` bulunamayan id'leri sessizce atlıyor |
+| **E-6** | Employees | **ÇÖZÜLDÜ 2026-08-31** | — | Toplu pasifleştirme süreç kapısını aşmaması için kapatıldı; UI seçimi yalnız raporlama amaçlı |
 
 ---
 

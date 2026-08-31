@@ -2,7 +2,8 @@
 
 **Son güncelleme:** 2026-08-31
 
-**Güncel çalışma tabanı:** `main@9933f4d`
+**Güncel çalışma tabanı:** `main@835aac7`; özellik dalı
+`codex/gate3-offboarding-closure` (yerel, senkronizasyon onayı bekliyor)
 
 **Kaynak:** özellik doğrulama sicili, Faz 2b mimari incelemesi ve tam test paketi
 
@@ -15,9 +16,9 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | Kapı | İçerik | Durum | Ticari etkisi |
 | --- | --- | --- | --- |
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
-| 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı; senkronizasyon onaylandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
-| 2 | Bordro ve parasal doğruluk | ✅ Üç dilim tamamlandı; senkronizasyon bekliyor | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
-| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2` tamamlandı; `E-5` sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
+| 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı ve senkronlandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
+| 2 | Bordro ve parasal doğruluk | ✅ Üç dilim tamamlandı ve senkronlandı | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
+| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2`, `E-5A+B` tamamlandı; `E-5C` karar girdileri bekliyor | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
 | 6 | Pilot müşteri ve satış kapısı | ⬜ Kapalı | Ürünün kontrollü ücretli pilotta desteklenebilir olduğunu kanıtlar |
@@ -119,8 +120,25 @@ arayüzü ayrılış tarihi, ekip/onay etkisi ve uygun halefleri gösteren tekil
 işten çıkış akışını sunuyor. Kanıt: backend build 0 uyarı/0 hata, 71 unit +
 195 integration; frontend lint/build + 148 test.
 
-Kapı 3’ün sıradaki işi `E-5`: kıdem/ihbar ve kalan işten çıkış yan etkilerini
-açık sahiplik ve geri alma kurallarıyla tamamlamak.
+**Kapı 3 / E-5A+B tamamlandı (2026-08-31):** İşten çıkış kalıcı ve sürümlü
+`Taslak → Tamamlandı → Geri Alındı` vakasına dönüştü. Tamamlama; etkin ayrılış,
+çıkış nedeni, halef/ekip devri, dış uzman kaynaklı kullanılmayan izin, kıdem ve
+ihbar tutarlarının anlık görüntüsü ile Identity erişim kapatma işini atomik
+olarak kaydediyor. Genel durum ve toplu pasifleştirme yolları kapatıldığı için
+süreç atlanamıyor. Geri alma yalnız beklenen vaka sürümü ve değişmemiş
+organizasyon anlık görüntüsüyle çalışıyor; sapma/stale istek 409 alıyor, geçmiş
+vaka silinmiyor. React akışı taslak, sürümlü tamamlama, finansal özet, provizyon
+durumu ve gerekçeli geri alma sağlıyor. Uygulama hukuki tutar hesaplamıyor;
+kaynağı ve referansı görünen uzman onaylı değerleri saklıyor. Yerel kanıt:
+backend hedefli 17 integration testi ve frontend hedefli 6 test; tam paket 71
+unit + 195 integration + 149 frontend testi. Release build 0 uyarı/0 hata,
+lint ve production build yeşil.
+
+Kapı 3’ün sıradaki karar paketi `E-5C`: otomatik kıdem/ihbar hesabı ancak etkin
+ücret ve yan hakların güvenilir kaynağı, doğru izin yıl devri/bakiye modeli ve
+uzman onaylı tarih etkili sürümlü kurallar birlikte tanımlandığında açılacak.
+Bu girdiler tamamlanana kadar dış uzman finansal anlık görüntüsü tek güvenli
+kapanış sözleşmesidir.
 
 Çıkış ölçütü: işe giriş/çıkış uçtan uca süreç testleri, idempotanslık, yarım kalan
 işlem için kurtarma yolu ve açık sahiplik kuralları.
