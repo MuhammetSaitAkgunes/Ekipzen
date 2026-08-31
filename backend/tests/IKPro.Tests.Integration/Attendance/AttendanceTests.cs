@@ -183,11 +183,8 @@ public sealed class AttendanceTests(IKProApiFactory factory)
         var historical = await CreateEntryAsync(
             admin, employee.Id, "2026-08-10", "09:00", "18:00");
 
-        (await admin.PatchAsJsonAsync($"/api/employees/{employee.Id}/status", new
-        {
-            status = "passive",
-            terminationDate = "2026-08-15",
-        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await OffboardingTestHelper.CompleteAsync(
+            admin, employee.Id, new DateOnly(2026, 8, 15));
 
         (await PostEntryAsync(admin, employee.Id, "2026-08-14", "09:00", "18:00"))
             .StatusCode.Should().Be(HttpStatusCode.Created,

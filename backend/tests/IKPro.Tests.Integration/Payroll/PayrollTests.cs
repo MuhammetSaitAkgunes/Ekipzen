@@ -161,11 +161,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
         await SeedEmployeeTimesheetsAsync(
             admin, departingEmployee.Id, departingEmployee.Name,
             new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 15));
-        (await admin.PatchAsJsonAsync($"/api/employees/{departingEmployee.Id}/status", new
-        {
-            status = "passive",
-            terminationDate = "2026-09-15",
-        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await OffboardingTestHelper.CompleteAsync(
+            admin, departingEmployee.Id, new DateOnly(2026, 9, 15));
         var futureEmployee = await CreateEmployeeAsync(
             admin, "Gelecek", "Çalışan", departmentId, "2026-10-15");
         var incompleteEmployee = await CreateEmployeeAsync(
