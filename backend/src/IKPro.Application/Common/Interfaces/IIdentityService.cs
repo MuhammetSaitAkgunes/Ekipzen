@@ -65,6 +65,13 @@ public interface IIdentityService
     /// </summary>
     Task SetEmployeeAccessAsync(int employeeId, bool isActive, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Personelin manager rolünü idempotent biçimde verir veya kaldırır. HR-admin korunur;
+    /// diğer hesaplarda temel employee rolü geri yüklenir. Bağlı login yoksa kaldırma
+    /// no-op, rol verme ise <c>ConflictException</c> olur.
+    /// </summary>
+    Task SetEmployeeManagerRoleAsync(int employeeId, bool isManager, CancellationToken cancellationToken);
+
     /// <summary>Refresh token rotasyonu: eskisini iptal eder, yeni çift üretir.</summary>
     Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
 

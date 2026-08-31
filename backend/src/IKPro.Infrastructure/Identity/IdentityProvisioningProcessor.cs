@@ -56,6 +56,12 @@ public sealed class IdentityProvisioningProcessor(
                 case IdentityProvisioningOperationType.EmployeeLogin:
                     await ProcessEmployeeLoginAsync(operation, cancellationToken);
                     break;
+                case IdentityProvisioningOperationType.GrantManagerRole:
+                    await identityService.SetEmployeeManagerRoleAsync(operation.EmployeeId, true, cancellationToken);
+                    break;
+                case IdentityProvisioningOperationType.RevokeManagerRole:
+                    await identityService.SetEmployeeManagerRoleAsync(operation.EmployeeId, false, cancellationToken);
+                    break;
                 default:
                     throw new ValidationException(
                         $"Desteklenmeyen provizyon işi: {operation.Type}.");

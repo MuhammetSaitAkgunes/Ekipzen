@@ -1,8 +1,16 @@
 using FluentAssertions;
+using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Common.Models;
 using IKPro.Application.Features.Auth;
 using IKPro.Application.Features.Departments;
 using IKPro.Application.Features.Employees;
+using IKPro.Application.Features.Employees.Offboarding;
+using IKPro.Application.Features.Leaves;
+using IKPro.Domain.Entities.Leaves;
+using IKPro.Domain.Enums;
+using IKPro.Infrastructure.Tenancy;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -363,6 +371,218 @@ public sealed class PersonnelTests(IKProApiFactory factory)
             password = DemoPassword,
         })).StatusCode.Should().Be(HttpStatusCode.OK,
             "reaktive edilen personel yeni bir oturum açabilmeli");
+    }
+
+    [Fact]
+    public async Task ManagerAssignment_GrantsAndRevokesRole_RejectsStaleTokens()
+    {
+        var adminAuth = await LoginAsync("ik@hrmaster.local");
+        var ahmetAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+        var ahmetId = ahmetAuth.User.EmployeeId!.Value;
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", adminAuth.Token);
+        var staleEmployeeClient = factory.CreateClient();
+        staleEmployeeClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", ahmetAuth.Token);
+
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        int? createdEmployeeId = null;
+
+        try
+        {
+            var createResponse = await admin.PostAsJsonAsync("/api/employees", new
+            {
+                firstName = "Rol",
+                lastName = $"Takibi{suffix}",
+                title = "Test Personeli",
+                departmentId,
+                managerId = ahmetId,
+                hireDate = "2024-01-01",
+                status = "active",
+            });
+            createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            var created = (await createResponse.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+            createdEmployeeId = created.Id;
+
+            (await staleEmployeeClient.GetAsync("/api/me")).StatusCode.Should().Be(
+                HttpStatusCode.Unauthorized,
+                "terfi öncesi employee tokenı yeni organizasyon rolünü atlayamamalı");
+
+            var managerAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+            managerAuth.User.Role.Should().Be("manager");
+            var staleManagerClient = factory.CreateClient();
+            staleManagerClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", managerAuth.Token);
+
+            var updateResponse = await admin.PutAsJsonAsync($"/api/employees/{created.Id}", new
+            {
+                firstName = "Rol",
+                lastName = $"Takibi{suffix}",
+                title = "Test Personeli",
+                departmentId,
+                managerId = (int?)null,
+                hireDate = "2024-01-01",
+                status = "active",
+            });
+            updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            (await staleManagerClient.GetAsync("/api/me")).StatusCode.Should().Be(
+                HttpStatusCode.Unauthorized,
+                "son ekibini kaybeden yöneticinin eski tokenı yetkiyi korumamalı");
+
+            var employeeAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+            employeeAuth.User.Role.Should().Be("employee");
+        }
+        finally
+        {
+            using var tenantScope = factory.Services
+                .GetRequiredService<ITenantScopeFactory>()
+                .Create(adminAuth.User.TenantId);
+            var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
+            if (createdEmployeeId is int employeeId)
+            {
+                var created = await db.Employees
+                    .FirstOrDefaultAsync(employee => employee.Id == employeeId);
+                if (created is not null)
+                {
+                    created.ManagerId = null;
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+            }
+
+            var identity = tenantScope.Services.GetRequiredService<IIdentityService>();
+            await identity.SetEmployeeManagerRoleAsync(ahmetId, false, CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task ManagerOffboarding_RequiresSuccessor_TransfersTeamLeaveScopeAndRoles()
+    {
+        var adminAuth = await LoginAsync("ik@hrmaster.local");
+        var eceAuth = await LoginAsync("ece.arslan@hrmaster.local");
+        var ahmetAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+        var eceId = eceAuth.User.EmployeeId!.Value;
+        var ahmetId = ahmetAuth.User.EmployeeId!.Value;
+
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", adminAuth.Token);
+
+        var directory = await GetAsync<PagedResult<EmployeeListItemDto>>(
+            admin, "/api/employees?page=1&pageSize=50");
+        var selinId = directory.Items.Single(employee => employee.Name == "Selin Koç").Id;
+        int leaveRequestId;
+
+        using (var tenantScope = factory.Services
+                   .GetRequiredService<ITenantScopeFactory>()
+                   .Create(adminAuth.User.TenantId))
+        {
+            var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
+            var leaveTypeId = await db.LeaveTypes.Select(type => type.Id).FirstAsync();
+            var leaveRequest = new LeaveRequest
+            {
+                EmployeeId = selinId,
+                LeaveTypeId = leaveTypeId,
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30),
+                EndDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30),
+                Days = 1,
+                Status = LeaveStatus.Pending,
+                Description = "Halef devri kapsam testi",
+            };
+            db.LeaveRequests.Add(leaveRequest);
+            await db.SaveChangesAsync(CancellationToken.None);
+            leaveRequestId = leaveRequest.Id;
+        }
+
+        try
+        {
+            var context = await GetAsync<EmployeeOffboardingContextDto>(
+                admin, $"/api/employees/{eceId}/offboarding-context");
+            context.DirectReportCount.Should().Be(2);
+            context.PendingLeaveRequestCount.Should().BeGreaterThanOrEqualTo(1);
+            context.Successors.Should().Contain(successor =>
+                successor.Id == ahmetId && successor.IsDirectReport);
+
+            var terminationDate = DateOnly.FromDateTime(DateTime.UtcNow);
+            (await admin.PatchAsJsonAsync($"/api/employees/{eceId}/status", new
+            {
+                status = "passive",
+                terminationDate,
+            })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "ekibi olan yönetici halef seçilmeden pasife alınamamalı");
+
+            (await admin.PostAsJsonAsync("/api/employees/bulk-deactivate", new
+            {
+                ids = new[] { eceId },
+                terminationDate,
+            })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "yönetici toplu pasife alma yoluyla halef kapısını aşamamalı");
+
+            (await admin.PatchAsJsonAsync($"/api/employees/{eceId}/status", new
+            {
+                status = "passive",
+                terminationDate,
+                successorManagerId = ahmetId,
+            })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var departing = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{eceId}");
+            var promoted = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{ahmetId}");
+            var transferred = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{selinId}");
+            departing.Status.Should().Be("passive");
+            promoted.ManagerId.Should().Be(departing.ManagerId,
+                "terfi eden doğrudan rapor kendi kendisinin yöneticisi olmamalı");
+            transferred.ManagerId.Should().Be(ahmetId);
+
+            (await _client.PostAsJsonAsync("/api/auth/login", new
+            {
+                email = "ece.arslan@hrmaster.local",
+                password = DemoPassword,
+            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            var promotedAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+            promotedAuth.User.Role.Should().Be("manager");
+            var promotedClient = factory.CreateClient();
+            promotedClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", promotedAuth.Token);
+
+            var pending = await GetAsync<List<LeaveRequestDto>>(
+                promotedClient, "/api/leaves/pending");
+            pending.Should().Contain(request => request.Id == leaveRequestId,
+                "bekleyen izinler yeni yönetici kapsamına dinamik olarak geçmeli");
+            (await promotedClient.PostAsJsonAsync(
+                $"/api/leaves/{leaveRequestId}/approve", new { note = "Halef onayı" }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            using var tenantScope = factory.Services
+                .GetRequiredService<ITenantScopeFactory>()
+                .Create(adminAuth.User.TenantId);
+            var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
+            var ece = await db.Employees.FirstAsync(employee => employee.Id == eceId);
+            var ahmet = await db.Employees.FirstAsync(employee => employee.Id == ahmetId);
+            var selin = await db.Employees.FirstAsync(employee => employee.Id == selinId);
+            ece.Status = EmployeeStatus.Active;
+            ece.TerminationDate = null;
+            ahmet.ManagerId = eceId;
+            selin.ManagerId = eceId;
+
+            var leaveRequest = await db.LeaveRequests
+                .FirstOrDefaultAsync(request => request.Id == leaveRequestId);
+            if (leaveRequest is not null)
+            {
+                db.LeaveRequests.Remove(leaveRequest);
+            }
+
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            var identity = tenantScope.Services.GetRequiredService<IIdentityService>();
+            await identity.SetEmployeeManagerRoleAsync(eceId, true, CancellationToken.None);
+            await identity.SetEmployeeAccessAsync(eceId, true, CancellationToken.None);
+            await identity.SetEmployeeManagerRoleAsync(ahmetId, false, CancellationToken.None);
+        }
     }
 
     // --- departmanlar ---

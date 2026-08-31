@@ -1,5 +1,7 @@
 using FluentValidation;
+using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +25,8 @@ public sealed class BulkDeactivateEmployeesCommandValidator : AbstractValidator<
 
 public sealed class BulkDeactivateEmployeesCommandHandler(
     IApplicationDbContext context,
-    IIdentityService identityService)
+    IIdentityService identityService,
+    IIdentityProvisioningProcessor provisioningProcessor)
     : IRequestHandler<BulkDeactivateEmployeesCommand, int>
 {
     public async Task<int> Handle(BulkDeactivateEmployeesCommand request, CancellationToken cancellationToken)
@@ -33,10 +36,27 @@ public sealed class BulkDeactivateEmployeesCommandHandler(
             .Where(e => request.Ids.Contains(e.Id) && e.Status == EmployeeStatus.Active)
             .ToListAsync(cancellationToken);
 
+        var employeeIds = employees.Select(employee => employee.Id).ToArray();
+        var containsManager = await context.Employees
+            .AnyAsync(candidate => candidate.ManagerId != null
+                && employeeIds.Contains(candidate.ManagerId.Value), cancellationToken);
+        if (containsManager)
+        {
+            throw new ConflictException("Ekibi bulunan yöneticiler toplu pasife alınamaz; tekil işten çıkışta halef seçin.");
+        }
+
         if (employees.Any(employee => request.TerminationDate < employee.HireDate))
         {
             throw new ArgumentException("İşten ayrılma tarihi işe giriş tarihinden önce olamaz.");
         }
+
+        var roleOperations = employees.Select(employee => new IdentityProvisioningOperation
+        {
+            EmployeeId = employee.Id,
+            Type = IdentityProvisioningOperationType.RevokeManagerRole,
+            Status = IdentityProvisioningStatus.Pending,
+            NextAttemptAtUtc = DateTime.UtcNow,
+        }).ToList();
 
         foreach (var employee in employees)
         {
@@ -44,7 +64,13 @@ public sealed class BulkDeactivateEmployeesCommandHandler(
             employee.TerminationDate = request.TerminationDate;
         }
 
+        context.IdentityProvisioningOperations.AddRange(roleOperations);
         await context.SaveChangesAsync(cancellationToken);
+
+        foreach (var operation in roleOperations)
+        {
+            await provisioningProcessor.ProcessNowAsync(operation.Id, cancellationToken);
+        }
 
         // Login'i olan personellerin Identity hesabını da kapat ve refresh
         // token'larını iptal et. Login'i olmayan personeller no-op'tur.

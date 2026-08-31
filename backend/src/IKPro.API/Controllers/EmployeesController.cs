@@ -6,6 +6,7 @@ using IKPro.Application.Features.Employees.Files;
 using IKPro.Application.Features.Employees.GetEmployee;
 using IKPro.Application.Features.Employees.GetEmployees;
 using IKPro.Application.Features.Employees.Import;
+using IKPro.Application.Features.Employees.Offboarding;
 using IKPro.Application.Features.Employees.SetStatus;
 using IKPro.Application.Features.Employees.Upsert;
 using MediatR;
@@ -107,6 +108,14 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int id, EmployeeUpsertModel model, CancellationToken cancellationToken)
         => Ok(await sender.Send(new UpdateEmployeeCommand(id, model), cancellationToken));
 
+    [HttpGet("{id:int}/offboarding-context")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeOffboardingContextDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<EmployeeOffboardingContextDto>> GetOffboardingContext(
+        int id, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetEmployeeOffboardingContextQuery(id), cancellationToken));
+
     [HttpPost("bulk-deactivate")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -125,7 +134,8 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int id, SetStatusBody body, CancellationToken cancellationToken)
     {
         await sender.Send(
-            new SetEmployeeStatusCommand(id, body.Status, body.TerminationDate), cancellationToken);
+            new SetEmployeeStatusCommand(
+                id, body.Status, body.TerminationDate, body.SuccessorManagerId), cancellationToken);
         return NoContent();
     }
 
@@ -178,5 +188,6 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         return File(download.Content, download.ContentType, download.FileName);
     }
 
-    public sealed record SetStatusBody(string Status, DateOnly? TerminationDate = null);
+    public sealed record SetStatusBody(
+        string Status, DateOnly? TerminationDate = null, int? SuccessorManagerId = null);
 }

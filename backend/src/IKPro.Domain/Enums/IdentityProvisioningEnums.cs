@@ -4,6 +4,7 @@ public enum IdentityProvisioningOperationType
 {
     EmployeeLogin,
     GrantManagerRole,
+    RevokeManagerRole,
 }
 
 public enum IdentityProvisioningStatus

@@ -3,6 +3,7 @@ using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Common.Notifications;
 using IKPro.Application.Features.Employees.GetEmployee;
+using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Organization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,10 @@ public sealed class CreateEmployeeCommandValidator : AbstractValidator<CreateEmp
 }
 
 public sealed class CreateEmployeeCommandHandler(
-    IApplicationDbContext context, ISender sender, INotificationTrigger notificationTrigger)
+    IApplicationDbContext context,
+    ISender sender,
+    INotificationTrigger notificationTrigger,
+    IIdentityProvisioningProcessor provisioningProcessor)
     : IRequestHandler<CreateEmployeeCommand, EmployeeDetailDto>
 {
     public async Task<EmployeeDetailDto> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
@@ -35,6 +39,12 @@ public sealed class CreateEmployeeCommandHandler(
         var model = request.Model;
 
         await EmployeeUpsertGuards.EnsureReferencesAsync(context, model, employeeId: null, cancellationToken);
+
+        var roleOperations = new List<IdentityProvisioningOperation>();
+        if (model.ManagerId is int managerId)
+        {
+            roleOperations.Add(ManagerRoleProvisioning.Enqueue(context, managerId, isManager: true));
+        }
 
         var employee = new Employee
         {
@@ -52,6 +62,7 @@ public sealed class CreateEmployeeCommandHandler(
         context.Employees.Add(employee);
         await context.SaveChangesAsync(cancellationToken);
 
+        await ManagerRoleProvisioning.ProcessNowAsync(provisioningProcessor, roleOperations, cancellationToken);
         // Faz 11: "Yeni Personel Kaydı" bildirimi (ayar toggle'ına uyar).
         await notificationTrigger.NewPersonnelCreatedAsync(employee, cancellationToken);
 
@@ -77,9 +88,39 @@ public static class EmployeeUpsertGuards
                 throw new ConflictException("Personel kendi yöneticisi olamaz.");
             }
 
-            if (!await context.Employees.AnyAsync(e => e.Id == model.ManagerId, cancellationToken))
+            var manager = await context.Employees
+                .AsNoTracking()
+                .FirstOrDefaultAsync(candidate => candidate.Id == model.ManagerId, cancellationToken)
+                ?? throw new NotFoundException("Yönetici", model.ManagerId);
+
+            if (manager.Status != Domain.Enums.EmployeeStatus.Active)
             {
-                throw new NotFoundException("Yönetici", model.ManagerId);
+                throw new ConflictException("Yönetici aktif olmalıdır.");
+            }
+
+            if (string.IsNullOrWhiteSpace(manager.UserId))
+            {
+                throw new ConflictException("Yöneticinin bağlı bir giriş hesabı olmalıdır.");
+            }
+
+            if (employeeId is int currentEmployeeId)
+            {
+                var hierarchy = await context.Employees
+                    .AsNoTracking()
+                    .Select(candidate => new { candidate.Id, candidate.ManagerId })
+                    .ToDictionaryAsync(candidate => candidate.Id, candidate => candidate.ManagerId, cancellationToken);
+                var visited = new HashSet<int>();
+                int? cursor = manager.Id;
+
+                while (cursor is int managerId && visited.Add(managerId))
+                {
+                    if (managerId == currentEmployeeId)
+                    {
+                        throw new ConflictException("Yönetici ataması organizasyon hiyerarşisinde döngü oluşturamaz.");
+                    }
+
+                    cursor = hierarchy.GetValueOrDefault(managerId);
+                }
             }
         }
 

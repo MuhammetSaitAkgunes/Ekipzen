@@ -279,6 +279,74 @@ public sealed class IdentityService(
         }
     }
 
+    public async Task SetEmployeeManagerRoleAsync(
+        int employeeId, bool isManager, CancellationToken cancellationToken)
+    {
+        var tenantId = currentTenant.TenantIdOrThrow();
+        using var kapsam = tenantScopeFactory.Create(tenantId);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.Users
+            .FirstOrDefaultAsync(candidate => candidate.EmployeeId == employeeId, cancellationToken);
+
+        if (user is null)
+        {
+            if (isManager)
+            {
+                throw new ConflictException("Halef personelin bağlı bir giriş hesabı olmalıdır.");
+            }
+
+            return;
+        }
+
+        // İK yöneticisi organizasyon rolünden üstündür. Bağlı bir personel kaydı
+        // olsa bile hr-admin korunur ve alt roller temizlenir.
+        if (await kullanicilar.IsInRoleAsync(user, Roles.HrAdmin))
+        {
+            if (await kullanicilar.IsInRoleAsync(user, Roles.Manager))
+            {
+                EnsureIdentitySuccess(await kullanicilar.RemoveFromRoleAsync(user, Roles.Manager), "role");
+            }
+
+            if (await kullanicilar.IsInRoleAsync(user, Roles.Employee))
+            {
+                EnsureIdentitySuccess(await kullanicilar.RemoveFromRoleAsync(user, Roles.Employee), "role");
+            }
+
+            return;
+        }
+
+        if (isManager)
+        {
+            if (!await kullanicilar.IsInRoleAsync(user, Roles.Manager))
+            {
+                EnsureIdentitySuccess(await kullanicilar.AddToRoleAsync(user, Roles.Manager), "role");
+            }
+
+            // Organizasyon rolleri birbirini dışlar. Çift rol yalnız DTO'da doğru
+            // etiketi seçmekle kalmamalı; token claim'lerinde Employee yetkisini
+            // açık bırakmak çalışanlara özel kapıları da yanlışlıkla açar.
+            if (await kullanicilar.IsInRoleAsync(user, Roles.Employee))
+            {
+                EnsureIdentitySuccess(await kullanicilar.RemoveFromRoleAsync(user, Roles.Employee), "role");
+            }
+
+            return;
+        }
+
+        // Retry, Manager kaldırıldıktan sonra yarıda kalmış olsa bile Employee
+        // rolünü tamamlamalı; erken dönüş rolü olmayan hesap bırakırdı.
+        if (!await kullanicilar.IsInRoleAsync(user, Roles.Employee))
+        {
+            EnsureIdentitySuccess(await kullanicilar.AddToRoleAsync(user, Roles.Employee), "role");
+        }
+
+        if (await kullanicilar.IsInRoleAsync(user, Roles.Manager))
+        {
+            EnsureIdentitySuccess(await kullanicilar.RemoveFromRoleAsync(user, Roles.Manager), "role");
+        }
+    }
+
     public async Task ResendInviteAsync(int tenantId, string email, CancellationToken cancellationToken)
     {
         using var kapsam = tenantScopeFactory.Create(tenantId);
@@ -568,7 +636,10 @@ public sealed class IdentityService(
 
     private static UserDto ToUserDto(ApplicationUser user, IEnumerable<string> roles, string tenantName)
     {
-        var role = roles.FirstOrDefault() ?? Roles.Employee;
+        var roleSet = roles.ToHashSet(StringComparer.Ordinal);
+        var role = roleSet.Contains(Roles.HrAdmin) ? Roles.HrAdmin
+            : roleSet.Contains(Roles.Manager) ? Roles.Manager
+            : Roles.Employee;
 
         return new UserDto(
             user.Id,

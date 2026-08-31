@@ -1,5 +1,6 @@
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Domain.Constants;
 using IKPro.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +92,27 @@ public sealed class TenantAccessMiddleware(RequestDelegate next)
             if (!employeeActive)
             {
                 throw new UnauthorizedException("Personel hesabı pasif durumda.");
+            }
+
+            // Organizasyon hiyerarşisi yönetici rolünün kaynağıdır. Önceden
+            // üretilmiş JWT eski rol claim'ini taşıyorsa yetkilendirmeye ulaşmadan
+            // 401 dön; istemcinin tek-uçuş refresh'i güncel Identity rolüyle yeni
+            // token üretir. Böylece demote edilen yönetici token süresi boyunca
+            // eski yetkisini koruyamaz.
+            var claimedRoles = context.User.FindAll("role")
+                .Select(claim => claim.Value)
+                .ToHashSet(StringComparer.Ordinal);
+            if (!claimedRoles.Contains(Roles.HrAdmin))
+            {
+                var shouldBeManager = await applicationDb.Employees
+                    .AsNoTracking()
+                    .AnyAsync(employee => employee.ManagerId == employeeId, context.RequestAborted);
+                var roleIsCurrent = claimedRoles.Contains(Roles.Manager) == shouldBeManager
+                    && claimedRoles.Contains(Roles.Employee) == !shouldBeManager;
+                if (!roleIsCurrent)
+                {
+                    throw new UnauthorizedException("Kullanıcı rolü güncel değil; oturumu yenileyin.");
+                }
             }
         }
 
