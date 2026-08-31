@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -7,15 +6,11 @@ import { downloadCsv, tableToCsvLines } from "../shared/csv";
 import { ImportModal } from "./ImportModal";
 import { OffboardingModal } from "./OffboardingModal";
 import { PersonnelModal } from "./PersonnelModal";
-import { useBulkDeactivate, useDepartments, useEmployees, type EmployeeFilters } from "./queries";
+import { useDepartments, useEmployees, type EmployeeFilters } from "./queries";
 
 const formatDate = (value?: string | null): string =>
   value ? new Date(value).toLocaleDateString("tr-TR") : "";
 
-const todayInputValue = (): string => {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-};
 
 export function PersonnelPage() {
   const { user } = useAuth();
@@ -25,7 +20,6 @@ export function PersonnelPage() {
   const [searchInput, setSearchInput] = useState("");
   const [filters, setFilters] = useState<EmployeeFilters>({ search: "", departmentId: "", status: "" });
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [terminationDate, setTerminationDate] = useState(todayInputValue);
   const [cardId, setCardId] = useState<number | null | undefined>(undefined); // undefined: kapalı, null: yeni kayıt
   const [importOpen, setImportOpen] = useState(false);
   const [offboardingId, setOffboardingId] = useState<number | null>(null);
@@ -42,7 +36,6 @@ export function PersonnelPage() {
 
   const employeesQ = useEmployees(filters);
   const departmentsQ = useDepartments();
-  const bulkDeactivate = useBulkDeactivate();
 
   const items = useMemo(() => employeesQ.data?.items ?? [], [employeesQ.data]);
 
@@ -73,21 +66,6 @@ export function PersonnelPage() {
     });
     downloadCsv(lines, hasSelection ? "personel-secili" : "personel-listesi");
     showToast("CSV raporu indirildi.", "success");
-  };
-
-  const deactivateSelected = async () => {
-    if (!terminationDate) {
-      showToast("İşten ayrılma tarihi seçilmeli.", "error");
-      return;
-    }
-    const count = selected.size;
-    try {
-      await bulkDeactivate.mutateAsync({ ids: [...selected], terminationDate });
-      showToast(`${count} personel pasife alındı.`, "success");
-      setSelected(new Set());
-    } catch (cause) {
-      showToast(cause instanceof ApiError ? cause.message : "Pasife alma başarısız oldu.", "error");
-    }
   };
 
   return (
@@ -157,22 +135,7 @@ export function PersonnelPage() {
             <button className="btn btn-secondary btn-sm" onClick={exportCsv}>
               <i aria-hidden="true" className="fa-solid fa-file-excel" /> Seçilenleri dışa aktar
             </button>
-            {isHrAdmin && (
-              <>
-                <label htmlFor="bulk-termination-date">Ayrılış tarihi</label>
-                <input
-                  id="bulk-termination-date"
-                  type="date"
-                  className="filter-select"
-                  max={todayInputValue()}
-                  value={terminationDate}
-                  onChange={(event) => setTerminationDate(event.target.value)}
-                />
-              <button className="btn btn-secondary btn-sm" onClick={deactivateSelected}>
-                <i aria-hidden="true" className="fa-solid fa-user-slash" /> Pasife al
-              </button>
-              </>
-            )}
+
             <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Seçimi temizle</button>
           </div>
         </div>
@@ -238,9 +201,16 @@ export function PersonnelPage() {
                           <i aria-hidden="true" className="fa-solid fa-pen" />
                         </button>
                       )}
-                      {isHrAdmin && employee.status === "active" && (
-                        <button className="btn-icon-sm" title="İşten çıkar" aria-label={`${employee.name} için işten çıkış başlat`} onClick={() => setOffboardingId(employee.id ?? -1)}>
-                          <i aria-hidden="true" className="fa-solid fa-user-slash" />
+                      {isHrAdmin && (
+                        <button
+                          className="btn-icon-sm"
+                          title={employee.status === "active" ? "İşten çıkış başlat" : "İşten çıkış dosyası"}
+                          aria-label={`${employee.name} için işten çıkış dosyasını aç`}
+                          onClick={() => setOffboardingId(employee.id ?? -1)}
+                        >
+                          <i aria-hidden="true" className={employee.status === "active"
+                            ? "fa-solid fa-user-slash"
+                            : "fa-solid fa-folder-open"} />
                         </button>
                       )}
                     </div>

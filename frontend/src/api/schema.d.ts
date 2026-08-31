@@ -1999,6 +1999,209 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/offboarding-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveOffboardingDraftBody"];
+                    "text/json": components["schemas"]["SaveOffboardingDraftBody"];
+                    "application/*+json": components["schemas"]["SaveOffboardingDraftBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/offboarding/{caseId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["OffboardingVersionBody"];
+                    "text/json": components["schemas"]["OffboardingVersionBody"];
+                    "application/*+json": components["schemas"]["OffboardingVersionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/offboarding/{caseId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReverseOffboardingBody"];
+                    "text/json": components["schemas"]["ReverseOffboardingBody"];
+                    "application/*+json": components["schemas"]["ReverseOffboardingBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/bulk-deactivate": {
         parameters: {
             query?: never;
@@ -5177,6 +5380,41 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
+        EmployeeOffboardingCaseDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            employeeId?: number;
+            status?: string | null;
+            /** Format: int32 */
+            version?: number;
+            /** Format: date */
+            terminationDate?: string;
+            exitCode?: string | null;
+            exitReason?: string | null;
+            /** Format: int32 */
+            successorManagerId?: number | null;
+            /** Format: double */
+            unusedLeaveDays?: number;
+            /** Format: double */
+            unusedLeavePayment?: number;
+            /** Format: double */
+            severancePayment?: number;
+            /** Format: double */
+            noticePayment?: number;
+            /** Format: double */
+            totalPayment?: number;
+            settlementSource?: string | null;
+            settlementReference?: string | null;
+            settlementNotes?: string | null;
+            /** Format: date-time */
+            completedAtUtc?: string | null;
+            /** Format: date-time */
+            reversedAtUtc?: string | null;
+            reversalReason?: string | null;
+            identityProvisioningPending?: boolean;
+            identityProvisioningLastError?: string | null;
+        };
         EmployeeOffboardingContextDto: {
             /** Format: int32 */
             employeeId?: number;
@@ -5185,6 +5423,7 @@ export interface components {
             directReportCount?: number;
             /** Format: int32 */
             pendingLeaveRequestCount?: number;
+            currentCase?: components["schemas"]["EmployeeOffboardingCaseDto"];
             successors?: components["schemas"]["ManagerSuccessorDto"][] | null;
         };
         EmployeeProfileDto: {
@@ -5459,6 +5698,10 @@ export interface components {
             newPersonnelEmail?: boolean;
             leaveRequestEmail?: boolean;
             weeklyReportEmail?: boolean;
+        };
+        OffboardingVersionBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
         };
         OverviewDto: {
             /** Format: int32 */
@@ -5795,6 +6038,11 @@ export interface components {
         RetryProvisioningBody: {
             email?: string | null;
         };
+        ReverseOffboardingBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
+            reason?: string | null;
+        };
         RiskDetailDto: {
             /** Format: int32 */
             highCount?: number;
@@ -5837,6 +6085,26 @@ export interface components {
             burnoutRisk?: string | null;
             trend?: string | null;
             action?: string | null;
+        };
+        SaveOffboardingDraftBody: {
+            /** Format: int32 */
+            expectedVersion?: number | null;
+            /** Format: date */
+            terminationDate?: string;
+            exitCode?: string | null;
+            exitReason?: string | null;
+            /** Format: int32 */
+            successorManagerId?: number | null;
+            /** Format: double */
+            unusedLeaveDays?: number;
+            /** Format: double */
+            unusedLeavePayment?: number;
+            /** Format: double */
+            severancePayment?: number;
+            /** Format: double */
+            noticePayment?: number;
+            settlementReference?: string | null;
+            settlementNotes?: string | null;
         };
         SearchResultDto: {
             type?: string | null;

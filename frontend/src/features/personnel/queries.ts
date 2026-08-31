@@ -9,6 +9,8 @@ export type EmployeeUpsertModel = components["schemas"]["EmployeeUpsertModel"];
 export type DepartmentDto = components["schemas"]["DepartmentDto"];
 export type EmployeeDocumentDto = components["schemas"]["EmployeeDocumentDto"];
 export type EmployeeOffboardingContextDto = components["schemas"]["EmployeeOffboardingContextDto"];
+export type EmployeeOffboardingCaseDto = components["schemas"]["EmployeeOffboardingCaseDto"];
+export type SaveOffboardingDraftBody = components["schemas"]["SaveOffboardingDraftBody"];
 export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string };
@@ -36,13 +38,13 @@ export const useEmployee = (id: number | null) =>
     queryFn: () => apiFetch<EmployeeDetailDto>(`/employees/${id}`),
     enabled: id !== null,
   });
+
 export const useEmployeeOffboardingContext = (id: number | null) =>
   useQuery({
     queryKey: ["employees", id, "offboarding-context"],
     queryFn: () => apiFetch<EmployeeOffboardingContextDto>(`/employees/${id}/offboarding-context`),
     enabled: id !== null,
   });
-
 
 export const useEmployeeDocuments = (id: number | null) =>
   useQuery({
@@ -62,29 +64,46 @@ export const useSaveEmployee = () => {
   });
 };
 
-export const useBulkDeactivate = () => {
+export const useSaveOffboardingDraft = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ ids, terminationDate }: { ids: number[]; terminationDate: string }) =>
-      apiFetch<{ deactivated: number }>("/employees/bulk-deactivate", {
-        method: "POST",
-        body: JSON.stringify({ ids, terminationDate }),
+    mutationFn: ({ employeeId, body }: { employeeId: number; body: SaveOffboardingDraftBody }) =>
+      apiFetch<EmployeeOffboardingCaseDto>(`/employees/${employeeId}/offboarding-draft`, {
+        method: "PUT",
+        body: JSON.stringify(body),
       }),
+    onSuccess: (_case, { employeeId }) =>
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "offboarding-context"] }),
+  });
+};
+
+export const useCompleteOffboarding = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, caseId, expectedVersion }: {
+      employeeId: number;
+      caseId: number;
+      expectedVersion: number;
+    }) => apiFetch<EmployeeOffboardingCaseDto>(
+      `/employees/${employeeId}/offboarding/${caseId}/complete`,
+      { method: "POST", body: JSON.stringify({ expectedVersion }) },
+    ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
   });
 };
 
-export const useOffboardEmployee = () => {
+export const useReverseOffboarding = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, terminationDate, successorManagerId }: {
+    mutationFn: ({ employeeId, caseId, expectedVersion, reason }: {
       employeeId: number;
-      terminationDate: string;
-      successorManagerId: number | null;
-    }) => apiFetch<void>(`/employees/${employeeId}/status`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "passive", terminationDate, successorManagerId }),
-    }),
+      caseId: number;
+      expectedVersion: number;
+      reason: string;
+    }) => apiFetch<EmployeeOffboardingCaseDto>(
+      `/employees/${employeeId}/offboarding/${caseId}/reverse`,
+      { method: "POST", body: JSON.stringify({ expectedVersion, reason }) },
+    ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
   });
 };
@@ -112,10 +131,6 @@ export const useUploadDocument = () => {
   });
 };
 
-// --- Excel içe aktarma ---
-// Tipler backend Swagger'ından üretilir (npm run gen:api); sözleşme değişirse
-// derleme kırılır, elle yazılan kopya sessizce ayrışamaz.
-
 export type ImportRowIssue = components["schemas"]["ImportRowIssueDto"];
 export type ImportPreviewDto = components["schemas"]["ImportPreviewDto"];
 export type ImportResultDto = components["schemas"]["ImportResultDto"];
@@ -126,7 +141,6 @@ const dosyaGovdesi = (file: File): FormData => {
   return form;
 };
 
-/** Doğrular, KAYDETMEZ. */
 export const usePreviewImport = () =>
   useMutation({
     mutationFn: (file: File) =>
