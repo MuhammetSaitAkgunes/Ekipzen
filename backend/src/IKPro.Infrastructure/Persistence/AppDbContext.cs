@@ -4,6 +4,7 @@ using IKPro.Domain.Entities.Actions;
 using IKPro.Domain.Entities.Analytics;
 using IKPro.Domain.Entities.Attendance;
 using IKPro.Domain.Entities.Compliance;
+using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Leaves;
 using IKPro.Domain.Entities.Organization;
 using IKPro.Domain.Entities.Payroll;
@@ -73,6 +74,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     // Actions & Audit
     public DbSet<GlobalAction> GlobalActions => Set<GlobalAction>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    // Durable Identity provisioning
+    public DbSet<IdentityProvisioningOperation> IdentityProvisioningOperations => Set<IdentityProvisioningOperation>();
 
     // Settings
     public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();

@@ -24,6 +24,12 @@ public sealed record CandidateEvaluationDto(int Id, string Criterion, int Score,
 
 public sealed record CandidateHistoryDto(int Id, string Event, DateTime OccurredAtUtc);
 
+public sealed record IdentityProvisioningDto(
+    string Status,
+    string? Email,
+    int AttemptCount,
+    string? LastError);
+
 /// <summary>Aday detayı — recruitment.js sekmeleri (özgeçmiş/notlar/değerlendirme/geçmiş).</summary>
 public sealed record CandidateDetailDto(
     int Id,
@@ -42,7 +48,8 @@ public sealed record CandidateDetailDto(
     IReadOnlyList<CandidateExperienceDto> Experiences,
     IReadOnlyList<InterviewNoteDto> Notes,
     IReadOnlyList<CandidateEvaluationDto> Evaluations,
-    IReadOnlyList<CandidateHistoryDto> History);
+    IReadOnlyList<CandidateHistoryDto> History,
+    IdentityProvisioningDto? Provisioning);
 
 public sealed record PositionDto(
     int Id, string Title, int? DepartmentId, string? Department, bool IsOpen, int OpenCount, int CandidateCount);
@@ -53,6 +60,18 @@ public sealed record RecruitmentFunnelDto(
 
 public static class RecruitmentMappings
 {
+    public static IdentityProvisioningDto ToDto(
+        this Domain.Entities.Identity.IdentityProvisioningOperation operation) => new(
+        operation.Status switch
+        {
+            IdentityProvisioningStatus.Completed => "completed",
+            IdentityProvisioningStatus.Failed => "failed",
+            _ => "pending",
+        },
+        operation.Email,
+        operation.AttemptCount,
+        operation.LastError);
+
     public static bool IsStatus(string? value)
         => value is "Yeni" or "Mülakat" or "Teklif" or "Red" or "İşe Alındı";
 

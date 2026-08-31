@@ -6,6 +6,7 @@ export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"]
 export type CandidateDetailDto = components["schemas"]["CandidateDetailDto"];
 export type InterviewNoteDto = components["schemas"]["InterviewNoteDto"];
 export type HireResultDto = components["schemas"]["HireResultDto"];
+export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
 export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
 
 const candidatesPath = (search: string, status: string): string => {
@@ -77,6 +78,21 @@ export const useHireCandidate = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recruitment"] });
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+    },
+  });
+};
+
+export const useRetryCandidateProvisioning = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, email }: { id: number; email?: string | null }) =>
+      apiFetch<IdentityProvisioningDto>(`/candidates/${id}/provisioning/retry`, {
+        method: "POST",
+        body: JSON.stringify({ email: email || null }),
+      }),
+    onSuccess: (_result, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", id] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
     },
   });

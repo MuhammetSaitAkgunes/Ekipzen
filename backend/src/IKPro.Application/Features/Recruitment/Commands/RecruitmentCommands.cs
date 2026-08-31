@@ -2,6 +2,7 @@ using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Features.Recruitment.Queries;
+using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Recruitment;
 using IKPro.Domain.Enums;
 using MediatR;
@@ -288,7 +289,8 @@ public sealed record HireCandidateCommand(
     string? Title = null,
     DateOnly? HireDate = null) : IRequest<HireResultDto>;
 
-public sealed record HireResultDto(int CandidateId, int EmployeeId, string EmployeeName);
+public sealed record HireResultDto(
+    int CandidateId, int EmployeeId, string EmployeeName, IdentityProvisioningDto Provisioning);
 
 public sealed class HireCandidateCommandValidator : AbstractValidator<HireCandidateCommand>
 {
@@ -300,7 +302,10 @@ public sealed class HireCandidateCommandValidator : AbstractValidator<HireCandid
     }
 }
 
-public sealed class HireCandidateCommandHandler(IApplicationDbContext context, IIdentityService identityService)
+public sealed class HireCandidateCommandHandler(
+    IApplicationDbContext context,
+    IIdentityService identityService,
+    IIdentityProvisioningProcessor provisioningProcessor)
     : IRequestHandler<HireCandidateCommand, HireResultDto>
 {
     public async Task<HireResultDto> Handle(HireCandidateCommand request, CancellationToken cancellationToken)
@@ -357,6 +362,18 @@ public sealed class HireCandidateCommandHandler(IApplicationDbContext context, I
             CarriedOverDays = 0,
         });
 
+        var provisioning = new IdentityProvisioningOperation
+        {
+            Type = IdentityProvisioningOperationType.EmployeeLogin,
+            Status = IdentityProvisioningStatus.Pending,
+            Employee = employee,
+            Candidate = candidate,
+            Email = request.Email.Trim(),
+            DisplayName = candidate.Name,
+            NextAttemptAtUtc = DateTime.UtcNow,
+        };
+        context.IdentityProvisioningOperations.Add(provisioning);
+
         candidate.Status = CandidateStatus.Hired;
         candidate.History.Add(new CandidateHistory
         {
@@ -373,11 +390,75 @@ public sealed class HireCandidateCommandHandler(IApplicationDbContext context, I
 
         await context.SaveChangesAsync(cancellationToken);
 
-        // Personel-bağlı login (employee Id kaydedildikten sonra). Tekil transaction
-        // ideali için not: erken e-posta kontrolü orphan riskini pratikte kapatır.
-        await identityService.CreateEmployeeLoginAsync(
-            employee.Id, candidate.Name, request.Email, cancellationToken);
+        await provisioningProcessor.ProcessNowAsync(provisioning.Id, cancellationToken);
+        var currentProvisioning = await context.IdentityProvisioningOperations
+            .AsNoTracking()
+            .SingleAsync(operation => operation.Id == provisioning.Id, cancellationToken);
 
-        return new HireResultDto(candidate.Id, employee.Id, employee.FullName);
+        return new HireResultDto(
+            candidate.Id, employee.Id, employee.FullName, currentProvisioning.ToDto());
+    }
+}
+
+public sealed record RetryCandidateProvisioningCommand(int CandidateId, string? Email = null)
+    : IRequest<IdentityProvisioningDto>;
+
+public sealed class RetryCandidateProvisioningCommandValidator
+    : AbstractValidator<RetryCandidateProvisioningCommand>
+{
+    public RetryCandidateProvisioningCommandValidator()
+    {
+        RuleFor(command => command.Email)
+            .EmailAddress()
+            .MaximumLength(256)
+            .When(command => !string.IsNullOrWhiteSpace(command.Email));
+    }
+}
+
+public sealed class RetryCandidateProvisioningCommandHandler(
+    IApplicationDbContext context,
+    IIdentityService identityService,
+    IIdentityProvisioningProcessor provisioningProcessor)
+    : IRequestHandler<RetryCandidateProvisioningCommand, IdentityProvisioningDto>
+{
+    public async Task<IdentityProvisioningDto> Handle(
+        RetryCandidateProvisioningCommand request,
+        CancellationToken cancellationToken)
+    {
+        var operation = await context.IdentityProvisioningOperations
+            .Where(item => item.CandidateId == request.CandidateId
+                && item.Type == IdentityProvisioningOperationType.EmployeeLogin)
+            .OrderByDescending(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Aday login provizyonu", request.CandidateId);
+
+        if (operation.Status == IdentityProvisioningStatus.Completed)
+        {
+            throw new ConflictException("Aday login provizyonu zaten tamamlanmış.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Email)
+            && !string.Equals(operation.Email, request.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            var email = request.Email.Trim();
+            if (await identityService.EmailExistsAsync(email, cancellationToken))
+            {
+                throw new ConflictException($"'{email}' e-postasıyla kayıtlı bir hesap zaten var.");
+            }
+
+            operation.Email = email;
+        }
+
+        operation.Status = IdentityProvisioningStatus.Pending;
+        operation.NextAttemptAtUtc = DateTime.UtcNow;
+        operation.LeaseUntilUtc = null;
+        operation.LastError = null;
+        await context.SaveChangesAsync(cancellationToken);
+
+        await provisioningProcessor.ProcessNowAsync(operation.Id, cancellationToken);
+        var current = await context.IdentityProvisioningOperations
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == operation.Id, cancellationToken);
+        return current.ToDto();
     }
 }

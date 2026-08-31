@@ -141,6 +141,7 @@ public static class DependencyInjection
         services.AddSingleton<Application.Features.Payroll.Payslips.IPayslipGenerator, Pdf.QuestPdfPayslipGenerator>();
         services.AddScoped<JwtTokenService>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IIdentityProvisioningProcessor, Identity.IdentityProvisioningProcessor>();
         services.AddScoped<IUserDirectorySource, Identity.UserDirectorySource>();
         services.AddScoped<ITenantDirectory, Tenancy.TenantDirectory>();
         services.AddScoped<ITenantPurger, Persistence.TenantPurger>();

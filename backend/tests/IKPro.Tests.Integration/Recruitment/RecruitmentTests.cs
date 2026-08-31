@@ -1,11 +1,20 @@
 using FluentAssertions;
+using IKPro.API.Services;
+using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Common.Models;
+using IKPro.Infrastructure.Email;
 using IKPro.Application.Features.Auth;
 using IKPro.Application.Features.Departments;
 using IKPro.Application.Features.Employees;
 using IKPro.Application.Features.Leaves;
 using IKPro.Application.Features.Recruitment;
 using IKPro.Application.Features.Recruitment.Commands;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -152,6 +161,98 @@ public sealed class RecruitmentTests(IKProApiFactory factory)
     }
 
     [Fact]
+    public async Task Hire_TransientInviteFailure_RemainsRecoverableAndRetryCompletes()
+    {
+        var hireEmail = $"retry-{Guid.NewGuid():N}@hrmaster.local";
+        using var retryFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IEmailSender>();
+                services.AddSingleton<IEmailSender>(provider =>
+                    new FailCountEmailSender(
+                        hireEmail,
+                        failureCount: 2,
+                        new FileOutboxEmailSender(
+                            provider.GetRequiredService<IConfiguration>(),
+                            provider.GetRequiredService<ILogger<FileOutboxEmailSender>>())));
+            }));
+
+        var anonymous = retryFactory.CreateClient();
+        var login = await anonymous.PostAsJsonAsync(
+            "/api/auth/login", new { email = "ik@hrmaster.local", password = DemoPassword });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        var auth = (await login.Content.ReadFromJsonAsync<AuthResponse>())!;
+        var admin = retryFactory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+
+        var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
+        var candidateResponse = await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Retry Aday",
+            appliedRole = "Platform Uzmanı",
+            score = 82,
+        });
+        candidateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var candidate = (await candidateResponse.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+
+        var hireResponse = await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
+        {
+            departmentId = departments[0].Id,
+            email = hireEmail,
+        });
+        hireResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            "gecici e-posta hatasi atomik ise alim kaydini kaybettirmemeli");
+        var hired = (await hireResponse.Content.ReadFromJsonAsync<HireResultDto>())!;
+        hired.Provisioning.Status.Should().Be("pending");
+        hired.Provisioning.AttemptCount.Should().Be(1);
+
+        var pending = await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}");
+        pending.Status.Should().Be("İşe Alındı");
+        pending.Provisioning!.Status.Should().Be("pending");
+        pending.Provisioning.LastError.Should().NotBeNullOrWhiteSpace();
+
+        var retryResponse = await admin.PostAsJsonAsync(
+            $"/api/candidates/{candidate.Id}/provisioning/retry", new { email = (string?)null });
+        retryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var stillPending = (await retryResponse.Content.ReadFromJsonAsync<IdentityProvisioningDto>())!;
+        stillPending.Status.Should().Be("pending");
+        stillPending.AttemptCount.Should().Be(2);
+        stillPending.LastError.Should().NotBeNullOrWhiteSpace();
+
+        using (var tenantScope = retryFactory.Services
+                   .GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
+            var updated = await db.IdentityProvisioningOperations
+                .Where(operation => operation.CandidateId == candidate.Id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(operation => operation.NextAttemptAtUtc,
+                        DateTime.UtcNow.AddSeconds(-1)));
+            updated.Should().Be(1);
+        }
+
+        var completedCount = await retryFactory.Services
+            .GetRequiredService<IdentityProvisioningRetryService>()
+            .RunOnceAsync(CancellationToken.None);
+        completedCount.Should().BeGreaterThan(0);
+
+        var completedCandidate = await GetAsync<CandidateDetailDto>(
+            admin, $"/api/candidates/{candidate.Id}");
+        completedCandidate.Provisioning!.Status.Should().Be("completed");
+        completedCandidate.Provisioning.AttemptCount.Should().Be(3);
+        completedCandidate.Provisioning.LastError.Should().BeNull();
+
+        await AcceptInviteAsync(hireEmail);
+        _ = await AuthedClientAsync(hireEmail);
+
+        (await admin.PostAsJsonAsync(
+            $"/api/candidates/{candidate.Id}/provisioning/retry", new { email = (string?)null }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "tamamlanan idempotent is yeniden kuyruga alinmamali");
+    }
+
+    [Fact]
     public async Task Funnel_AndPoolFilters_ReflectCandidates()
     {
         var admin = await AuthedClientAsync("ik@hrmaster.local");
@@ -203,6 +304,25 @@ public sealed class RecruitmentTests(IKProApiFactory factory)
     }
 
     // --- yardımcılar ---
+
+    private sealed class FailCountEmailSender(
+        string targetEmail,
+        int failureCount,
+        IEmailSender inner) : IEmailSender
+    {
+        private int _attempts;
+
+        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
+        {
+            if (string.Equals(message.To, targetEmail, StringComparison.OrdinalIgnoreCase)
+                && Interlocked.Increment(ref _attempts) <= failureCount)
+            {
+                throw new IOException("Test transient e-posta hatası.");
+            }
+
+            return inner.SendAsync(message, cancellationToken);
+        }
+    }
 
     private sealed record FunnelDto(int Total, int New, int Interview, int Offer, int Rejected, int Hired);
 

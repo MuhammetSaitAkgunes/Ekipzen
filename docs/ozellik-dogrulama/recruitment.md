@@ -18,7 +18,7 @@ güvenlik/kimlik hatasına dönüşebilir.
 | R-3 | Mantık | **YÜKSEK** | 24 günlük izin hak edişi sabit kodlanmış; mevzuata aykırı görünüyor | dış girdi bekliyor (müşavir) |
 | R-4 | Mantık | ORTA | Tek kelimelik isimde soyad boş kalıyor | açık |
 | R-5 | Mantık | ORTA | İşe alım **geri alınamıyor**; yanlış işe alım düzeltilemiyor | açık |
-| R-6 | Kod | **YÜKSEK** | `hire` transaction'sız; login yaratma patlarsa kurtarma yolu yok | açık |
+| **R-6** | Kod | **ÇÖZÜLDÜ 2026-08-31** | İş verileri atomik; Identity/davet kalıcı, idempotent ve yeniden denenebilir iş | integration + UI testi |
 | R-7 | Kod | ORTA | `GetCandidateQuery` 6 koleksiyon `Include` — kartezyen çarpım | açık |
 | R-8 | Kod | DÜŞÜK | Pozisyon oluştururken departman iki kez sorgulanıyor | açık |
 | R-9 | Kod | ORTA | `notes` ve `evaluations` uçlarının hiç testi yok | açık |
@@ -125,39 +125,25 @@ burada karşılığı yok.
 | 1 | Kiracı izolasyonu | ✅ Tüm sorgular `IApplicationDbContext` üzerinden, global filtre kapsıyor; ambient context kötüye kullanımı yok |
 | 2 | Yetki kapsamı | ✅ Controller tamamı `HrAdminOnly`; satır düzeyi daraltma bu alanda gerekmiyor |
 | 3 | Doğrulama | ❌ R-1 (tarih), R-4 (isim) |
-| 4 | İşlem sınırı | ❌ **R-6** |
+| 4 | İşlem sınırı | ✅ İş verisi atomik; dış Identity etkisi telafi edilebilir ve idempotent |
 | 5 | N+1 / kartezyen | ❌ R-7, R-8 |
 | 6 | Hata zarfı | ✅ 404/409 doğru kullanılmış, mesajlar iç detay sızdırmıyor |
 | 7 | Audit izi | ✅ `CandidateHistory` durum değişimi, not ekleme ve işe alımı kaydediyor |
 | 8 | Test boşluğu | ❌ R-9 |
 
-### R-6 · `hire` transaction'sız, kurtarma yolu yok — YÜKSEK
+### R-6 · İşe alım + login arası yarım işlem — ÇÖZÜLDÜ (2026-08-31)
 
-`HireCandidateCommandHandler` şu sırayla çalışıyor:
+İşe alımın iş verileri ve `IdentityProvisioningOperation` aynı `SaveChanges`
+içinde kalıcılaşıyor. Identity hesabı transaction dışındaki dış etki olarak
+idempotent bir işlemciye bırakılıyor; lease, deneme sayısı, son hata, sonraki
+deneme zamanı ve tamamlanma zamanı kalıcı tutuluyor.
 
-```csharp
-context.Employees.Add(employee);
-context.LeaveBalances.Add(...);
-candidate.Status = CandidateStatus.Hired;
-candidate.Position.OpenCount--;
-await context.SaveChangesAsync(cancellationToken);   // ← BURADA COMMIT
-
-await identityService.CreateEmployeeLoginAsync(...); // ← BUNDAN SONRA
-```
-
-`CreateEmployeeLoginAsync` başarısız olursa (SMTP arızası, Identity hatası,
-dizin çakışması) **geriye kalıcı olarak** şunlar kalır: personel kaydı, izin
-bakiyesi, `Hired` durumu, düşmüş kontenjan — ve **login yok**.
-
-Tekrar denemek de mümkün değil: aday artık `Hired`, uç 409 dönüyor. Yani sistemde
-**girişi olmayan bir personel** kalıyor ve API'den düzeltilemiyor.
-
-Kodun kendi yorumu durumun farkında:
-
-> `// Tekil transaction ideali için not: erken e-posta kontrolü orphan riskini pratikte kapatır.`
-
-Ama e-posta ön kontrolü yalnız **çakışma** riskini kapatır; SMTP arızasını,
-Identity hatasını ya da araya giren bir kesintiyi kapatmaz.
+İlk deneme istek içinde best-effort çalışır. Geçici SMTP/altyapı hatası işe alımı
+geri almaz; tenant-izole background worker üstel geri çekilmeyle yeniden dener.
+İK aday detayından durumu/hata mesajını görür, gerekirse e-postayı düzeltip
+manuel retry başlatır. Tamamlanmış iş yeniden kuyruğa alınmaz. Entegrasyon testi
+iki geçici e-posta hatası, manuel retry, otomatik worker iyileşmesi, davet kabulü
+ve login zincirini doğrular.
 
 ### R-7 · `GetCandidateQuery` kartezyen çarpım üretiyor — ORTA
 
@@ -194,12 +180,10 @@ tercihtir. Karar verilip yorumla sabitlenmeli; bugün belirsiz.
 
 ## Sonraki adım
 
-Bulgular **düzeltilmedi** — akış kararı gereği önce raporlanır, düzeltme onayla
-yapılır. Önerilen sıra:
+`R-6` kapandı. Kalan önerilen sıra:
 
-1. **R-6** (transaction + kurtarma yolu) — veri bütünlüğü, en yüksek etki
-2. **R-1 + R-2** (tarih doğrulama + bakiye yılı) — birlikte çözülmeli, aynı kök
-3. **R-5** (işe alımı geri alma) — R-6'nın kurtarma yoluyla birlikte tasarlanmalı
-4. **R-9** (eksik testler) — düzeltmelerle birlikte yazılır
-5. **R-7, R-4, R-8, R-10** — kalite borcu
-6. **R-3** — müşavir görüşü geldiğinde
+1. **R-1 + R-2** (tarih doğrulama + bakiye yılı) — birlikte çözülmeli, aynı kök
+2. **R-5** (işe alımı geri alma) — artık R-6'nın kalıcı işlem altyapısına dayanabilir
+3. **R-9** (eksik testler) — düzeltmelerle birlikte yazılır
+4. **R-7, R-4, R-8, R-10** — kalite borcu
+5. **R-3** — müşavir görüşü geldiğinde

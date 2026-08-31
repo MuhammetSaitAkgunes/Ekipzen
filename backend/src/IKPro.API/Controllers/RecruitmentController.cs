@@ -74,6 +74,14 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         => Ok(await sender.Send(
             new HireCandidateCommand(id, body.DepartmentId, body.Email, body.Title, body.HireDate), cancellationToken));
 
+    [HttpPost("candidates/{id:int}/provisioning/retry")]
+    [ProducesResponseType<IdentityProvisioningDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<IdentityProvisioningDto>> RetryProvisioning(
+        int id, RetryProvisioningBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new RetryCandidateProvisioningCommand(id, body.Email), cancellationToken));
+
     // --- pozisyonlar & funnel ---
 
     [HttpGet("positions")]
@@ -99,4 +107,5 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public sealed record CandidateNoteBody(string NoteType, string Text);
     public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5);
     public sealed record CandidateHireBody(int DepartmentId, string Email, string? Title = null, DateOnly? HireDate = null);
+    public sealed record RetryProvisioningBody(string? Email = null);
 }

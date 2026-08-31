@@ -3680,6 +3680,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/candidates/{id}/provisioning/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RetryProvisioningBody"];
+                    "text/json": components["schemas"]["RetryProvisioningBody"];
+                    "application/*+json": components["schemas"]["RetryProvisioningBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["IdentityProvisioningDto"];
+                        "application/json": components["schemas"]["IdentityProvisioningDto"];
+                        "text/json": components["schemas"]["IdentityProvisioningDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/positions": {
         parameters: {
             query?: never;
@@ -4712,6 +4779,7 @@ export interface components {
             notes?: components["schemas"]["InterviewNoteDto"][] | null;
             evaluations?: components["schemas"]["CandidateEvaluationDto"][] | null;
             history?: components["schemas"]["CandidateHistoryDto"][] | null;
+            provisioning?: components["schemas"]["IdentityProvisioningDto"];
         };
         CandidateEvaluationBody: {
             criterion?: string | null;
@@ -5164,6 +5232,14 @@ export interface components {
             /** Format: int32 */
             employeeId?: number;
             employeeName?: string | null;
+            provisioning?: components["schemas"]["IdentityProvisioningDto"];
+        };
+        IdentityProvisioningDto: {
+            status?: string | null;
+            email?: string | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            lastError?: string | null;
         };
         ImportPreviewDto: {
             /** Format: int32 */
@@ -5647,6 +5723,9 @@ export interface components {
         };
         /** @description Davet yeniden gönderme isteği gövdesi. */
         ResendInviteRequest: {
+            email?: string | null;
+        };
+        RetryProvisioningBody: {
             email?: string | null;
         };
         RiskDetailDto: {

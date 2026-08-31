@@ -167,26 +167,64 @@ public sealed class IdentityService(
         await CreateInvitedUserAsync(kapsam, user, Roles.HrAdmin, companyName, cancellationToken);
     }
 
-    public async Task CreateEmployeeLoginAsync(
+    public async Task<string> CreateEmployeeLoginAsync(
         int employeeId, string name, string email, CancellationToken cancellationToken)
     {
-        // İşe alım her zaman kimliği doğrulanmış bir hr-admin tarafından yapılır →
-        // yeni personel login'i o admin'in kiracısına bağlanır.
         var tenantId = currentTenant.TenantIdOrThrow();
         var companyName = await TenantNameAsync(tenantId, cancellationToken);
-
-        var user = new ApplicationUser
-        {
-            UserName = email,
-            Email = email,
-            EmailConfirmed = true,
-            DisplayName = name,
-            Initials = DeriveInitials(name),
-            EmployeeId = employeeId,
-            TenantId = tenantId,
-        };
         using var kapsam = tenantScopeFactory.Create(tenantId);
-        await CreateInvitedUserAsync(kapsam, user, Roles.Employee, companyName, cancellationToken);
+        var (kullanicilar, _) = KimlikServisleri(kapsam);
+
+        var user = await kullanicilar.Users
+            .FirstOrDefaultAsync(candidate => candidate.EmployeeId == employeeId, cancellationToken);
+
+        if (user is null)
+        {
+            var emailOwner = await kullanicilar.FindByEmailAsync(email);
+            if (emailOwner is not null)
+            {
+                throw new ConflictException($"'{email}' e-postasıyla kayıtlı bir hesap zaten var.");
+            }
+
+            user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                DisplayName = name,
+                Initials = DeriveInitials(name),
+                EmployeeId = employeeId,
+                TenantId = tenantId,
+            };
+
+            await directory.ReserveAsync(email, tenantId, cancellationToken);
+            EnsureIdentitySuccess(await kullanicilar.CreateAsync(user), "email");
+        }
+        else
+        {
+            if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ConflictException(
+                    "Personel için farklı e-postayla yarım kalmış bir login zaten var.");
+            }
+
+            await directory.ReserveAsync(email, tenantId, cancellationToken);
+        }
+
+        if (!await kullanicilar.IsInRoleAsync(user, Roles.Employee))
+        {
+            EnsureIdentitySuccess(await kullanicilar.AddToRoleAsync(user, Roles.Employee), "role");
+        }
+
+        // Davet kabul edilmişse retry yeni davet üretmez. Teslimat sonucu belirsiz
+        // kaldığında şifresiz hesaba davet at-least-once gönderilir.
+        if (user.PasswordHash is null)
+        {
+            var token = await kullanicilar.GeneratePasswordResetTokenAsync(user);
+            await SendInviteEmailAsync(user.DisplayName, user.Email!, companyName, token, cancellationToken);
+        }
+
+        return user.Id;
     }
 
     public async Task SetEmployeeAccessAsync(
@@ -344,6 +382,15 @@ public sealed class IdentityService(
 
         var token = await kullanicilar.GeneratePasswordResetTokenAsync(user);
         await SendInviteEmailAsync(user.DisplayName, user.Email!, companyName, token, cancellationToken);
+    }
+
+    private static void EnsureIdentitySuccess(IdentityResult result, string field)
+    {
+        if (!result.Succeeded)
+        {
+            throw new ValidationException(result.Errors
+                .Select(error => new ValidationFailure(field, error.Description)));
+        }
     }
 
     private async Task SendInviteEmailAsync(

@@ -45,7 +45,7 @@ sonucu L-1: 1 Ocak'ta izin modülü kendiliğinden kilitleniyor.
 
 ### K3 · Süreç yok, alan güncellemesi var
 
-`E-5` (kök) → `E-1` `E-2` `E-3`; `P-4` tarihli son bordro açısından kapandı
+`E-5` (kök) → `E-1` ve `E-3` kapandı; `E-2` ile kalan süreç açık. `P-4` kapandı.
 
 İşten çıkış artık erişimi kesiyor, etkin tarihi ve son ay bordrosunu koruyor.
 Yöneticilik devri, bekleyen talepler ve kıdem/ihbar hâlâ süreç değil.
@@ -108,10 +108,10 @@ Devir mekanizması yazılmadan diğerleri anlamsız.
 
 ZİNCİR C — işten çıkış
 E-5 çıkış bir süreç değil
-  ├→ E-1 KRİTİK: çıkarılan personel giriş yapabiliyor
+  ├→ E-1 ÇÖZÜLDÜ: erişim ve refresh kesiliyor
   ├→ E-2 pasif yönetici ekibin yöneticisi kalıyor
-  ├→ E-3 pasif personele puantaj girilebiliyor
-  └→ P-4 ay içinde ayrılan bordroya hiç girmiyor
+  ├→ E-3 ÇÖZÜLDÜ: puantaj istihdam tarih aralığıyla sınırlı
+  └→ P-4 ÇÖZÜLDÜ: ayrılış ayı bordroda korunuyor
 ```
 
 ---
@@ -125,7 +125,7 @@ E-5 çıkış bir süreç değil
 | **2 — tamamlandı 2026-08-28** | **ZİNCİR A** (A-2 → P-5 → P-1) | Puantaj sunucu sahipli; sıfır brüt ve sıfır/negatif net onaya kapalı. |
 | **2b — tamamlandı 2026-08-28** | **P-3 → P-2/P-8/P-9** | Dönemler tenant bazlı dağıtık kilitle kronolojik/final duruma bağlı; kümülatif matrah sunucu sahipli. |
 | **2c — tamamlandı 2026-08-28** | **P-4/P-10/P-12** | Etkin ayrılış tarihi son ay bordrosunu koruyor; detay sorgusu ayrık; dönem mutasyonları dağıtık kilitli. |
-| **3** | **ZİNCİR C** (E-5 ve türevleri) | Süreç tasarımı gerektirir; E-1'in kalıcı çözümü de burada. |
+| **3 — sürüyor; E-3/R-6 tamamlandı 2026-08-31** | **R-6 + ZİNCİR C** | İşe alım telafi edilebilir, puantaj istihdam dönemine bağlı; E-2/E-5 yöneticilik devri sırada. |
 | **4** | **ZİNCİR B** (L-1 devri) | 1 Ocak'a kadar zamanı var ama tasarım kararı gerektiriyor (devir tavanı, hak ediş kademesi). |
 | **5** | **K1** geri alma yolları (R-5, L-3, A-7) | Ürün kararı gerektirir: kim, hangi süre içinde, hangi ize karşılık geri alabilir. |
 | **6** | **K6** eşzamanlılık, **K7** sorgu, kalan ORTA/DÜŞÜK | Bugün müşteriyi vurmuyor; kalite borcu. |
@@ -149,7 +149,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | R-1 | Recruitment | **YÜKSEK** | K4 | İşe alım tarihi hiç doğrulanmıyor (1990 ve 2099 kabul) |
 | R-2 | Recruitment | **YÜKSEK** | K2 | Geçmiş tarihli işe alımda cari yıl izin bakiyesi oluşmuyor |
 | R-3 | Recruitment | **YÜKSEK** | K5 | 24 günlük hak ediş sabit kodlu — mevzuata aykırı görünüyor |
-| R-6 | Recruitment | **YÜKSEK** | — | `hire` transaction'sız; login yaratma patlarsa kurtarma yolu yok |
+| **R-6** | Recruitment | **ÇÖZÜLDÜ 2026-08-31** | — | İş verisi atomik; Identity/davet kalıcı, idempotent, otomatik ve manuel retry destekli |
 | L-1 | Leaves | **YÜKSEK** | K2 | Yıl devri hiç yok — her 1 Ocak'ta modül kilitleniyor |
 | L-2 | Leaves | **YÜKSEK** | K2 | Yıl sınırını aşan izin tamamen başlangıç yılından düşülüyor |
 | A-1 | Attendance | **YÜKSEK** | — | Gece vardiyası kaydedilemiyor (22:00→06:00 reddediliyor) |
@@ -177,7 +177,7 @@ Kök: yukarıdaki K1–K7. Konum ve kanıt için alan belgesine bakınız.
 | A-5 | Attendance | ORTA | K4 | Gelecek tarihli puantaj girilebiliyor (2030 kabul) |
 | A-6 | Attendance | ORTA | K5 | Mesai başlangıcı ve erken eşiği sabit kodlu (09:00 / 08:45) |
 | A-7 | Attendance | ORTA | K1 | Onaylanmış bordro dönemine ait puantaj sonradan değişebiliyor |
-| E-3 | Employees | ORTA | K3 | Pasif personele puantaj girilebiliyor |
+| **E-3** | Employees | **ÇÖZÜLDÜ 2026-08-31** | K3 | Puantaj yalnız işe giriş–etkin ayrılış tarih aralığında kabul ediliyor |
 | E-4 | Employees | ORTA | K4 | Geçersiz TC kabul ediliyor — yalnız `^\d{11}$` kontrolü |
 | E-5 | Employees | ORTA | K3 | İşten çıkış tek alanlık güncelleme, süreç değil (**E-1'in kökü**) |
 | D-1 | Departments | ORTA | — | Açık pozisyonu olan departman silinebiliyor; pozisyon sahipsiz kalıyor |

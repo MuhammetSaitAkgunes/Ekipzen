@@ -138,6 +138,14 @@ try
         builder.Configuration.GetSection(UnverifiedTenantCleanupOptions.SectionName));
     builder.Services.AddHostedService<UnverifiedTenantCleanupService>();
 
+    // Tenant iş verisiyle atomik kaydedilen login/rol provizyonlarını dış servis
+    // hatalarından sonra otomatik ve tenant-izole biçimde yeniden dener.
+    builder.Services.Configure<IdentityProvisioningRetryOptions>(
+        builder.Configuration.GetSection(IdentityProvisioningRetryOptions.SectionName));
+    builder.Services.AddSingleton<IdentityProvisioningRetryService>();
+    builder.Services.AddHostedService(provider =>
+        provider.GetRequiredService<IdentityProvisioningRetryService>());
+
     // Açılışta kiracı şemalarını KONTROL eder (migrate etmez) ve geride kalanı
     // yüksek sesle loglar. Migration ayrı bir dağıtım adımıdır:
     // POST /api/tenants/migrate. Bkz. TenantSchemaCheckService xmldoc.

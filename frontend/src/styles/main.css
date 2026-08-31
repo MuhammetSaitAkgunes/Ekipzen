@@ -730,6 +730,34 @@ textarea.input-control,
 
 /* ---------- Boş durumlar ---------- */
 
+.provisioning-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px) auto;
+  align-items: center;
+  gap: 16px;
+  margin: 16px 0;
+  padding: 16px 20px;
+  border: 1px solid #f2c46d;
+  border-radius: 12px;
+  background: #fff9eb;
+}
+
+.provisioning-banner.is-failed {
+  border-color: #ef9a9a;
+  background: #fff1f1;
+}
+
+.provisioning-banner p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+@media (max-width: 800px) {
+  .provisioning-banner {
+    grid-template-columns: 1fr;
+  }
+}
+
 .empty-state {
   min-height: 320px;
   display: flex;

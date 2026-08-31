@@ -52,10 +52,12 @@ public interface IIdentityService
     Task AcceptInviteAsync(string email, string token, string newPassword, CancellationToken cancellationToken);
 
     /// <summary>
-    /// İşe alınan aday için personel-bağlı <c>employee</c> login'i oluşturur (token üretmez).
-    /// Geçici şifre atanır; e-posta çakışmasında <c>ConflictException</c>.
+    /// İşe alınan aday için personel-bağlı, şifresiz <c>employee</c> login'i oluşturur
+    /// ve davet e-postası gönderir. Aynı personel/e-posta için idempotenttir; mevcut
+    /// kullanıcıyı tamamlayarak kimliğini döndürür. Farklı e-posta çakışmasında
+    /// <c>ConflictException</c>.
     /// </summary>
-    Task CreateEmployeeLoginAsync(int employeeId, string name, string email, CancellationToken cancellationToken);
+    Task<string> CreateEmployeeLoginAsync(int employeeId, string name, string email, CancellationToken cancellationToken);
 
     /// <summary>
     /// Personel durumuyla bağlı Identity hesabını eşitler. Pasife alınırken mevcut

@@ -2,6 +2,7 @@ using IKPro.Domain.Entities.Actions;
 using IKPro.Domain.Entities.Analytics;
 using IKPro.Domain.Entities.Attendance;
 using IKPro.Domain.Entities.Compliance;
+using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Leaves;
 using IKPro.Domain.Entities.Organization;
 using IKPro.Domain.Entities.Payroll;
@@ -64,6 +65,9 @@ public interface IApplicationDbContext
     // Actions & Audit
     DbSet<GlobalAction> GlobalActions { get; }
     DbSet<AuditLog> AuditLogs { get; }
+
+    // Durable Identity provisioning
+    DbSet<IdentityProvisioningOperation> IdentityProvisioningOperations { get; }
 
     // Settings
     DbSet<CompanyProfile> CompanyProfiles { get; }

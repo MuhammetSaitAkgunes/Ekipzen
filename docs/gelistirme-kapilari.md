@@ -1,8 +1,8 @@
 # İK Pro — Geliştirme ve Satışa Hazırlık Kapıları
 
-**Son güncelleme:** 2026-08-28
+**Son güncelleme:** 2026-08-31
 
-**Başlangıç çizgisi:** `main@d58181c`
+**Güncel çalışma tabanı:** `main@9933f4d`
 
 **Kaynak:** özellik doğrulama sicili, Faz 2b mimari incelemesi ve tam test paketi
 
@@ -17,7 +17,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
 | 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı; senkronizasyon onaylandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
 | 2 | Bordro ve parasal doğruluk | ✅ Üç dilim tamamlandı; senkronizasyon bekliyor | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
-| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | ⬜ Planlandı | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
+| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3` ve `R-6` tamamlandı; `E-2/E-5` sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
 | 6 | Pilot müşteri ve satış kapısı | ⬜ Kapalı | Ürünün kontrollü ücretli pilotta desteklenebilir olduğunu kanıtlar |
@@ -92,6 +92,23 @@ testleri; dönem sırası/kümülatif matrah regresyonları; eşzamanlı onay te
 Kapsam: `E-5/E-2/E-3` ile yöneticilik devri, bekleyen talepler, puantaj ve son
 bordro; `R-6` ile işe alım + login oluşturmanın atomik veya telafi edilebilir
 hale gelmesi; başarısız adımların audit izi ve güvenli tekrar çalıştırılması.
+
+**Kapı 3 / E-3 tamamlandı (2026-08-31):** puantaj oluşturma ve güncelleme,
+personelin işe giriş/etkin ayrılış aralığı dışında kayıt kabul etmiyor. Doğrudan
+personel güncelleme ucu durum değişimini atlayamıyor; yeni personel yalnız aktif
+başlıyor ve tüm aktif/pasif geçişler yaşam döngüsü komutundan geçiyor.
+
+**Kapı 3 / R-6 tamamlandı (2026-08-31):** personel, izin bakiyesi, aday geçmişi,
+pozisyon kontenjanı ve kalıcı provizyon işi tek veritabanı commit’inde oluşuyor.
+Identity/davet adımı idempotent; geçici hatalar lease + üstel geri çekilmeli
+background worker ile tenant bazında yeniden deneniyor. Kalıcı hata ve son hata
+aday detayında görünür; İK düzeltilmiş e-postayla güvenli retry yapabiliyor.
+İki ardışık SMTP hatası sonrası manuel retry’nin beklemede kaldığı ve worker’ın
+üçüncü denemede hesabı tamamladığı uçtan uca kanıtlandı. Kanıt: Release backend
+0 uyarı/0 hata, 71 unit + 193 integration; frontend lint/build + 147 test.
+
+Kapı 3’ün sıradaki işi `E-2/E-5`: pasif yöneticinin ekibini ve bekleyen onayları
+açık bir devir kuralıyla yeni sahibine aktarmak.
 
 Çıkış ölçütü: işe giriş/çıkış uçtan uca süreç testleri, idempotanslık, yarım kalan
 işlem için kurtarma yolu ve açık sahiplik kuralları.

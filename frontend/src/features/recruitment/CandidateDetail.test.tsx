@@ -100,3 +100,44 @@ test("işe alınmış adayda durum select ve İşe Al pasiftir", async () => {
   expect(screen.getByLabelText("Pipeline durumu")).toBeDisabled();
   expect(screen.getByRole("button", { name: /İşe Al/ })).toBeDisabled();
 });
+
+test("bekleyen hesap kurulumu düzeltilmiş e-postayla yeniden denenir", async () => {
+  stubApi({
+    "/api/candidates/5": {
+      ...detail,
+      status: "İşe Alındı",
+      provisioning: {
+        status: "pending",
+        email: "burak.hatali@hrmaster.local",
+        attemptCount: 2,
+        lastError: "E-posta servisine ulaşılamadı.",
+      },
+    },
+    "/api/candidates/5/provisioning/retry": {
+      status: "completed",
+      email: "burak.yeni@hrmaster.local",
+      attemptCount: 3,
+      lastError: null,
+    },
+    "/api/departments": departments,
+  });
+
+  renderDetail();
+  expect(await screen.findByText("Giriş hesabı hazırlanıyor")).toBeInTheDocument();
+  expect(screen.getByText("E-posta servisine ulaşılamadı.")).toBeInTheDocument();
+
+  const email = screen.getByLabelText("Provizyon e-postası");
+  await userEvent.clear(email);
+  await userEvent.type(email, "burak.yeni@hrmaster.local");
+  await userEvent.click(screen.getByRole("button", { name: "Şimdi yeniden dene" }));
+
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(
+      ([u, i]) => String(u) === "/api/candidates/5/provisioning/retry" && i?.method === "POST",
+    );
+    expect(posted).toBeTruthy();
+    expect(JSON.parse(String(posted![1]?.body))).toEqual({
+      email: "burak.yeni@hrmaster.local",
+    });
+  });
+});

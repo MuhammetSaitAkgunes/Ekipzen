@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
-import { useAddInterviewNote, useCandidate, useHireCandidate, useSetCandidateStatus } from "./queries";
+import { useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus } from "./queries";
 
 const TABS: [string, string][] = [
   ["cv", "Özgeçmiş"], ["notes", "Mülakat Notları"], ["eval", "Değerlendirme"], ["history", "Geçmiş"],
@@ -23,16 +23,24 @@ export function CandidateDetail({ id }: { id: number }) {
   const detailQ = useCandidate(id);
   const setStatus = useSetCandidateStatus();
   const addNote = useAddInterviewNote();
+  const retryProvisioning = useRetryCandidateProvisioning();
   const [tab, setTab] = useState("cv");
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState(NOTE_TYPES[0]);
   const [hireOpen, setHireOpen] = useState(false);
+  const [provisioningEmail, setProvisioningEmail] = useState("");
+
+  useEffect(() => {
+    const email = detailQ.data?.provisioning?.email;
+    if (email) setProvisioningEmail(email);
+  }, [detailQ.data?.provisioning?.email]);
 
   if (detailQ.isPending) return <PageLoading />;
   if (detailQ.isError) return <PageError error={detailQ.error} />;
 
   const candidate = detailQ.data;
   const isHired = candidate.status === "İşe Alındı";
+  const provisioning = candidate.provisioning;
 
   const changeStatus = async (status: string) => {
     try {
@@ -55,6 +63,23 @@ export function CandidateDetail({ id }: { id: number }) {
       showToast("Mülakat notu eklendi.", "success");
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Not eklenemedi.", "error");
+    }
+  };
+
+  const retryLoginProvisioning = async () => {
+    try {
+      const result = await retryProvisioning.mutateAsync({
+        id,
+        email: provisioningEmail.trim() || provisioning?.email || null,
+      });
+      showToast(
+        result.status === "completed"
+          ? "Personel giriş hesabı ve daveti hazır."
+          : "Provizyon yeniden kuyruğa alındı; otomatik deneme devam edecek.",
+        result.status === "completed" ? "success" : "warning",
+      );
+    } catch (e) {
+      showToast(e instanceof ApiError ? e.message : "Provizyon yeniden denenemedi.", "error");
     }
   };
 
@@ -92,6 +117,33 @@ export function CandidateDetail({ id }: { id: number }) {
           </button>
         </div>
       </div>
+
+      {isHired && provisioning && provisioning.status !== "completed" && (
+        <div
+          className={`provisioning-banner is-${provisioning.status ?? "pending"}`}
+          role={provisioning.status === "failed" ? "alert" : "status"}
+        >
+          <div>
+            <strong>
+              {provisioning.status === "failed"
+                ? "Giriş hesabı müdahale bekliyor"
+                : "Giriş hesabı hazırlanıyor"}
+            </strong>
+            <p>{provisioning.lastError || "Otomatik provizyon denemeleri devam ediyor."}</p>
+          </div>
+          <label className="sr-only" htmlFor="provisioning-email">Provizyon e-postası</label>
+          <input
+            id="provisioning-email"
+            type="email"
+            className="input-control"
+            value={provisioningEmail}
+            onChange={(event) => setProvisioningEmail(event.target.value)}
+          />
+          <button className="btn btn-primary btn-sm" onClick={retryLoginProvisioning} disabled={retryProvisioning.isPending}>
+            Şimdi yeniden dene
+          </button>
+        </div>
+      )}
 
       <div className="detail-tabs">
         {TABS.map(([key, label]) => (
@@ -254,7 +306,13 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose }: {
         title: title.trim() || null,
         hireDate: hireDate || null,
       });
-      showToast(`${result.employeeName} işe alındı — personel kaydı oluşturuldu.`, "success");
+      const loginPending = result.provisioning?.status && result.provisioning.status !== "completed";
+      showToast(
+        loginPending
+          ? `${result.employeeName} işe alındı; giriş hesabı otomatik olarak hazırlanıyor.`
+          : `${result.employeeName} işe alındı — personel kaydı ve giriş hesabı oluşturuldu.`,
+        loginPending ? "warning" : "success",
+      );
       onClose();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Aday işe alınamadı.");

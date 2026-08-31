@@ -18,7 +18,7 @@ bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 | --- | --- | --- | --- | --- |
 | **E-1** | Mantık | **ÇÖZÜLDÜ** (eski KRİTİK) | Pasif personelin mevcut/yeni oturumu ve refresh token erişimi kesiliyor | `TenantAccessMiddleware`; `IdentityService`; durum komutları; integration testi |
 | E-2 | Mantık | **YÜKSEK** | Pasif yönetici ekibin yöneticisi olarak kalıyor — onay kuyruğu sahipsiz | `SetEmployeeStatusCommandHandler`, `BulkDeactivateEmployeesCommandHandler` |
-| E-3 | Mantık | ORTA | Pasif personele puantaj girilebiliyor | `CreateAttendanceEntryCommandHandler` — durum kontrolü yok |
+| **E-3** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Puantaj yalnız personelin etkin çalışma tarih aralığında kabul ediliyor | create/update + integration testleri |
 | E-4 | Mantık | ORTA | **Geçersiz TC kabul ediliyor** (`11111111111` → 201); yalnız 11 hane kontrolü var | `EmployeeUpsertModel` → `NationalIdRegex = ^\d{11}$` |
 | E-5 | Kod | ORTA | İşten çıkış **tek alanlık bir güncelleme**; süreç olarak ele alınmıyor | `SetEmployeeStatusCommand` |
 | E-6 | Kod | DÜŞÜK | `BulkDeactivate` yalnız aktifleri sayıyor, bulunamayan id'leri raporlamıyor | `BulkDeactivateEmployeesCommandHandler` |
@@ -86,11 +86,12 @@ verecek kimse yoktur), `ScopeFor` kapsamı pasif bir kişiye bağlı kalır, ve
 E-1 ile birleşince **pasif bir yönetici ekibinin taleplerini onaylamaya devam
 edebilir**.
 
-### E-3 · Pasif personele puantaj girilebiliyor — ORTA
+### E-3 · Çalışma dönemi dışında puantaj — ÇÖZÜLDÜ (2026-08-31)
 
-Canlı: pasif personele puantaj kaydı **201** ile açıldı. Personel bordroya
-girmiyor (Payroll P-4) ama puantajı birikmeye devam ediyor — veri ile gerçek
-ayrışıyor.
+Puantaj oluşturma ve güncelleme personelin etkin çalışma aralığını doğruluyor:
+işe girişten önce, etkin ayrılıştan sonra veya tarihi bilinmeyen pasif personelde
+kayıt 409 ile reddediliyor. Böylece bordro kapsamı ile puantaj verisi aynı
+istihdam dönemi kuralını kullanıyor.
 
 ### E-4 · TC kimlik algoritması doğrulanmıyor — ORTA
 
@@ -120,15 +121,15 @@ hata kurumdan geri döner. Mükerrer TC kontrolü var ama **geçersiz TC** kontr
 | 7 | Audit izi | ✅ Trigger + interceptor; `BulkDeactivate` bunun için bilinçli olarak change tracker kullanıyor |
 | 8 | Test boşluğu | ❌ Aşağıda |
 
-### E-5 · İşten çıkış bir süreç olarak ele alınmamış — ORTA (E-1/E-2/E-3'ün kökü)
+### E-5 · İşten çıkış bir süreç olarak ele alınmamış — ORTA (E-1/E-2'nin kökü)
 
 İşten çıkış erişim kesme, zorunlu etkin ayrılış tarihi ve son ay bordrosu
 açısından tamamlandı (`E-1`, Payroll `P-4`). Yeniden aktifleştirme ayrılış
 tarihini temizliyor; eski refresh token'ı diriltmiyor.
 
 Bekleyen izin taleplerinin kararı, yöneticilik bağlarının devri ve kıdem/ihbar
-hesabı hâlâ tek bir orkestre süreç değil. Bu nedenle `E-5`, `E-2` ve `E-3`
-için kök bulgu olarak açık kalıyor.
+hesabı hâlâ tek bir orkestre süreç değil. Bu nedenle `E-5` ve `E-2` kök
+bulguları açık kalıyor; `E-3` çalışma tarihi kapısıyla kapandı.
 
 ### E-6 · Toplu pasife almada sessiz atlama — DÜŞÜK
 
@@ -145,11 +146,10 @@ alma.
 
 **Yeni kapsanan davranış:** pasif personelin mevcut access token'ı, yeni login'i
 ve mevcut refresh token'ı reddediliyor; ayrılış tarihi zorunlu kaydediliyor;
-reaktivasyonda tarih temizleniyor ve yalnız yeni login başarılı oluyor.
+reaktivasyonda tarih temizleniyor; puantaj yalnız etkin çalışma aralığında kabul ediliyor.
 
-**Hâlâ test edilmemiş davranışlar:** pasif yöneticinin ekip bağı (E-2), pasif
-personele puantaj (E-3), geçersiz TC
-algoritması (E-4), işten çıkışın yan etkileri (E-5).
+**Hâlâ test edilmemiş davranışlar:** pasif yöneticinin ekip bağı (E-2), geçersiz
+TC algoritması (E-4) ve işten çıkışın kalan yan etkileri (E-5).
 
 **Yöntem açısından not:** bu alanın 38 testi var ve hiçbiri E-1'i yakalamıyor.
 Sebep, testlerin **uç nokta** düzeyinde yazılmış olması: her uç tek başına doğru
@@ -161,8 +161,7 @@ olarak bunu yakalamak için var.
 
 ## Sonraki adım
 
-1. **E-5** — kalan işten çıkış sürecinin tasarlanması (E-2/E-3'ü birlikte
-   kapatır ve Leaves ile kesişir; Payroll P-4 kapandı)
-2. **E-2** — yöneticilik devri
+1. **E-2** — yöneticilik devri ve bekleyen onayların yeni sahibine aktarılması
+2. **E-5** — kalan işten çıkış süreci (Leaves ve kıdem/ihbar ile kesişir)
 3. **E-4** — TC algoritma doğrulaması
-4. **E-3, E-6**
+4. **E-6**

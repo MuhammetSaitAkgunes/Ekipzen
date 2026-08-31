@@ -75,6 +75,13 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Aday", request.Id);
 
+        var provisioning = await context.IdentityProvisioningOperations
+            .AsNoTracking()
+            .Where(operation => operation.CandidateId == candidate.Id
+                && operation.Type == IdentityProvisioningOperationType.EmployeeLogin)
+            .OrderByDescending(operation => operation.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new CandidateDetailDto(
             candidate.Id,
             candidate.Name,
@@ -102,7 +109,8 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
             candidate.History
                 .OrderByDescending(h => h.OccurredAtUtc)
                 .Select(h => new CandidateHistoryDto(h.Id, h.Event, h.OccurredAtUtc))
-                .ToList());
+                .ToList(),
+            provisioning?.ToDto());
     }
 }
 
