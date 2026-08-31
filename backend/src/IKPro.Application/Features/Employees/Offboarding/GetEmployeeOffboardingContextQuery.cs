@@ -17,6 +17,7 @@ public sealed record EmployeeOffboardingContextDto(
     string EmployeeName,
     int DirectReportCount,
     int PendingLeaveRequestCount,
+    EmployeeOffboardingCaseDto? CurrentCase,
     IReadOnlyList<ManagerSuccessorDto> Successors);
 
 public sealed record GetEmployeeOffboardingContextQuery(int EmployeeId)
@@ -85,12 +86,37 @@ public sealed class GetEmployeeOffboardingContextQueryHandler(IApplicationDbCont
                 .AsNoTracking()
                 .CountAsync(request => request.Status == LeaveStatus.Pending
                     && directReportIds.Contains(request.EmployeeId), cancellationToken);
+        var currentCase = await context.EmployeeOffboardingCases
+            .AsNoTracking()
+            .Where(item => item.EmployeeId == departing.Id
+                && item.Status != EmployeeOffboardingStatus.Reversed)
+            .OrderByDescending(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        EmployeeOffboardingCaseDto? currentCaseDto = null;
+        if (currentCase is not null)
+        {
+            var operations = context.IdentityProvisioningOperations
+                .AsNoTracking()
+                .Where(operation => operation.OffboardingCaseId == currentCase.Id);
+            var pendingIdentity = await operations.AnyAsync(
+                operation => operation.Status != IdentityProvisioningStatus.Completed,
+                cancellationToken);
+            var lastError = await operations
+                .Where(operation => operation.LastError != null)
+                .OrderByDescending(operation => operation.LastAttemptAtUtc)
+                .Select(operation => operation.LastError)
+                .FirstOrDefaultAsync(cancellationToken);
+            currentCaseDto = currentCase.ToDto(pendingIdentity, lastError);
+        }
+
 
         return new EmployeeOffboardingContextDto(
             departing.Id,
             $"{departing.FirstName} {departing.LastName}".Trim(),
             directReportIds.Count,
             pendingLeaveRequestCount,
+            currentCaseDto,
             successors);
     }
 }

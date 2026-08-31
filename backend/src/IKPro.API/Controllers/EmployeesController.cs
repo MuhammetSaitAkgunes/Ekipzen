@@ -115,6 +115,50 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public async Task<ActionResult<EmployeeOffboardingContextDto>> GetOffboardingContext(
         int id, CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetEmployeeOffboardingContextQuery(id), cancellationToken));
+    [HttpPut("{id:int}/offboarding-draft")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeOffboardingCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeOffboardingCaseDto>> SaveOffboardingDraft(
+        int id, SaveOffboardingDraftBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new SaveEmployeeOffboardingDraftCommand(
+            id,
+            body.ExpectedVersion,
+            body.TerminationDate,
+            body.ExitCode,
+            body.ExitReason,
+            body.SuccessorManagerId,
+            body.UnusedLeaveDays,
+            body.UnusedLeavePayment,
+            body.SeverancePayment,
+            body.NoticePayment,
+            body.SettlementReference,
+            body.SettlementNotes), cancellationToken));
+
+    [HttpPost("{id:int}/offboarding/{caseId:int}/complete")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeOffboardingCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeOffboardingCaseDto>> CompleteOffboarding(
+        int id, int caseId, OffboardingVersionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(
+            new CompleteEmployeeOffboardingCommand(id, caseId, body.ExpectedVersion),
+            cancellationToken));
+
+    [HttpPost("{id:int}/offboarding/{caseId:int}/reverse")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeOffboardingCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeOffboardingCaseDto>> ReverseOffboarding(
+        int id, int caseId, ReverseOffboardingBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(
+            new ReverseEmployeeOffboardingCommand(
+                id, caseId, body.ExpectedVersion, body.Reason),
+            cancellationToken));
+
 
     [HttpPost("bulk-deactivate")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -187,6 +231,23 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             new DownloadEmployeeDocumentQuery(id, documentId), cancellationToken);
         return File(download.Content, download.ContentType, download.FileName);
     }
+
+    public sealed record SaveOffboardingDraftBody(
+        int? ExpectedVersion,
+        DateOnly TerminationDate,
+        string ExitCode,
+        string ExitReason,
+        int? SuccessorManagerId,
+        decimal UnusedLeaveDays,
+        decimal UnusedLeavePayment,
+        decimal SeverancePayment,
+        decimal NoticePayment,
+        string SettlementReference,
+        string? SettlementNotes = null);
+
+    public sealed record OffboardingVersionBody(int ExpectedVersion);
+
+    public sealed record ReverseOffboardingBody(int ExpectedVersion, string Reason);
 
     public sealed record SetStatusBody(
         string Status, DateOnly? TerminationDate = null, int? SuccessorManagerId = null);

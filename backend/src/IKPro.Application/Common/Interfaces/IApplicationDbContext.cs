@@ -23,6 +23,8 @@ public interface IApplicationDbContext
     DbSet<Employee> Employees { get; }
     DbSet<EmployeeProfile> EmployeeProfiles { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
+    DbSet<EmployeeOffboardingCase> EmployeeOffboardingCases { get; }
+    DbSet<EmployeeOffboardingTeamTransfer> EmployeeOffboardingTeamTransfers { get; }
 
     // Leaves
     DbSet<LeaveType> LeaveTypes { get; }

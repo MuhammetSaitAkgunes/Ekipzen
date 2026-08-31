@@ -203,70 +203,27 @@ public sealed class PersonnelTests(IKProApiFactory factory)
     }
 
     [Fact]
-    public async Task StatusChanges_MustUseDedicatedEndpoint()
+    public async Task StatusChanges_MustUseOffboardingWorkflow()
     {
         var client = await AuthedClientAsync("ik@hrmaster.local");
-        var departments = await GetAsync<List<DepartmentDto>>(client, "/api/departments");
-        var departmentId = departments[0].Id;
-        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var departmentId = (await GetAsync<List<DepartmentDto>>(client, "/api/departments"))[0].Id;
+        var id = await CreateMinimalEmployeeAsync(client, departmentId, "Durum", $"Kapisi{Guid.NewGuid():N}");
 
-        var passiveCreate = await client.PostAsJsonAsync("/api/employees", new
+        (await client.PutAsJsonAsync($"/api/employees/{id}", new
         {
-            firstName = "Dogrudan",
-            lastName = $"Pasif{suffix}",
-            title = "Test Personeli",
-            departmentId,
-            hireDate = "2024-01-01",
-            status = "passive",
-        });
-        passiveCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest,
-            "ayrilis tarihi olmayan pasif personel olusturulamamali");
+            firstName = "Durum", lastName = "Kapisi", title = "Degistirildi",
+            departmentId, hireDate = "2024-01-01", status = "passive",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
-        var employeeId = await CreateMinimalEmployeeAsync(
-            client, departmentId, "Durum", $"Kapisi{suffix}");
-
-        var bypassAttempt = await client.PutAsJsonAsync($"/api/employees/{employeeId}", new
+        (await client.PatchAsJsonAsync($"/api/employees/{id}/status", new
         {
-            firstName = "Durum",
-            lastName = $"Kapisi{suffix}",
-            title = "Degistirildi",
-            departmentId,
-            hireDate = "2024-01-01",
-            status = "passive",
-        });
-        bypassAttempt.StatusCode.Should().Be(HttpStatusCode.Conflict,
-            "genel guncelleme ayrilis tarihi ve Identity erisim esitlemesini atlamamali");
+            status = "passive", terminationDate = "2026-08-15",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
-        var unchanged = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{employeeId}");
+        var unchanged = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}");
         unchanged.Status.Should().Be("active");
         unchanged.TerminationDate.Should().BeNull();
-        unchanged.Title.Should().Be("Test Personeli");
-
-        var terminationDate = new DateOnly(2026, 8, 15);
-        (await client.PatchAsJsonAsync($"/api/employees/{employeeId}/status", new
-        {
-            status = "passive",
-            terminationDate,
-        })).StatusCode.Should().Be(HttpStatusCode.NoContent);
-
-        var passiveEdit = await client.PutAsJsonAsync($"/api/employees/{employeeId}", new
-        {
-            firstName = "Durum",
-            lastName = $"Kapisi{suffix}",
-            title = "Pasif Kayit Duzenlendi",
-            departmentId,
-            hireDate = "2024-01-01",
-            status = "passive",
-        });
-        passiveEdit.StatusCode.Should().Be(HttpStatusCode.OK,
-            "pasif personelin ozluk bilgileri ayni durum korunarak duzenlenebilmeli");
-
-        var edited = (await passiveEdit.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
-        edited.Status.Should().Be("passive");
-        edited.TerminationDate.Should().Be(terminationDate);
-        edited.Title.Should().Be("Pasif Kayit Duzenlendi");
     }
-
     [Fact]
     public async Task CreateEmployee_AsManager_Returns403()
     {
@@ -285,94 +242,69 @@ public sealed class PersonnelTests(IKProApiFactory factory)
     }
 
     [Fact]
-    public async Task BulkDeactivate_ThenReactivate_UpdatesStatuses()
+    public async Task BulkDeactivate_CannotBypassPerEmployeeClosure()
     {
         var client = await AuthedClientAsync("ik@hrmaster.local");
-        var departments = await GetAsync<List<DepartmentDto>>(client, "/api/departments");
-        var id = await CreateMinimalEmployeeAsync(client, departments[0].Id, "Toplu", "Pasif");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(client, "/api/departments"))[0].Id;
+        var id = await CreateMinimalEmployeeAsync(client, departmentId, "Toplu", "Pasif");
 
         (await client.PostAsJsonAsync(
-                "/api/employees/bulk-deactivate", new { ids = new[] { id } }))
-            .StatusCode.Should().Be(HttpStatusCode.BadRequest,
-                "pasife alma etkin işten ayrılma tarihi olmadan yapılamaz");
+            "/api/employees/bulk-deactivate", new { ids = new[] { id } }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        var terminationDate = new DateOnly(2026, 8, 15);
-        var bulkResponse = await client.PostAsJsonAsync("/api/employees/bulk-deactivate", new
+        (await client.PostAsJsonAsync("/api/employees/bulk-deactivate", new
         {
-            ids = new[] { id },
-            terminationDate,
-        });
-        bulkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var passive = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}");
-        passive.Status.Should().Be("passive");
-        passive.TerminationDate.Should().Be(terminationDate);
+            ids = new[] { id }, terminationDate = "2026-08-15",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
-        var statusResponse = await client.PatchAsJsonAsync($"/api/employees/{id}/status", new { status = "active" });
-        statusResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        var active = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}");
-        active.Status.Should().Be("active");
-        active.TerminationDate.Should().BeNull("yeniden aktifleştirmede eski ayrılış tarihi taşınmaz");
+        (await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}"))
+            .Status.Should().Be("active");
     }
-
     [Fact]
-    public async Task PassiveEmployee_LosesCurrentSession_LoginAndRefreshAccess()
+    public async Task CompletedOffboarding_RevokesAccess_AndReverseRequiresNewSession()
     {
         var admin = await AuthedClientAsync("ik@hrmaster.local");
-        var employeeAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
-        var employeeId = employeeAuth.User.EmployeeId!.Value;
+        var auth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
+        var employeeId = auth.User.EmployeeId!.Value;
+        var oldSession = factory.CreateClient();
+        oldSession.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
 
-        var employeeClient = factory.CreateClient();
-        employeeClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", employeeAuth.Token);
-
+        EmployeeOffboardingCaseDto? completed = null;
         try
         {
-            var deactivate = await admin.PatchAsJsonAsync(
-                $"/api/employees/{employeeId}/status", new
-                {
-                    status = "passive",
-                    terminationDate = "2026-08-15",
-                });
-            deactivate.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            completed = await CompleteOffboardingAsync(
+                admin, employeeId, DateOnly.FromDateTime(DateTime.UtcNow));
 
-            (await employeeClient.GetAsync("/api/me")).StatusCode.Should().Be(
-                HttpStatusCode.Unauthorized,
-                "pasife alınmadan önceki access token anında kesilmeli");
-
+            (await oldSession.GetAsync("/api/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
             (await _client.PostAsJsonAsync("/api/auth/login", new
             {
-                email = "ahmet.yilmaz@hrmaster.local",
-                password = DemoPassword,
-            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
-                "pasif personel yeni oturum açamamalı");
-
+                email = "ahmet.yilmaz@hrmaster.local", password = DemoPassword,
+            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
             (await _client.PostAsJsonAsync("/api/auth/refresh", new
             {
-                refreshToken = employeeAuth.RefreshToken,
-            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
-                "pasife alınırken mevcut refresh token iptal edilmeli");
+                refreshToken = auth.RefreshToken,
+            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await admin.PatchAsJsonAsync(
+                $"/api/employees/{employeeId}/status", new { status = "active" }))
+                .StatusCode.Should().Be(HttpStatusCode.Conflict);
         }
         finally
         {
-            var reactivate = await admin.PatchAsJsonAsync(
-                $"/api/employees/{employeeId}/status", new { status = "active" });
-            reactivate.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            if (completed is not null)
+            {
+                await ReverseOffboardingAsync(admin, employeeId, completed, "Test temizliği");
+            }
         }
 
         (await _client.PostAsJsonAsync("/api/auth/refresh", new
         {
-            refreshToken = employeeAuth.RefreshToken,
-        })).StatusCode.Should().Be(HttpStatusCode.Unauthorized,
-            "reaktivasyon eski refresh token'ı yeniden geçerli kılmamalı");
-
+            refreshToken = auth.RefreshToken,
+        })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await _client.PostAsJsonAsync("/api/auth/login", new
         {
-            email = "ahmet.yilmaz@hrmaster.local",
-            password = DemoPassword,
-        })).StatusCode.Should().Be(HttpStatusCode.OK,
-            "reaktive edilen personel yeni bir oturum açabilmeli");
+            email = "ahmet.yilmaz@hrmaster.local", password = DemoPassword,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
     }
-
     [Fact]
     public async Task ManagerAssignment_GrantsAndRevokesRole_RejectsStaleTokens()
     {
@@ -458,133 +390,113 @@ public sealed class PersonnelTests(IKProApiFactory factory)
     }
 
     [Fact]
-    public async Task ManagerOffboarding_RequiresSuccessor_TransfersTeamLeaveScopeAndRoles()
+    public async Task ManagerOffboarding_DraftCompleteAndReverse_PreserveOwnershipAndRoles()
     {
         var adminAuth = await LoginAsync("ik@hrmaster.local");
-        var eceAuth = await LoginAsync("ece.arslan@hrmaster.local");
-        var ahmetAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
-        var eceId = eceAuth.User.EmployeeId!.Value;
-        var ahmetId = ahmetAuth.User.EmployeeId!.Value;
-
+        var eceId = (await LoginAsync("ece.arslan@hrmaster.local")).User.EmployeeId!.Value;
+        var ahmetId = (await LoginAsync("ahmet.yilmaz@hrmaster.local")).User.EmployeeId!.Value;
         var admin = factory.CreateClient();
-        admin.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", adminAuth.Token);
-
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminAuth.Token);
         var directory = await GetAsync<PagedResult<EmployeeListItemDto>>(
             admin, "/api/employees?page=1&pageSize=50");
-        var selinId = directory.Items.Single(employee => employee.Name == "Selin Koç").Id;
-        int leaveRequestId;
+        var selinId = directory.Items.Single(item => item.Name == "Selin Koç").Id;
 
-        using (var tenantScope = factory.Services
-                   .GetRequiredService<ITenantScopeFactory>()
+        int leaveRequestId;
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
                    .Create(adminAuth.User.TenantId))
         {
-            var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
-            var leaveTypeId = await db.LeaveTypes.Select(type => type.Id).FirstAsync();
-            var leaveRequest = new LeaveRequest
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var request = new LeaveRequest
             {
                 EmployeeId = selinId,
-                LeaveTypeId = leaveTypeId,
+                LeaveTypeId = await db.LeaveTypes.Select(item => item.Id).FirstAsync(),
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30),
                 EndDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30),
                 Days = 1,
                 Status = LeaveStatus.Pending,
-                Description = "Halef devri kapsam testi",
             };
-            db.LeaveRequests.Add(leaveRequest);
+            db.LeaveRequests.Add(request);
             await db.SaveChangesAsync(CancellationToken.None);
-            leaveRequestId = leaveRequest.Id;
+            leaveRequestId = request.Id;
         }
 
+        EmployeeOffboardingCaseDto? completed = null;
         try
         {
-            var context = await GetAsync<EmployeeOffboardingContextDto>(
-                admin, $"/api/employees/{eceId}/offboarding-context");
-            context.DirectReportCount.Should().Be(2);
-            context.PendingLeaveRequestCount.Should().BeGreaterThanOrEqualTo(1);
-            context.Successors.Should().Contain(successor =>
-                successor.Id == ahmetId && successor.IsDirectReport);
+            var date = DateOnly.FromDateTime(DateTime.UtcNow);
+            var incomplete = await SaveOffboardingDraftAsync(admin, eceId, date);
+            (await admin.PostAsJsonAsync(
+                $"/api/employees/{eceId}/offboarding/{incomplete.Id}/complete",
+                new { expectedVersion = incomplete.Version }))
+                .StatusCode.Should().Be(HttpStatusCode.Conflict);
 
-            var terminationDate = DateOnly.FromDateTime(DateTime.UtcNow);
-            (await admin.PatchAsJsonAsync($"/api/employees/{eceId}/status", new
-            {
-                status = "passive",
-                terminationDate,
-            })).StatusCode.Should().Be(HttpStatusCode.Conflict,
-                "ekibi olan yönetici halef seçilmeden pasife alınamamalı");
-
-            (await admin.PostAsJsonAsync("/api/employees/bulk-deactivate", new
-            {
-                ids = new[] { eceId },
-                terminationDate,
-            })).StatusCode.Should().Be(HttpStatusCode.Conflict,
-                "yönetici toplu pasife alma yoluyla halef kapısını aşamamalı");
-
-            (await admin.PatchAsJsonAsync($"/api/employees/{eceId}/status", new
-            {
-                status = "passive",
-                terminationDate,
-                successorManagerId = ahmetId,
-            })).StatusCode.Should().Be(HttpStatusCode.NoContent);
+            var ready = await SaveOffboardingDraftAsync(
+                admin, eceId, date, ahmetId, incomplete.Version,
+                unusedLeaveDays: 4.5m, unusedLeavePayment: 12500m,
+                severancePayment: 80000m, noticePayment: 25000m);
+            (await admin.PostAsJsonAsync(
+                $"/api/employees/{eceId}/offboarding/{ready.Id}/complete",
+                new { expectedVersion = incomplete.Version }))
+                .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                    "eski taslak sürümü tamamlamayı kazanamamalı");
+            completed = await CompleteOffboardingAsync(admin, eceId, ready);
+            completed.TotalPayment.Should().Be(117500m);
+            completed.SettlementSource.Should().Be("external-expert");
 
             var departing = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{eceId}");
-            var promoted = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{ahmetId}");
-            var transferred = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{selinId}");
-            departing.Status.Should().Be("passive");
-            promoted.ManagerId.Should().Be(departing.ManagerId,
-                "terfi eden doğrudan rapor kendi kendisinin yöneticisi olmamalı");
-            transferred.ManagerId.Should().Be(ahmetId);
+            (await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{ahmetId}"))
+                .ManagerId.Should().Be(departing.ManagerId);
+            (await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{selinId}"))
+                .ManagerId.Should().Be(ahmetId);
+            (await LoginAsync("ahmet.yilmaz@hrmaster.local")).User.Role.Should().Be("manager");
 
-            (await _client.PostAsJsonAsync("/api/auth/login", new
+            var promoted = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+            (await GetAsync<List<LeaveRequestDto>>(promoted, "/api/leaves/pending"))
+                .Should().Contain(item => item.Id == leaveRequestId);
+
+            using (var driftScope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                       .Create(adminAuth.User.TenantId))
             {
-                email = "ece.arslan@hrmaster.local",
-                password = DemoPassword,
-            })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+                var driftDb = driftScope.Services.GetRequiredService<IApplicationDbContext>();
+                (await driftDb.Employees.FirstAsync(item => item.Id == selinId)).ManagerId = null;
+                await driftDb.SaveChangesAsync(CancellationToken.None);
+            }
 
-            var promotedAuth = await LoginAsync("ahmet.yilmaz@hrmaster.local");
-            promotedAuth.User.Role.Should().Be("manager");
-            var promotedClient = factory.CreateClient();
-            promotedClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", promotedAuth.Token);
+            (await admin.PostAsJsonAsync(
+                $"/api/employees/{eceId}/offboarding/{completed.Id}/reverse",
+                new { expectedVersion = completed.Version, reason = "Sapma testi" }))
+                .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                    "sonradan değişen organizasyon bağı sessizce ezilmemeli");
 
-            var pending = await GetAsync<List<LeaveRequestDto>>(
-                promotedClient, "/api/leaves/pending");
-            pending.Should().Contain(request => request.Id == leaveRequestId,
-                "bekleyen izinler yeni yönetici kapsamına dinamik olarak geçmeli");
-            (await promotedClient.PostAsJsonAsync(
-                $"/api/leaves/{leaveRequestId}/approve", new { note = "Halef onayı" }))
-                .StatusCode.Should().Be(HttpStatusCode.OK);
+            using (var repairScope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                       .Create(adminAuth.User.TenantId))
+            {
+                var repairDb = repairScope.Services.GetRequiredService<IApplicationDbContext>();
+                (await repairDb.Employees.FirstAsync(item => item.Id == selinId)).ManagerId = ahmetId;
+                await repairDb.SaveChangesAsync(CancellationToken.None);
+            }
+
+            completed = await ReverseOffboardingAsync(
+                admin, eceId, completed, "Hatalı çıkış tarihi");
+            completed.Status.Should().Be("reversed");
+            (await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{eceId}"))
+                .Status.Should().Be("active");
+            (await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{ahmetId}"))
+                .ManagerId.Should().Be(eceId);
+            (await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{selinId}"))
+                .ManagerId.Should().Be(eceId);
+            (await LoginAsync("ahmet.yilmaz@hrmaster.local")).User.Role.Should().Be("employee");
         }
         finally
         {
-            using var tenantScope = factory.Services
-                .GetRequiredService<ITenantScopeFactory>()
+            using var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
                 .Create(adminAuth.User.TenantId);
-            var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
-            var ece = await db.Employees.FirstAsync(employee => employee.Id == eceId);
-            var ahmet = await db.Employees.FirstAsync(employee => employee.Id == ahmetId);
-            var selin = await db.Employees.FirstAsync(employee => employee.Id == selinId);
-            ece.Status = EmployeeStatus.Active;
-            ece.TerminationDate = null;
-            ahmet.ManagerId = eceId;
-            selin.ManagerId = eceId;
-
-            var leaveRequest = await db.LeaveRequests
-                .FirstOrDefaultAsync(request => request.Id == leaveRequestId);
-            if (leaveRequest is not null)
-            {
-                db.LeaveRequests.Remove(leaveRequest);
-            }
-
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var request = await db.LeaveRequests.FirstOrDefaultAsync(item => item.Id == leaveRequestId);
+            if (request is not null) db.LeaveRequests.Remove(request);
             await db.SaveChangesAsync(CancellationToken.None);
-
-            var identity = tenantScope.Services.GetRequiredService<IIdentityService>();
-            await identity.SetEmployeeManagerRoleAsync(eceId, true, CancellationToken.None);
-            await identity.SetEmployeeAccessAsync(eceId, true, CancellationToken.None);
-            await identity.SetEmployeeManagerRoleAsync(ahmetId, false, CancellationToken.None);
         }
     }
-
     // --- departmanlar ---
 
     [Fact]
@@ -656,6 +568,50 @@ public sealed class PersonnelTests(IKProApiFactory factory)
 
     // --- yardımcılar ---
 
+    private static async Task<EmployeeOffboardingCaseDto> SaveOffboardingDraftAsync(
+        HttpClient client, int employeeId, DateOnly terminationDate,
+        int? successorManagerId = null, int? expectedVersion = null,
+        decimal unusedLeaveDays = 0m, decimal unusedLeavePayment = 0m,
+        decimal severancePayment = 0m, decimal noticePayment = 0m)
+    {
+        var response = await client.PutAsJsonAsync(
+            $"/api/employees/{employeeId}/offboarding-draft", new
+            {
+                expectedVersion, terminationDate, exitCode = "TEST-03",
+                exitReason = "Entegrasyon testi", successorManagerId,
+                unusedLeaveDays, unusedLeavePayment, severancePayment, noticePayment,
+                settlementReference = "Test uzman hesap belgesi",
+                settlementNotes = "Otomatik mevzuat hesabı değildir.",
+            });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
+    }
+
+    private static async Task<EmployeeOffboardingCaseDto> CompleteOffboardingAsync(
+        HttpClient client, int employeeId, DateOnly terminationDate)
+        => await CompleteOffboardingAsync(
+            client, employeeId,
+            await SaveOffboardingDraftAsync(client, employeeId, terminationDate));
+
+    private static async Task<EmployeeOffboardingCaseDto> CompleteOffboardingAsync(
+        HttpClient client, int employeeId, EmployeeOffboardingCaseDto draft)
+    {
+        var response = await client.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/offboarding/{draft.Id}/complete",
+            new { expectedVersion = draft.Version });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
+    }
+
+    private static async Task<EmployeeOffboardingCaseDto> ReverseOffboardingAsync(
+        HttpClient client, int employeeId, EmployeeOffboardingCaseDto completed, string reason)
+    {
+        var response = await client.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
+            new { expectedVersion = completed.Version, reason });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
+    }
     private async Task<HttpClient> AuthedClientAsync(string email)
     {
         var response = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = DemoPassword });

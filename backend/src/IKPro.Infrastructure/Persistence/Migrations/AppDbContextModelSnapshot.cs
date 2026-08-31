@@ -448,6 +448,9 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("NextAttemptAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("OffboardingCaseId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -466,6 +469,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.HasIndex("CandidateId");
 
                     b.HasIndex("EmployeeId");
+
+                    b.HasIndex("OffboardingCaseId");
+
+                    b.HasIndex("TenantId", "OffboardingCaseId");
 
                     b.HasIndex("TenantId", "CandidateId", "Type");
 
@@ -863,6 +870,155 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("EmployeeDocuments");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CompletedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExitCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ExitReason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("NoticePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("PreviousExitCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ReversalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReversedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReversedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SettlementNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("SettlementReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SettlementSource")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("SeverancePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("SuccessorManagerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("TerminationDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("UnusedLeaveDays")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("UnusedLeavePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "EmployeeId")
+                        .IsUnique()
+                        .HasFilter("[Status] <> 'Reversed'");
+
+                    b.ToTable("EmployeeOffboardingCases");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingTeamTransfer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedManagerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OffboardingCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousManagerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("OffboardingCaseId");
+
+                    b.HasIndex("TenantId", "OffboardingCaseId", "EmployeeId")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeOffboardingTeamTransfers");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeProfile", b =>
@@ -2314,9 +2470,16 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", "OffboardingCase")
+                        .WithMany()
+                        .HasForeignKey("OffboardingCaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Candidate");
 
                     b.Navigation("Employee");
+
+                    b.Navigation("OffboardingCase");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveBalance", b =>
@@ -2383,6 +2546,36 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>
+                {
+                    b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingTeamTransfer", b =>
+                {
+                    b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", "OffboardingCase")
+                        .WithMany("TeamTransfers")
+                        .HasForeignKey("OffboardingCaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("OffboardingCase");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeProfile", b =>
@@ -2589,6 +2782,11 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Navigation("Documents");
 
                     b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>
+                {
+                    b.Navigation("TeamTransfers");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Payroll.PayrollEmployee", b =>

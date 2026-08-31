@@ -38,6 +38,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<EmployeeOffboardingCase> EmployeeOffboardingCases => Set<EmployeeOffboardingCase>();
+    public DbSet<EmployeeOffboardingTeamTransfer> EmployeeOffboardingTeamTransfers => Set<EmployeeOffboardingTeamTransfer>();
 
     // Leaves
     public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();

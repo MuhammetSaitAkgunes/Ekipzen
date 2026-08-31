@@ -28,6 +28,12 @@ public sealed class IdentityProvisioningOperationConfiguration
             operation.Type,
         });
 
+        builder.HasIndex(operation => new
+        {
+            operation.TenantId,
+            operation.OffboardingCaseId,
+        });
+
         builder.HasOne(operation => operation.Employee)
             .WithMany()
             .HasForeignKey(operation => operation.EmployeeId)
@@ -36,6 +42,11 @@ public sealed class IdentityProvisioningOperationConfiguration
         builder.HasOne(operation => operation.Candidate)
             .WithMany()
             .HasForeignKey(operation => operation.CandidateId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(operation => operation.OffboardingCase)
+            .WithMany()
+            .HasForeignKey(operation => operation.OffboardingCaseId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

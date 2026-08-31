@@ -16,6 +16,8 @@ public sealed class IdentityProvisioningOperation : BaseEntity
     public int EmployeeId { get; set; }
     public Organization.Employee? Employee { get; set; }
     public int? CandidateId { get; set; }
+    public int? OffboardingCaseId { get; set; }
+    public Organization.EmployeeOffboardingCase? OffboardingCase { get; set; }
     public Recruitment.Candidate? Candidate { get; set; }
 
     public string? Email { get; set; }
