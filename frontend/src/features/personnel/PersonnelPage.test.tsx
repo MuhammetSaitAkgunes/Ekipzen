@@ -37,7 +37,16 @@ const renderPersonnel = () =>
 
 beforeEach(() => {
   localStorage.clear();
-  stubApi({ "/api/employees": employees, "/api/departments": departments, "/api/employees/bulk-deactivate": { deactivated: 1 } });
+  stubApi({
+    "/api/employees": employees,
+    "/api/departments": departments,
+    "/api/employees/bulk-deactivate": { deactivated: 1 },
+    "/api/employees/1/offboarding-context": {
+      employeeId: 1, employeeName: "Ahmet Yılmaz", directReportCount: 2, pendingLeaveRequestCount: 1,
+      successors: [{ id: 2, name: "Selin Koç", title: "UI Designer", isDirectReport: true }],
+    },
+    "/api/employees/1/status": {},
+  });
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -63,6 +72,33 @@ test("satır seçilince bulk bar görünür, pasife al isteği gider", async () 
     const posted = vi.mocked(fetch).mock.calls.find(([u]) => String(u).includes("bulk-deactivate"));
     expect(posted).toBeTruthy();
     expect(JSON.parse(String(posted![1]?.body))).toEqual({ ids: [1], terminationDate: "2026-08-15" });
+  });
+});
+
+test("tekil işten çıkış halef seçimini status isteğine taşır", async () => {
+  setRole("hr-admin");
+  renderPersonnel();
+  await screen.findByText("Ahmet Yılmaz");
+
+  await userEvent.click(screen.getByRole("button", { name: "Ahmet Yılmaz için işten çıkış başlat" }));
+  expect(await screen.findByRole("heading", { name: "İşten Çıkış ve Halef Devri" })).toBeInTheDocument();
+  expect(screen.getByText(/2 doğrudan ekip üyesi ve 1 bekleyen izin talebi/)).toBeInTheDocument();
+
+  await userEvent.selectOptions(screen.getByLabelText("Halef yönetici"), "2");
+  const terminationDate = screen.getByLabelText("İşten ayrılma tarihi");
+  await userEvent.clear(terminationDate);
+  await userEvent.type(terminationDate, "2026-08-15");
+  await userEvent.click(screen.getByRole("button", { name: /İşten çıkışı tamamla/ }));
+
+  await waitFor(() => {
+    const patched = vi.mocked(fetch).mock.calls.find(([url, init]) =>
+      String(url) === "/api/employees/1/status" && init?.method === "PATCH");
+    expect(patched).toBeTruthy();
+    expect(JSON.parse(String(patched![1]?.body))).toEqual({
+      status: "passive",
+      terminationDate: "2026-08-15",
+      successorManagerId: 2,
+    });
   });
 });
 

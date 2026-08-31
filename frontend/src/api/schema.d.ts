@@ -1949,6 +1949,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/offboarding-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingContextDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingContextDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingContextDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/bulk-deactivate": {
         parameters: {
             query?: never;
@@ -5127,6 +5177,16 @@ export interface components {
             /** Format: int32 */
             readonly totalPages?: number;
         };
+        EmployeeOffboardingContextDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            employeeName?: string | null;
+            /** Format: int32 */
+            directReportCount?: number;
+            /** Format: int32 */
+            pendingLeaveRequestCount?: number;
+            successors?: components["schemas"]["ManagerSuccessorDto"][] | null;
+        };
         EmployeeProfileDto: {
             /** Format: date */
             birthDate?: string | null;
@@ -5364,6 +5424,13 @@ export interface components {
             pulse?: number;
             /** Format: int32 */
             load?: number;
+        };
+        ManagerSuccessorDto: {
+            /** Format: int32 */
+            id?: number;
+            name?: string | null;
+            title?: string | null;
+            isDirectReport?: boolean;
         };
         MigrateTenantsResult: {
             /** Format: int32 */
@@ -5786,6 +5853,8 @@ export interface components {
             status?: string | null;
             /** Format: date */
             terminationDate?: string | null;
+            /** Format: int32 */
+            successorManagerId?: number | null;
         };
         SettingsDto: {
             company?: components["schemas"]["CompanyProfileDto"];

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { downloadCsv, tableToCsvLines } from "../shared/csv";
 import { ImportModal } from "./ImportModal";
+import { OffboardingModal } from "./OffboardingModal";
 import { PersonnelModal } from "./PersonnelModal";
 import { useBulkDeactivate, useDepartments, useEmployees, type EmployeeFilters } from "./queries";
 
@@ -26,6 +28,7 @@ export function PersonnelPage() {
   const [terminationDate, setTerminationDate] = useState(todayInputValue);
   const [cardId, setCardId] = useState<number | null | undefined>(undefined); // undefined: kapalı, null: yeni kayıt
   const [importOpen, setImportOpen] = useState(false);
+  const [offboardingId, setOffboardingId] = useState<number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Arama debounce: 300ms sonra server-side filtreye yansır.
@@ -82,8 +85,8 @@ export function PersonnelPage() {
       await bulkDeactivate.mutateAsync({ ids: [...selected], terminationDate });
       showToast(`${count} personel pasife alındı.`, "success");
       setSelected(new Set());
-    } catch {
-      showToast("Pasife alma başarısız oldu.", "error");
+    } catch (cause) {
+      showToast(cause instanceof ApiError ? cause.message : "Pasife alma başarısız oldu.", "error");
     }
   };
 
@@ -235,6 +238,11 @@ export function PersonnelPage() {
                           <i aria-hidden="true" className="fa-solid fa-pen" />
                         </button>
                       )}
+                      {isHrAdmin && employee.status === "active" && (
+                        <button className="btn-icon-sm" title="İşten çıkar" aria-label={`${employee.name} için işten çıkış başlat`} onClick={() => setOffboardingId(employee.id ?? -1)}>
+                          <i aria-hidden="true" className="fa-solid fa-user-slash" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -250,6 +258,10 @@ export function PersonnelPage() {
       </div>
 
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+
+      {offboardingId !== null && (
+        <OffboardingModal employeeId={offboardingId} onClose={() => setOffboardingId(null)} />
+      )}
 
       {cardId !== undefined && (
         <PersonnelModal

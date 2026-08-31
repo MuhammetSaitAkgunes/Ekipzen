@@ -8,6 +8,8 @@ export type EmployeeDetailDto = components["schemas"]["EmployeeDetailDto"];
 export type EmployeeUpsertModel = components["schemas"]["EmployeeUpsertModel"];
 export type DepartmentDto = components["schemas"]["DepartmentDto"];
 export type EmployeeDocumentDto = components["schemas"]["EmployeeDocumentDto"];
+export type EmployeeOffboardingContextDto = components["schemas"]["EmployeeOffboardingContextDto"];
+export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string };
 
@@ -34,6 +36,13 @@ export const useEmployee = (id: number | null) =>
     queryFn: () => apiFetch<EmployeeDetailDto>(`/employees/${id}`),
     enabled: id !== null,
   });
+export const useEmployeeOffboardingContext = (id: number | null) =>
+  useQuery({
+    queryKey: ["employees", id, "offboarding-context"],
+    queryFn: () => apiFetch<EmployeeOffboardingContextDto>(`/employees/${id}/offboarding-context`),
+    enabled: id !== null,
+  });
+
 
 export const useEmployeeDocuments = (id: number | null) =>
   useQuery({
@@ -61,6 +70,21 @@ export const useBulkDeactivate = () => {
         method: "POST",
         body: JSON.stringify({ ids, terminationDate }),
       }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+  });
+};
+
+export const useOffboardEmployee = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, terminationDate, successorManagerId }: {
+      employeeId: number;
+      terminationDate: string;
+      successorManagerId: number | null;
+    }) => apiFetch<void>(`/employees/${employeeId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "passive", terminationDate, successorManagerId }),
+    }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
   });
 };
