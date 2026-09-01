@@ -4,6 +4,7 @@ using IKPro.Application.Common.Models;
 using IKPro.Application.Features.Auth;
 using IKPro.Application.Features.Departments;
 using IKPro.Application.Features.Employees;
+using IKPro.Application.Features.Employees.Employment;
 using IKPro.Application.Features.Employees.Offboarding;
 using IKPro.Application.Features.Leaves;
 using IKPro.Domain.Entities.Leaves;
@@ -200,6 +201,110 @@ public sealed class PersonnelTests(IKProApiFactory factory)
             nationalId = "12345678901", // seed'deki Ahmet Yılmaz'ın TC'si
         });
         duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task EmploymentFoundation_VersionsCompensationWithoutRewritingHistory()
+    {
+        var client = await AuthedClientAsync("ik@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(client, "/api/departments"))[0].Id;
+        var createdResponse = await client.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Ücret",
+            lastName = $"Geçmişi{Guid.NewGuid():N}",
+            title = "Test Personeli",
+            departmentId,
+            hireDate = "2024-01-01",
+            contractType = "fixed-term",
+        });
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await createdResponse.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+        created.ContractType.Should().Be("fixed-term");
+
+        var initial = await GetAsync<EmployeeEmploymentFoundationDto>(
+            client, $"/api/employees/{created.Id}/employment-foundation");
+        initial.EmploymentPeriods.Should().ContainSingle();
+        initial.EmploymentPeriods[0].StartDate.Should().Be(new DateOnly(2024, 1, 1));
+        initial.EmploymentPeriods[0].ContractType.Should().Be("fixed-term");
+
+        (await client.PostAsJsonAsync($"/api/employees/{created.Id}/compensation-packages", new
+        {
+            effectiveFrom = "2024-01-01",
+            monthlyGrossSalary = 40000m,
+            regularPremium = 2500m,
+            roadAllowance = 1000m,
+            mealAllowance = 2000m,
+            otherRegularBenefits = 500m,
+            sourceReference = "Ücret yazısı-2024",
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var secondResponse = await client.PostAsJsonAsync(
+            $"/api/employees/{created.Id}/compensation-packages", new
+            {
+                effectiveFrom = "2025-01-01",
+                monthlyGrossSalary = 50000m,
+                regularPremium = 3000m,
+                roadAllowance = 1200m,
+                mealAllowance = 2500m,
+                otherRegularBenefits = 800m,
+                sourceReference = "Ücret yazısı-2025",
+            });
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var foundation = (await secondResponse.Content
+            .ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!;
+        foundation.CompensationPackages.Should().HaveCount(2);
+        foundation.CompensationPackages.Should().OnlyContain(
+            package => package.EmploymentPeriodId == initial.EmploymentPeriods[0].Id);
+        foundation.CompensationPackages[0].EffectiveTo.Should().BeNull();
+        foundation.CompensationPackages[0].MonthlyRecurringTotal.Should().Be(57500m);
+        foundation.CompensationPackages[1].EffectiveTo.Should().Be(new DateOnly(2024, 12, 31));
+
+        (await client.PostAsJsonAsync($"/api/employees/{created.Id}/compensation-packages", new
+        {
+            effectiveFrom = "2025-01-01",
+            monthlyGrossSalary = 60000m,
+            sourceReference = "Mükerrer",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var draft = await SaveOffboardingDraftAsync(
+            client, created.Id, new DateOnly(2025, 6, 30));
+        var completed = await CompleteOffboardingAsync(client, created.Id, draft);
+        completed.TerminationReason.Should().Be("employee-resignation");
+        completed.NoticeHandling.Should().Be("not-applicable");
+        completed.ContractTypeSnapshot.Should().Be("fixed-term");
+        completed.MonthlyGrossSalarySnapshot.Should().Be(50000m);
+        completed.CompensationPackageId.Should().Be(foundation.CompensationPackages[0].Id);
+        completed.EmploymentPeriodId.Should().NotBeNull();
+
+        var closed = await GetAsync<EmployeeEmploymentFoundationDto>(
+            client, $"/api/employees/{created.Id}/employment-foundation");
+        closed.EmploymentPeriods[0].EndDate.Should().Be(new DateOnly(2025, 6, 30));
+        closed.CompensationPackages[0].EffectiveTo.Should().Be(new DateOnly(2025, 6, 30));
+
+        (await client.PutAsJsonAsync($"/api/employees/{created.Id}", new
+        {
+            firstName = created.FirstName,
+            lastName = created.LastName,
+            title = created.Title,
+            departmentId,
+            hireDate = "2024-02-01",
+            status = "passive",
+            contractType = "indefinite",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "pasif kart güncellemesi kapalı istihdam dönemini değiştirmemeli");
+
+        var stillClosed = await GetAsync<EmployeeEmploymentFoundationDto>(
+            client, $"/api/employees/{created.Id}/employment-foundation");
+        stillClosed.EmploymentPeriods.Should().ContainSingle(period =>
+            period.EndDate == new DateOnly(2025, 6, 30));
+
+        var reversed = await ReverseOffboardingAsync(
+            client, created.Id, completed, "İstihdam dönemi geri alma testi");
+        reversed.Status.Should().Be("reversed");
+        var reopened = await GetAsync<EmployeeEmploymentFoundationDto>(
+            client, $"/api/employees/{created.Id}/employment-foundation");
+        reopened.EmploymentPeriods[0].EndDate.Should().BeNull();
+        reopened.CompensationPackages[0].EffectiveTo.Should().BeNull();
     }
 
     [Fact]
@@ -578,7 +683,9 @@ public sealed class PersonnelTests(IKProApiFactory factory)
             $"/api/employees/{employeeId}/offboarding-draft", new
             {
                 expectedVersion, terminationDate, exitCode = "TEST-03",
-                exitReason = "Entegrasyon testi", successorManagerId,
+                exitReason = "Entegrasyon testi",
+                terminationReason = "employee-resignation", noticeHandling = "not-applicable",
+                successorManagerId,
                 unusedLeaveDays, unusedLeavePayment, severancePayment, noticePayment,
                 settlementReference = "Test uzman hesap belgesi",
                 settlementNotes = "Otomatik mevzuat hesabı değildir.",

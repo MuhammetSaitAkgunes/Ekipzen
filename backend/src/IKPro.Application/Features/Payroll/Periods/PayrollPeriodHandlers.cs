@@ -95,9 +95,27 @@ public sealed class CreatePayrollPeriodCommandHandler(
                 e.Id,
                 e.HireDate,
                 e.TerminationDate,
+                EmploymentPeriodId = e.EmploymentPeriods
+                    .Where(employment => employment.StartDate <= periodStart
+                        && (employment.EndDate == null || employment.EndDate >= periodStart))
+                    .Select(employment => (int?)employment.Id)
+                    .SingleOrDefault(),
                 HasIban = e.Profile != null && e.Profile.Iban != null,
             })
             .ToListAsync(cancellationToken);
+
+        var employmentPeriodIds = employees
+            .Where(employee => employee.EmploymentPeriodId is not null)
+            .Select(employee => employee.EmploymentPeriodId!.Value)
+            .ToArray();
+        var compensationPackages = await context.EmployeeCompensationPackages
+            .AsNoTracking()
+            .Where(package => employmentPeriodIds.Contains(package.EmploymentPeriodId)
+                && package.EffectiveFrom <= periodStart
+                && (package.EffectiveTo == null || package.EffectiveTo >= periodStart))
+            .ToListAsync(cancellationToken);
+        var compensationByEmploymentPeriod = compensationPackages
+            .ToDictionary(package => package.EmploymentPeriodId);
 
         var timesheetCoverage = await PayrollTimesheetCoverage.CalculateAsync(
             context,
@@ -127,10 +145,18 @@ public sealed class CreatePayrollPeriodCommandHandler(
         foreach (var employee in employees)
         {
             var summary = attendanceByEmployee.GetValueOrDefault(employee.Id);
+            var compensation = employee.EmploymentPeriodId is int employmentPeriodId
+                ? compensationByEmploymentPeriod.GetValueOrDefault(employmentPeriodId)
+                : null;
             period.Employees.Add(new PayrollEmployee
             {
                 EmployeeId = employee.Id,
-                GrossSalary = 0m, // maaş girdisi İK tarafından doldurulur
+                // Paket yalnız dönem başı girdisini sağlar; satır yine İK kontrolü ve onayına tabidir.
+                GrossSalary = compensation?.MonthlyGrossSalary ?? 0m,
+                PremiumPay = compensation?.RegularPremium ?? 0m,
+                RoadAllowance = compensation?.RoadAllowance ?? 0m,
+                MealAllowance = compensation?.MealAllowance ?? 0m,
+                BenefitPay = compensation?.OtherRegularBenefits ?? 0m,
                 WorkedDays = settings.DefaultWorkedDays,
                 OvertimeHours = summary is null ? 0 : (int)Math.Round(summary.TotalOvertimeMinutes / 60.0),
                 IbanComplete = employee.HasIban,

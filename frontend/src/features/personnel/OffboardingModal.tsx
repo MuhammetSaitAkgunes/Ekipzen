@@ -38,6 +38,8 @@ export function OffboardingModal({ employeeId, onClose }: {
   const [terminationDate, setTerminationDate] = useState(todayInputValue);
   const [exitCode, setExitCode] = useState("");
   const [exitReason, setExitReason] = useState("");
+  const [terminationReason, setTerminationReason] = useState("other");
+  const [noticeHandling, setNoticeHandling] = useState("not-applicable");
   const [successorId, setSuccessorId] = useState("");
   const [unusedLeaveDays, setUnusedLeaveDays] = useState("0");
   const [unusedLeavePayment, setUnusedLeavePayment] = useState("0");
@@ -63,6 +65,8 @@ export function OffboardingModal({ employeeId, onClose }: {
     setTerminationDate(currentCase.terminationDate ?? todayInputValue());
     setExitCode(currentCase.exitCode ?? "");
     setExitReason(currentCase.exitReason ?? "");
+    setTerminationReason(currentCase.terminationReason ?? "other");
+    setNoticeHandling(currentCase.noticeHandling ?? "not-applicable");
     setSuccessorId(currentCase.successorManagerId ? String(currentCase.successorManagerId) : "");
     setUnusedLeaveDays(String(currentCase.unusedLeaveDays ?? 0));
     setUnusedLeavePayment(String(currentCase.unusedLeavePayment ?? 0));
@@ -86,6 +90,8 @@ export function OffboardingModal({ employeeId, onClose }: {
     terminationDate,
     exitCode: exitCode.trim(),
     exitReason: exitReason.trim(),
+    terminationReason,
+    noticeHandling,
     successorManagerId: successorId ? Number(successorId) : null,
     unusedLeaveDays: nonNegativeNumber(unusedLeaveDays),
     unusedLeavePayment: nonNegativeNumber(unusedLeavePayment),
@@ -185,6 +191,10 @@ export function OffboardingModal({ employeeId, onClose }: {
               <dl className="offboarding-summary">
                 <div><dt>Ayrılış tarihi</dt><dd>{completedCase.terminationDate}</dd></div>
                 <div><dt>Çıkış kodu</dt><dd>{completedCase.exitCode}</dd></div>
+                <div><dt>Fesih nedeni</dt><dd>{completedCase.terminationReason}</dd></div>
+                <div><dt>İhbar uygulaması</dt><dd>{completedCase.noticeHandling}</dd></div>
+                <div><dt>Sözleşme snapshot</dt><dd>{completedCase.contractTypeSnapshot}</dd></div>
+                <div><dt>Brüt ücret snapshot</dt><dd>{money.format(completedCase.monthlyGrossSalarySnapshot ?? 0)}</dd></div>
                 <div><dt>Kalan izin</dt><dd>{completedCase.unusedLeaveDays} gün</dd></div>
                 <div><dt>İzin ödemesi</dt><dd>{money.format(completedCase.unusedLeavePayment ?? 0)}</dd></div>
                 <div><dt>Kıdem</dt><dd>{money.format(completedCase.severancePayment ?? 0)}</dd></div>
@@ -239,6 +249,33 @@ export function OffboardingModal({ employeeId, onClose }: {
                   <label htmlFor="offboarding-exit-code">Çıkış kodu</label>
                   <input id="offboarding-exit-code" className="input-control" value={exitCode}
                     onChange={(event) => setExitCode(event.target.value)} placeholder="Örn. Kod-03" />
+                </div>
+                <div className="input-group">
+                  <label htmlFor="offboarding-termination-reason">Fesih nedeni</label>
+                  <select id="offboarding-termination-reason" className="input-control" value={terminationReason}
+                    onChange={(event) => setTerminationReason(event.target.value)}>
+                    <option value="employee-resignation">Çalışan istifası</option>
+                    <option value="employer-termination">İşveren feshi</option>
+                    <option value="employer-termination-for-cause">İşveren haklı feshi</option>
+                    <option value="mutual-agreement">İkale</option>
+                    <option value="fixed-term-expiry">Belirli süre bitimi</option>
+                    <option value="retirement">Emeklilik</option>
+                    <option value="military-service">Askerlik</option>
+                    <option value="marriage">Evlilik</option>
+                    <option value="death">Vefat</option>
+                    <option value="other">Diğer</option>
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label htmlFor="offboarding-notice-handling">İhbar uygulaması</label>
+                  <select id="offboarding-notice-handling" className="input-control" value={noticeHandling}
+                    onChange={(event) => setNoticeHandling(event.target.value)}>
+                    <option value="not-applicable">Uygulanmaz</option>
+                    <option value="worked">Süre çalışıldı</option>
+                    <option value="payable-to-employee">Çalışana ödeme</option>
+                    <option value="payable-to-employer">İşverene ödeme</option>
+                    <option value="waived">Feragat / mahsup</option>
+                  </select>
                 </div>
                 <div className="input-group form-span-2">
                   <label htmlFor="offboarding-exit-reason">Çıkış gerekçesi</label>

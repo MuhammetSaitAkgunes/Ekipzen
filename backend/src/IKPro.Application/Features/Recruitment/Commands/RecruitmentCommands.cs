@@ -351,6 +351,11 @@ public sealed class HireCandidateCommandHandler(
             Status = EmployeeStatus.Active,
             Profile = new Domain.Entities.Organization.EmployeeProfile(),
         };
+        employee.EmploymentPeriods.Add(new Domain.Entities.Organization.EmployeeEmploymentPeriod
+        {
+            StartDate = hireDate,
+            ContractType = employee.ContractType,
+        });
         context.Employees.Add(employee);
 
         // İşe giriş yılı için yıllık izin hak edişi (seed varsayılanıyla tutarlı: 24 gün).

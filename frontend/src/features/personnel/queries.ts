@@ -12,6 +12,8 @@ export type EmployeeOffboardingContextDto = components["schemas"]["EmployeeOffbo
 export type EmployeeOffboardingCaseDto = components["schemas"]["EmployeeOffboardingCaseDto"];
 export type SaveOffboardingDraftBody = components["schemas"]["SaveOffboardingDraftBody"];
 export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
+export type EmployeeEmploymentFoundationDto = components["schemas"]["EmployeeEmploymentFoundationDto"];
+export type SaveCompensationPackageBody = components["schemas"]["SaveCompensationPackageBody"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string };
 
@@ -39,6 +41,13 @@ export const useEmployee = (id: number | null) =>
     enabled: id !== null,
   });
 
+export const useEmployeeEmploymentFoundation = (id: number | null, enabled = true) =>
+  useQuery({
+    queryKey: ["employees", id, "employment-foundation"],
+    queryFn: () => apiFetch<EmployeeEmploymentFoundationDto>(`/employees/${id}/employment-foundation`),
+    enabled: id !== null && enabled,
+  });
+
 export const useEmployeeOffboardingContext = (id: number | null) =>
   useQuery({
     queryKey: ["employees", id, "offboarding-context"],
@@ -61,6 +70,19 @@ export const useSaveEmployee = () => {
         ? apiFetch<EmployeeDetailDto>("/employees", { method: "POST", body: JSON.stringify(model) })
         : apiFetch<EmployeeDetailDto>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(model) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+  });
+};
+
+export const useSaveCompensationPackage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, body }: { employeeId: number; body: SaveCompensationPackageBody }) =>
+      apiFetch<EmployeeEmploymentFoundationDto>(`/employees/${employeeId}/compensation-packages`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (_foundation, { employeeId }) =>
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
   });
 };
 

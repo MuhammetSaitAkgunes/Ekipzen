@@ -111,3 +111,34 @@ public enum RiskLevel
     Medium,
     Low
 }
+/// <summary>İş sözleşmesinin süre niteliği; çalışma şekli (tam/yarı/uzaktan) değildir.</summary>
+public enum EmploymentContractType
+{
+    Indefinite,
+    FixedTerm
+}
+
+/// <summary>İş ilişkisinin sona erme iş sebebi; SGK kodu ayrıca referans olarak tutulur.</summary>
+public enum TerminationReason
+{
+    EmployeeResignation,
+    EmployerTermination,
+    EmployerTerminationForCause,
+    MutualAgreement,
+    FixedTermExpiry,
+    Retirement,
+    MilitaryService,
+    Marriage,
+    Death,
+    Other
+}
+
+/// <summary>Bildirim süresinin nasıl karşılandığı; tek başına hak/tutar kararı değildir.</summary>
+public enum NoticeHandling
+{
+    NotApplicable,
+    Worked,
+    PayableToEmployee,
+    PayableToEmployer,
+    Waived
+}

@@ -738,6 +738,11 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ContractType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -815,6 +820,78 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeCompensationPackage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<int>("EmploymentPeriodId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MealAllowance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MonthlyGrossSalary")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("OtherRegularBenefits")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("RegularPremium")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("RoadAllowance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("SourceReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmploymentPeriodId");
+
+                    b.HasIndex("TenantId", "EmploymentPeriodId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeCompensationPackages");
+                });
+
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -872,7 +949,7 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeDocuments");
                 });
 
-            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -880,12 +957,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CompletedByUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<string>("ContractType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
@@ -894,6 +969,73 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "EmployeeId")
+                        .IsUnique()
+                        .HasFilter("[EndDate] IS NULL");
+
+                    b.HasIndex("TenantId", "EmployeeId", "StartDate")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeEmploymentPeriods");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CompensationPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("CompensationPackagePreviousEffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CompletedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ContractTypeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EmploymentPeriodId")
                         .HasColumnType("int");
 
                     b.Property<string>("ExitCode")
@@ -906,13 +1048,34 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<decimal>("MealAllowanceSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MonthlyGrossSalarySnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("NoticeHandling")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<decimal>("NoticePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("OtherRegularBenefitsSnapshot")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("PreviousExitCode")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("RegularPremiumSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ReversalReason")
                         .HasMaxLength(1000)
@@ -924,6 +1087,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<string>("ReversedByUserId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("RoadAllowanceSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("SettlementNotes")
                         .HasMaxLength(2000)
@@ -956,6 +1123,11 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     b.Property<DateOnly>("TerminationDate")
                         .HasColumnType("date");
+
+                    b.Property<string>("TerminationReason")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("UnusedLeaveDays")
                         .HasPrecision(18, 4)
@@ -2537,10 +2709,32 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Navigation("Manager");
                 });
 
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeCompensationPackage", b =>
+                {
+                    b.HasOne("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", "EmploymentPeriod")
+                        .WithMany("CompensationPackages")
+                        .HasForeignKey("EmploymentPeriodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EmploymentPeriod");
+                });
+
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeDocument", b =>
                 {
                     b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
                         .WithMany("Documents")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", b =>
+                {
+                    b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
+                        .WithMany("EmploymentPeriods")
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2781,7 +2975,14 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Documents");
 
+                    b.Navigation("EmploymentPeriods");
+
                     b.Navigation("Profile");
+                });
+
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", b =>
+                {
+                    b.Navigation("CompensationPackages");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>

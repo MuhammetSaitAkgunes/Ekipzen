@@ -19,6 +19,17 @@ public sealed class EmployeeOffboardingCase : AuditableEntity
     public string ExitCode { get; set; } = string.Empty;
     public string ExitReason { get; set; } = string.Empty;
     public int? SuccessorManagerId { get; set; }
+    public TerminationReason TerminationReason { get; set; } = TerminationReason.Other;
+    public NoticeHandling NoticeHandling { get; set; } = NoticeHandling.NotApplicable;
+    public EmploymentContractType ContractTypeSnapshot { get; set; }
+    public int? EmploymentPeriodId { get; set; }
+    public int? CompensationPackageId { get; set; }
+    public DateOnly? CompensationPackagePreviousEffectiveTo { get; set; }
+    public decimal MonthlyGrossSalarySnapshot { get; set; }
+    public decimal RegularPremiumSnapshot { get; set; }
+    public decimal RoadAllowanceSnapshot { get; set; }
+    public decimal MealAllowanceSnapshot { get; set; }
+    public decimal OtherRegularBenefitsSnapshot { get; set; }
 
     public decimal UnusedLeaveDays { get; set; }
     public decimal UnusedLeavePayment { get; set; }

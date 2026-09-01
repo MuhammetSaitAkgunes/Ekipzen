@@ -1,9 +1,10 @@
 # İK Pro — Geliştirme ve Satışa Hazırlık Kapıları
 
-**Son güncelleme:** 2026-08-31
+**Son güncelleme:** 2026-09-01
 
-**Güncel çalışma tabanı:** `main@835aac7`; özellik dalı
-`codex/gate3-offboarding-closure` (yerel, senkronizasyon onayı bekliyor)
+**Güncel çalışma tabanı:** `main@c98f6e3`; özellik dalı
+`codex/gate3-compensation-foundation` (E-5C0 yerel doğrulama tamamlandı,
+senkronizasyon onayı bekliyor)
 
 **Kaynak:** özellik doğrulama sicili, Faz 2b mimari incelemesi ve tam test paketi
 
@@ -18,7 +19,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
 | 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı ve senkronlandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
 | 2 | Bordro ve parasal doğruluk | ✅ Üç dilim tamamlandı ve senkronlandı | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
-| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2`, `E-5A+B` tamamlandı; `E-5C` karar girdileri bekliyor | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
+| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2`, `E-5A+B`, `E-5C0` tamamlandı; `E-5C1` sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
 | 6 | Pilot müşteri ve satış kapısı | ⬜ Kapalı | Ürünün kontrollü ücretli pilotta desteklenebilir olduğunu kanıtlar |
@@ -134,7 +135,30 @@ backend hedefli 17 integration testi ve frontend hedefli 6 test; tam paket 71
 unit + 195 integration + 149 frontend testi. Release build 0 uyarı/0 hata,
 lint ve production build yeşil.
 
-Kapı 3’ün sıradaki karar paketi `E-5C`: otomatik kıdem/ihbar hesabı ancak etkin
+**Kapı 3 / E-5C0 tamamlandı (2026-09-01):** hukuki hesaplamaya geçmeden
+önce eksik doğruluk kaynakları kuruldu. Personelin belirli/belirsiz süreli
+sözleşme türü ve yeniden işe alımları destekleyen tarihçeli istihdam dönemleri
+ayrı kayıtlarda tutuluyor. Ücret; brüt maaş ve düzenli prim/yol/yemek/diğer yan
+hakları kapsayan, ait olduğu istihdam dönemine bağlı, yürürlük tarihli ve geçmişi
+ezmeyen paketlere taşındı. Yeni bordro dönemi ayın ilk gününde yürürlükteki
+istihdam dönemi ve yalnız o döneme ait ücret paketini başlangıç girdisi
+olarak kopyalıyor; satır İK kontrolü ve dönem onayı olmadan kesinleşmiyor.
+İşten çıkış dosyası yapılandırılmış fesih nedeni ve ihbar uygulamasıyla birlikte
+sözleşme/ücret snapshot'ı alıyor, açık istihdam dönemini ve etkin ücret paketini
+kapatıyor; güvenli geri alma ikisini de drift kontrolüyle yeniden açıyor. Eski çalışanlar migration sırasında tek dönemle
+geri dolduruluyor. React personel kartı sözleşme türünü, ücret geçmişini ve yeni
+paket girişini; işten çıkış akışı yapılandırılmış neden/ihbar ve snapshot özetini
+sunuyor. Otomatik kıdem, ihbar veya izin ücreti hesabı bilinçli olarak kapsam
+dışında kaldı. Kanıt: backend build 0 uyarı/0 hata, 71 unit + 196 integration;
+frontend production build + 150 test yeşil.
+
+Kapı 3’ün sıradaki paketi `E-5C1`: takvim yılına sabit izin bakiyesini hizmet
+yıldönümü temelli hak ediş/harcama defterine taşımak; yeniden işe alım dönemleri,
+devreden bakiye ve yıl sınırını tek doğruluk kaynağında çözmek. Bunun ardından
+otomatik kıdem/ihbar hesabı ancak uzman onaylı, tarih etkili ve sürümlü mevzuat
+kurallarıyla taslak sonuç üreten ayrı bir hesaplayıcı olarak açılacak.
+
+Kapı 3’ün önceki karar paketi `E-5C`: otomatik kıdem/ihbar hesabı ancak etkin
 ücret ve yan hakların güvenilir kaynağı, doğru izin yıl devri/bakiye modeli ve
 uzman onaylı tarih etkili sürümlü kurallar birlikte tanımlandığında açılacak.
 Bu girdiler tamamlanana kadar dış uzman finansal anlık görüntüsü tek güvenli

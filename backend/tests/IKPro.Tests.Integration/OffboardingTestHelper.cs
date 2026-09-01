@@ -17,6 +17,8 @@ internal static class OffboardingTestHelper
                 terminationDate,
                 exitCode = "TEST-03",
                 exitReason = "Entegrasyon testi",
+                terminationReason = "employee-resignation",
+                noticeHandling = "not-applicable",
                 unusedLeaveDays = 0m,
                 unusedLeavePayment = 0m,
                 severancePayment = 0m,

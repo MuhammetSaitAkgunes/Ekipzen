@@ -2,6 +2,7 @@ using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Entities.Identity;
+using IKPro.Domain.Entities.Organization;
 using IKPro.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,8 @@ public sealed record SetEmployeeStatusCommand(
     int Id,
     string Status,
     DateOnly? TerminationDate = null,
-    int? SuccessorManagerId = null)
+    int? SuccessorManagerId = null,
+    DateOnly? RehireDate = null)
     : IRequest;
 
 public sealed class SetEmployeeStatusCommandValidator : AbstractValidator<SetEmployeeStatusCommand>
@@ -48,6 +50,7 @@ public sealed class SetEmployeeStatusCommandHandler(
     public async Task Handle(SetEmployeeStatusCommand request, CancellationToken cancellationToken)
     {
         var employee = await context.Employees
+            .Include(item => item.EmploymentPeriods)
             .FirstOrDefaultAsync(item => item.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Personel", request.Id);
 
@@ -76,6 +79,30 @@ public sealed class SetEmployeeStatusCommandHandler(
         {
             throw new ConflictException(
                 "Tamamlanmış işten çıkış yalnız kontrollü geri alma işlemiyle açılabilir.");
+        }
+
+        var openPeriod = employee.EmploymentPeriods.SingleOrDefault(period => period.EndDate == null);
+        if (openPeriod is null)
+        {
+            if (request.RehireDate is null)
+            {
+                throw new ConflictException("Yeniden işe alma tarihi zorunludur.");
+            }
+
+            var lastEndDate = employee.EmploymentPeriods
+                .Where(period => period.EndDate is not null)
+                .Max(period => period.EndDate);
+            if (request.RehireDate <= lastEndDate)
+            {
+                throw new ConflictException("Yeniden işe alma tarihi önceki istihdam döneminden sonra olmalıdır.");
+            }
+
+            employee.HireDate = request.RehireDate.Value;
+            employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+            {
+                StartDate = request.RehireDate.Value,
+                ContractType = employee.ContractType,
+            });
         }
 
         employee.Status = EmployeeStatus.Active;

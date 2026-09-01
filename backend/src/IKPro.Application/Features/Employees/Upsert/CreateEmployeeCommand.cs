@@ -2,6 +2,7 @@ using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Common.Notifications;
+using IKPro.Application.Features.Employees.Employment;
 using IKPro.Application.Features.Employees.GetEmployee;
 using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Organization;
@@ -55,9 +56,15 @@ public sealed class CreateEmployeeCommandHandler(
             DepartmentId = model.DepartmentId,
             ManagerId = model.ManagerId,
             HireDate = model.HireDate,
+            ContractType = EmployeeEmploymentMappings.ParseContractType(model.ContractType),
             Status = EmployeeMappings.ParseStatus(model.Status),
             Profile = EmployeeUpsertGuards.MapProfile(new EmployeeProfile(), model.Profile),
         };
+        employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+        {
+            StartDate = employee.HireDate,
+            ContractType = employee.ContractType,
+        });
 
         context.Employees.Add(employee);
         await context.SaveChangesAsync(cancellationToken);

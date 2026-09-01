@@ -9,7 +9,7 @@ import { PersonnelModal } from "./PersonnelModal";
 const departments = [{ id: 1, name: "Yazılım", code: "YZL", employeeCount: 1 }];
 const detail = {
   id: 1, firstName: "Ahmet", lastName: "Yılmaz", name: "Ahmet Yılmaz", initials: "AY",
-  title: "Senior Developer", nationalId: "12345678901", status: "active", hireDate: "2021-03-12",
+  title: "Senior Developer", nationalId: "12345678901", status: "active", hireDate: "2021-03-12", contractType: "indefinite",
   departmentId: 1, department: "Yazılım", managerId: null, managerName: null,
   profile: { birthDate: "1990-01-01", gender: "Erkek", maritalStatus: "Evli", bloodType: "0 Rh+", mobilePhone: "(532) 111 11 11", personalEmail: "a@a", homeAddress: "İstanbul", emergencyContactName: "Ayşe Yılmaz", emergencyContactRelation: null, emergencyContactPhone: "0533", employmentType: "Tam Zamanlı", rehireEligibility: null, exitCode: null, iban: "TR11", bankName: "Banka", salaryType: "Net Maaş", pensionStatus: "Otomatik Katılım", mealCard: "Multinet", tshirtSize: "L", pantsSize: "32", coatSize: "L", shoeSize: "42", canWorkAtHeight: true, canWorkNightShift: false, canLiftHeavyLoads: false, healthNotes: "" },
   documents: [],
@@ -17,7 +17,24 @@ const detail = {
 
 beforeEach(() => {
   localStorage.clear();
-  stubApi({ "/api/departments": departments, "/api/employees/1": detail, "/api/employees": detail, "/api/employees/1/documents": [] });
+  stubApi({
+    "/api/departments": departments,
+    "/api/employees/1": detail,
+    "/api/employees": detail,
+    "/api/employees/1/documents": [],
+    "/api/employees/1/employment-foundation": {
+      employeeId: 1,
+      contractType: "indefinite",
+      employmentPeriods: [{ id: 1, startDate: "2021-03-12", endDate: null, contractType: "indefinite" }],
+      compensationPackages: [],
+    },
+    "/api/employees/1/compensation-packages": {
+      employeeId: 1,
+      contractType: "indefinite",
+      employmentPeriods: [],
+      compensationPackages: [],
+    },
+  });
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -40,6 +57,27 @@ test("sekme değişimi içerik bölümünü değiştirir", async () => {
   await screen.findByText("Personel Kartı — Ahmet Yılmaz");
   await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
   expect(screen.getByLabelText("IBAN Numarası").closest(".content-section")).toHaveClass("active");
+});
+
+test("yürürlük tarihli ücret paketini kaynak referansıyla kaydeder", async () => {
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.type(screen.getByLabelText("Yürürlük başlangıcı"), "2026-09-01");
+  await userEvent.type(screen.getByLabelText("Aylık brüt maaş"), "50000");
+  await userEvent.type(screen.getByLabelText("Kaynak / karar referansı"), "Ücret yazısı-42");
+  await userEvent.click(screen.getByRole("button", { name: "Yeni ücret paketini kaydet" }));
+
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(
+      ([u, i]) => String(u) === "/api/employees/1/compensation-packages" && i?.method === "POST",
+    );
+    expect(JSON.parse(String(posted?.[1]?.body))).toMatchObject({
+      effectiveFrom: "2026-09-01",
+      monthlyGrossSalary: 50000,
+      sourceReference: "Ücret yazısı-42",
+    });
+  });
 });
 
 test("yeni kayıt kaydedilince POST body doğru kurulur", async () => {
