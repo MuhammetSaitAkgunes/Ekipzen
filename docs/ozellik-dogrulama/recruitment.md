@@ -1,7 +1,7 @@
 # Recruitment (İşe Alım) — Özellik Doğrulama
 
-**Tarih:** 2026-08-13 · **Kapsam:** 10 uç nokta, `Features/Recruitment` +
-`RecruitmentController` · **Mevcut test:** 4
+**Son güncelleme:** 2026-09-01 · **Kapsam:** `Features/Recruitment` +
+`RecruitmentController` · **Modül testi:** 6
 
 **Neden ilk bu alan:** kapsama açısından en zayıf alan (10 uç / 4 test) ve `hire`
 akışı **Identity kullanıcısı yaratıyor** — yani buradaki bir hata doğrudan
@@ -14,8 +14,8 @@ güvenlik/kimlik hatasına dönüşebilir.
 | # | Katman | Önem | Bulgu | Durum |
 | --- | --- | --- | --- | --- |
 | R-1 | Mantık | **YÜKSEK** | İşe alım tarihi hiç doğrulanmıyor (1990 ve 2099 kabul edildi) | açık |
-| R-2 | Mantık | **YÜKSEK** | Geçmiş tarihli işe alımda personelin **cari yılda izin bakiyesi olmuyor** | açık |
-| R-3 | Mantık | **YÜKSEK** | 24 günlük izin hak edişi sabit kodlanmış; mevzuata aykırı görünüyor | dış girdi bekliyor (müşavir) |
+| **R-2** | Mantık | **ÇÖZÜLDÜ 2026-09-01** | Takvim yılına bağlı bakiye yerine çalışma dönemi/yıldönümü defteri | E-5C1 integration testi |
+| R-3 | Mantık | **YÜKSEK** | Peşin hak ediş kaldırıldı; 24 günlük dönem politikası hâlâ uzman onaylı/sürümlü kurala taşınmalı | kısmen çözüldü, müşavir girdisi bekliyor |
 | R-4 | Mantık | ORTA | Tek kelimelik isimde soyad boş kalıyor | açık |
 | R-5 | Mantık | ORTA | İşe alım **geri alınamıyor**; yanlış işe alım düzeltilemiyor | açık |
 | **R-6** | Kod | **ÇÖZÜLDÜ 2026-08-31** | İş verileri atomik; Identity/davet kalıcı, idempotent ve yeniden denenebilir iş | integration + UI testi |
@@ -56,46 +56,26 @@ hireDate = 2099-12-31  → 200 OK
 
 Bu tek başına da sorun ama asıl zararı R-2 ile birleşince veriyor.
 
-### R-2 · Geçmiş tarihli işe alımda cari yılda izin bakiyesi oluşmuyor — YÜKSEK
+### R-2 · Geçmiş işe alımda cari yıl bakiyesi yok — ÇÖZÜLDÜ (2026-09-01)
 
-`hire` yalnız **tek bir** izin bakiyesi açıyor ve yılını `hireDate.Year`'dan
-alıyor:
+Takvim yılına bağlı tek bakiye satırı kaldırıldı. İzin hakları çalışanın
+`EmployeeEmploymentPeriod` kaydına bağlı imzalı defter hareketleridir.
+Geçmiş tarihli işe girişte çalışma yıldönümleri idempotent oluşturulduğu için
+cari yıl, geçmiş hizmet ve devir aynı doğruluk kaynağından hesaplanır. Yıl aşan
+kullanım takvim yılı parçalarına ayrılır; yeni çalışma dönemi eski dönemin
+bakiyesini otomatik devralmaz.
 
-```csharp
-context.LeaveBalances.Add(new LeaveBalance {
-    Employee = employee, Year = hireDate.Year, EntitledDays = 24, ...
-});
-```
+### R-3 · 24 günlük hak ediş politikası — KISMEN ÇÖZÜLDÜ
 
-Veritabanında doğrulandı:
+Yeni işe alınan kişiye işe giriş yılında peşin 24 gün verilmesi kaldırıldı; ilk
+hak ediş bir çalışma yılı dolduğunda oluşur. Varsayılan 24 gün artık komut
+handler'ında yaratılan bakiye değil, istihdam döneminde saklanan şirket politika
+snapshot'ıdır. Böylece geçmiş hareketler politika değişse bile açıklanabilir.
 
-```
-personel: Zeynep Aydın | iseGiris=1990-01-01
-izin bakiyesi: yil=1990 hakedis=24 devir=0     ← cari yıl (2026) için bakiye YOK
-```
-
-**Neden gerçek bir senaryo:** geçmiş tarihli işe alım istisna değil, kuraldır —
-sisteme geçerken mevcut personelin aktarılması, geç girilen kayıt, deneme süresi
-sonrası resmileştirme. Bu personel **cari yılda hiç izin kullanamaz** ve sebebi
-ekranda görünmez; "bakiyesi yok" der.
-
-Gelecek tarihli işe alımda da aynı: `2099` yılına bakiye açıldı.
-
-### R-3 · İzin hak edişi sabit 24 gün — YÜKSEK, müşavir doğrulaması gerekir
-
-`EntitledDays = 24` handler'ın içine gömülü. İki ayrı sorun:
-
-1. **Mevzuat.** 4857 sayılı İş Kanunu md.53'e göre yıllık izin **kıdeme
-   bağlıdır** (1–5 yıl: 14 gün, 5–15 yıl: 20 gün, 15+ yıl: 26 gün) ve hak ediş
-   **bir yıllık çalışma dolduğunda** başlar. Yeni işe alınan birine, işe giriş
-   yılında 24 gün vermek hem **fazla** hem **erken** görünüyor. Fazla verilen
-   izin, kullanılmazsa çıkışta **ücrete dönüşür** — yani doğrudan para.
-2. **Yer.** Sayı bir iş kuralı ama komut handler'ının içinde sabit. Şirket yasal
-   asgariden fazla vermeyi seçebilir — bu meşrudur, ama o zaman **ayar** olmalı,
-   sabit değil.
-
-> Bu bulguyu mevzuat uzmanı doğrulamalıdır; ben hukuki görüş vermiyorum.
-> Müşavir görüşü geldiğinde bu madde revize edilecek.
+Açık kalan kısım hukuki/politika hesabıdır: kıdem, yaş, sözleşme/iş kolu ve tarih
+etkili kural sürümüne göre gün sayısı henüz otomatik hesaplanmaz. Mevcut 24 gün
+yasal asgari iddiası değildir; uzman onayı sonrası yapılandırılabilir ve sürümlü
+kural girdisine dönüştürülmelidir.
 
 ### R-4 · Tek kelimelik isimde soyad boş — ORTA
 
@@ -182,8 +162,8 @@ tercihtir. Karar verilip yorumla sabitlenmeli; bugün belirsiz.
 
 `R-6` kapandı. Kalan önerilen sıra:
 
-1. **R-1 + R-2** (tarih doğrulama + bakiye yılı) — birlikte çözülmeli, aynı kök
-2. **R-5** (işe alımı geri alma) — artık R-6'nın kalıcı işlem altyapısına dayanabilir
-3. **R-9** (eksik testler) — düzeltmelerle birlikte yazılır
+1. **R-1** — işe alım tarihi için geçmiş/future politika sınırı
+2. **R-5** — yanlış işe alımı kontrollü geri alma
+3. **R-9** — eksik uç testleri
 4. **R-7, R-4, R-8, R-10** — kalite borcu
-5. **R-3** — müşavir görüşü geldiğinde
+5. **R-3** — müşavir görüşüyle sürümlü hak ediş kuralı
