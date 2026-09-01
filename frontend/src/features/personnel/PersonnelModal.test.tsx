@@ -80,6 +80,39 @@ test("yürürlük tarihli ücret paketini kaynak referansıyla kaydeder", async 
   });
 });
 
+test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderilir", async () => {
+  const passiveDetail = { ...detail, status: "passive" };
+  stubApi({
+    "/api/departments": departments,
+    "/api/employees/1": passiveDetail,
+    "/api/employees/1/documents": [],
+    "/api/employees/1/employment-foundation": {
+      employeeId: 1,
+      contractType: "indefinite",
+      employmentPeriods: [{ id: 1, startDate: "2021-03-12", endDate: "2026-08-31", contractType: "indefinite" }],
+      compensationPackages: [],
+    },
+    "/api/employees/1/rehire": { ...detail, hireDate: "2026-09-15" },
+  });
+
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.type(screen.getByLabelText("İşe dönüş tarihi"), "2026-09-15");
+  await userEvent.selectOptions(screen.getByLabelText("Yeni sözleşme türü"), "fixed-term");
+  await userEvent.click(screen.getByRole("button", { name: "Yeni çalışma dönemini başlat" }));
+
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(
+      ([url, init]) => String(url) === "/api/employees/1/rehire" && init?.method === "POST",
+    );
+    expect(JSON.parse(String(posted?.[1]?.body))).toEqual({
+      rehireDate: "2026-09-15",
+      contractType: "fixed-term",
+    });
+  });
+});
+
 test("yeni kayıt kaydedilince POST body doğru kurulur", async () => {
   renderModal(null);
   await screen.findByText("Yeni Personel Kartı");

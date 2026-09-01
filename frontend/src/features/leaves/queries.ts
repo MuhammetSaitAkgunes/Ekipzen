@@ -3,6 +3,7 @@ import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
 
 export type LeaveBalanceDto = components["schemas"]["LeaveBalanceDto"];
+export type LeaveLedgerEntryDto = components["schemas"]["LeaveLedgerEntryDto"];
 export type LeaveRequestDto = components["schemas"]["LeaveRequestDto"];
 export type LeaveTypeDto = components["schemas"]["LeaveTypeDto"];
 export type TeamLeaveDto = components["schemas"]["TeamLeaveDto"];
@@ -11,6 +12,9 @@ type EmployeePagedResult = components["schemas"]["EmployeeListItemDtoPagedResult
 
 export const useLeaveBalance = () =>
   useQuery({ queryKey: ["leaves", "balance"], queryFn: () => apiFetch<LeaveBalanceDto>("/leaves/balance") });
+
+export const useLeaveLedger = () =>
+  useQuery({ queryKey: ["leaves", "ledger"], queryFn: () => apiFetch<LeaveLedgerEntryDto[]>("/leaves/ledger") });
 
 export const useMyLeaves = () =>
   useQuery({ queryKey: ["leaves", "my"], queryFn: () => apiFetch<LeaveRequestDto[]>("/leaves/my") });
