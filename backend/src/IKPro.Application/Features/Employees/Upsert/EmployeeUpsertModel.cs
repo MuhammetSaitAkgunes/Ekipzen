@@ -16,6 +16,7 @@ public sealed record EmployeeUpsertModel(
     string? NationalId = null,
     int? ManagerId = null,
     string Status = "active",
+    string ContractType = "indefinite",
     EmployeeProfileUpsertModel? Profile = null);
 
 public sealed record EmployeeProfileUpsertModel(
@@ -71,6 +72,10 @@ public sealed class EmployeeUpsertModelValidator : AbstractValidator<EmployeeUps
         RuleFor(x => x.Status)
             .Must(s => s is "active" or "passive")
             .WithMessage("Durum 'active' veya 'passive' olmalı.");
+
+        RuleFor(x => x.ContractType)
+            .Must(value => value is "indefinite" or "fixed-term")
+            .WithMessage("Sözleşme türü 'indefinite' veya 'fixed-term' olmalı.");
 
         When(x => x.Profile is not null, () =>
         {

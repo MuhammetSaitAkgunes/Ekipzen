@@ -1,4 +1,5 @@
 using IKPro.Application.Common.Interfaces;
+using IKPro.Application.Features.Employees.Employment;
 using IKPro.Application.Features.Employees.Upsert;
 using IKPro.Domain.Entities.Organization;
 using MediatR;
@@ -26,7 +27,7 @@ public sealed class ImportEmployeesCommandHandler(IApplicationDbContext context)
 
         foreach (var model in sonuc.Gecerli)
         {
-            context.Employees.Add(new Employee
+            var employee = new Employee
             {
                 FirstName = model.FirstName,
                 LastName = model.LastName,
@@ -35,8 +36,15 @@ public sealed class ImportEmployeesCommandHandler(IApplicationDbContext context)
                 DepartmentId = model.DepartmentId,
                 HireDate = model.HireDate,
                 Status = EmployeeMappings.ParseStatus(model.Status),
+                ContractType = EmployeeEmploymentMappings.ParseContractType(model.ContractType),
                 Profile = EmployeeUpsertGuards.MapProfile(new EmployeeProfile(), model.Profile),
+            };
+            employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+            {
+                StartDate = employee.HireDate,
+                ContractType = employee.ContractType,
             });
+            context.Employees.Add(employee);
         }
 
         // Tek SaveChanges → tek transaction. Beklenmedik bir veritabanı hatasında

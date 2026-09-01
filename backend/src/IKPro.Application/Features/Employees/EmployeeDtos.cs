@@ -73,6 +73,7 @@ public sealed record EmployeeDetailDto(
     string Status,
     DateOnly HireDate,
     DateOnly? TerminationDate,
+    string ContractType,
     int DepartmentId,
     string Department,
     int? ManagerId,

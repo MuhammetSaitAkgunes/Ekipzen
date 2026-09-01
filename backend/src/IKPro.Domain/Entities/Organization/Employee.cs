@@ -19,6 +19,7 @@ public class Employee : AuditableEntity
     public string Title { get; set; } = string.Empty;
     public EmployeeStatus Status { get; set; } = EmployeeStatus.Active;
     public DateOnly HireDate { get; set; }
+    public EmploymentContractType ContractType { get; set; } = EmploymentContractType.Indefinite;
 
     /// <summary>Son çalışma günü; yalnız pasif personelde doludur.</summary>
     public DateOnly? TerminationDate { get; set; }
@@ -35,6 +36,7 @@ public class Employee : AuditableEntity
 
     public EmployeeProfile? Profile { get; set; }
     public ICollection<EmployeeDocument> Documents { get; set; } = new List<EmployeeDocument>();
+    public ICollection<EmployeeEmploymentPeriod> EmploymentPeriods { get; set; } = new List<EmployeeEmploymentPeriod>();
 
     public string FullName => $"{FirstName} {LastName}".Trim();
 

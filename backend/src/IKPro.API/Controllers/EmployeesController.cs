@@ -2,6 +2,7 @@ using IKPro.Application.Common.Models;
 using IKPro.Application.Common.Security;
 using IKPro.Application.Features.Employees;
 using IKPro.Application.Features.Employees.BulkDeactivate;
+using IKPro.Application.Features.Employees.Employment;
 using IKPro.Application.Features.Employees.Files;
 using IKPro.Application.Features.Employees.GetEmployee;
 using IKPro.Application.Features.Employees.GetEmployees;
@@ -108,6 +109,31 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int id, EmployeeUpsertModel model, CancellationToken cancellationToken)
         => Ok(await sender.Send(new UpdateEmployeeCommand(id, model), cancellationToken));
 
+    [HttpGet("{id:int}/employment-foundation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<EmployeeEmploymentFoundationDto>> GetEmploymentFoundation(
+        int id, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetEmployeeEmploymentFoundationQuery(id), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeEmploymentFoundationDto>> SaveCompensationPackage(
+        int id, SaveCompensationPackageBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new SaveEmployeeCompensationPackageCommand(
+            id,
+            body.EffectiveFrom,
+            body.MonthlyGrossSalary,
+            body.RegularPremium,
+            body.RoadAllowance,
+            body.MealAllowance,
+            body.OtherRegularBenefits,
+            body.SourceReference), cancellationToken));
+
     [HttpGet("{id:int}/offboarding-context")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeOffboardingContextDto>(StatusCodes.Status200OK)]
@@ -128,6 +154,8 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.TerminationDate,
             body.ExitCode,
             body.ExitReason,
+            body.TerminationReason,
+            body.NoticeHandling,
             body.SuccessorManagerId,
             body.UnusedLeaveDays,
             body.UnusedLeavePayment,
@@ -179,7 +207,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     {
         await sender.Send(
             new SetEmployeeStatusCommand(
-                id, body.Status, body.TerminationDate, body.SuccessorManagerId), cancellationToken);
+                id, body.Status, body.TerminationDate, body.SuccessorManagerId, body.RehireDate), cancellationToken);
         return NoContent();
     }
 
@@ -232,11 +260,22 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         return File(download.Content, download.ContentType, download.FileName);
     }
 
+    public sealed record SaveCompensationPackageBody(
+        DateOnly EffectiveFrom,
+        decimal MonthlyGrossSalary,
+        decimal RegularPremium,
+        decimal RoadAllowance,
+        decimal MealAllowance,
+        decimal OtherRegularBenefits,
+        string SourceReference);
+
     public sealed record SaveOffboardingDraftBody(
         int? ExpectedVersion,
         DateOnly TerminationDate,
         string ExitCode,
         string ExitReason,
+        string TerminationReason,
+        string NoticeHandling,
         int? SuccessorManagerId,
         decimal UnusedLeaveDays,
         decimal UnusedLeavePayment,
@@ -250,5 +289,8 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record ReverseOffboardingBody(int ExpectedVersion, string Reason);
 
     public sealed record SetStatusBody(
-        string Status, DateOnly? TerminationDate = null, int? SuccessorManagerId = null);
+        string Status,
+        DateOnly? TerminationDate = null,
+        int? SuccessorManagerId = null,
+        DateOnly? RehireDate = null);
 }

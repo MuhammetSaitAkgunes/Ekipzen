@@ -1,6 +1,7 @@
 using FluentValidation;
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Application.Features.Employees.Employment;
 using IKPro.Application.Features.Employees.GetEmployee;
 using IKPro.Domain.Entities.Identity;
 using IKPro.Domain.Entities.Organization;
@@ -29,16 +30,27 @@ public sealed class UpdateEmployeeCommandHandler(
     {
         var employee = await context.Employees
             .Include(e => e.Profile)
+            .Include(e => e.EmploymentPeriods)
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Personel", request.Id);
 
         var model = request.Model;
         var previousManagerId = employee.ManagerId;
+        var requestedContractType = EmployeeEmploymentMappings.ParseContractType(model.ContractType);
+        var openPeriod = employee.EmploymentPeriods.SingleOrDefault(period => period.EndDate == null);
         var requestedStatus = EmployeeMappings.ParseStatus(model.Status);
         if (requestedStatus != employee.Status)
         {
             throw new ConflictException(
                 "Personel durumu genel güncelleme ile değiştirilemez; ayrılış tarihi ve erişim eşitlemesi için durum işlemini kullanın.");
+        }
+
+        if (employee.Status == Domain.Enums.EmployeeStatus.Passive
+            && openPeriod is null
+            && (model.HireDate != employee.HireDate || requestedContractType != employee.ContractType))
+        {
+            throw new ConflictException(
+                "Kapanmış istihdam döneminin işe giriş tarihi veya sözleşme türü personel kartından değiştirilemez.");
         }
 
         await EmployeeUpsertGuards.EnsureReferencesAsync(context, model, employee.Id, cancellationToken);
@@ -70,7 +82,33 @@ public sealed class UpdateEmployeeCommandHandler(
         employee.NationalId = model.NationalId;
         employee.DepartmentId = model.DepartmentId;
         employee.ManagerId = model.ManagerId;
+        if (model.HireDate != employee.HireDate
+            && openPeriod is not null
+            && await context.EmployeeCompensationPackages.AnyAsync(
+                item => item.EmploymentPeriodId == openPeriod.Id
+                    && item.EffectiveFrom < model.HireDate,
+                cancellationToken))
+        {
+            throw new ConflictException(
+                "İşe giriş tarihi, kayıtlı ücret geçmişinin sonrasına taşınamaz.");
+        }
+
         employee.HireDate = model.HireDate;
+        employee.ContractType = requestedContractType;
+        if (openPeriod is null && employee.Status == Domain.Enums.EmployeeStatus.Active)
+        {
+            employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+            {
+                StartDate = employee.HireDate,
+                ContractType = employee.ContractType,
+            });
+        }
+        else if (openPeriod is not null)
+        {
+            openPeriod.StartDate = employee.HireDate;
+            openPeriod.ContractType = employee.ContractType;
+        }
+
         employee.Profile = EmployeeUpsertGuards.MapProfile(
             employee.Profile ?? new EmployeeProfile { EmployeeId = employee.Id }, model.Profile);
 

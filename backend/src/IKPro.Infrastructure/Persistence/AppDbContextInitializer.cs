@@ -148,6 +148,15 @@ public class AppDbContextInitializer(
             HireDate = new DateOnly(2023, 1, 17),
             Profile = new EmployeeProfile(),
         };
+        foreach (var employee in new[] { ece, ahmet, ayse, selin })
+        {
+            employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+            {
+                StartDate = employee.HireDate,
+                EndDate = employee.TerminationDate,
+                ContractType = employee.ContractType,
+            });
+        }
         context.Employees.AddRange(ece, ahmet, ayse, selin);
 
         await context.SaveChangesAsync();
@@ -181,6 +190,11 @@ public class AppDbContextInitializer(
             DepartmentId = operasyon.Id, HireDate = new DateOnly(2024, 3, 1),
             Status = EmployeeStatus.Active, Profile = new EmployeeProfile(),
         };
+        deniz.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+        {
+            StartDate = deniz.HireDate,
+            ContractType = deniz.ContractType,
+        });
         context.Employees.Add(deniz);
         await context.SaveChangesAsync();
 
@@ -190,6 +204,11 @@ public class AppDbContextInitializer(
             DepartmentId = operasyon.Id, HireDate = new DateOnly(2025, 6, 1),
             Status = EmployeeStatus.Active, ManagerId = deniz.Id, Profile = new EmployeeProfile(),
         };
+        cem.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+        {
+            StartDate = cem.HireDate,
+            ContractType = cem.ContractType,
+        });
         context.Employees.Add(cem);
         await context.SaveChangesAsync();
 

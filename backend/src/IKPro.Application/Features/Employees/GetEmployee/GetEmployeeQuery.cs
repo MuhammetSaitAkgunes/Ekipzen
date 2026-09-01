@@ -1,5 +1,6 @@
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
+using IKPro.Application.Features.Employees.Employment;
 using IKPro.Domain.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,7 @@ public sealed class GetEmployeeQueryHandler(IApplicationDbContext context, ICurr
             employee.Status.ToDto(),
             employee.HireDate,
             employee.TerminationDate,
+            employee.ContractType.ToDto(),
             employee.DepartmentId,
             employee.Department?.Name ?? string.Empty,
             employee.ManagerId,
