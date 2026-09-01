@@ -12,8 +12,15 @@ public class EmployeeEmploymentPeriod : AuditableEntity
     public DateOnly? EndDate { get; set; }
     public Enums.EmploymentContractType ContractType { get; set; }
 
+    /// <summary>Bu dönem için her hizmet yıldönümünde yazılacak şirket politika günü.</summary>
+    public int AnnualLeaveEntitlementDays { get; set; } = 24;
+    /// <summary>Ledger'a otomatik yıldönümü yazımının başlayacağı geçiş tarihi.</summary>
+    public DateOnly? LeaveAccrualManagedFrom { get; set; }
+
     public ICollection<EmployeeCompensationPackage> CompensationPackages { get; set; }
         = new List<EmployeeCompensationPackage>();
+    public ICollection<IKPro.Domain.Entities.Leaves.LeaveLedgerEntry> LeaveLedgerEntries { get; set; }
+        = new List<IKPro.Domain.Entities.Leaves.LeaveLedgerEntry>();
 }
 
 /// <summary>

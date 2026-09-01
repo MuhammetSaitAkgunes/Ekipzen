@@ -4,23 +4,33 @@ import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { LeaveRequestModal } from "./LeaveRequestModal";
 import { LEAVE_STATUS_TEXT, awayDateLabel, formatLeaveDate } from "./format";
-import { useCancelLeave, useLeaveBalance, useMyLeaves, useTeamLeaves } from "./queries";
+import { useCancelLeave, useLeaveBalance, useLeaveLedger, useMyLeaves, useTeamLeaves } from "./queries";
+
+const LEDGER_TYPE_TEXT: Record<string, string> = {
+  "legacy-opening": "Geçiş bakiyesi",
+  "service-anniversary": "Hizmet yılı hak edişi",
+  usage: "İzin kullanımı",
+  "usage-reversal": "İzin iadesi",
+  adjustment: "Manuel düzeltme",
+};
 
 export function LeavesPage() {
   const { showToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const balanceQ = useLeaveBalance();
+  const ledgerQ = useLeaveLedger();
   const myQ = useMyLeaves();
   const teamQ = useTeamLeaves();
   const cancelLeave = useCancelLeave();
 
-  const queries = [balanceQ, myQ, teamQ];
+  const queries = [balanceQ, ledgerQ, myQ, teamQ];
   if (queries.some((q) => q.isPending)) return <PageLoading />;
   const failed = queries.find((q) => q.isError);
   if (failed) return <PageError error={failed.error} />;
 
   const balance = balanceQ.data!;
   const myLeaves = myQ.data!;
+  const ledger = ledgerQ.data!;
   const team = teamQ.data!;
 
   const entitlement = (balance.entitledDays ?? 0) + (balance.carriedOverDays ?? 0);
@@ -63,6 +73,10 @@ export function LeavesPage() {
           </div>
           <div className="bal-progress"><div className="prog-bar" style={{ width: `${progress}%` }} /></div>
           <span className="bal-sub">Hak ediş: {entitlement} gün</span>
+          <span className="bal-sub">Bekleyen rezervasyon: {balance.pendingDays ?? 0} gün</span>
+          {balance.nextAccrualDate && (
+            <span className="bal-sub">Sıradaki hak ediş: {formatLeaveDate(balance.nextAccrualDate)}</span>
+          )}
         </div>
         <div className="bal-card">
           <div className="bal-header"><div className="bal-icon"><i aria-hidden="true" className="fa-solid fa-clock-rotate-left" /></div></div>
@@ -119,7 +133,7 @@ export function LeavesPage() {
                       </span>
                     </td>
                     <td className="text-right">
-                      {leave.status === "pending" && (
+                      {(leave.status === "pending" || leave.status === "approved") && (
                         <button
                           className="btn-icon-sm"
                           title="Talebi iptal et"
@@ -153,6 +167,36 @@ export function LeavesPage() {
               {team.length === 0 && <p className="pending-desc">Bu hafta ekipten izinli kimse yok.</p>}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="leaves-list-section" style={{ marginTop: 24 }}>
+        <div className="section-header">
+          <div>
+            <h3>İzin Bakiye Defteri</h3>
+            <p className="pending-desc">Her hak ediş, kullanım ve iade değiştirilemez bir hareket olarak izlenir.</p>
+          </div>
+        </div>
+        <div className="table-scroll">
+          <table className="leaf-table">
+            <thead>
+              <tr><th>Tarih</th><th>Hareket</th><th>Hizmet yılı</th><th>Gün</th><th>Referans</th></tr>
+            </thead>
+            <tbody>
+              {ledger.map((entry) => (
+                <tr key={entry.id}>
+                  <td>{formatLeaveDate(entry.occurredOn)}</td>
+                  <td>{LEDGER_TYPE_TEXT[entry.type ?? ""] ?? entry.type}</td>
+                  <td>{entry.serviceYear ?? "—"}</td>
+                  <td><span className="days-badge">{(entry.days ?? 0) > 0 ? "+" : ""}{entry.days ?? 0} gün</span></td>
+                  <td>{entry.sourceReference ?? "—"}</td>
+                </tr>
+              ))}
+              {ledger.length === 0 && (
+                <tr><td colSpan={5}>Bu dönem için henüz izin defteri hareketi yok.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

@@ -308,6 +308,69 @@ public sealed class PersonnelTests(IKProApiFactory factory)
     }
 
     [Fact]
+    public async Task Rehire_StartsNewEmploymentPeriodWithoutOldLeaveBalanceLeak()
+    {
+        var adminAuth = await LoginAsync("ik@hrmaster.local");
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminAuth.Token);
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var createdResponse = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Yeniden",
+            lastName = $"Giris{Guid.NewGuid():N}",
+            title = "Test Personeli",
+            departmentId,
+            hireDate = "2024-01-01",
+            contractType = "indefinite",
+        });
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await createdResponse.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+        var initial = await GetAsync<EmployeeEmploymentFoundationDto>(
+            admin, $"/api/employees/{created.Id}/employment-foundation");
+        var initialPeriodId = initial.EmploymentPeriods.Single().Id;
+
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(adminAuth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            db.LeaveLedgerEntries.Add(new LeaveLedgerEntry
+            {
+                EmploymentPeriodId = initialPeriodId,
+                OccurredOn = new DateOnly(2024, 1, 1),
+                Type = LeaveLedgerEntryType.LegacyOpening,
+                Days = 24,
+                SourceKey = $"rehire-test:{created.Id}",
+                SourceReference = "Rehire izolasyon testi",
+            });
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await CompleteOffboardingAsync(admin, created.Id, new DateOnly(2025, 12, 31));
+        var rehireResponse = await admin.PostAsJsonAsync($"/api/employees/{created.Id}/rehire", new
+        {
+            rehireDate = "2026-02-01",
+            contractType = "fixed-term",
+        });
+        rehireResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var rehired = (await rehireResponse.Content
+            .ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!;
+        rehired.EmploymentPeriods.Should().HaveCount(2);
+        var currentPeriod = rehired.EmploymentPeriods.Single(period => period.EndDate is null);
+        currentPeriod.Id.Should().NotBe(initialPeriodId);
+        currentPeriod.StartDate.Should().Be(new DateOnly(2026, 2, 1));
+        currentPeriod.ContractType.Should().Be("fixed-term");
+
+        using var verifyScope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+            .Create(adminAuth.User.TenantId);
+        var verifyDb = verifyScope.Services.GetRequiredService<IApplicationDbContext>();
+        (await verifyDb.LeaveLedgerEntries.CountAsync(
+            item => item.EmploymentPeriodId == initialPeriodId)).Should().Be(1);
+        (await verifyDb.LeaveLedgerEntries.CountAsync(
+            item => item.EmploymentPeriodId == currentPeriod.Id)).Should().Be(0,
+            "eski dönem bakiyesi yeni işe girişe otomatik taşınmamalı");
+    }
+
+    [Fact]
     public async Task StatusChanges_MustUseOffboardingWorkflow()
     {
         var client = await AuthedClientAsync("ik@hrmaster.local");
@@ -514,6 +577,9 @@ public sealed class PersonnelTests(IKProApiFactory factory)
             var request = new LeaveRequest
             {
                 EmployeeId = selinId,
+                EmploymentPeriodId = await db.EmployeeEmploymentPeriods
+                    .Where(item => item.EmployeeId == selinId)
+                    .Select(item => item.Id).SingleAsync(),
                 LeaveTypeId = await db.LeaveTypes.Select(item => item.Id).FirstAsync(),
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30),
                 EndDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30),

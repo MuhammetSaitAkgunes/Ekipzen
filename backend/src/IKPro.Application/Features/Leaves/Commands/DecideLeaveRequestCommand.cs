@@ -9,10 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IKPro.Application.Features.Leaves.Commands;
 
-/// <summary>
-/// Onay kuyruğu kararı: approve/reject. Manager yalnız kendi ekibinin taleplerini
-/// karara bağlayabilir; kimse (hr-admin hariç) kendi talebini onaylayamaz.
-/// </summary>
 public sealed record DecideLeaveRequestCommand(int Id, bool Approve, string? DecisionNote = null)
     : IRequest<LeaveRequestDto>;
 
@@ -24,14 +20,34 @@ public sealed class DecideLeaveRequestCommandValidator : AbstractValidator<Decid
     }
 }
 
-public sealed class DecideLeaveRequestCommandHandler(IApplicationDbContext context, ICurrentUser currentUser)
+public sealed class DecideLeaveRequestCommandHandler(
+    IApplicationDbContext context,
+    ICurrentUser currentUser,
+    IWorkingDayCalculator workingDayCalculator,
+    IDatabaseLock databaseLock)
     : IRequestHandler<DecideLeaveRequestCommand, LeaveRequestDto>
 {
     public async Task<LeaveRequestDto> Handle(
         DecideLeaveRequestCommand request, CancellationToken cancellationToken)
     {
+        var employeeId = await context.LeaveRequests
+            .Where(item => item.Id == request.Id)
+            .Select(item => (int?)item.EmployeeId)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("İzin talebi", request.Id);
+
+        return await databaseLock.ExecuteExclusiveAsync(
+            $"leave-ledger:{employeeId}",
+            token => DecideAsync(request, token),
+            cancellationToken);
+    }
+
+    private async Task<LeaveRequestDto> DecideAsync(
+        DecideLeaveRequestCommand request, CancellationToken cancellationToken)
+    {
         var leaveRequest = await context.LeaveRequests
             .Include(r => r.LeaveType)
+            .Include(r => r.EmploymentPeriod)
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("İzin talebi", request.Id);
 
@@ -48,19 +64,22 @@ public sealed class DecideLeaveRequestCommandHandler(IApplicationDbContext conte
         {
             throw new ForbiddenAccessException("Kendi izin talebinizi karara bağlayamazsınız.");
         }
-
         if (leaveRequest.Status != LeaveStatus.Pending)
         {
             throw new ConflictException("Yalnız bekleyen talepler karara bağlanabilir.");
         }
 
-        // Onayda bakiyeyi yeniden doğrula: oluşturmadan bu yana başka onaylar bakiyeyi
-        // tüketmiş olabilir (özellikle eşzamanlı onaylarda) — bu talebin kendisi bekleyen
-        // toplamdan hariç tutulur. Düşümsüz tipler ve red kararları etkilenmez.
         if (request.Approve && (leaveRequest.LeaveType?.DeductsFromAnnualBalance ?? false))
         {
-            await LeaveGuards.EnsureBalanceAsync(
-                context, leaveRequest.EmployeeId, leaveRequest.StartDate.Year, leaveRequest.Days,
+            var period = leaveRequest.EmploymentPeriod
+                ?? throw new ConflictException("İzin talebinin istihdam dönemi bulunamıyor.");
+            if (await LeaveLedgerService.EnsureAccrualsAsync(
+                    context, period, leaveRequest.StartDate, cancellationToken) > 0)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            await LeaveLedgerService.EnsureCanReserveAsync(
+                context, period, leaveRequest.StartDate, leaveRequest.Days,
                 excludeRequestId: leaveRequest.Id, cancellationToken);
         }
 
@@ -68,8 +87,14 @@ public sealed class DecideLeaveRequestCommandHandler(IApplicationDbContext conte
         leaveRequest.DecisionByUserId = currentUser.UserId;
         leaveRequest.DecisionAtUtc = DateTime.UtcNow;
         leaveRequest.DecisionNote = request.DecisionNote;
-
         await context.SaveChangesAsync(cancellationToken);
+
+        if (request.Approve && (leaveRequest.LeaveType?.DeductsFromAnnualBalance ?? false))
+        {
+            await LeaveLedgerService.AddUsageEntriesAsync(
+                context, leaveRequest, workingDayCalculator, reversal: false, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
         return await context.LeaveRequests
             .AsNoTracking()

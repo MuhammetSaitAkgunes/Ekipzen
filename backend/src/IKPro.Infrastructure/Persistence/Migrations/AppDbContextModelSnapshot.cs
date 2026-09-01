@@ -523,7 +523,7 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.ToTable("Holidays");
                 });
 
-            modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveBalance", b =>
+            modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveLedgerEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -531,23 +531,44 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CarriedOverDays")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("EmployeeId")
+                    b.Property<int>("Days")
                         .HasColumnType("int");
 
-                    b.Property<int>("EntitledDays")
+                    b.Property<int>("EmploymentPeriodId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("LeaveRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("OccurredOn")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("ServiceYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("SourceReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
@@ -555,17 +576,18 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("EmploymentPeriodId");
 
-                    b.HasIndex("EmployeeId", "Year")
+                    b.HasIndex("LeaveRequestId");
+
+                    b.HasIndex("TenantId", "SourceKey")
                         .IsUnique();
 
-                    b.ToTable("LeaveBalances");
+                    b.HasIndex("TenantId", "EmploymentPeriodId", "OccurredOn");
+
+                    b.ToTable("LeaveLedgerEntries");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveRequest", b =>
@@ -603,6 +625,9 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
+                    b.Property<int>("EmploymentPeriodId")
+                        .HasColumnType("int");
+
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
 
@@ -630,6 +655,8 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EmploymentPeriodId");
 
                     b.HasIndex("LeaveTypeId");
 
@@ -957,6 +984,11 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AnnualLeaveEntitlementDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(24);
+
                     b.Property<string>("ContractType")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -972,6 +1004,9 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("LeaveAccrualManagedFrom")
                         .HasColumnType("date");
 
                     b.Property<DateOnly>("StartDate")
@@ -2267,34 +2302,6 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.ToView("vw_EmployeeRiskMetric", (string)null);
                 });
 
-            modelBuilder.Entity("IKPro.Domain.ReadModels.LeaveBalanceSummary", b =>
-                {
-                    b.Property<int>("CarriedOverDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("EntitledDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RemainingDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UsedDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("vw_LeaveBalanceSummary", (string)null);
-                });
-
             modelBuilder.Entity("IKPro.Domain.ReadModels.MonthlyAttendanceSummary", b =>
                 {
                     b.Property<int>("AbsentDays")
@@ -2654,15 +2661,22 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Navigation("OffboardingCase");
                 });
 
-            modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveBalance", b =>
+            modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveLedgerEntry", b =>
                 {
-                    b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
+                    b.HasOne("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", "EmploymentPeriod")
+                        .WithMany("LeaveLedgerEntries")
+                        .HasForeignKey("EmploymentPeriodId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Employee");
+                    b.HasOne("IKPro.Domain.Entities.Leaves.LeaveRequest", "LeaveRequest")
+                        .WithMany("LedgerEntries")
+                        .HasForeignKey("LeaveRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("EmploymentPeriod");
+
+                    b.Navigation("LeaveRequest");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveRequest", b =>
@@ -2670,6 +2684,12 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", "EmploymentPeriod")
+                        .WithMany()
+                        .HasForeignKey("EmploymentPeriodId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2685,6 +2705,8 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Employee");
+
+                    b.Navigation("EmploymentPeriod");
 
                     b.Navigation("LeaveType");
 
@@ -2961,6 +2983,11 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveRequest", b =>
+                {
+                    b.Navigation("LedgerEntries");
+                });
+
             modelBuilder.Entity("IKPro.Domain.Entities.Leaves.LeaveType", b =>
                 {
                     b.Navigation("Requests");
@@ -2983,6 +3010,8 @@ namespace IKPro.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeEmploymentPeriod", b =>
                 {
                     b.Navigation("CompensationPackages");
+
+                    b.Navigation("LeaveLedgerEntries");
                 });
 
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>

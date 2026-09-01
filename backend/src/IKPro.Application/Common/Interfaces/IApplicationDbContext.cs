@@ -32,8 +32,7 @@ public interface IApplicationDbContext
     DbSet<LeaveType> LeaveTypes { get; }
     DbSet<Holiday> Holidays { get; }
     DbSet<LeaveRequest> LeaveRequests { get; }
-    DbSet<LeaveBalance> LeaveBalances { get; }
-    DbSet<Domain.ReadModels.LeaveBalanceSummary> LeaveBalanceSummaries { get; }
+    DbSet<LeaveLedgerEntry> LeaveLedgerEntries { get; }
 
     // Attendance
     DbSet<AttendanceRecord> AttendanceRecords { get; }

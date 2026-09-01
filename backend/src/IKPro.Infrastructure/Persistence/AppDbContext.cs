@@ -47,7 +47,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();
     public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
-    public DbSet<LeaveBalance> LeaveBalances => Set<LeaveBalance>();
+    public DbSet<LeaveLedgerEntry> LeaveLedgerEntries => Set<LeaveLedgerEntry>();
 
     // Attendance
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
@@ -91,8 +91,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     // DB'sine bakılacağı token dizesinden başka türlü bilinemez.
 
     // Okuma modelleri (SQL view)
-    public DbSet<Domain.ReadModels.LeaveBalanceSummary> LeaveBalanceSummaries
-        => Set<Domain.ReadModels.LeaveBalanceSummary>();
     public DbSet<Domain.ReadModels.MonthlyAttendanceSummary> MonthlyAttendanceSummaries
         => Set<Domain.ReadModels.MonthlyAttendanceSummary>();
     public DbSet<Domain.ReadModels.PayrollPeriodSummary> PayrollPeriodSummaries

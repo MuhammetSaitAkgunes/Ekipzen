@@ -98,7 +98,7 @@ public sealed class RecruitmentTests(IKProApiFactory factory)
 
         await PatchStatusAsync(admin, candidate.Id, "Teklif");
 
-        // --- hire → Employee dönüşümü (tam provizyon: login + izin bakiyesi) ---
+        // --- hire → Employee dönüşümü (tam provizyon: login + çalışma dönemi) ---
         var hireEmail = $"burak.yilmaz-{Guid.NewGuid():N}@hrmaster.local";
         var hireResponse = await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
         {
@@ -109,13 +109,14 @@ public sealed class RecruitmentTests(IKProApiFactory factory)
         var hired = (await hireResponse.Content.ReadFromJsonAsync<HireResultDto>())!;
         hired.EmployeeName.Should().Be("Burak Yılmaz");
 
-        // İşe alınan kişi davetini kabul eder (şifre belirler), login olur ve
-        // yıllık izin bakiyesi (24) kurulmuştur.
+        // İşe alınan kişi davetini kabul eder (şifre belirler), login olur.
+        // Yeni dönemde peşin bakiye verilmez; ilk hak ediş çalışma yıldönümündedir.
         await AcceptInviteAsync(hireEmail);
         var hiredClient = await AuthedClientAsync(hireEmail);
         var hiredBalance = await GetAsync<LeaveBalanceDto>(
             hiredClient, $"/api/leaves/balance?year={DateTime.UtcNow.Year}");
-        hiredBalance.EntitledDays.Should().Be(24);
+        hiredBalance.EntitledDays.Should().Be(0);
+        hiredBalance.NextAccrualDate.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1));
 
         // Personel kartı directory'de görünür.
         var directory = await GetAsync<PagedResult<EmployeeListItemDto>>(

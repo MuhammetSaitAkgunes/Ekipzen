@@ -7,6 +7,7 @@ import {
   useDepartments,
   useEmployee,
   useEmployeeEmploymentFoundation,
+  useRehireEmployee,
   useSaveCompensationPackage,
   useSaveEmployee,
   useUploadPhoto,
@@ -150,12 +151,15 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
+  const [rehireDate, setRehireDate] = useState("");
+  const [rehireContractType, setRehireContractType] = useState("indefinite");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const detailQ = useEmployee(employeeId);
   const departmentsQ = useDepartments();
   const foundationQ = useEmployeeEmploymentFoundation(employeeId, !readOnly);
   const save = useSaveEmployee();
+  const rehire = useRehireEmployee();
   const saveCompensation = useSaveCompensationPackage();
   const uploadPhoto = useUploadPhoto();
 
@@ -212,6 +216,26 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
       showToast("Yeni ücret paketi yürürlük tarihiyle kaydedildi.", "success");
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Ücret paketi kaydedilemedi.");
+    }
+  };
+
+  const handleRehire = async () => {
+    if (employeeId === null) return;
+    setError(null);
+    if (!rehireDate) {
+      setError("İşe dönüş tarihi zorunludur.");
+      return;
+    }
+
+    try {
+      await rehire.mutateAsync({
+        employeeId,
+        body: { rehireDate, contractType: rehireContractType },
+      });
+      showToast("Yeni çalışma dönemi açıldı; eski izin ve ücret kayıtları taşınmadı.", "success");
+      setRehireDate("");
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "İşe dönüş işlemi tamamlanamadı.");
     }
   };
 
@@ -377,6 +401,30 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
                   </div>
                 </div>
               </div>
+              {isEdit && !readOnly && detailQ.data?.status === "passive" && (
+                <div className="notice-card col-12">
+                  <strong>Yeni çalışma dönemi aç</strong>
+                  <p>İşe dönüş, önceki dönemin izin bakiyesini ve ücret paketini otomatik taşımaz.</p>
+                  <div className="form-grid-2">
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-rehire-date">İşe dönüş tarihi</label>
+                      <input id="pm-rehire-date" type="date" className="input-control" value={rehireDate}
+                        onChange={(event) => setRehireDate(event.target.value)} />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-rehire-contract">Yeni sözleşme türü</label>
+                      <select id="pm-rehire-contract" className="input-control" value={rehireContractType}
+                        onChange={(event) => setRehireContractType(event.target.value)}>
+                        <option value="indefinite">Belirsiz süreli</option>
+                        <option value="fixed-term">Belirli süreli</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="button" className="btn btn-secondary" onClick={handleRehire} disabled={rehire.isPending}>
+                    Yeni çalışma dönemini başlat
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -398,7 +446,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
                 </select>
               </div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-meal">Yemek Kartı</label><input id="pm-meal" type="text" className="input-control" value={form.mealCard} disabled={readOnly} onChange={(e) => set("mealCard", e.target.value)} /></div>
-              {isEdit && !readOnly && (
+              {isEdit && !readOnly && detailQ.data?.status === "active" && (
                 <div className="notice-card col-12">
                   <strong>Yürürlük tarihli ücret paketleri</strong>
                   <p>

@@ -14,6 +14,7 @@ export type SaveOffboardingDraftBody = components["schemas"]["SaveOffboardingDra
 export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
 export type EmployeeEmploymentFoundationDto = components["schemas"]["EmployeeEmploymentFoundationDto"];
 export type SaveCompensationPackageBody = components["schemas"]["SaveCompensationPackageBody"];
+export type RehireEmployeeBody = components["schemas"]["RehireEmployeeBody"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string };
 
@@ -69,6 +70,18 @@ export const useSaveEmployee = () => {
       id === null
         ? apiFetch<EmployeeDetailDto>("/employees", { method: "POST", body: JSON.stringify(model) })
         : apiFetch<EmployeeDetailDto>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(model) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+  });
+};
+
+export const useRehireEmployee = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, body }: { employeeId: number; body: RehireEmployeeBody }) =>
+      apiFetch<EmployeeDetailDto>(`/employees/${employeeId}/rehire`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
   });
 };

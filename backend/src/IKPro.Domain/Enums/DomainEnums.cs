@@ -24,6 +24,16 @@ public enum LeaveStatus
     Cancelled
 }
 
+/// <summary>Yıllık izin hareket defterindeki işlem türü.</summary>
+public enum LeaveLedgerEntryType
+{
+    LegacyOpening,
+    ServiceAnniversaryEntitlement,
+    Usage,
+    UsageReversal,
+    Adjustment
+}
+
 /// <summary>Canlı yoklama durumu (frontend: ontime | late | absent | early).</summary>
 public enum AttendanceStatus
 {

@@ -2,9 +2,8 @@
 
 **Son güncelleme:** 2026-09-01
 
-**Güncel çalışma tabanı:** `main@c98f6e3`; özellik dalı
-`codex/gate3-compensation-foundation` (E-5C0 yerel doğrulama tamamlandı,
-senkronizasyon onayı bekliyor)
+**Güncel çalışma tabanı:** `main@894d1b4`; özellik dalı
+`codex/gate3-leave-accrual-ledger` (E-5C1 yerel doğrulama aşamasında)
 
 **Kaynak:** özellik doğrulama sicili, Faz 2b mimari incelemesi ve tam test paketi
 
@@ -19,7 +18,7 @@ kaydı ve çıkış kanıtı birlikte tamamlanmadan kapanmış sayılmaz.
 | 0 | Personel erişim güvenliği (`E-1`) | ✅ Tamamlandı, `main` ve GitHub senkron | İşten ayrılan kullanıcının şirkete erişimini keser |
 | 1 | API doğrulama ve hata sözleşmesi (`X-1`, `C-2`, `N-1`) | ✅ Tamamlandı ve senkronlandı | Entegrasyon hatalarını anlaşılır 400 yanıtlarına çevirir; gerçek 500 alarm gürültüsünü azaltır |
 | 2 | Bordro ve parasal doğruluk | ✅ Üç dilim tamamlandı ve senkronlandı | Yanlış/negatif ödeme ve hatalı vergi matrahı riskini kapatır |
-| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2`, `E-5A+B`, `E-5C0` tamamlandı; `E-5C1` sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
+| 3 | Personel yaşam döngüsü ve işlem bütünlüğü | 🟡 `E-3`, `R-6`, `E-2`, `E-5A+B`, `E-5C0`, `E-5C1` tamamlandı; otomatik hesaplayıcı sırada | İşe alım/işten çıkış süreçlerini yarım kalmış veri ve sahipsiz onaylardan korur |
 | 4 | İzin, puantaj ve mevzuat kuralları | ⬜ Karar girdileri gerekli | Türkiye mevzuatına uyum ve yıl geçişlerinde operasyon sürekliliği sağlar |
 | 5 | Üretim güvenliği ve felaket kurtarma | ⬜ Planlandı | Kesinti ve veri kaybı riskini satış öncesi kabul edilebilir seviyeye indirir |
 | 6 | Pilot müşteri ve satış kapısı | ⬜ Kapalı | Ürünün kontrollü ücretli pilotta desteklenebilir olduğunu kanıtlar |
@@ -152,26 +151,33 @@ sunuyor. Otomatik kıdem, ihbar veya izin ücreti hesabı bilinçli olarak kapsa
 dışında kaldı. Kanıt: backend build 0 uyarı/0 hata, 71 unit + 196 integration;
 frontend production build + 150 test yeşil.
 
-Kapı 3’ün sıradaki paketi `E-5C1`: takvim yılına sabit izin bakiyesini hizmet
-yıldönümü temelli hak ediş/harcama defterine taşımak; yeniden işe alım dönemleri,
-devreden bakiye ve yıl sınırını tek doğruluk kaynağında çözmek. Bunun ardından
-otomatik kıdem/ihbar hesabı ancak uzman onaylı, tarih etkili ve sürümlü mevzuat
-kurallarıyla taslak sonuç üreten ayrı bir hesaplayıcı olarak açılacak.
+**Kapı 3 / E-5C1 tamamlandı (2026-09-01):** takvim yılına sabit izin
+bakiyesi kaldırıldı. Hak ediş, kullanım, iptal iadesi, geçiş bakiyesi ve manuel
+düzeltme; istihdam dönemine bağlı, kaynak anahtarıyla idempotent ve silinmeyen
+defter hareketlerine dönüştürüldü. Hak ediş çalışma yıldönümünde oluşuyor;
+gelecekteki hak daha erken talebi finanse etmiyor. Bekleyen rezervasyonlar ve
+onay aynı personel kapsamlı veritabanı kilidi altında yeniden doğrulanıyor.
+Yıl aşan izin yıl bazında bölünüyor; onaylı iptal ters hareket yazıyor. Yeni işe
+alım peşin izin vermiyor. Kontrollü yeniden işe alım ayrı dönem açıyor ve eski
+izin/ücret verisini taşımıyor. Migration eski bakiyeleri ve onaylı kullanımları
+veri kaybetmeden deftere çeviriyor; eşlenemeyen talepte duruyor. React izin
+defterini ve işe dönüş akışını sunuyor. 24 günlük değer uzman onaylı hukuki
+hesap değil, dönem bazlı mevcut şirket politika snapshot'ıdır.
 
-Kapı 3’ün önceki karar paketi `E-5C`: otomatik kıdem/ihbar hesabı ancak etkin
-ücret ve yan hakların güvenilir kaynağı, doğru izin yıl devri/bakiye modeli ve
-uzman onaylı tarih etkili sürümlü kurallar birlikte tanımlandığında açılacak.
-Bu girdiler tamamlanana kadar dış uzman finansal anlık görüntüsü tek güvenli
-kapanış sözleşmesidir.
+Kapı 3’ün sıradaki paketi otomatik kıdem/ihbar **taslak hesaplayıcısıdır**.
+Uygulamaya geçmeden önce tarih etkili ve sürümlü mevzuat/politika girdileri,
+uzman onay akışı ve altın senaryolar tanımlanacaktır. Bu girdiler olmadan dış
+uzman finansal anlık görüntüsü güvenli kapanış sözleşmesi olarak kalır.
 
 Çıkış ölçütü: işe giriş/çıkış uçtan uca süreç testleri, idempotanslık, yarım kalan
 işlem için kurtarma yolu ve açık sahiplik kuralları.
 
 ## Kapı 4 — İzin, puantaj ve mevzuat
 
-Kapsam: `L-1/L-2` yıl devri ve yıl aşan izin; `A-1/A-3/A-4` gece vardiyası,
-haftalık fazla mesai ve erken mesai; `R-3/P-11` gibi mevzuat değerlerinin sabit
-koddan sürümlü/yapılandırılabilir kurala taşınması.
+Kapsam: `A-1/A-3/A-4` gece vardiyası, haftalık fazla mesai ve erken mesai;
+`L-5` geçmiş izin politikası; `R-3/P-11` gibi mevzuat değerlerinin sabit koddan
+sürümlü/yapılandırılabilir kurala taşınması. `L-1/L-2/L-3/L-4/L-6/L-7`
+E-5C1 kapsamında kapatıldı.
 
 Çıkış ölçütü: mali müşavir/uzman tarafından onaylanmış karar kaydı, tarih etkili
 kural sürümü ve yıl sınırı/gece vardiyası regresyonları.

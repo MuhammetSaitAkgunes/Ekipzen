@@ -231,6 +231,69 @@ public sealed class LeavesTests(IKProApiFactory factory)
         mine.Should().Contain(r => r.Id == request.Id && r.Status == "cancelled");
     }
 
+    [Fact]
+    public async Task AnnualLeave_SplitsUsageAcrossYears_AndApprovedCancellationReversesLedger()
+    {
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var annual = await GetTypeAsync(employee, "Yıllık");
+
+        var createResponse = await CreateAsync(
+            employee, annual.Id, "2026-12-28", "2027-01-05");
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var request = (await createResponse.Content.ReadFromJsonAsync<LeaveRequestDto>())!;
+
+        (await manager.PostAsJsonAsync(
+            $"/api/leaves/{request.Id}/approve", new { note = "Yıl geçişi" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var usage = (await GetAsync<List<LeaveLedgerEntryDto>>(
+                employee, "/api/leaves/ledger?year=2026"))
+            .Concat(await GetAsync<List<LeaveLedgerEntryDto>>(
+                employee, "/api/leaves/ledger?year=2027"))
+            .Where(item => item.LeaveRequestId == request.Id && item.Type == "usage")
+            .ToList();
+        usage.Should().HaveCount(2, "yıl aşan kullanım her takvim yılına ayrı hareket yazmalı");
+        usage.Sum(item => item.Days).Should().Be(-request.Days);
+
+        (await employee.PostAsync($"/api/leaves/{request.Id}/cancel", null))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var reversed = (await GetAsync<List<LeaveLedgerEntryDto>>(
+                employee, "/api/leaves/ledger?year=2026"))
+            .Concat(await GetAsync<List<LeaveLedgerEntryDto>>(
+                employee, "/api/leaves/ledger?year=2027"))
+            .Where(item => item.LeaveRequestId == request.Id && item.Type == "usage-reversal")
+            .ToList();
+        reversed.Should().HaveCount(2);
+        reversed.Sum(item => item.Days).Should().Be(request.Days);
+    }
+
+    [Fact]
+    public async Task FutureRequest_MaterializesAnniversaryOnce()
+    {
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        var annual = await GetTypeAsync(employee, "Yıllık");
+
+        var response = await CreateAsync(employee, annual.Id, "2027-04-05", "2027-04-05");
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var request = (await response.Content.ReadFromJsonAsync<LeaveRequestDto>())!;
+        try
+        {
+            var first = await GetAsync<List<LeaveLedgerEntryDto>>(
+                employee, "/api/leaves/ledger?year=2027");
+            var second = await GetAsync<List<LeaveLedgerEntryDto>>(
+                employee, "/api/leaves/ledger?year=2027");
+            first.Should().ContainSingle(item =>
+                item.Type == "service-anniversary" && item.ServiceYear == 5 && item.Days == 24);
+            second.Count(item => item.Type == "service-anniversary" && item.ServiceYear == 5)
+                .Should().Be(1, "aynı yıldönümü idempotent olmalı");
+        }
+        finally
+        {
+            await employee.PostAsync($"/api/leaves/{request.Id}/cancel", null);
+        }
+    }
+
     // --- yardımcılar ---
 
     private async Task<HttpClient> AuthedClientAsync(string email)

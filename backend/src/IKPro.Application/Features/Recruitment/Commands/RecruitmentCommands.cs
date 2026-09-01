@@ -358,15 +358,6 @@ public sealed class HireCandidateCommandHandler(
         });
         context.Employees.Add(employee);
 
-        // İşe giriş yılı için yıllık izin hak edişi (seed varsayılanıyla tutarlı: 24 gün).
-        context.LeaveBalances.Add(new Domain.Entities.Leaves.LeaveBalance
-        {
-            Employee = employee,
-            Year = hireDate.Year,
-            EntitledDays = 24,
-            CarriedOverDays = 0,
-        });
-
         var provisioning = new IdentityProvisioningOperation
         {
             Type = IdentityProvisioningOperationType.EmployeeLogin,
