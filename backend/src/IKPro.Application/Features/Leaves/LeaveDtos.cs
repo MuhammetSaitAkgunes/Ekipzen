@@ -1,7 +1,6 @@
 using IKPro.Application.Common.Exceptions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace IKPro.Application.Features.Leaves;
 
@@ -25,9 +24,27 @@ public sealed record LeaveRequestDto(
     DateTime? DecisionAtUtc,
     DateTime CreatedAtUtc);
 
-/// <summary>Bakiye kartı — leaves.js: hak ediş / kullanılan / kalan.</summary>
+/// <summary>Hareket defterinden üretilen hizmet dönemi bakiyesi.</summary>
 public sealed record LeaveBalanceDto(
-    int Year, int EntitledDays, int CarriedOverDays, int UsedDays, int RemainingDays);
+    int Year,
+    int EntitledDays,
+    int CarriedOverDays,
+    int UsedDays,
+    int PendingDays,
+    int RemainingDays,
+    DateOnly ThroughDate,
+    DateOnly? NextAccrualDate,
+    int EmploymentPeriodId);
+
+public sealed record LeaveLedgerEntryDto(
+    int Id,
+    int EmploymentPeriodId,
+    int? LeaveRequestId,
+    DateOnly OccurredOn,
+    string Type,
+    int Days,
+    int? ServiceYear,
+    string SourceReference);
 
 /// <summary>Takım yokluk widget'ı satırı.</summary>
 public sealed record TeamLeaveDto(
@@ -57,40 +74,4 @@ public static class LeaveGuards
     public static int RequireEmployeeId(ICurrentUser currentUser)
         => currentUser.EmployeeId
             ?? throw new ForbiddenAccessException("Hesabınıza bağlı personel kaydı yok; izin işlemleri yapılamaz.");
-
-    /// <summary>
-    /// Yıllık izin bakiyesi kontrolü — <c>vw_LeaveBalanceSummary</c> yalnız onaylı
-    /// talepleri "kullanılmış" saydığından, bekleyen (henüz onaysız) düşümlü talepleri
-    /// de hesaba katar. Böylece çakışmayan birden çok bekleyen talep toplamda bakiyeyi
-    /// aşamaz. <paramref name="excludeRequestId"/> onay anında değerlendirilen talebin
-    /// kendisini bekleyen toplamdan çıkarmak içindir. Yalnız düşümlü tip için çağrılır.
-    /// </summary>
-    public static async Task EnsureBalanceAsync(
-        IApplicationDbContext context,
-        int employeeId,
-        int year,
-        int requestedDays,
-        int? excludeRequestId,
-        CancellationToken cancellationToken)
-    {
-        var summary = await context.LeaveBalanceSummaries.FirstOrDefaultAsync(
-            s => s.EmployeeId == employeeId && s.Year == year, cancellationToken);
-        var remaining = summary?.RemainingDays ?? 0;
-
-        var pendingDays = await context.LeaveRequests
-            .Where(r => r.EmployeeId == employeeId
-                        && r.Status == LeaveStatus.Pending
-                        && r.StartDate.Year == year
-                        && r.LeaveType!.DeductsFromAnnualBalance
-                        && (excludeRequestId == null || r.Id != excludeRequestId))
-            .SumAsync(r => r.Days, cancellationToken);
-
-        var available = remaining - pendingDays;
-        if (requestedDays > available)
-        {
-            throw new ConflictException(
-                $"Yetersiz izin bakiyesi: talep {requestedDays} gün, kullanılabilir {available} gün " +
-                $"(kalan {remaining} − bekleyen {pendingDays}).");
-        }
-    }
 }

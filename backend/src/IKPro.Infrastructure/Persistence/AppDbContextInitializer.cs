@@ -77,7 +77,7 @@ public class AppDbContextInitializer(
             await SeedDemoUsersAsync();
             await SeedLeaveCatalogAsync();
             await SeedHolidaysAsync();
-            await SeedLeaveBalancesAsync();
+            await SeedLeaveLedgerAsync();
             await SeedPayrollSettingsAsync();
             await SeedAnalyticsAsync();
             await SeedComplianceAsync();
@@ -213,9 +213,30 @@ public class AppDbContextInitializer(
         await context.SaveChangesAsync();
 
         var year = DateTime.UtcNow.Year;
-        context.LeaveBalances.AddRange(
-            new LeaveBalance { EmployeeId = deniz.Id, Year = year, EntitledDays = 24, CarriedOverDays = 0 },
-            new LeaveBalance { EmployeeId = cem.Id, Year = year, EntitledDays = 24, CarriedOverDays = 0 });
+        var managedFrom = new DateOnly(year + 1, 1, 1);
+        var denizPeriod = deniz.EmploymentPeriods.Single();
+        var cemPeriod = cem.EmploymentPeriods.Single();
+        denizPeriod.LeaveAccrualManagedFrom = managedFrom;
+        cemPeriod.LeaveAccrualManagedFrom = managedFrom;
+        context.LeaveLedgerEntries.AddRange(
+            new LeaveLedgerEntry
+            {
+                EmploymentPeriodId = denizPeriod.Id,
+                OccurredOn = new DateOnly(year, 1, 1),
+                Type = LeaveLedgerEntryType.LegacyOpening,
+                Days = 24,
+                SourceKey = $"demo-opening:{denizPeriod.Id}:{year}",
+                SourceReference = "Demo geçiş bakiyesi",
+            },
+            new LeaveLedgerEntry
+            {
+                EmploymentPeriodId = cemPeriod.Id,
+                OccurredOn = new DateOnly(year, 1, 1),
+                Type = LeaveLedgerEntryType.LegacyOpening,
+                Days = 24,
+                SourceKey = $"demo-opening:{cemPeriod.Id}:{year}",
+                SourceReference = "Demo geçiş bakiyesi",
+            });
 
         context.CompanyProfiles.Add(new CompanyProfile
         {
@@ -410,21 +431,28 @@ public class AppDbContextInitializer(
         await context.SaveChangesAsync();
     }
 
-    private async Task SeedLeaveBalancesAsync()
+    private async Task SeedLeaveLedgerAsync()
     {
-        if (await context.LeaveBalances.AnyAsync()) return;
+        if (await context.LeaveLedgerEntries.AnyAsync()) return;
 
-        // leaves.js bakiye kartı: hak ediş 24 gün (tüm personel, içinde bulunulan yıl).
+        // Mevcut demo politikasını geçiş açılışı olarak koru. Bundan sonraki
+        // krediler takvim yılında değil hizmet yıldönümünde oluşur.
         var year = DateTime.UtcNow.Year;
-        var employeeIds = await context.Employees.Select(e => e.Id).ToListAsync();
-
-        context.LeaveBalances.AddRange(employeeIds.Select(id => new LeaveBalance
+        var managedFrom = new DateOnly(year + 1, 1, 1);
+        var periods = await context.EmployeeEmploymentPeriods.ToListAsync();
+        foreach (var period in periods)
         {
-            EmployeeId = id,
-            Year = year,
-            EntitledDays = 24,
-            CarriedOverDays = 0,
-        }));
+            period.LeaveAccrualManagedFrom = managedFrom;
+            context.LeaveLedgerEntries.Add(new LeaveLedgerEntry
+            {
+                EmploymentPeriodId = period.Id,
+                OccurredOn = new DateOnly(year, 1, 1),
+                Type = LeaveLedgerEntryType.LegacyOpening,
+                Days = 24,
+                SourceKey = $"demo-opening:{period.Id}:{year}",
+                SourceReference = "Demo geçiş bakiyesi",
+            });
+        }
 
         await context.SaveChangesAsync();
     }

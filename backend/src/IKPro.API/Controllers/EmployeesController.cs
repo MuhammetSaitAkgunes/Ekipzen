@@ -134,6 +134,16 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.OtherRegularBenefits,
             body.SourceReference), cancellationToken));
 
+    [HttpPost("{id:int}/rehire")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeEmploymentFoundationDto>> Rehire(
+        int id, RehireEmployeeBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(
+            new RehireEmployeeCommand(id, body.RehireDate, body.ContractType), cancellationToken));
+
     [HttpGet("{id:int}/offboarding-context")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeOffboardingContextDto>(StatusCodes.Status200OK)]
@@ -268,6 +278,8 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal MealAllowance,
         decimal OtherRegularBenefits,
         string SourceReference);
+
+    public sealed record RehireEmployeeBody(DateOnly RehireDate, string ContractType);
 
     public sealed record SaveOffboardingDraftBody(
         int? ExpectedVersion,

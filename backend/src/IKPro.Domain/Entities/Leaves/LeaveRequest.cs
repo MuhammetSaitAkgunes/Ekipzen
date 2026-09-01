@@ -12,6 +12,9 @@ public class LeaveRequest : AuditableEntity
     public int EmployeeId { get; set; }
     public Employee? Employee { get; set; }
 
+    public int EmploymentPeriodId { get; set; }
+    public EmployeeEmploymentPeriod? EmploymentPeriod { get; set; }
+
     public int LeaveTypeId { get; set; }
     public LeaveType? LeaveType { get; set; }
 
@@ -30,4 +33,6 @@ public class LeaveRequest : AuditableEntity
     public string? DecisionByUserId { get; set; }
     public DateTime? DecisionAtUtc { get; set; }
     public string? DecisionNote { get; set; }
+
+    public ICollection<LeaveLedgerEntry> LedgerEntries { get; set; } = new List<LeaveLedgerEntry>();
 }

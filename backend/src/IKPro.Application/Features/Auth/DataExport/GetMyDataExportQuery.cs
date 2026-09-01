@@ -14,7 +14,8 @@ public sealed record EmployeeInfo(
     string? PersonalEmail, string? HomeAddress, string? Iban, string? BankName);
 
 public sealed record LeaveRequestExportItem(string LeaveTypeName, DateOnly StartDate, DateOnly EndDate, int Days, string Status);
-public sealed record LeaveBalanceExportItem(int Year, int EntitledDays, int CarriedOverDays);
+public sealed record LeaveLedgerExportItem(
+    DateOnly OccurredOn, string Type, int Days, string SourceReference);
 public sealed record AttendanceExportItem(DateOnly WorkDate, TimeOnly? CheckIn, TimeOnly? CheckOut, int WorkedMinutes, string Status);
 public sealed record ComplianceDocumentExportItem(string DocumentName, string Status, DateOnly? DueDate);
 public sealed record PayslipExportItem(string PeriodName, string ApprovalStatus);
@@ -23,7 +24,7 @@ public sealed record MyDataExportDto(
     AccountInfo Account,
     EmployeeInfo? Employee,
     IReadOnlyList<LeaveRequestExportItem> LeaveRequests,
-    IReadOnlyList<LeaveBalanceExportItem> LeaveBalances,
+    IReadOnlyList<LeaveLedgerExportItem> LeaveLedger,
     IReadOnlyList<AttendanceExportItem> AttendanceRecords,
     IReadOnlyList<ComplianceDocumentExportItem> ComplianceDocuments,
     IReadOnlyList<PayslipExportItem> Payslips,
@@ -52,7 +53,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
 
         EmployeeInfo? employeeInfo = null;
         IReadOnlyList<LeaveRequestExportItem> leaveRequests = Array.Empty<LeaveRequestExportItem>();
-        IReadOnlyList<LeaveBalanceExportItem> leaveBalances = Array.Empty<LeaveBalanceExportItem>();
+        IReadOnlyList<LeaveLedgerExportItem> leaveLedger = Array.Empty<LeaveLedgerExportItem>();
         IReadOnlyList<AttendanceExportItem> attendance = Array.Empty<AttendanceExportItem>();
         IReadOnlyList<ComplianceDocumentExportItem> compliance = Array.Empty<ComplianceDocumentExportItem>();
         IReadOnlyList<PayslipExportItem> payslips = Array.Empty<PayslipExportItem>();
@@ -80,9 +81,11 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
                     r.LeaveType!.Name, r.StartDate, r.EndDate, r.Days, r.Status.ToString()))
                 .ToListAsync(cancellationToken);
 
-            leaveBalances = await context.LeaveBalances
-                .Where(b => b.EmployeeId == employeeId)
-                .Select(b => new LeaveBalanceExportItem(b.Year, b.EntitledDays, b.CarriedOverDays))
+            leaveLedger = await context.LeaveLedgerEntries
+                .Where(item => item.EmploymentPeriod!.EmployeeId == employeeId)
+                .OrderBy(item => item.OccurredOn)
+                .Select(item => new LeaveLedgerExportItem(
+                    item.OccurredOn, item.Type.ToString(), item.Days, item.SourceReference))
                 .ToListAsync(cancellationToken);
 
             attendance = await context.AttendanceRecords
@@ -103,7 +106,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         }
 
         var dto = new MyDataExportDto(
-            account, employeeInfo, leaveRequests, leaveBalances, attendance, compliance, payslips,
+            account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
             DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);

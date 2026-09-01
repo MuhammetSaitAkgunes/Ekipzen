@@ -28,6 +28,12 @@ public sealed class LeavesController(ISender sender) : ControllerBase
         [FromQuery] int? year, CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetMyLeaveBalanceQuery(year), cancellationToken));
 
+    [HttpGet("ledger")]
+    [ProducesResponseType<IReadOnlyList<LeaveLedgerEntryDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<LeaveLedgerEntryDto>>> GetMyLedger(
+        [FromQuery] int? year, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetMyLeaveLedgerQuery(year), cancellationToken));
+
     [HttpGet("my")]
     [ProducesResponseType<IReadOnlyList<LeaveRequestDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<LeaveRequestDto>>> GetMyRequests(

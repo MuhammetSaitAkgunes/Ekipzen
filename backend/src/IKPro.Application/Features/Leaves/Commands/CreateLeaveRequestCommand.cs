@@ -11,8 +11,8 @@ namespace IKPro.Application.Features.Leaves.Commands;
 
 /// <summary>
 /// İzin talebi oluşturur. Gün sayısı SQL iş-günü fonksiyonuyla hesaplanır;
-/// çakışan talep ve yetersiz bakiye 409 döner. Onay gerektirmeyen tipler
-/// (ör. Raporlu) doğrudan onaylı açılır.
+/// çakışan talep ve yetersiz bakiye 409 döner. Düşümlü onaylı talep
+/// istihdam dönemi ledger'ına takvim yılı dilimleri halinde yazılır.
 /// </summary>
 public sealed record CreateLeaveRequestCommand(
     int LeaveTypeId,
@@ -37,24 +37,45 @@ public sealed class CreateLeaveRequestCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IWorkingDayCalculator workingDayCalculator,
-    INotificationTrigger notificationTrigger)
+    INotificationTrigger notificationTrigger,
+    IDatabaseLock databaseLock)
     : IRequestHandler<CreateLeaveRequestCommand, LeaveRequestDto>
 {
     public async Task<LeaveRequestDto> Handle(
         CreateLeaveRequestCommand request, CancellationToken cancellationToken)
     {
         var employeeId = LeaveGuards.RequireEmployeeId(currentUser);
+        var result = await databaseLock.ExecuteExclusiveAsync(
+            $"leave-ledger:{employeeId}",
+            token => CreateAsync(request, employeeId, token),
+            cancellationToken);
 
+        await notificationTrigger.LeaveRequestCreatedAsync(result.Request, cancellationToken);
+        return result.Dto;
+    }
+
+    private async Task<CreateResult> CreateAsync(
+        CreateLeaveRequestCommand request,
+        int employeeId,
+        CancellationToken cancellationToken)
+    {
         var leaveType = await context.LeaveTypes
             .FirstOrDefaultAsync(t => t.Id == request.LeaveTypeId, cancellationToken)
             ?? throw new NotFoundException("İzin tipi", request.LeaveTypeId);
 
-        if (request.SubstituteEmployeeId is not null &&
-            !await context.Employees.AnyAsync(e => e.Id == request.SubstituteEmployeeId, cancellationToken))
+        if (request.SubstituteEmployeeId == employeeId)
         {
-            throw new NotFoundException("Vekil personel", request.SubstituteEmployeeId);
+            throw new ConflictException("İzindeki personel kendi vekili olamaz.");
+        }
+        if (request.SubstituteEmployeeId is not null
+            && !await context.Employees.AnyAsync(e => e.Id == request.SubstituteEmployeeId
+                && e.Status == Domain.Enums.EmployeeStatus.Active, cancellationToken))
+        {
+            throw new NotFoundException("Aktif vekil personel", request.SubstituteEmployeeId);
         }
 
+        var period = await LeaveLedgerService.RequirePeriodAsync(
+            context, employeeId, request.StartDate, request.EndDate, cancellationToken);
         var days = await workingDayCalculator.GetWorkingDaysAsync(
             request.StartDate, request.EndDate, cancellationToken);
         if (days == 0)
@@ -63,10 +84,10 @@ public sealed class CreateLeaveRequestCommandHandler(
         }
 
         var hasOverlap = await context.LeaveRequests.AnyAsync(r =>
-            r.EmployeeId == employeeId &&
-            (r.Status == LeaveStatus.Pending || r.Status == LeaveStatus.Approved) &&
-            r.StartDate <= request.EndDate &&
-            r.EndDate >= request.StartDate, cancellationToken);
+            r.EmployeeId == employeeId
+            && (r.Status == LeaveStatus.Pending || r.Status == LeaveStatus.Approved)
+            && r.StartDate <= request.EndDate
+            && r.EndDate >= request.StartDate, cancellationToken);
         if (hasOverlap)
         {
             throw new ConflictException("Bu tarih aralığıyla çakışan bekleyen/onaylı bir talebiniz var.");
@@ -74,14 +95,19 @@ public sealed class CreateLeaveRequestCommandHandler(
 
         if (leaveType.DeductsFromAnnualBalance)
         {
-            // Bekleyen düşümlü talepleri de hesaba katar (view yalnız onaylıyı sayar).
-            await LeaveGuards.EnsureBalanceAsync(
-                context, employeeId, request.StartDate.Year, days, excludeRequestId: null, cancellationToken);
+            if (await LeaveLedgerService.EnsureAccrualsAsync(
+                    context, period, request.StartDate, cancellationToken) > 0)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            await LeaveLedgerService.EnsureCanReserveAsync(
+                context, period, request.StartDate, days, excludeRequestId: null, cancellationToken);
         }
 
         var leaveRequest = new LeaveRequest
         {
             EmployeeId = employeeId,
+            EmploymentPeriodId = period.Id,
             LeaveTypeId = leaveType.Id,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
@@ -93,14 +119,20 @@ public sealed class CreateLeaveRequestCommandHandler(
 
         context.LeaveRequests.Add(leaveRequest);
         await context.SaveChangesAsync(cancellationToken);
+        if (leaveRequest.Status == LeaveStatus.Approved && leaveType.DeductsFromAnnualBalance)
+        {
+            await LeaveLedgerService.AddUsageEntriesAsync(
+                context, leaveRequest, workingDayCalculator, reversal: false, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
-        // Faz 11: "İzin Talepleri" bildirimi (ayar toggle'ına uyar).
-        await notificationTrigger.LeaveRequestCreatedAsync(leaveRequest, cancellationToken);
-
-        return await context.LeaveRequests
+        var dto = await context.LeaveRequests
             .AsNoTracking()
             .Where(r => r.Id == leaveRequest.Id)
             .Select(Queries.LeaveQueryProjections.Projection)
             .SingleAsync(cancellationToken);
+        return new CreateResult(leaveRequest, dto);
     }
+
+    private sealed record CreateResult(LeaveRequest Request, LeaveRequestDto Dto);
 }

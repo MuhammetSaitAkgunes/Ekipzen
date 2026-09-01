@@ -27,22 +27,77 @@ public sealed class GetLeaveTypesQueryHandler(IApplicationDbContext context)
 
 public sealed record GetMyLeaveBalanceQuery(int? Year = null) : IRequest<LeaveBalanceDto>;
 
-public sealed class GetMyLeaveBalanceQueryHandler(IApplicationDbContext context, ICurrentUser currentUser)
+public sealed class GetMyLeaveBalanceQueryHandler(
+    IApplicationDbContext context,
+    ICurrentUser currentUser,
+    IDatabaseLock databaseLock)
     : IRequestHandler<GetMyLeaveBalanceQuery, LeaveBalanceDto>
 {
-    public async Task<LeaveBalanceDto> Handle(GetMyLeaveBalanceQuery request, CancellationToken cancellationToken)
+    public Task<LeaveBalanceDto> Handle(
+        GetMyLeaveBalanceQuery request, CancellationToken cancellationToken)
     {
         var employeeId = LeaveGuards.RequireEmployeeId(currentUser);
         var year = request.Year ?? DateTime.UtcNow.Year;
+        return databaseLock.ExecuteExclusiveAsync(
+            $"leave-ledger:{employeeId}",
+            token => GetAsync(employeeId, year, token),
+            cancellationToken);
+    }
 
-        var summary = await context.LeaveBalanceSummaries
-            .FirstOrDefaultAsync(s => s.EmployeeId == employeeId && s.Year == year, cancellationToken);
+    private async Task<LeaveBalanceDto> GetAsync(
+        int employeeId, int year, CancellationToken cancellationToken)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        var throughDate = year < today.Year
+            ? new DateOnly(year, 12, 31)
+            : year == today.Year ? today : new DateOnly(year, 1, 1);
+        var period = await LeaveLedgerService.RequireLatestPeriodAsync(
+            context, employeeId, year, cancellationToken);
+        if (await LeaveLedgerService.EnsureAccrualsAsync(
+                context, period, throughDate, cancellationToken) > 0)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
-        return summary is null
-            ? new LeaveBalanceDto(year, 0, 0, 0, 0)
-            : new LeaveBalanceDto(
-                summary.Year, summary.EntitledDays, summary.CarriedOverDays,
-                summary.UsedDays, summary.RemainingDays);
+        return await LeaveLedgerService.GetBalanceAsync(
+            context, period, year, throughDate, cancellationToken);
+    }
+}
+
+public sealed record GetMyLeaveLedgerQuery(int? Year = null)
+    : IRequest<IReadOnlyList<LeaveLedgerEntryDto>>;
+
+public sealed class GetMyLeaveLedgerQueryHandler(
+    IApplicationDbContext context,
+    ICurrentUser currentUser,
+    IDatabaseLock databaseLock)
+    : IRequestHandler<GetMyLeaveLedgerQuery, IReadOnlyList<LeaveLedgerEntryDto>>
+{
+    public Task<IReadOnlyList<LeaveLedgerEntryDto>> Handle(
+        GetMyLeaveLedgerQuery request, CancellationToken cancellationToken)
+    {
+        var employeeId = LeaveGuards.RequireEmployeeId(currentUser);
+        var year = request.Year ?? DateTime.UtcNow.Year;
+        return databaseLock.ExecuteExclusiveAsync(
+            $"leave-ledger:{employeeId}",
+            token => GetAsync(employeeId, year, token),
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<LeaveLedgerEntryDto>> GetAsync(
+        int employeeId, int year, CancellationToken cancellationToken)
+    {
+        var period = await LeaveLedgerService.RequireLatestPeriodAsync(
+            context, employeeId, year, cancellationToken);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        var throughDate = year < today.Year ? new DateOnly(year, 12, 31) : today;
+        if (await LeaveLedgerService.EnsureAccrualsAsync(
+                context, period, throughDate, cancellationToken) > 0)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        return await LeaveLedgerService.GetEntriesAsync(
+            context, period.Id, year, cancellationToken);
     }
 }
 

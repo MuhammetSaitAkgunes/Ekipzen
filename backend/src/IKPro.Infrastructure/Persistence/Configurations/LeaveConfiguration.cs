@@ -20,6 +20,11 @@ public class LeaveRequestConfiguration : IEntityTypeConfiguration<LeaveRequest>
             .HasForeignKey(l => l.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        b.HasOne(l => l.EmploymentPeriod)
+            .WithMany()
+            .HasForeignKey(l => l.EmploymentPeriodId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         b.HasOne(l => l.SubstituteEmployee)
             .WithMany()
             .HasForeignKey(l => l.SubstituteEmployeeId)
@@ -44,24 +49,23 @@ public class HolidayConfiguration : IEntityTypeConfiguration<Holiday>
     }
 }
 
-public class LeaveBalanceSummaryConfiguration : IEntityTypeConfiguration<Domain.ReadModels.LeaveBalanceSummary>
+public sealed class LeaveLedgerEntryConfiguration : IEntityTypeConfiguration<LeaveLedgerEntry>
 {
-    public void Configure(EntityTypeBuilder<Domain.ReadModels.LeaveBalanceSummary> b)
+    public void Configure(EntityTypeBuilder<LeaveLedgerEntry> b)
     {
-        // Salt-okunur view eşlemesi; migration'larda tablo üretilmez.
-        b.HasNoKey().ToView("vw_LeaveBalanceSummary");
-    }
-}
+        b.Property(item => item.SourceKey).IsRequired().HasMaxLength(160);
+        b.Property(item => item.SourceReference).IsRequired().HasMaxLength(256);
+        b.HasIndex(item => new { item.TenantId, item.SourceKey }).IsUnique();
+        b.HasIndex(item => new { item.TenantId, item.EmploymentPeriodId, item.OccurredOn });
 
-public class LeaveBalanceConfiguration : IEntityTypeConfiguration<LeaveBalance>
-{
-    public void Configure(EntityTypeBuilder<LeaveBalance> b)
-    {
-        b.HasOne(x => x.Employee)
-            .WithMany()
-            .HasForeignKey(x => x.EmployeeId)
+        b.HasOne(item => item.EmploymentPeriod)
+            .WithMany(period => period.LeaveLedgerEntries)
+            .HasForeignKey(item => item.EmploymentPeriodId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        b.HasIndex(x => new { x.EmployeeId, x.Year }).IsUnique();
+        b.HasOne(item => item.LeaveRequest)
+            .WithMany(request => request.LedgerEntries)
+            .HasForeignKey(item => item.LeaveRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

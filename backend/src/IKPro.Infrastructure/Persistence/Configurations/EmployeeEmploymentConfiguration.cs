@@ -9,6 +9,7 @@ public sealed class EmployeeEmploymentPeriodConfiguration
 {
     public void Configure(EntityTypeBuilder<EmployeeEmploymentPeriod> b)
     {
+        b.Property(item => item.AnnualLeaveEntitlementDays).HasDefaultValue(24);
         b.HasIndex(item => new { item.TenantId, item.EmployeeId, item.StartDate })
             .IsUnique();
         b.HasIndex(item => new { item.TenantId, item.EmployeeId })
