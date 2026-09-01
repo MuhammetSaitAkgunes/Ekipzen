@@ -1949,6 +1949,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/employment-foundation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "application/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "text/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveCompensationPackageBody"];
+                    "text/json": components["schemas"]["SaveCompensationPackageBody"];
+                    "application/*+json": components["schemas"]["SaveCompensationPackageBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "application/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "text/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/offboarding-context": {
         parameters: {
             query?: never;
@@ -5319,6 +5436,30 @@ export interface components {
             /** Format: int32 */
             highBurnoutCount?: number;
         };
+        EmployeeCompensationPackageDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            employmentPeriodId?: number;
+            /** Format: date */
+            effectiveFrom?: string;
+            /** Format: date */
+            effectiveTo?: string | null;
+            /** Format: double */
+            monthlyGrossSalary?: number;
+            /** Format: double */
+            regularPremium?: number;
+            /** Format: double */
+            roadAllowance?: number;
+            /** Format: double */
+            mealAllowance?: number;
+            /** Format: double */
+            otherRegularBenefits?: number;
+            /** Format: double */
+            monthlyRecurringTotal?: number;
+            currency?: string | null;
+            sourceReference?: string | null;
+        };
         EmployeeDetailDto: {
             /** Format: int32 */
             id?: number;
@@ -5333,6 +5474,7 @@ export interface components {
             hireDate?: string;
             /** Format: date */
             terminationDate?: string | null;
+            contractType?: string | null;
             /** Format: int32 */
             departmentId?: number;
             department?: string | null;
@@ -5352,6 +5494,22 @@ export interface components {
             sizeBytes?: number;
             /** Format: date-time */
             createdAtUtc?: string;
+        };
+        EmployeeEmploymentFoundationDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            contractType?: string | null;
+            employmentPeriods?: components["schemas"]["EmployeeEmploymentPeriodDto"][] | null;
+            compensationPackages?: components["schemas"]["EmployeeCompensationPackageDto"][] | null;
+        };
+        EmployeeEmploymentPeriodDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string | null;
+            contractType?: string | null;
         };
         EmployeeListItemDto: {
             /** Format: int32 */
@@ -5392,8 +5550,25 @@ export interface components {
             terminationDate?: string;
             exitCode?: string | null;
             exitReason?: string | null;
+            terminationReason?: string | null;
+            noticeHandling?: string | null;
+            contractTypeSnapshot?: string | null;
             /** Format: int32 */
             successorManagerId?: number | null;
+            /** Format: int32 */
+            employmentPeriodId?: number | null;
+            /** Format: int32 */
+            compensationPackageId?: number | null;
+            /** Format: double */
+            monthlyGrossSalarySnapshot?: number;
+            /** Format: double */
+            regularPremiumSnapshot?: number;
+            /** Format: double */
+            roadAllowanceSnapshot?: number;
+            /** Format: double */
+            mealAllowanceSnapshot?: number;
+            /** Format: double */
+            otherRegularBenefitsSnapshot?: number;
             /** Format: double */
             unusedLeaveDays?: number;
             /** Format: double */
@@ -5497,6 +5672,7 @@ export interface components {
             /** Format: int32 */
             managerId?: number | null;
             status?: string | null;
+            contractType?: string | null;
             profile?: components["schemas"]["EmployeeProfileUpsertModel"];
         };
         EmployeeVoiceDto: {
@@ -6086,6 +6262,21 @@ export interface components {
             trend?: string | null;
             action?: string | null;
         };
+        SaveCompensationPackageBody: {
+            /** Format: date */
+            effectiveFrom?: string;
+            /** Format: double */
+            monthlyGrossSalary?: number;
+            /** Format: double */
+            regularPremium?: number;
+            /** Format: double */
+            roadAllowance?: number;
+            /** Format: double */
+            mealAllowance?: number;
+            /** Format: double */
+            otherRegularBenefits?: number;
+            sourceReference?: string | null;
+        };
         SaveOffboardingDraftBody: {
             /** Format: int32 */
             expectedVersion?: number | null;
@@ -6093,6 +6284,8 @@ export interface components {
             terminationDate?: string;
             exitCode?: string | null;
             exitReason?: string | null;
+            terminationReason?: string | null;
+            noticeHandling?: string | null;
             /** Format: int32 */
             successorManagerId?: number | null;
             /** Format: double */
@@ -6123,6 +6316,8 @@ export interface components {
             terminationDate?: string | null;
             /** Format: int32 */
             successorManagerId?: number | null;
+            /** Format: date */
+            rehireDate?: string | null;
         };
         SettingsDto: {
             company?: components["schemas"]["CompanyProfileDto"];

@@ -3,7 +3,16 @@ import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { DocumentsTab } from "./DocumentsTab";
-import { useDepartments, useEmployee, useSaveEmployee, useUploadPhoto, type EmployeeDetailDto, type EmployeeUpsertModel } from "./queries";
+import {
+  useDepartments,
+  useEmployee,
+  useEmployeeEmploymentFoundation,
+  useSaveCompensationPackage,
+  useSaveEmployee,
+  useUploadPhoto,
+  type EmployeeDetailDto,
+  type EmployeeUpsertModel,
+} from "./queries";
 
 type TabId = "tab-kimlik" | "tab-iletisim" | "tab-is" | "tab-mali" | "tab-ozluk" | "tab-evrak";
 
@@ -21,7 +30,7 @@ type FormState = {
   gender: string; maritalStatus: string; bloodType: string;
   mobilePhone: string; personalEmail: string; homeAddress: string;
   emergencyContactName: string; emergencyContactPhone: string;
-  departmentId: string; title: string; hireDate: string; employmentType: string;
+  departmentId: string; title: string; hireDate: string; employmentType: string; contractType: string;
   rehireEligibility: string; exitCode: string;
   iban: string; bankName: string; salaryType: string; pensionStatus: string; mealCard: string;
   tshirtSize: string; pantsSize: string; coatSize: string; shoeSize: string;
@@ -33,7 +42,7 @@ const emptyForm: FormState = {
   gender: "Erkek", maritalStatus: "Evli", bloodType: "0 Rh+",
   mobilePhone: "", personalEmail: "", homeAddress: "",
   emergencyContactName: "", emergencyContactPhone: "",
-  departmentId: "", title: "", hireDate: "", employmentType: "Tam Zamanlı",
+  departmentId: "", title: "", hireDate: "", employmentType: "Tam Zamanlı", contractType: "indefinite",
   rehireEligibility: "Değerlendirilmedi", exitCode: "Yok",
   iban: "", bankName: "", salaryType: "Net Maaş", pensionStatus: "Otomatik Katılım", mealCard: "",
   tshirtSize: "M", pantsSize: "32", coatSize: "M", shoeSize: "42",
@@ -58,6 +67,7 @@ const formFrom = (detail: EmployeeDetailDto): FormState => ({
   emergencyContactName: detail.profile?.emergencyContactName ?? "",
   emergencyContactPhone: detail.profile?.emergencyContactPhone ?? "",
   employmentType: detail.profile?.employmentType ?? emptyForm.employmentType,
+  contractType: detail.contractType ?? emptyForm.contractType,
   rehireEligibility: detail.profile?.rehireEligibility ?? emptyForm.rehireEligibility,
   exitCode: detail.profile?.exitCode ?? emptyForm.exitCode,
   iban: detail.profile?.iban ?? "",
@@ -84,6 +94,7 @@ const modelFrom = (form: FormState, existing: EmployeeDetailDto | undefined): Em
   nationalId: form.nationalId,
   managerId: existing?.managerId ?? null,
   status: existing?.status ?? "active",
+  contractType: form.contractType,
   profile: {
     birthDate: form.birthDate || null,
     gender: form.gender, maritalStatus: form.maritalStatus, bloodType: form.bloodType,
@@ -105,17 +116,47 @@ const modelFrom = (form: FormState, existing: EmployeeDetailDto | undefined): Em
   },
 });
 
+type CompensationForm = {
+  effectiveFrom: string;
+  monthlyGrossSalary: string;
+  regularPremium: string;
+  roadAllowance: string;
+  mealAllowance: string;
+  otherRegularBenefits: string;
+  sourceReference: string;
+};
+
+const emptyCompensation: CompensationForm = {
+  effectiveFrom: "",
+  monthlyGrossSalary: "",
+  regularPremium: "0",
+  roadAllowance: "0",
+  mealAllowance: "0",
+  otherRegularBenefits: "0",
+  sourceReference: "",
+};
+
+const tryNumber = (value: string): number => {
+  const result = Number(value);
+  return Number.isFinite(result) ? result : 0;
+};
+
+const currency = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" });
+
 export function PersonnelModal({ employeeId, readOnly, onClose }:
   { employeeId: number | null; readOnly: boolean; onClose: () => void }) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>("tab-kimlik");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const detailQ = useEmployee(employeeId);
   const departmentsQ = useDepartments();
+  const foundationQ = useEmployeeEmploymentFoundation(employeeId, !readOnly);
   const save = useSaveEmployee();
+  const saveCompensation = useSaveCompensationPackage();
   const uploadPhoto = useUploadPhoto();
 
   useEffect(() => {
@@ -124,6 +165,9 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
+
+  const setCompensationField = <K extends keyof CompensationForm>(key: K, value: CompensationForm[K]) =>
+    setCompensation((current) => ({ ...current, [key]: value }));
 
   const isEdit = employeeId !== null;
   const title = isEdit && detailQ.data ? `Personel Kartı — ${detailQ.data.name}` : "Yeni Personel Kartı";
@@ -139,6 +183,35 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
       onClose();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Beklenmeyen bir hata oluştu.");
+    }
+  };
+
+  const handleCompensationSave = async () => {
+    if (employeeId === null) return;
+    setError(null);
+    if (!compensation.effectiveFrom || tryNumber(compensation.monthlyGrossSalary) <= 0
+      || !compensation.sourceReference.trim()) {
+      setError("Ücret paketi için başlangıç tarihi, pozitif brüt maaş ve kaynak referansı zorunludur.");
+      return;
+    }
+
+    try {
+      await saveCompensation.mutateAsync({
+        employeeId,
+        body: {
+          effectiveFrom: compensation.effectiveFrom,
+          monthlyGrossSalary: tryNumber(compensation.monthlyGrossSalary),
+          regularPremium: tryNumber(compensation.regularPremium),
+          roadAllowance: tryNumber(compensation.roadAllowance),
+          mealAllowance: tryNumber(compensation.mealAllowance),
+          otherRegularBenefits: tryNumber(compensation.otherRegularBenefits),
+          sourceReference: compensation.sourceReference.trim(),
+        },
+      });
+      setCompensation(emptyCompensation);
+      showToast("Yeni ücret paketi yürürlük tarihiyle kaydedildi.", "success");
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "Ücret paketi kaydedilemedi.");
     }
   };
 
@@ -274,6 +347,13 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-title">Ünvan / Görev</label><input id="pm-title" type="text" className="input-control" value={form.title} disabled={readOnly} onChange={(e) => set("title", e.target.value)} /></div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-hire">İşe Giriş Tarihi</label><input id="pm-hire" type="date" className="input-control" value={form.hireDate} disabled={readOnly} onChange={(e) => set("hireDate", e.target.value)} /></div>
               <div className="input-group col-6">
+                <label className="input-label" htmlFor="pm-contract">Sözleşme Türü</label>
+                <select id="pm-contract" className="input-control" value={form.contractType} disabled={readOnly} onChange={(e) => set("contractType", e.target.value)}>
+                  <option value="indefinite">Belirsiz süreli</option>
+                  <option value="fixed-term">Belirli süreli</option>
+                </select>
+              </div>
+              <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-employment">Çalışma Şekli</label>
                 <select id="pm-employment" className="input-control" value={form.employmentType} disabled={readOnly} onChange={(e) => set("employmentType", e.target.value)}>
                   <option>Tam Zamanlı</option><option>Yarı Zamanlı</option><option>Uzaktan</option>
@@ -318,6 +398,65 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
                 </select>
               </div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-meal">Yemek Kartı</label><input id="pm-meal" type="text" className="input-control" value={form.mealCard} disabled={readOnly} onChange={(e) => set("mealCard", e.target.value)} /></div>
+              {isEdit && !readOnly && (
+                <div className="notice-card col-12">
+                  <strong>Yürürlük tarihli ücret paketleri</strong>
+                  <p>
+                    Paket bordro dönemine başlangıç girdisi sağlar; bordro satırı yine İK kontrolü
+                    ve dönem onayından geçer. Geçmiş kayıtlar değiştirilmez.
+                  </p>
+                  {foundationQ.isPending && <p>Ücret geçmişi yükleniyor…</p>}
+                  {foundationQ.isError && <p className="form-error">Ücret geçmişi yüklenemedi.</p>}
+                  {(foundationQ.data?.compensationPackages ?? []).map((item) => (
+                    <p key={item.id}>
+                      <strong>{item.effectiveFrom}</strong>
+                      {item.effectiveTo ? ` – ${item.effectiveTo}` : " – güncel"}
+                      {` · ${currency.format(item.monthlyRecurringTotal ?? 0)} · ${item.sourceReference ?? "Referans yok"}`}
+                    </p>
+                  ))}
+                  {foundationQ.data?.compensationPackages?.length === 0 && <p>Henüz ücret paketi yok.</p>}
+                  <div className="form-grid-2">
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-comp-effective">Yürürlük başlangıcı</label>
+                      <input id="pm-comp-effective" type="date" className="input-control" value={compensation.effectiveFrom}
+                        onChange={(e) => setCompensationField("effectiveFrom", e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-comp-gross">Aylık brüt maaş</label>
+                      <input id="pm-comp-gross" type="number" min="0" step="0.01" className="input-control" value={compensation.monthlyGrossSalary}
+                        onChange={(e) => setCompensationField("monthlyGrossSalary", e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-comp-premium">Düzenli prim</label>
+                      <input id="pm-comp-premium" type="number" min="0" step="0.01" className="input-control" value={compensation.regularPremium}
+                        onChange={(e) => setCompensationField("regularPremium", e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-comp-road">Yol yardımı</label>
+                      <input id="pm-comp-road" type="number" min="0" step="0.01" className="input-control" value={compensation.roadAllowance}
+                        onChange={(e) => setCompensationField("roadAllowance", e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-comp-meal">Yemek yardımı</label>
+                      <input id="pm-comp-meal" type="number" min="0" step="0.01" className="input-control" value={compensation.mealAllowance}
+                        onChange={(e) => setCompensationField("mealAllowance", e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                      <label className="input-label" htmlFor="pm-comp-other">Diğer düzenli yan hak</label>
+                      <input id="pm-comp-other" type="number" min="0" step="0.01" className="input-control" value={compensation.otherRegularBenefits}
+                        onChange={(e) => setCompensationField("otherRegularBenefits", e.target.value)} />
+                    </div>
+                    <div className="input-group form-span-2">
+                      <label className="input-label" htmlFor="pm-comp-source">Kaynak / karar referansı</label>
+                      <input id="pm-comp-source" className="input-control" value={compensation.sourceReference}
+                        onChange={(e) => setCompensationField("sourceReference", e.target.value)} placeholder="Ücret yazısı, kurul kararı veya belge no" />
+                    </div>
+                  </div>
+                  <button type="button" className="btn btn-secondary" onClick={handleCompensationSave} disabled={saveCompensation.isPending}>
+                    Yeni ücret paketini kaydet
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
