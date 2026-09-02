@@ -14,4 +14,5 @@ public enum EmployeeOffboardingStatus
 public enum OffboardingSettlementSource
 {
     ExternalExpert,
+    ApprovedRuleDraft,
 }

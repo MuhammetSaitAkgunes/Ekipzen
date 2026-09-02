@@ -1,3 +1,4 @@
+using System.Reflection;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Domain.Common;
 using IKPro.Domain.Entities.Actions;
@@ -14,7 +15,6 @@ using IKPro.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System.Reflection;
 
 namespace IKPro.Infrastructure.Persistence;
 
@@ -42,6 +42,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<EmployeeOffboardingTeamTransfer> EmployeeOffboardingTeamTransfers => Set<EmployeeOffboardingTeamTransfer>();
     public DbSet<EmployeeEmploymentPeriod> EmployeeEmploymentPeriods => Set<EmployeeEmploymentPeriod>();
     public DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages => Set<EmployeeCompensationPackage>();
+    public DbSet<TerminationCalculationRule> TerminationCalculationRules => Set<TerminationCalculationRule>();
 
     // Leaves
     public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();

@@ -1,3 +1,7 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
 using FluentAssertions;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Common.Models;
@@ -12,10 +16,6 @@ using IKPro.Domain.Enums;
 using IKPro.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
 
 namespace IKPro.Tests.Integration.Personnel;
 
@@ -379,13 +379,18 @@ public sealed class PersonnelTests(IKProApiFactory factory)
 
         (await client.PutAsJsonAsync($"/api/employees/{id}", new
         {
-            firstName = "Durum", lastName = "Kapisi", title = "Degistirildi",
-            departmentId, hireDate = "2024-01-01", status = "passive",
+            firstName = "Durum",
+            lastName = "Kapisi",
+            title = "Degistirildi",
+            departmentId,
+            hireDate = "2024-01-01",
+            status = "passive",
         })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         (await client.PatchAsJsonAsync($"/api/employees/{id}/status", new
         {
-            status = "passive", terminationDate = "2026-08-15",
+            status = "passive",
+            terminationDate = "2026-08-15",
         })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var unchanged = await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}");
@@ -422,7 +427,8 @@ public sealed class PersonnelTests(IKProApiFactory factory)
 
         (await client.PostAsJsonAsync("/api/employees/bulk-deactivate", new
         {
-            ids = new[] { id }, terminationDate = "2026-08-15",
+            ids = new[] { id },
+            terminationDate = "2026-08-15",
         })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         (await GetAsync<EmployeeDetailDto>(client, $"/api/employees/{id}"))
@@ -446,7 +452,8 @@ public sealed class PersonnelTests(IKProApiFactory factory)
             (await oldSession.GetAsync("/api/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
             (await _client.PostAsJsonAsync("/api/auth/login", new
             {
-                email = "ahmet.yilmaz@hrmaster.local", password = DemoPassword,
+                email = "ahmet.yilmaz@hrmaster.local",
+                password = DemoPassword,
             })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
             (await _client.PostAsJsonAsync("/api/auth/refresh", new
             {
@@ -470,7 +477,8 @@ public sealed class PersonnelTests(IKProApiFactory factory)
         })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await _client.PostAsJsonAsync("/api/auth/login", new
         {
-            email = "ahmet.yilmaz@hrmaster.local", password = DemoPassword,
+            email = "ahmet.yilmaz@hrmaster.local",
+            password = DemoPassword,
         })).StatusCode.Should().Be(HttpStatusCode.OK);
     }
     [Fact]
@@ -668,6 +676,123 @@ public sealed class PersonnelTests(IKProApiFactory factory)
             await db.SaveChangesAsync(CancellationToken.None);
         }
     }
+
+    [Fact]
+    public async Task TerminationCalculationRule_RequiresApproval_IsImmutable_AndGeneratesTraceableDraft()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var employeeClient = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        (await employeeClient.GetAsync("/api/termination-calculation-rules"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var effectiveFrom = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        var createRule = await admin.PostAsJsonAsync("/api/termination-calculation-rules", new
+        {
+            effectiveFrom,
+            dailyWageDivisor = 30m,
+            severanceDaysPerYear = 30m,
+            minimumSeveranceServiceDays = 365,
+            severanceCeiling = 73729.87m,
+            noticeDaysUnderSixMonths = 14,
+            noticeDaysSixToEighteenMonths = 28,
+            noticeDaysEighteenToThirtySixMonths = 42,
+            noticeDaysOverThirtySixMonths = 56,
+            noticeFirstThresholdMonths = 6,
+            noticeSecondThresholdMonths = 18,
+            noticeThirdThresholdMonths = 36,
+            includeRegularPremiumInDressedWage = true,
+            includeRoadAllowanceInDressedWage = true,
+            includeMealAllowanceInDressedWage = true,
+            includeOtherRegularBenefitsInDressedWage = true,
+            sourceReference = "CSGB 2026 + uzman doğrulama TEST",
+            reviewNotes = "Entegrasyon testi",
+        });
+        createRule.StatusCode.Should().Be(HttpStatusCode.Created);
+        var rule = (await createRule.Content.ReadFromJsonAsync<TerminationCalculationRuleDto>())!;
+        rule.Status.Should().Be("draft");
+
+        var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departments[0].Id, "Hesap", $"Taslak{Guid.NewGuid():N}"[..12]);
+        var terminationDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        var foundation = await GetAsync<EmployeeEmploymentFoundationDto>(
+            admin, $"/api/employees/{employeeId}/employment-foundation");
+        var packageResponse = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = foundation.EmploymentPeriods.Single().StartDate,
+                monthlyGrossSalary = 60000m,
+                regularPremium = 3000m,
+                roadAllowance = 1000m,
+                mealAllowance = 2000m,
+                otherRegularBenefits = 1000m,
+                sourceReference = "Test ücret paketi",
+            });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var draft = await SaveOffboardingDraftAsync(
+            admin, employeeId, terminationDate,
+            unusedLeaveDays: 3m);
+
+        (await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/offboarding/{draft.Id}/calculation-draft", new
+            {
+                expectedVersion = draft.Version,
+                confirmSeveranceEligibility = true,
+                confirmNoticeEligibility = false,
+                expertReviewReference = "Uzman inceleme TEST-1",
+            })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "taslak kural hesapta kullanılamamalı");
+
+        var approveResponse = await admin.PostAsJsonAsync(
+            $"/api/termination-calculation-rules/{rule.Id}/approve",
+            new { expectedVersion = rule.Version });
+        approveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var approved = (await approveResponse.Content
+            .ReadFromJsonAsync<TerminationCalculationRuleDto>())!;
+        approved.Status.Should().Be("approved");
+
+        (await admin.PutAsJsonAsync($"/api/termination-calculation-rules/{approved.Id}", new
+        {
+            expectedVersion = approved.Version,
+            effectiveFrom,
+            dailyWageDivisor = 30m,
+            severanceDaysPerYear = 30m,
+            minimumSeveranceServiceDays = 365,
+            severanceCeiling = 99999m,
+            noticeDaysUnderSixMonths = 14,
+            noticeDaysSixToEighteenMonths = 28,
+            noticeDaysEighteenToThirtySixMonths = 42,
+            noticeDaysOverThirtySixMonths = 56,
+            noticeFirstThresholdMonths = 6,
+            noticeSecondThresholdMonths = 18,
+            noticeThirdThresholdMonths = 36,
+            includeRegularPremiumInDressedWage = true,
+            includeRoadAllowanceInDressedWage = true,
+            includeMealAllowanceInDressedWage = true,
+            includeOtherRegularBenefitsInDressedWage = true,
+            sourceReference = "Değiştirme denemesi",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "onaylı sürüm değiştirilememeli");
+
+        var calculationResponse = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/offboarding/{draft.Id}/calculation-draft", new
+            {
+                expectedVersion = draft.Version,
+                confirmSeveranceEligibility = true,
+                confirmNoticeEligibility = false,
+                expertReviewReference = "Uzman inceleme TEST-1",
+            });
+        calculationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var calculated = (await calculationResponse.Content
+            .ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
+        calculated.SettlementSource.Should().Be("approved-rule-draft");
+        calculated.CalculationRuleId.Should().Be(approved.Id);
+        calculated.CalculationRuleVersion.Should().Be(approved.Version);
+        calculated.CalculationGeneratedAtUtc.Should().NotBeNull();
+        calculated.UnusedLeavePayment.Should().Be(6000m);
+        calculated.SeverancePayment.Should().BeGreaterThan(0m);
+        calculated.NoticePayment.Should().Be(0m);
+    }
     // --- departmanlar ---
 
     [Fact]
@@ -748,11 +873,17 @@ public sealed class PersonnelTests(IKProApiFactory factory)
         var response = await client.PutAsJsonAsync(
             $"/api/employees/{employeeId}/offboarding-draft", new
             {
-                expectedVersion, terminationDate, exitCode = "TEST-03",
+                expectedVersion,
+                terminationDate,
+                exitCode = "TEST-03",
                 exitReason = "Entegrasyon testi",
-                terminationReason = "employee-resignation", noticeHandling = "not-applicable",
+                terminationReason = "employee-resignation",
+                noticeHandling = "not-applicable",
                 successorManagerId,
-                unusedLeaveDays, unusedLeavePayment, severancePayment, noticePayment,
+                unusedLeaveDays,
+                unusedLeavePayment,
+                severancePayment,
+                noticePayment,
                 settlementReference = "Test uzman hesap belgesi",
                 settlementNotes = "Otomatik mevzuat hesabı değildir.",
             });
