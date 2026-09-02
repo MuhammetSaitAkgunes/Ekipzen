@@ -1,7 +1,7 @@
 # Employees (Personel) — Özellik Doğrulama
 
-**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-08-31 · **Kapsam:** 15 uç
-nokta, `Features/Employees` + `EmployeesController` · **Mevcut test:** 42
+**Tarih:** 2026-08-13 · **Son güncelleme:** 2026-09-02 · **Kapsam:** personel
+ve işten çıkış hesap kuralı uçları · `Features/Employees` · **Mevcut test:** 43+
 
 **Neden bu alan seçildi:** kapsaması en yüksek alan. Yöntem açısından da bilgi
 verici: iyi test edilmiş bir alanda ÖD ne bulur?
@@ -20,7 +20,7 @@ bir **süreç** olduğu için hiçbir testin kapsamına girmemiş.
 | **E-2** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Halef zorunlu; ekip/onay kapsamı ve yönetici rolü güvenle devrediliyor | status/offboarding/upsert + Identity provizyonu + integration/UI testleri |
 | **E-3** | Mantık | **ÇÖZÜLDÜ 2026-08-31** | Puantaj yalnız personelin etkin çalışma tarih aralığında kabul ediliyor | create/update + integration testleri |
 | E-4 | Mantık | ORTA | **Geçersiz TC kabul ediliyor** (`11111111111` → 201); yalnız 11 hane kontrolü var | `EmployeeUpsertModel` → `NationalIdRegex = ^\d{11}$` |
-| **E-5** | Kod | **KISMEN ÇÖZÜLDÜ 2026-08-31** | Kalıcı, geri alınabilir süreç ve uzman kaynaklı finansal kapanış tamam; otomatik yasal hesap `E-5C` kararlarını bekliyor | `EmployeeOffboardingWorkflow`; `EmployeeOffboardingCase` |
+| **E-5** | Kod | **E-5C2 YAZILIMI TAMAM 2026-09-02** | Sürümlü uzman kuralı ve izlenebilir hesap taslağı tamam; üretim kullanımı ilk uzman onaylı kural/senaryoları bekliyor | `TerminationCalculationRules`; `TerminationDraftCalculator`; `EmployeeOffboardingCase` |
 | **E-6** | Kod | **ÇÖZÜLDÜ 2026-08-31** | Toplu pasifleştirme süreç kapısını aşmasın diye devre dışı; arayüzde yalnız raporlama seçimi kaldı | `EmployeesController`; `PersonnelPage` |
 
 **Doğru çalışan, kanıtlanmış davranışlar:**
@@ -131,7 +131,7 @@ hata kurumdan geri döner. Mükerrer TC kontrolü var ama **geçersiz TC** kontr
 | 7 | Audit izi | ✅ Trigger + interceptor + silinmeyen, sürümlü işten çıkış vakası |
 | 8 | Test boşluğu | ❌ Aşağıda |
 
-### E-5 · İşten çıkış kapanışı — KISMEN ÇÖZÜLDÜ (2026-08-31)
+### E-5 · İşten çıkış kapanışı — E-5C2 YAZILIMI TAMAM (2026-09-02)
 
 `E-5A+B` ile işten çıkış kalıcı ve sürümlü `Taslak → Tamamlandı → Geri Alındı`
 vakasına dönüştü. Taslak; ayrılış/çıkış bilgisi, halef, kullanılmayan izin,
@@ -141,11 +141,16 @@ tek işlemde kaydediyor. Geri alma; organizasyon anlık görüntüsü değişmi�
 veriyor; değişmemişse ekip, durum ve erişim niyetini telafi ediyor. Geçmiş vaka
 silinmediği için karar ve tersine çevirme gerekçesi izlenebilir.
 
-Uygulama hukuki tutar hesaplamıyor. Kullanılmayan izin, kıdem ve ihbar değerleri
-kaynağı/referansı görünen dış uzman onaylı finansal anlık görüntü olarak
-saklanıyor. `E-5C`; etkin ücret/yan hak kaynağı, izin yıl devri doğruluğu ve
-uzman onaylı tarih etkili sürümlü kurallar tanımlandıktan sonra otomatik hesap
-seçeneğini değerlendirecek.
+`E-5C2` ile tarih etkili hesap kuralları taslak hazırlanıyor, uzman onayıyla
+değişmez sürüme dönüşüyor ve vaka snapshot'larıyla yalnız hesap taslağı
+üretiyor. Kıdem/ihbar hak edişi vaka bazında ayrıca teyit edilmeden tutar
+üretilmiyor. Sonuç; kural kimliği/sürümü, üreten kullanıcı ve zamanla vakaya
+bağlanıyor; ayrı tamamlama eylemi insan onayı sınırı olarak korunuyor. Harici
+uzman girişi alternatif yol olmaya devam ediyor. Ayrıntı:
+[`e5c2-isten-cikis-hesap-taslagi.md`](../e5c2-isten-cikis-hesap-taslagi.md).
+
+Yazılım hazır olsa da ilk üretim kuralı ve gerçek vaka beklenen sonuçları
+yetkili uzman tarafından onaylanana kadar hukuki üretim kapısı kapalıdır.
 
 ### E-6 · Toplu pasife alma kapısı — ÇÖZÜLDÜ (2026-08-31)
 
@@ -170,8 +175,9 @@ ediliyor; halef, ekip/onay devri, rol terfi/geri alma ve eski rol tokenı doğru
 anlık görüntü toplamı, Identity erişim kapatma/açma, stale sürüm reddi,
 organizasyon sapmasında güvenli 409 ve onarım sonrası ekip/rol geri yükleme.
 
-**Hâlâ test edilmemiş davranış:** geçersiz TC algoritması (E-4). `E-5C`
-otomatik yasal hesap değildir; ürün ve uzman karar girdisi bekleyen yeni dilimdir.
+**Yeni kapsanan davranış:** taslak/onaylı kural ayrımı, onaylı sürümün
+değişmezliği, rol koruması, vaka bazlı uygunluk teyidi, hesap sınırları ve kural
+sürümü izi. **Hâlâ test edilmemiş davranış:** geçersiz TC algoritması (E-4).
 
 **Yöntem açısından not:** ilk incelemede bu alanın 38 testi vardı ve hiçbiri E-1'i yakalamıyordu.
 Sebep, testlerin **uç nokta** düzeyinde yazılmış olması: her uç tek başına doğru
@@ -183,5 +189,6 @@ olarak bunu yakalamak için var.
 
 ## Sonraki adım
 
-1. **E-5C karar paketi** — etkin ücret/yan hak, izin devri ve sürümlü uzman kuralları
-2. **E-4** — TC algoritma doğrulaması
+1. **E-5C3 uzman kabul paketi** — ilk üretim kuralı + gerçek vaka beklenen sonuçları
+2. **Yerel demo şema bakımı** — geride kalan tenant migration'larını kontrollü uygulama
+3. **E-4** — TC algoritma doğrulaması

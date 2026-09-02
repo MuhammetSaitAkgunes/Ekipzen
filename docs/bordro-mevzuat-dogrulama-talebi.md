@@ -81,7 +81,7 @@ davranışlar. Her biri için "doğru davranış nedir?" sorusuna yanıt bekliyo
 | S5 | Fazla mesai için **tek çarpan** var (varsayılan 1,5). | Hafta tatili ve ulusal bayram/genel tatil çalışması için ayrı çarpan (%100) gerekiyor mu? Hesaplama farkı nedir? |
 | S6 | İşveren SGK primi **%20,5 tam** hesaplanıyor; hiçbir teşvik/indirim uygulanmıyor. | 5510 sayılı kanun kapsamındaki 5 puanlık indirim hangi koşullarda uygulanır? İşveren maliyetine nasıl yansır? |
 | S7 | Hesap sonuçlarında **yuvarlama yapılmıyor** (kuruş sonrası basamaklar taşınıyor). | Hangi kalemler, hangi aşamada, kaç kuruşa yuvarlanmalı? (Her kalem ayrı mı, yoksa sadece net mi?) |
-| S8 | Kıdem tazminatı, ihbar tazminatı ve yıllık izin ücreti **hiç hesaplanmıyor**. | Bunlar bordro modülünün kapsamında olmalı mı; olacaksa öncelik sırası nedir? |
+| S8 | **E-5C2 yazılım temeli hazır:** onaylı tarih etkili kural yalnız hesap taslağı üretiyor; harici uzman yolu korunuyor. | İlk üretim kuralındaki bölen, tavan, dahil yan haklar, eşikler ve gerçek vaka beklenen sonuçlarını onaylıyor musunuz? |
 
 ---
 
