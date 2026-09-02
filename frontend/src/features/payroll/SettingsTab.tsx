@@ -3,6 +3,7 @@ import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { usePayrollSettings, useUpdatePayrollSettings, type PayrollSettingsDto } from "./queries";
+import { TerminationRulesPanel } from "./TerminationRulesPanel";
 
 const FIELDS: [keyof PayrollSettingsDto & string, string, string][] = [
   ["overtimeMultiplier", "Fazla mesai çarpanı", "0.1"],
@@ -81,7 +82,8 @@ export function SettingsTab() {
   };
 
   return (
-    <section className="card payroll-settings-card">
+    <>
+      <section className="card payroll-settings-card">
       <div className="card-header-clean">
         <div>
           <h4>Bordro Ayarları</h4>
@@ -129,6 +131,8 @@ export function SettingsTab() {
         <i aria-hidden="true" className="fa-solid fa-circle-info" />
         <span>Bu değerler dönem bordrosu ve tekil hesaplama ön hesabında kullanılır. Üretim öncesi mevzuat ve müşavir doğrulaması gerekir.</span>
       </div>
-    </section>
+      </section>
+      <TerminationRulesPanel />
+    </>
   );
 }

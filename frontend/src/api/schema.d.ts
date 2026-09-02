@@ -2250,6 +2250,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/offboarding/{caseId}/calculation-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GenerateOffboardingCalculationDraftBody"];
+                    "text/json": components["schemas"]["GenerateOffboardingCalculationDraftBody"];
+                    "application/*+json": components["schemas"]["GenerateOffboardingCalculationDraftBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingCaseDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/offboarding/{caseId}/complete": {
         parameters: {
             query?: never;
@@ -5147,6 +5215,215 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/termination-calculation-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TerminationCalculationRuleDto"][];
+                        "application/json": components["schemas"]["TerminationCalculationRuleDto"][];
+                        "text/json": components["schemas"]["TerminationCalculationRuleDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveTerminationCalculationRuleBody"];
+                    "text/json": components["schemas"]["SaveTerminationCalculationRuleBody"];
+                    "application/*+json": components["schemas"]["SaveTerminationCalculationRuleBody"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TerminationCalculationRuleDto"];
+                        "application/json": components["schemas"]["TerminationCalculationRuleDto"];
+                        "text/json": components["schemas"]["TerminationCalculationRuleDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/termination-calculation-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveTerminationCalculationRuleBody"];
+                    "text/json": components["schemas"]["SaveTerminationCalculationRuleBody"];
+                    "application/*+json": components["schemas"]["SaveTerminationCalculationRuleBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TerminationCalculationRuleDto"];
+                        "application/json": components["schemas"]["TerminationCalculationRuleDto"];
+                        "text/json": components["schemas"]["TerminationCalculationRuleDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/termination-calculation-rules/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApproveTerminationCalculationRuleBody"];
+                    "text/json": components["schemas"]["ApproveTerminationCalculationRuleBody"];
+                    "application/*+json": components["schemas"]["ApproveTerminationCalculationRuleBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TerminationCalculationRuleDto"];
+                        "application/json": components["schemas"]["TerminationCalculationRuleDto"];
+                        "text/json": components["schemas"]["TerminationCalculationRuleDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5171,6 +5448,10 @@ export interface components {
             due?: string | null;
             priority?: string | null;
             recommendedAction?: string | null;
+        };
+        ApproveTerminationCalculationRuleBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
         };
         AttendanceEntryModel: {
             /** Format: date */
@@ -5688,6 +5969,12 @@ export interface components {
             settlementSource?: string | null;
             settlementReference?: string | null;
             settlementNotes?: string | null;
+            /** Format: int32 */
+            calculationRuleId?: number | null;
+            /** Format: int32 */
+            calculationRuleVersion?: number | null;
+            /** Format: date-time */
+            calculationGeneratedAtUtc?: string | null;
             /** Format: date-time */
             completedAtUtc?: string | null;
             /** Format: date-time */
@@ -5794,6 +6081,13 @@ export interface components {
             departments?: components["schemas"]["VoiceDepartmentDto"][] | null;
             signals?: string[] | null;
             recommendedActions?: string[] | null;
+        };
+        GenerateOffboardingCalculationDraftBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
+            confirmSeveranceEligibility?: boolean;
+            confirmNoticeEligibility?: boolean;
+            expertReviewReference?: string | null;
         };
         GlobalActionDto: {
             /** Format: int32 */
@@ -6434,6 +6728,40 @@ export interface components {
             settlementReference?: string | null;
             settlementNotes?: string | null;
         };
+        SaveTerminationCalculationRuleBody: {
+            /** Format: int32 */
+            expectedVersion?: number | null;
+            /** Format: date */
+            effectiveFrom?: string;
+            /** Format: double */
+            dailyWageDivisor?: number;
+            /** Format: double */
+            severanceDaysPerYear?: number;
+            /** Format: int32 */
+            minimumSeveranceServiceDays?: number;
+            /** Format: double */
+            severanceCeiling?: number;
+            /** Format: int32 */
+            noticeDaysUnderSixMonths?: number;
+            /** Format: int32 */
+            noticeDaysSixToEighteenMonths?: number;
+            /** Format: int32 */
+            noticeDaysEighteenToThirtySixMonths?: number;
+            /** Format: int32 */
+            noticeDaysOverThirtySixMonths?: number;
+            /** Format: int32 */
+            noticeFirstThresholdMonths?: number;
+            /** Format: int32 */
+            noticeSecondThresholdMonths?: number;
+            /** Format: int32 */
+            noticeThirdThresholdMonths?: number;
+            includeRegularPremiumInDressedWage?: boolean;
+            includeRoadAllowanceInDressedWage?: boolean;
+            includeMealAllowanceInDressedWage?: boolean;
+            includeOtherRegularBenefitsInDressedWage?: boolean;
+            sourceReference?: string | null;
+            reviewNotes?: string | null;
+        };
         SearchResultDto: {
             type?: string | null;
             label?: string | null;
@@ -6537,6 +6865,46 @@ export interface components {
             slug?: string | null;
             status?: components["schemas"]["TenantStatus"];
             alreadyInTargetState?: boolean;
+        };
+        TerminationCalculationRuleDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            version?: number;
+            /** Format: date */
+            effectiveFrom?: string;
+            status?: string | null;
+            /** Format: double */
+            dailyWageDivisor?: number;
+            /** Format: double */
+            severanceDaysPerYear?: number;
+            /** Format: int32 */
+            minimumSeveranceServiceDays?: number;
+            /** Format: double */
+            severanceCeiling?: number;
+            /** Format: int32 */
+            noticeDaysUnderSixMonths?: number;
+            /** Format: int32 */
+            noticeDaysSixToEighteenMonths?: number;
+            /** Format: int32 */
+            noticeDaysEighteenToThirtySixMonths?: number;
+            /** Format: int32 */
+            noticeDaysOverThirtySixMonths?: number;
+            /** Format: int32 */
+            noticeFirstThresholdMonths?: number;
+            /** Format: int32 */
+            noticeSecondThresholdMonths?: number;
+            /** Format: int32 */
+            noticeThirdThresholdMonths?: number;
+            includeRegularPremiumInDressedWage?: boolean;
+            includeRoadAllowanceInDressedWage?: boolean;
+            includeMealAllowanceInDressedWage?: boolean;
+            includeOtherRegularBenefitsInDressedWage?: boolean;
+            sourceReference?: string | null;
+            reviewNotes?: string | null;
+            /** Format: date-time */
+            approvedAtUtc?: string | null;
+            approvedByUserId?: string | null;
         };
         TimesheetDto: {
             /** Format: int32 */

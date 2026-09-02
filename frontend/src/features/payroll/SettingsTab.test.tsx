@@ -14,7 +14,10 @@ const settings = {
   minWageGross: 33030, taxBrackets: [],
 };
 
-beforeEach(() => stubApi({ "/api/payroll/settings": settings }));
+beforeEach(() => stubApi({
+  "/api/payroll/settings": settings,
+  "/api/termination-calculation-rules": [],
+}));
 afterEach(() => vi.unstubAllGlobals());
 
 const renderTab = () =>
@@ -57,4 +60,32 @@ test("varsayılana dön formu sorgu değerlerine geri alır", async () => {
   await userEvent.type(multiplier, "3");
   await userEvent.click(screen.getByRole("button", { name: /Varsayılana dön/ }));
   expect(screen.getByLabelText("Fazla mesai çarpanı")).toHaveValue(1.5);
+});
+
+test("işten çıkış kuralını onaysız taslak ve kaynak referansıyla oluşturur", async () => {
+  renderTab();
+  const source = await screen.findByLabelText("Resmî kaynak + uzman inceleme referansı");
+  const ceiling = screen.getByLabelText("Kıdem tavanı (₺)");
+  expect(ceiling).toHaveValue(0);
+
+  await userEvent.clear(ceiling);
+  await userEvent.type(ceiling, "75000");
+  await userEvent.type(source, "CSGB belge + SMMM-42");
+  await userEvent.click(screen.getByRole("button", { name: /Taslak oluştur/ }));
+
+  await waitFor(() => {
+    const post = vi.mocked(fetch).mock.calls.find(
+      ([url, init]) => String(url) === "/api/termination-calculation-rules" && init?.method === "POST",
+    );
+    expect(post).toBeTruthy();
+    const body = JSON.parse(String(post![1]?.body));
+    expect(body).toMatchObject({
+      severanceCeiling: 75000,
+      sourceReference: "CSGB belge + SMMM-42",
+      dailyWageDivisor: 30,
+      severanceDaysPerYear: 30,
+      expectedVersion: null,
+    });
+    expect(body.status).toBeUndefined();
+  });
 });

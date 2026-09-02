@@ -9,7 +9,40 @@ export type EmployeeUpsertModel = components["schemas"]["EmployeeUpsertModel"];
 export type DepartmentDto = components["schemas"]["DepartmentDto"];
 export type EmployeeDocumentDto = components["schemas"]["EmployeeDocumentDto"];
 export type EmployeeOffboardingContextDto = components["schemas"]["EmployeeOffboardingContextDto"];
-export type EmployeeOffboardingCaseDto = components["schemas"]["EmployeeOffboardingCaseDto"];
+export type EmployeeOffboardingCaseDto = components["schemas"]["EmployeeOffboardingCaseDto"] & {
+  calculationRuleId?: number | null;
+  calculationRuleVersion?: number | null;
+  calculationGeneratedAtUtc?: string | null;
+};
+export type TerminationCalculationRuleDto = {
+  id: number;
+  version: number;
+  effectiveFrom: string;
+  status: "draft" | "approved";
+  dailyWageDivisor: number;
+  severanceDaysPerYear: number;
+  minimumSeveranceServiceDays: number;
+  severanceCeiling: number;
+  noticeDaysUnderSixMonths: number;
+  noticeDaysSixToEighteenMonths: number;
+  noticeDaysEighteenToThirtySixMonths: number;
+  noticeDaysOverThirtySixMonths: number;
+  noticeFirstThresholdMonths: number;
+  noticeSecondThresholdMonths: number;
+  noticeThirdThresholdMonths: number;
+  includeRegularPremiumInDressedWage: boolean;
+  includeRoadAllowanceInDressedWage: boolean;
+  includeMealAllowanceInDressedWage: boolean;
+  includeOtherRegularBenefitsInDressedWage: boolean;
+  sourceReference: string;
+  reviewNotes?: string | null;
+  approvedAtUtc?: string | null;
+  approvedByUserId?: string | null;
+};
+export type SaveTerminationCalculationRuleBody = Omit<
+  TerminationCalculationRuleDto,
+  "id" | "version" | "status" | "approvedAtUtc" | "approvedByUserId"
+> & { expectedVersion?: number | null };
 export type SaveOffboardingDraftBody = components["schemas"]["SaveOffboardingDraftBody"];
 export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
 export type EmployeeEmploymentFoundationDto = components["schemas"]["EmployeeEmploymentFoundationDto"];
@@ -107,6 +140,30 @@ export const useSaveOffboardingDraft = () => {
         method: "PUT",
         body: JSON.stringify(body),
       }),
+    onSuccess: (_case, { employeeId }) =>
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "offboarding-context"] }),
+  });
+};
+
+export const useTerminationCalculationRules = () =>
+  useQuery({
+    queryKey: ["termination-calculation-rules"],
+    queryFn: () => apiFetch<TerminationCalculationRuleDto[]>("/termination-calculation-rules"),
+  });
+
+export const useGenerateOffboardingCalculationDraft = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, caseId, expectedVersion, confirmSeveranceEligibility,
+      confirmNoticeEligibility, expertReviewReference }: {
+      employeeId: number; caseId: number; expectedVersion: number;
+      confirmSeveranceEligibility: boolean; confirmNoticeEligibility: boolean;
+      expertReviewReference: string;
+    }) => apiFetch<EmployeeOffboardingCaseDto>(
+      `/employees/${employeeId}/offboarding/${caseId}/calculation-draft`,
+      { method: "POST", body: JSON.stringify({ expectedVersion, confirmSeveranceEligibility,
+        confirmNoticeEligibility, expertReviewReference }) },
+    ),
     onSuccess: (_case, { employeeId }) =>
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "offboarding-context"] }),
   });
