@@ -461,17 +461,23 @@ public class AppDbContextInitializer(
     {
         if (await context.PayrollSettings.AnyAsync()) return;
 
-        // payrollDefaultSettings + taxBrackets (components/payroll.js) ile birebir.
+        // 2026 resmî SGK, GİB ve ÇSGB parametreleri.
         var settings = new PayrollSettings
         {
+            Version = 2,
+            Status = PayrollSettingsStatus.Approved,
             EffectiveFrom = new DateOnly(2026, 1, 1),
             IsDefault = true,
+            SourceReference = "https://www.sgk.gov.tr/Content/Post/2e0c9e1a-2cfe-4456-af10-49d3de0c58ba/Prime-Esas-Kazanc-Miktarlari-2026-01-14-10-35-39; https://www.sgk.gov.tr/Content/Post/c7812ea8-5087-413f-aeb5-d3c1d153e11a/Isveren-Prim-Oranlari-2026-01-13-04-52-38; https://usak.gib.gov.tr/vergi-konulari/1_bireysel/11_ucret_geliri/11; https://gib.gov.tr/vergi-konulari/1_bireysel/8_engelliler_icin_vergi_avantajlari/8; https://www.csgb.gov.tr/tr/poco-pages/asgari-ucret/",
+            ReviewNotes = "2026 standart yurt içi özel sektör 4/a profili",
+            ApprovedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            ApprovedByUserId = "system:official-2026-seed",
             OvertimeMultiplier = 1.5m,
             MonthlyWorkingHours = 225m,
             DefaultWorkedDays = 30,
             SgkEmployeeRate = 14m,
             UnemploymentEmployeeRate = 1m,
-            SgkEmployerRate = 20.5m,
+            SgkEmployerRate = 21.75m,
             UnemploymentEmployerRate = 2m,
             StampTaxRate = 0.759m,
             SgkBaseMin = 33030m,
@@ -483,6 +489,13 @@ public class AppDbContextInitializer(
             MonthlyMinWageIncomeTaxExemption = 4211.33m,
             MonthlyMinWageStampTaxExemption = 250.7m, // 33.030 × binde 7,59 = 250,6977
             MinWageGross = 33030m,
+            MealSgkDailyExemption = 158m,
+            MealIncomeTaxDailyExemption = 300m,
+            OtherSectorEmployerDiscountPoints = 2m,
+            ManufacturingEmployerDiscountPoints = 5m,
+            FirstDegreeDisabilityDeduction = 12000m,
+            SecondDegreeDisabilityDeduction = 7000m,
+            ThirdDegreeDisabilityDeduction = 3000m,
             TaxBrackets =
             {
                 new IncomeTaxBracket { Order = 1, Limit = 190000m, Base = 0m, BaseTax = 0m, Rate = 0.15m },

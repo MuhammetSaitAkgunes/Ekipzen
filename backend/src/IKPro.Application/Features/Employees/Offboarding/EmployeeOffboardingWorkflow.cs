@@ -37,6 +37,9 @@ public sealed record EmployeeOffboardingCaseDto(
     string SettlementSource,
     string SettlementReference,
     string? SettlementNotes,
+    int? CalculationRuleId,
+    int? CalculationRuleVersion,
+    DateTime? CalculationGeneratedAtUtc,
     DateTime? CompletedAtUtc,
     DateTime? ReversedAtUtc,
     string? ReversalReason,
@@ -78,9 +81,14 @@ internal static class EmployeeOffboardingMappings
         item.SeverancePayment,
         item.NoticePayment,
         item.UnusedLeavePayment + item.SeverancePayment + item.NoticePayment,
-        "external-expert",
+        item.SettlementSource == OffboardingSettlementSource.ApprovedRuleDraft
+            ? "approved-rule-draft"
+            : "external-expert",
         item.SettlementReference,
         item.SettlementNotes,
+        item.CalculationRuleId,
+        item.CalculationRuleVersion,
+        item.CalculationGeneratedAtUtc,
         item.CompletedAtUtc,
         item.ReversedAtUtc,
         item.ReversalReason,
@@ -234,6 +242,10 @@ public sealed class SaveEmployeeOffboardingDraftCommandHandler(
         item.MealAllowanceSnapshot = compensation?.MealAllowance ?? 0m;
         item.OtherRegularBenefitsSnapshot = compensation?.OtherRegularBenefits ?? 0m;
         item.SettlementSource = OffboardingSettlementSource.ExternalExpert;
+        item.CalculationRuleId = null;
+        item.CalculationRuleVersion = null;
+        item.CalculationGeneratedAtUtc = null;
+        item.CalculationGeneratedByUserId = null;
         item.SettlementReference = request.SettlementReference.Trim();
         item.SettlementNotes = string.IsNullOrWhiteSpace(request.SettlementNotes)
             ? null
@@ -518,13 +530,13 @@ public sealed class CompleteEmployeeOffboardingCommandHandler(
         EmployeeOffboardingCase item,
         int employeeId,
         IdentityProvisioningOperationType type) => new()
-    {
-        EmployeeId = employeeId,
-        OffboardingCase = item,
-        Type = type,
-        Status = IdentityProvisioningStatus.Pending,
-        NextAttemptAtUtc = DateTime.UtcNow,
-    };
+        {
+            EmployeeId = employeeId,
+            OffboardingCase = item,
+            Type = type,
+            Status = IdentityProvisioningStatus.Pending,
+            NextAttemptAtUtc = DateTime.UtcNow,
+        };
 }
 
 public sealed record ReverseEmployeeOffboardingCommand(
@@ -721,13 +733,13 @@ public sealed class ReverseEmployeeOffboardingCommandHandler(
         EmployeeOffboardingCase item,
         int employeeId,
         IdentityProvisioningOperationType type) => new()
-    {
-        EmployeeId = employeeId,
-        OffboardingCase = item,
-        Type = type,
-        Status = IdentityProvisioningStatus.Pending,
-        NextAttemptAtUtc = DateTime.UtcNow,
-    };
+        {
+            EmployeeId = employeeId,
+            OffboardingCase = item,
+            Type = type,
+            Status = IdentityProvisioningStatus.Pending,
+            NextAttemptAtUtc = DateTime.UtcNow,
+        };
 
     private sealed record OrganizationSnapshot(
         int Id,

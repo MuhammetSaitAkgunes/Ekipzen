@@ -16,6 +16,7 @@ public sealed class EmployeeOffboardingCaseConfiguration
         builder.Property(item => item.PreviousExitCode).HasMaxLength(64);
         builder.Property(item => item.CompletedByUserId).HasMaxLength(450);
         builder.Property(item => item.ReversedByUserId).HasMaxLength(450);
+        builder.Property(item => item.CalculationGeneratedByUserId).HasMaxLength(450);
         builder.Property(item => item.ReversalReason).HasMaxLength(1000);
         builder.Property(item => item.Version).IsConcurrencyToken();
 
@@ -26,6 +27,11 @@ public sealed class EmployeeOffboardingCaseConfiguration
         builder.HasOne(item => item.Employee)
             .WithMany()
             .HasForeignKey(item => item.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(item => item.CalculationRule)
+            .WithMany()
+            .HasForeignKey(item => item.CalculationRuleId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -47,5 +53,30 @@ public sealed class EmployeeOffboardingTeamTransferConfiguration
             .WithMany()
             .HasForeignKey(item => item.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class TerminationCalculationRuleConfiguration
+    : IEntityTypeConfiguration<TerminationCalculationRule>
+{
+    public void Configure(EntityTypeBuilder<TerminationCalculationRule> builder)
+    {
+        builder.Property(item => item.SourceReference).IsRequired().HasMaxLength(1000);
+        builder.Property(item => item.ReviewNotes).HasMaxLength(2000);
+        builder.Property(item => item.ApprovedByUserId).HasMaxLength(450);
+        builder.Property(item => item.Version).IsConcurrencyToken();
+
+        builder.HasIndex(item => new { item.TenantId, item.EffectiveFrom })
+            .IsUnique();
+
+        builder.ToTable(table => table.HasCheckConstraint(
+            "CK_TerminationCalculationRules_PositiveValues",
+            "[DailyWageDivisor] > 0 AND [SeveranceDaysPerYear] > 0 " +
+            "AND [MinimumSeveranceServiceDays] > 0 AND [SeveranceCeiling] > 0 " +
+            "AND [NoticeDaysUnderSixMonths] >= 0 AND [NoticeDaysSixToEighteenMonths] >= 0 " +
+            "AND [NoticeDaysEighteenToThirtySixMonths] >= 0 AND [NoticeDaysOverThirtySixMonths] >= 0 " +
+            "AND [NoticeFirstThresholdMonths] > 0 " +
+            "AND [NoticeSecondThresholdMonths] > [NoticeFirstThresholdMonths] " +
+            "AND [NoticeThirdThresholdMonths] > [NoticeSecondThresholdMonths]"));
     }
 }

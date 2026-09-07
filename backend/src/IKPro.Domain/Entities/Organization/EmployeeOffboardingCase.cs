@@ -39,6 +39,11 @@ public sealed class EmployeeOffboardingCase : AuditableEntity
         = OffboardingSettlementSource.ExternalExpert;
     public string SettlementReference { get; set; } = string.Empty;
     public string? SettlementNotes { get; set; }
+    public int? CalculationRuleId { get; set; }
+    public TerminationCalculationRule? CalculationRule { get; set; }
+    public int? CalculationRuleVersion { get; set; }
+    public DateTime? CalculationGeneratedAtUtc { get; set; }
+    public string? CalculationGeneratedByUserId { get; set; }
 
     /// <summary>Geri almada personel profilini güvenle eski haline döndürmek için snapshot.</summary>
     public string? PreviousExitCode { get; set; }

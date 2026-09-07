@@ -93,7 +93,7 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
 
   await userEvent.click(screen.getByRole("button", { name: "Ahmet Yılmaz için işten çıkış dosyasını aç" }));
   expect(await screen.findByRole("heading", { name: "İşten Çıkış ve Finansal Kapanış" })).toBeInTheDocument();
-  expect(screen.getByText(/hukuki tutar hesaplamaz/)).toBeInTheDocument();
+  expect(screen.getByText("İki güvenli kapanış yolu")).toBeInTheDocument();
 
   await userEvent.selectOptions(screen.getByLabelText("Halef yönetici"), "2");
   const date = screen.getByLabelText("İşten ayrılma tarihi");

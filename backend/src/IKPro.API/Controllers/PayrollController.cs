@@ -102,6 +102,13 @@ public sealed class PayrollController(ISender sender) : ControllerBase
         [FromQuery] DateOnly? asOf, CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetPayrollSettingsQuery(asOf), cancellationToken));
 
+    [HttpGet("settings/drafts")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<IReadOnlyList<PayrollSettingsDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PayrollSettingsDto>>> GetSettingsDrafts(
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetPayrollSettingsDraftsQuery(), cancellationToken));
+
     [HttpPut("settings")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<PayrollSettingsDto>(StatusCodes.Status200OK)]
@@ -109,6 +116,17 @@ public sealed class PayrollController(ISender sender) : ControllerBase
     public async Task<ActionResult<PayrollSettingsDto>> UpdateSettings(
         UpdatePayrollSettingsCommand command, CancellationToken cancellationToken)
         => Ok(await sender.Send(command, cancellationToken));
+
+    [HttpPost("settings/{id:int}/approve")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<PayrollSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<PayrollSettingsDto>> ApproveSettings(
+        int id, ApprovePayrollSettingsCommand command, CancellationToken cancellationToken)
+    {
+        if (id != command.Id) return BadRequest("Rota ve gövde mevzuat seti kimliği eşleşmiyor.");
+        return Ok(await sender.Send(command, cancellationToken));
+    }
 
     // --- çalışanın kendi bordroları (hr-admin + employee) ---
 

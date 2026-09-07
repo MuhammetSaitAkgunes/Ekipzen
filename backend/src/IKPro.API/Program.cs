@@ -4,9 +4,12 @@ using IKPro.Application;
 using IKPro.Application.Common.Interfaces;
 using IKPro.Application.Common.Security;
 using IKPro.Domain.Constants;
+using IKPro.Domain.Enums;
 using IKPro.Infrastructure;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 
 // Bootstrap logger — captures failures during startup before the host is built.
@@ -77,7 +80,23 @@ try
     });
 
     // MVC controllers + JSON.
-    builder.Services.AddControllers();
+    builder.Services
+        .AddControllers()
+        .AddJsonOptions(options =>
+        {
+            // Bordro sözleşmesi enumları okunabilir, camelCase değerlerle taşınır.
+            // Mevcut modüllerin sayısal enum sözleşmesini değiştirmemek için kapsam dar tutulur.
+            options.JsonSerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<PayrollStatutoryProfile>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.JsonSerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<PayrollMealTreatment>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.JsonSerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<EmployerSgkDiscountType>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.JsonSerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<PayrollDisabilityReliefType>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.JsonSerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<PayrollSettingsStatus>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        });
 
     // RFC 7807 ProblemDetails for consistent error envelopes.
     builder.Services.AddProblemDetails();
@@ -159,7 +178,8 @@ try
     var app = builder.Build();
 
     // Development'ta migration + demo seed otomatik uygulanır (docker-compose MSSQL).
-    if (app.Environment.IsDevelopment())
+    if (app.Environment.IsDevelopment()
+        && builder.Configuration.GetValue("Seed:Enabled", true))
     {
         using var scope = app.Services.CreateScope();
 

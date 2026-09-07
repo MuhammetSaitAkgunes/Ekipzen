@@ -7,12 +7,11 @@ import {
   formatPayrollNumber, payrollStatusClass,
 } from "./format";
 import { PayrollDetailPanel } from "./PayrollDetailPanel";
-import { usePayrollPeriod, usePayrollSettings, useRunPayrollCheck, type PayrollRowDto } from "./queries";
+import { usePayrollPeriod, useRunPayrollCheck, type PayrollRowDto } from "./queries";
 
 export function PeriodTab({ periodId }: { periodId: number | null }) {
   const { showToast } = useToast();
   const detailQ = usePayrollPeriod(periodId);
-  const settingsQ = usePayrollSettings(true);
   const runCheck = useRunPayrollCheck();
   const [deptFilter, setDeptFilter] = useState("");
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
@@ -26,12 +25,12 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
     );
   }
 
-  if (detailQ.isPending || settingsQ.isPending) return <PageLoading />;
+  if (detailQ.isPending) return <PageLoading />;
   if (detailQ.isError) return <PageError error={detailQ.error} />;
-  if (settingsQ.isError) return <PageError error={settingsQ.error} />;
 
   const detail = detailQ.data;
-  const parameters = settingsQ.data;
+  const parameters = detail.settings;
+  if (!parameters) return <PageError error={new Error("Dönemin mevzuat snapshot'ı bulunamadı.")} />;
   const rows = detail.rows ?? [];
   const controls = detail.controls ?? [];
   const totals = detail.totals ?? {};
@@ -133,21 +132,24 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
           <div className="card-header-clean">
             <div>
               <h4>Bordro Parametreleri ({parameters.effectiveFrom} tarihinden geçerli)</h4>
-              <p className="text-muted">Demo ön hesap için kullanılan Türkiye 4/a parametreleri.</p>
+              <p className="text-muted">Bu dönemin hesabında kilitlenen onaylı Türkiye 4/a mevzuat seti.</p>
             </div>
-            <span className="status-pill info">Ön hesap</span>
+            <span className="status-pill approved">Onaylı v{parameters.version}</span>
           </div>
           <div className="parameter-grid">
-            <div><span>Fazla mesai çarpanı</span><strong>{formatPayrollNumber(parameters.overtimeMultiplier)}</strong></div>
+            <div><span>Fazla çalışma çarpanı</span><strong>{formatPayrollNumber(parameters.overtimeMultiplier)}</strong></div>
             <div><span>Aylık çalışma saati</span><strong>{formatPayrollNumber(parameters.monthlyWorkingHours)}</strong></div>
-            <div><span>SGK PEK alt sınır</span><strong>{formatPayrollMoney(parameters.sgkBaseMin)}</strong></div>
+            <div><span>Brüt asgari ücret / SGK alt sınır</span><strong>{formatPayrollMoney(parameters.minWageGross)}</strong></div>
             <div><span>SGK PEK üst sınır</span><strong>{formatPayrollMoney(parameters.sgkBaseMax)}</strong></div>
             <div><span>SGK işçi / işsizlik</span><strong>%{formatPayrollNumber(parameters.sgkEmployeeRate)} + %{formatPayrollNumber(parameters.unemploymentEmployeeRate)}</strong></div>
-            <div><span>Damga vergisi</span><strong>‰{formatPayrollNumber(parameters.stampTaxRate)}</strong></div>
+            <div><span>Teşviksiz SGK işveren / işsizlik</span><strong>%{formatPayrollNumber(parameters.sgkEmployerRate)} + %{formatPayrollNumber(parameters.unemploymentEmployerRate)}</strong></div>
+            <div><span>Nakit yemek SGK / GV günlük istisna</span><strong>{formatPayrollMoney(parameters.mealSgkDailyExemption)} / {formatPayrollMoney(parameters.mealIncomeTaxDailyExemption)}</strong></div>
+            <div><span>Diğer sektör / imalat indirimi</span><strong>{formatPayrollNumber(parameters.otherSectorEmployerDiscountPoints)} / {formatPayrollNumber(parameters.manufacturingEmployerDiscountPoints)} puan</strong></div>
+            <div><span>Damga vergisi</span><strong>%{formatPayrollNumber(parameters.stampTaxRate)}</strong></div>
           </div>
           <div className="payroll-note">
             <i aria-hidden="true" className="fa-solid fa-circle-info" />
-            <span>Bu ekran bordro deneyimi ve kontrol akışı için demo hesap sunar; üretim kullanımında mevzuat ve müşavir doğrulaması gerekir.</span>
+            <span>{parameters.reviewNotes} Kaynak: {parameters.sourceReference}</span>
           </div>
         </div>
       </div>

@@ -4,8 +4,11 @@ import { useToast } from "../../layout/ToastProvider";
 import {
   useCompleteOffboarding,
   useEmployeeOffboardingContext,
+  useGenerateOffboardingCalculationDraft,
   useReverseOffboarding,
   useSaveOffboardingDraft,
+  useTerminationCalculationRules,
+  type EmployeeOffboardingCaseDto,
   type SaveOffboardingDraftBody,
 } from "./queries";
 
@@ -31,7 +34,9 @@ export function OffboardingModal({ employeeId, onClose }: {
 }) {
   const { showToast } = useToast();
   const contextQ = useEmployeeOffboardingContext(employeeId);
+  const rulesQ = useTerminationCalculationRules();
   const saveDraft = useSaveOffboardingDraft();
+  const generateCalculation = useGenerateOffboardingCalculationDraft();
   const complete = useCompleteOffboarding();
   const reverse = useReverseOffboarding();
 
@@ -47,18 +52,27 @@ export function OffboardingModal({ employeeId, onClose }: {
   const [noticePayment, setNoticePayment] = useState("0");
   const [settlementReference, setSettlementReference] = useState("");
   const [settlementNotes, setSettlementNotes] = useState("");
+  const [confirmSeveranceEligibility, setConfirmSeveranceEligibility] = useState(false);
+  const [confirmNoticeEligibility, setConfirmNoticeEligibility] = useState(false);
+  const [manualOverride, setManualOverride] = useState(false);
   const [reversalReason, setReversalReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const context = contextQ.data;
-  const currentCase = context?.currentCase;
+  const currentCase = context?.currentCase as EmployeeOffboardingCaseDto | null | undefined;
   const completedCase = currentCase?.status === "completed" ? currentCase : null;
   const directReportCount = context?.directReportCount ?? 0;
   const pendingLeaveCount = context?.pendingLeaveRequestCount ?? 0;
   const successors = context?.successors ?? [];
   const requiresSuccessor = directReportCount > 0;
   const hasEligibleSuccessor = !requiresSuccessor || successors.length > 0;
-  const isBusy = saveDraft.isPending || complete.isPending || reverse.isPending;
+  const calculationLocked = currentCase?.status === "draft"
+    && currentCase.settlementSource === "approved-rule-draft" && !manualOverride;
+  const activeRule = rulesQ.data
+    ?.filter((rule) => rule.status === "approved" && rule.effectiveFrom <= terminationDate)
+    .sort((left, right) => right.effectiveFrom.localeCompare(left.effectiveFrom))[0];
+  const isBusy = saveDraft.isPending || generateCalculation.isPending
+    || complete.isPending || reverse.isPending;
 
   useEffect(() => {
     if (currentCase?.status !== "draft") return;
@@ -80,7 +94,7 @@ export function OffboardingModal({ employeeId, onClose }: {
     if (!terminationDate) return "İşten ayrılma tarihi zorunludur.";
     if (!exitCode.trim()) return "Çıkış kodu zorunludur.";
     if (!exitReason.trim()) return "Çıkış gerekçesi zorunludur.";
-    if (!settlementReference.trim()) return "Uzman/harici hesap referansı zorunludur.";
+    if (!settlementReference.trim()) return "Hesap ve uzman inceleme referansı zorunludur.";
     if (requiresSuccessor && !successorId) return "Ekibi olan yönetici için halef seçilmelidir.";
     return null;
   };
@@ -110,6 +124,20 @@ export function OffboardingModal({ employeeId, onClose }: {
     }
 
     try {
+      if (finish && calculationLocked && currentCase?.status === "draft") {
+        if (currentCase.id == null || currentCase.version == null) {
+          throw new Error("Hesap taslağı kimlik veya sürüm bilgisi döndürmedi.");
+        }
+        await complete.mutateAsync({
+          employeeId,
+          caseId: currentCase.id,
+          expectedVersion: currentCase.version,
+        });
+        showToast("İşten çıkış dosyası tamamlandı; erişim ve rol işleri güvenli kuyruğa alındı.", "success");
+        onClose();
+        return;
+      }
+
       const saved = await saveDraft.mutateAsync({ employeeId, body: draftBody() });
       if (finish) {
         if (saved.id == null || saved.version == null) {
@@ -130,6 +158,38 @@ export function OffboardingModal({ employeeId, onClose }: {
     }
   };
 
+
+  const calculateDraft = async () => {
+    setError(null);
+    const validationError = validateDraft();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    if (!activeRule) {
+      setError("Ayrılış tarihinde yürürlükte olan onaylı kural yok. Bordro Ayarları'nda uzman onaylı sürüm oluşturun veya harici uzman tutarı kullanın.");
+      return;
+    }
+
+    try {
+      const saved = await saveDraft.mutateAsync({ employeeId, body: draftBody() });
+      if (saved.id == null || saved.version == null) {
+        throw new Error("İşten çıkış taslağı kimlik veya sürüm bilgisi döndürmedi.");
+      }
+      await generateCalculation.mutateAsync({
+        employeeId,
+        caseId: saved.id,
+        expectedVersion: saved.version,
+        confirmSeveranceEligibility,
+        confirmNoticeEligibility,
+        expertReviewReference: settlementReference.trim(),
+      });
+      showToast("Onaylı kural sürümüyle hesap taslağı üretildi. Tamamlamadan önce yeniden inceleyin.", "success");
+      onClose();
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "Hesap taslağı üretilemedi.");
+    }
+  };
   const reverseCompleted = async () => {
     if (!completedCase) return;
     setError(null);
@@ -184,8 +244,9 @@ export function OffboardingModal({ employeeId, onClose }: {
               <div className="notice-card">
                 <strong>Tamamlanmış ve geri alınabilir süreç kaydı</strong>
                 <p>
-                  Finansal tutarlar otomatik mevzuat hesabı değildir; uzman/harici kaynaktan alınan
-                  snapshot değiştirilmeden saklanır.
+                  {completedCase.settlementSource === "approved-rule-draft"
+                    ? "Tutarlar onaylı kural sürümüyle taslaklandı ve insan onayıyla tamamlandı."
+                    : "Finansal tutarlar uzman/harici kaynaktan alınan snapshot olarak saklanır."}
                 </p>
               </div>
               <dl className="offboarding-summary">
@@ -201,6 +262,7 @@ export function OffboardingModal({ employeeId, onClose }: {
                 <div><dt>İhbar</dt><dd>{money.format(completedCase.noticePayment ?? 0)}</dd></div>
                 <div><dt>Toplam kapanış</dt><dd>{money.format(completedCase.totalPayment ?? 0)}</dd></div>
                 <div><dt>Hesap referansı</dt><dd>{completedCase.settlementReference}</dd></div>
+                <div><dt>Hesap kaynağı</dt><dd>{completedCase.settlementSource}</dd></div>
               </dl>
               <p><strong>Çıkış gerekçesi:</strong> {completedCase.exitReason}</p>
               {completedCase.identityProvisioningPending && (
@@ -228,18 +290,31 @@ export function OffboardingModal({ employeeId, onClose }: {
           {context && !completedCase && (
             <>
               <div className="notice-card">
-                <strong>Bu ekran hukuki tutar hesaplamaz.</strong>
+                <strong>{calculationLocked ? "Onaylı kural sürümüyle üretilmiş hesap taslağı" : "İki güvenli kapanış yolu"}</strong>
                 <p>
-                  Kıdem, ihbar ve izin ödemelerini yetkili uzman veya harici bordro çıktısından
-                  girin; kaynak belgesini referans alanında belirtin.
+                  {calculationLocked
+                    ? `Kural #${currentCase?.calculationRuleId}, sürüm ${currentCase?.calculationRuleVersion}. Alanlar hesap izi bozulmasın diye kilitli; ayrı tamamla eylemi insan onayıdır.`
+                    : "Harici uzman tutarlarını girebilir veya ayrılış tarihindeki onaylı ve değişmez kural sürümüyle denetlenebilir taslak üretebilirsiniz."}
                 </p>
                 <p>
                   {directReportCount} doğrudan ekip üyesi ve {pendingLeaveCount} bekleyen izin talebi
                   {requiresSuccessor ? " seçilen halefin kapsamına aktarılacak." : " bulunuyor."}
                 </p>
+                {calculationLocked && (
+                  <button className="btn btn-secondary" onClick={() => setManualOverride(true)}>
+                    Harici uzman girişine dön
+                  </button>
+                )}
               </div>
 
-              <div className="form-grid-2 offboarding-form-grid">
+              {!calculationLocked && !activeRule && !rulesQ.isPending && (
+                <p className="form-warning" role="status">
+                  Bu tarih için onaylı hesap kuralı yok; harici uzman girişi kullanılabilir.
+                </p>
+              )}
+
+              <fieldset disabled={calculationLocked} className="offboarding-calculation-fieldset">
+                <div className="form-grid-2 offboarding-form-grid">
                 <div className="input-group">
                   <label htmlFor="offboarding-date">İşten ayrılma tarihi</label>
                   <input id="offboarding-date" className="input-control" type="date" max={todayInputValue()}
@@ -328,7 +403,23 @@ export function OffboardingModal({ employeeId, onClose }: {
                   <textarea id="offboarding-notes" className="input-control" rows={2}
                     value={settlementNotes} onChange={(event) => setSettlementNotes(event.target.value)} />
                 </div>
+                {!calculationLocked && activeRule && (
+                  <div className="input-group form-span-2 offboarding-eligibility-checks">
+                    <strong>Vaka bazlı uzman hak ediş teyidi</strong>
+                    <label className="checkbox-line">
+                      <input type="checkbox" checked={confirmSeveranceEligibility}
+                        onChange={(event) => setConfirmSeveranceEligibility(event.target.checked)} />
+                      Bu vaka için kıdem hak edişi uzman tarafından teyit edildi
+                    </label>
+                    <label className="checkbox-line">
+                      <input type="checkbox" checked={confirmNoticeEligibility}
+                        onChange={(event) => setConfirmNoticeEligibility(event.target.checked)} />
+                      Bu vaka için çalışana ihbar ödemesi uzman tarafından teyit edildi
+                    </label>
+                  </div>
+                )}
               </div>
+              </fieldset>
 
               {requiresSuccessor && !hasEligibleSuccessor && (
                 <p className="form-error" role="alert">
@@ -347,6 +438,12 @@ export function OffboardingModal({ employeeId, onClose }: {
             </button>
           ) : (
             <>
+              {!calculationLocked && activeRule && (
+                <button className="btn btn-secondary" onClick={calculateDraft}
+                  disabled={!context || !hasEligibleSuccessor || isBusy}>
+                  Onaylı kuralla taslak hesapla
+                </button>
+              )}
               <button className="btn btn-secondary" onClick={() => save(false)}
                 disabled={!context || !hasEligibleSuccessor || isBusy}>
                 Taslağı kaydet

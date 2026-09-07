@@ -1043,6 +1043,19 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("CalculationGeneratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CalculationGeneratedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("CalculationRuleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CalculationRuleVersion")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CompensationPackageId")
                         .HasColumnType("int");
 
@@ -1183,6 +1196,8 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CalculationRuleId");
 
                     b.HasIndex("EmployeeId");
 
@@ -1369,6 +1384,116 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeProfiles");
                 });
 
+            modelBuilder.Entity("IKPro.Domain.Entities.Organization.TerminationCalculationRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DailyWageDivisor")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IncludeMealAllowanceInDressedWage")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IncludeOtherRegularBenefitsInDressedWage")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IncludeRegularPremiumInDressedWage")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IncludeRoadAllowanceInDressedWage")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MinimumSeveranceServiceDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeDaysEighteenToThirtySixMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeDaysOverThirtySixMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeDaysSixToEighteenMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeDaysUnderSixMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeFirstThresholdMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeSecondThresholdMonths")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoticeThirdThresholdMonths")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal>("SeveranceCeiling")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("SeveranceDaysPerYear")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("SourceReference")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("TerminationCalculationRules", t =>
+                        {
+                            t.HasCheckConstraint("CK_TerminationCalculationRules_PositiveValues", "[DailyWageDivisor] > 0 AND [SeveranceDaysPerYear] > 0 AND [MinimumSeveranceServiceDays] > 0 AND [SeveranceCeiling] > 0 AND [NoticeDaysUnderSixMonths] >= 0 AND [NoticeDaysSixToEighteenMonths] >= 0 AND [NoticeDaysEighteenToThirtySixMonths] >= 0 AND [NoticeDaysOverThirtySixMonths] >= 0 AND [NoticeFirstThresholdMonths] > 0 AND [NoticeSecondThresholdMonths] > [NoticeFirstThresholdMonths] AND [NoticeThirdThresholdMonths] > [NoticeSecondThresholdMonths]");
+                        });
+                });
+
             modelBuilder.Entity("IKPro.Domain.Entities.Payroll.IncomeTaxBracket", b =>
                 {
                     b.Property<int>("Id")
@@ -1431,6 +1556,9 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("ApplyMinimumWageTaxExemption")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ApprovalStatus")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1440,14 +1568,38 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<bool>("BenefitPayFullyTaxableConfirmed")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("CumulativeIncomeTaxBaseConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("DisabilityReliefReference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DisabilityReliefType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
+
+                    b.Property<string>("EmployerSgkDiscount")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("EmployerSgkDiscountReference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal>("GrossSalary")
                         .HasPrecision(18, 4)
@@ -1460,12 +1612,26 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<int>("MealDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MealTreatment")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<bool>("OtherIncomeTaxBaseDeductionsConfirmedNone")
+                        .HasColumnType("bit");
+
                     b.Property<int>("OvertimeHours")
                         .HasColumnType("int");
+
+                    b.Property<bool>("OvertimeTreatmentConfirmed")
+                        .HasColumnType("bit");
 
                     b.Property<int>("PayrollPeriodId")
                         .HasColumnType("int");
@@ -1473,6 +1639,14 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("PremiumPay")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("PreviousEmployerIncomeTaxBase")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("PreviousEmployerIncomeTaxBaseReference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal>("PreviousTaxBase")
                         .HasPrecision(18, 4)
@@ -1482,9 +1656,17 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<bool>("SgkPremiumDaysConfirmed")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("SpecialDeductions")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("StatutoryProfile")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -1531,6 +1713,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("MinimumWageIncomeTaxBaseBefore")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
@@ -1582,6 +1768,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal>("AppliedEmployerSgkRate")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<decimal>("BaseGross")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
@@ -1594,6 +1784,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DisabilityIncomeTaxBaseDeduction")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("EmployerCost")
                         .HasPrecision(18, 4)
@@ -1623,6 +1817,18 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal>("IncomeTaxExemptMealAllowance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MinimumWageIncomeTaxExemption")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MinimumWageStampTaxExemption")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<decimal>("NetPay")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
@@ -1639,6 +1845,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("SgkEmployee")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("SgkExemptMealAllowance")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
@@ -1684,6 +1894,13 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1696,8 +1913,24 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("EffectiveFrom")
                         .HasColumnType("date");
 
+                    b.Property<decimal>("FirstDegreeDisabilityDeduction")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
+
+                    b.Property<decimal>("ManufacturingEmployerDiscountPoints")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MealIncomeTaxDailyExemption")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MealSgkDailyExemption")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("MinWageGross")
                         .HasPrecision(18, 4)
@@ -1715,7 +1948,19 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal>("OtherSectorEmployerDiscountPoints")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<decimal>("OvertimeMultiplier")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal>("SecondDegreeDisabilityDeduction")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
@@ -1735,12 +1980,26 @@ namespace IKPro.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("SourceReference")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<decimal>("StampTaxRate")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("ThirdDegreeDisabilityDeduction")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("UnemploymentEmployeeRate")
                         .HasPrecision(18, 4)
@@ -1755,6 +2014,10 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -2766,11 +3029,18 @@ namespace IKPro.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("IKPro.Domain.Entities.Organization.EmployeeOffboardingCase", b =>
                 {
+                    b.HasOne("IKPro.Domain.Entities.Organization.TerminationCalculationRule", "CalculationRule")
+                        .WithMany()
+                        .HasForeignKey("CalculationRuleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("IKPro.Domain.Entities.Organization.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CalculationRule");
 
                     b.Navigation("Employee");
                 });

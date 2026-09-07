@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
+import type {
+  SaveTerminationCalculationRuleBody,
+  TerminationCalculationRuleDto,
+} from "../personnel/queries";
 
 export type PayrollPeriodListItemDto = components["schemas"]["PayrollPeriodListItemDto"];
 export type PayrollPeriodDetailDto = components["schemas"]["PayrollPeriodDetailDto"];
@@ -11,6 +15,7 @@ export type PayrollCalculation = components["schemas"]["PayrollCalculation"];
 export type PreviewPayrollCommand = components["schemas"]["PreviewPayrollCommand"];
 export type PayrollSettingsDto = components["schemas"]["PayrollSettingsDto"];
 export type UpdatePayrollSettingsCommand = components["schemas"]["UpdatePayrollSettingsCommand"];
+export type ApprovePayrollSettingsCommand = components["schemas"]["ApprovePayrollSettingsCommand"];
 export type MyPayslipDto = components["schemas"]["MyPayslipDto"];
 
 export const usePayrollPeriods = (enabled: boolean) =>
@@ -103,6 +108,13 @@ export const usePayrollSettings = (enabled: boolean) =>
     enabled,
   });
 
+export const usePayrollSettingsDrafts = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["payroll", "settings", "drafts"],
+    queryFn: () => apiFetch<PayrollSettingsDto[]>("/payroll/settings/drafts"),
+    enabled,
+  });
+
 export const useUpdatePayrollSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -112,6 +124,47 @@ export const useUpdatePayrollSettings = () => {
         body: JSON.stringify(command),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll", "settings"] }),
+  });
+};
+
+export const useApprovePayrollSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (command: ApprovePayrollSettingsCommand) =>
+      apiFetch<PayrollSettingsDto>(`/payroll/settings/${command.id}/approve`, {
+        method: "POST",
+        body: JSON.stringify(command),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll", "settings"] }),
+  });
+};
+export const useTerminationCalculationRules = () =>
+  useQuery({
+    queryKey: ["termination-calculation-rules"],
+    queryFn: () => apiFetch<TerminationCalculationRuleDto[]>("/termination-calculation-rules"),
+  });
+
+export const useSaveTerminationCalculationRule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id?: number; body: SaveTerminationCalculationRuleBody }) =>
+      apiFetch<TerminationCalculationRuleDto>(
+        id ? `/termination-calculation-rules/${id}` : "/termination-calculation-rules",
+        { method: id ? "PUT" : "POST", body: JSON.stringify(body) },
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termination-calculation-rules"] }),
+  });
+};
+
+export const useApproveTerminationCalculationRule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, expectedVersion }: { id: number; expectedVersion: number }) =>
+      apiFetch<TerminationCalculationRuleDto>(`/termination-calculation-rules/${id}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ expectedVersion }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termination-calculation-rules"] }),
   });
 };
 

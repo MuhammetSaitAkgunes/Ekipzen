@@ -1,15 +1,40 @@
 import { useState } from "react";
 import { ApiError, apiDownload } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
-import { formatPayrollMoney, payrollStatusClass } from "./format";
+import { formatPayrollMoney, formatPayrollNumber, payrollStatusClass } from "./format";
 import { useApprovePayrollRow, useUpdatePayrollRow, type PayrollRowDto } from "./queries";
 
 const Line = ({ label, value, tone = "" }: { label: string; value?: number; tone?: string }) => (
-  <div className={`payroll-line ${tone}`}>
-    <span>{label}</span>
-    <strong>{formatPayrollMoney(value)}</strong>
-  </div>
+  <div className={`payroll-line ${tone}`}><span>{label}</span><strong>{formatPayrollMoney(value)}</strong></div>
 );
+
+type DetailForm = {
+  grossSalary: string;
+  statutoryProfile: "unspecified" | "domesticPrivateSectorStandardFourA";
+  workedDays: string;
+  sgkPremiumDaysConfirmed: boolean;
+  overtimeHours: string;
+  overtimeTreatmentConfirmed: boolean;
+  premiumPay: string;
+  roadAllowance: string;
+  mealAllowance: string;
+  mealDays: string;
+  mealTreatment: "unspecified" | "cashExemptWhereNoMealProvided" | "fullyTaxable";
+  benefitPay: string;
+  benefitPayFullyTaxableConfirmed: boolean;
+  applyMinimumWageTaxExemption: boolean;
+  employerSgkDiscount: "none" | "otherSectorTwoPoints" | "manufacturingFivePoints";
+  employerSgkDiscountReference: string;
+  disabilityReliefType: "unspecified" | "none" | "firstDegree" | "secondDegree" | "thirdDegree";
+  disabilityReliefReference: string;
+  otherIncomeTaxBaseDeductionsConfirmedNone: boolean;
+  previousEmployerIncomeTaxBase: string;
+  previousEmployerIncomeTaxBaseReference: string;
+  cumulativeIncomeTaxBaseConfirmed: boolean;
+  specialDeductions: string;
+  ibanComplete: boolean;
+  notes: string;
+};
 
 export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   periodId: number;
@@ -21,14 +46,29 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   const updateRow = useUpdatePayrollRow();
   const approveRow = useApprovePayrollRow();
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<DetailForm>({
     grossSalary: String(row.grossSalary ?? 0),
+    statutoryProfile: (row.statutoryProfile as DetailForm["statutoryProfile"]) ?? "unspecified",
     workedDays: String(row.workedDays ?? 30),
+    sgkPremiumDaysConfirmed: row.sgkPremiumDaysConfirmed ?? false,
     overtimeHours: String(row.overtimeHours ?? 0),
+    overtimeTreatmentConfirmed: row.overtimeTreatmentConfirmed ?? false,
     premiumPay: String(row.premiumPay ?? 0),
     roadAllowance: String(row.roadAllowance ?? 0),
     mealAllowance: String(row.mealAllowance ?? 0),
+    mealDays: String(row.mealDays ?? 0),
+    mealTreatment: (row.mealTreatment as DetailForm["mealTreatment"]) ?? "unspecified",
     benefitPay: String(row.benefitPay ?? 0),
+    benefitPayFullyTaxableConfirmed: row.benefitPayFullyTaxableConfirmed ?? false,
+    applyMinimumWageTaxExemption: row.applyMinimumWageTaxExemption ?? true,
+    employerSgkDiscount: (row.employerSgkDiscount as DetailForm["employerSgkDiscount"]) ?? "none",
+    employerSgkDiscountReference: row.employerSgkDiscountReference ?? "",
+    disabilityReliefType: (row.disabilityReliefType as DetailForm["disabilityReliefType"]) ?? "unspecified",
+    disabilityReliefReference: row.disabilityReliefReference ?? "",
+    otherIncomeTaxBaseDeductionsConfirmedNone: row.otherIncomeTaxBaseDeductionsConfirmedNone ?? false,
+    previousEmployerIncomeTaxBase: String(row.previousEmployerIncomeTaxBase ?? 0),
+    previousEmployerIncomeTaxBaseReference: row.previousEmployerIncomeTaxBaseReference ?? "",
+    cumulativeIncomeTaxBaseConfirmed: row.cumulativeIncomeTaxBaseConfirmed ?? false,
     specialDeductions: String(row.specialDeductions ?? 0),
     ibanComplete: row.ibanComplete ?? true,
     notes: row.notes ?? "",
@@ -40,11 +80,8 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     const parsed = Number(String(value).replace(",", "."));
     return Number.isFinite(parsed) ? parsed : 0;
   };
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({
-      ...f,
-      [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value,
-    }));
+  const setText = (key: keyof DetailForm) => (event: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
 
   const save = async () => {
     setError(null);
@@ -54,21 +91,36 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
         rowId,
         model: {
           grossSalary: parse(form.grossSalary),
+          statutoryProfile: form.statutoryProfile,
           workedDays: Math.round(parse(form.workedDays)),
+          sgkPremiumDaysConfirmed: form.sgkPremiumDaysConfirmed,
           overtimeHours: Math.round(parse(form.overtimeHours)),
+          overtimeTreatmentConfirmed: form.overtimeTreatmentConfirmed,
           premiumPay: parse(form.premiumPay),
           roadAllowance: parse(form.roadAllowance),
           mealAllowance: parse(form.mealAllowance),
+          mealDays: Math.round(parse(form.mealDays)),
+          mealTreatment: form.mealTreatment,
           benefitPay: parse(form.benefitPay),
+          benefitPayFullyTaxableConfirmed: form.benefitPayFullyTaxableConfirmed,
+          applyMinimumWageTaxExemption: form.applyMinimumWageTaxExemption,
+          employerSgkDiscount: form.employerSgkDiscount,
+          employerSgkDiscountReference: form.employerSgkDiscountReference.trim() || null,
+          disabilityReliefType: form.disabilityReliefType,
+          disabilityReliefReference: form.disabilityReliefReference.trim() || null,
+          otherIncomeTaxBaseDeductionsConfirmedNone: form.otherIncomeTaxBaseDeductionsConfirmedNone,
+          previousEmployerIncomeTaxBase: parse(form.previousEmployerIncomeTaxBase),
+          previousEmployerIncomeTaxBaseReference: form.previousEmployerIncomeTaxBaseReference.trim() || null,
+          cumulativeIncomeTaxBaseConfirmed: form.cumulativeIncomeTaxBaseConfirmed,
           specialDeductions: parse(form.specialDeductions),
           ibanComplete: form.ibanComplete,
-          notes: form.notes || null,
+          notes: form.notes.trim() || null,
         },
       });
       showToast(`${row.name} bordro girdileri kaydedildi.`, "success");
       onClose();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Girdiler kaydedilemedi.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Girdiler kaydedilemedi.");
     }
   };
 
@@ -76,10 +128,10 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     setError(null);
     try {
       await approveRow.mutateAsync({ periodId, rowId });
-      showToast(`${row.name} bordrosu onaylandı.`, "success");
+      showToast(`${row.name} bordrosu kanuni kapılardan geçerek onaylandı.`, "success");
       onClose();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Satır onaylanamadı.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Satır onaylanamadı.");
     }
   };
 
@@ -94,20 +146,22 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
       link.remove();
       URL.revokeObjectURL(link.href);
       showToast("Bordro pusulası indirildi.", "success");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Pusula indirilemedi.", "error");
+    } catch (caught) {
+      showToast(caught instanceof ApiError ? caught.message : "Pusula indirilemedi.", "error");
     }
   };
 
-  const inputFields: [keyof typeof form, string][] = [
-    ["grossSalary", "Brüt ücret"],
-    ["workedDays", "Çalışılan gün"],
-    ["overtimeHours", "Fazla mesai saati"],
-    ["premiumPay", "Prim"],
-    ["roadAllowance", "Yol yardımı"],
-    ["mealAllowance", "Yemek yardımı"],
-    ["benefitPay", "Yan hak / ek ödeme"],
-    ["specialDeductions", "Özel kesinti"],
+  const inputFields: [keyof DetailForm, string][] = [
+    ["grossSalary", "Aylık brüt ücret"],
+    ["workedDays", "SGK prim günü"],
+    ["overtimeHours", "Normal fazla çalışma saati"],
+    ["premiumPay", "Prime tabi prim"],
+    ["roadAllowance", "Nakit yol yardımı (tam tabi)"],
+    ["mealAllowance", "Nakit yemek yardımı"],
+    ["mealDays", "Yemek fiili gün sayısı"],
+    ["benefitPay", "Diğer ödeme (tam tabi)"],
+    ["previousEmployerIncomeTaxBase", "İlk dönem önceki işveren GV matrahı"],
+    ["specialDeductions", "Netten özel kesinti"],
   ];
 
   return (
@@ -118,9 +172,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           <h3>{row.name}</h3>
           <p>{row.title} · {row.department} · {periodName}</p>
         </div>
-        <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="Bordro detayını kapat">
-          <i aria-hidden="true" className="fa-solid fa-xmark" />
-        </button>
+        <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="Bordro detayını kapat"><i aria-hidden="true" className="fa-solid fa-xmark" /></button>
       </div>
 
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -133,41 +185,76 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
       </div>
 
       {!isApproved && (
-        <section className="card payroll-detail-section">
-          <div className="card-header-clean"><h4>Girdiler</h4></div>
+        <section className="card payroll-detail-section payroll-input-section">
+          <div className="card-header-clean">
+            <div><h4>Kanuni girdiler ve sınıflandırmalar</h4><p className="text-muted">Eksik doğrulama satır onayını sunucuda engeller.</p></div>
+          </div>
           <div className="form-grid">
+            <div className="input-group col-6">
+              <label className="input-label" htmlFor="pd-statutoryProfile">Kanuni çalışan profili</label>
+              <select id="pd-statutoryProfile" className="input-control" value={form.statutoryProfile} onChange={(e) => setForm((current) => ({ ...current, statutoryProfile: e.target.value as DetailForm["statutoryProfile"] }))}>
+                <option value="unspecified">Doğrulanmadı</option>
+                <option value="domesticPrivateSectorStandardFourA">Yurt içi özel sektör standart 4/a</option>
+              </select>
+            </div>
+            <div className="input-group col-3">
+              <label className="input-label" htmlFor="pd-mealTreatment">Yemek vergi/SGK sınıfı</label>
+              <select id="pd-mealTreatment" className="input-control" value={form.mealTreatment} onChange={(e) => setForm((current) => ({ ...current, mealTreatment: e.target.value as DetailForm["mealTreatment"] }))}>
+                <option value="unspecified">Yemek yok / seçilmedi</option>
+                <option value="cashExemptWhereNoMealProvided">İşyerinde yemek yok, nakit istisna</option>
+                <option value="fullyTaxable">Tam prime ve vergiye tabi</option>
+              </select>
+            </div>
+            <div className="input-group col-3">
+              <label className="input-label" htmlFor="pd-disabilityReliefType">Engellilik indirimi</label>
+              <select id="pd-disabilityReliefType" className="input-control" value={form.disabilityReliefType} onChange={(e) => setForm((current) => ({ ...current, disabilityReliefType: e.target.value as DetailForm["disabilityReliefType"] }))}>
+                <option value="unspecified">Seçilmedi</option>
+                <option value="none">Yok</option>
+                <option value="firstDegree">1. derece</option>
+                <option value="secondDegree">2. derece</option>
+                <option value="thirdDegree">3. derece</option>
+              </select>
+            </div>
+            <div className="input-group col-3">
+              <label className="input-label" htmlFor="pd-employerSgkDiscount">SGK işveren indirimi</label>
+              <select id="pd-employerSgkDiscount" className="input-control" value={form.employerSgkDiscount} onChange={(e) => setForm((current) => ({ ...current, employerSgkDiscount: e.target.value as DetailForm["employerSgkDiscount"] }))}>
+                <option value="none">İndirimsiz</option>
+                <option value="otherSectorTwoPoints">Diğer sektör 2 puan</option>
+                <option value="manufacturingFivePoints">İmalat 5 puan</option>
+              </select>
+            </div>
             {inputFields.map(([key, label]) => (
               <div key={key} className="input-group col-3">
                 <label className="input-label" htmlFor={`pd-${key}`}>{label}</label>
-                <input
-                  id={`pd-${key}`}
-                  type="number"
-                  className="input-control"
-                  value={String(form[key])}
-                  onChange={set(key)}
-                />
+                <input id={`pd-${key}`} type="number" className="input-control" value={String(form[key])} onChange={setText(key)} />
               </div>
             ))}
-            <div className="input-group col-3">
-              <label className="input-label" htmlFor="pd-notes">Not</label>
-              <input
-                id="pd-notes"
-                type="text"
-                className="input-control"
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              />
+            <div className="input-group col-6">
+              <label className="input-label" htmlFor="pd-employerSgkDiscountReference">İndirim uygunluk referansı</label>
+              <input id="pd-employerSgkDiscountReference" type="text" className="input-control" value={form.employerSgkDiscountReference} onChange={setText("employerSgkDiscountReference")} placeholder="Teşvik/uygunluk kayıt numarası" />
+            </div>
+            <div className="input-group col-6">
+              <label className="input-label" htmlFor="pd-disabilityReliefReference">Engellilik indirimi belge/referansı</label>
+              <input id="pd-disabilityReliefReference" type="text" className="input-control" value={form.disabilityReliefReference} onChange={setText("disabilityReliefReference")} placeholder="Vergi indirimi yazısı / uygunluk kayıt numarası" />
+            </div>
+            <div className="input-group col-6">
+              <label className="input-label" htmlFor="pd-previousEmployerIncomeTaxBaseReference">Önceki işveren matrahı talep/kabul referansı</label>
+              <input id="pd-previousEmployerIncomeTaxBaseReference" type="text" className="input-control" value={form.previousEmployerIncomeTaxBaseReference} onChange={setText("previousEmployerIncomeTaxBaseReference")} placeholder="Çalışan talebi ve işveren kabul kayıt numarası" />
+            </div>
+            <div className="input-group col-6">
+              <label className="input-label" htmlFor="pd-notes">Denetim notu</label>
+              <input id="pd-notes" type="text" className="input-control" value={form.notes} onChange={setText("notes")} />
             </div>
           </div>
-          <div className="toolbar-actions">
-            <label className="leg-item">
-              <input type="checkbox" checked={form.ibanComplete} onChange={set("ibanComplete")} /> IBAN tamam
-            </label>
-            <span className={`status-pill ${row.timesheetComplete ? "approved" : "pending"}`}>
-              {row.timesheetComplete
-                ? "Puantaj sistem tarafından tamamlandı"
-                : "Puantaj sistem kontrolünde eksik"}
-            </span>
+          <div className="payroll-rule-checks">
+            <label className="leg-item"><input type="checkbox" checked={form.ibanComplete} onChange={(e) => setForm((current) => ({ ...current, ibanComplete: e.target.checked }))} /> IBAN tamam</label>
+            <label className="leg-item"><input type="checkbox" checked={form.sgkPremiumDaysConfirmed} onChange={(e) => setForm((current) => ({ ...current, sgkPremiumDaysConfirmed: e.target.checked }))} /> SGK prim gününü doğruladım</label>
+            <label className="leg-item"><input type="checkbox" checked={form.overtimeTreatmentConfirmed} onChange={(e) => setForm((current) => ({ ...current, overtimeTreatmentConfirmed: e.target.checked }))} /> Fazla çalışmanın standart %50 zamlı türünü, çalışan onayını ve yıllık 270 saat sınırını doğruladım</label>
+            <label className="leg-item"><input type="checkbox" checked={form.benefitPayFullyTaxableConfirmed} onChange={(e) => setForm((current) => ({ ...current, benefitPayFullyTaxableConfirmed: e.target.checked }))} /> Diğer ödemenin tamamı prime ve vergiye tabi</label>
+            <label className="leg-item"><input type="checkbox" checked={form.applyMinimumWageTaxExemption} onChange={(e) => setForm((current) => ({ ...current, applyMinimumWageTaxExemption: e.target.checked }))} /> Asgari ücret gelir ve damga vergisi istisnası bu işverende (tek/en yüksek ücretli işveren) uygulanır</label>
+            <label className="leg-item"><input type="checkbox" checked={form.otherIncomeTaxBaseDeductionsConfirmedNone} onChange={(e) => setForm((current) => ({ ...current, otherIncomeTaxBaseDeductionsConfirmedNone: e.target.checked }))} /> Engellilik dışında kişisel sigorta/sendika vb. GV matrah indirimi bulunmuyor</label>
+            <label className="leg-item"><input type="checkbox" checked={form.cumulativeIncomeTaxBaseConfirmed} onChange={(e) => setForm((current) => ({ ...current, cumulativeIncomeTaxBaseConfirmed: e.target.checked }))} /> Kümülatif GV matrahını ve varsa önceki işveren açılışını doğruladım</label>
+            <span className={`status-pill ${row.timesheetComplete ? "approved" : "pending"}`}>{row.timesheetComplete ? "Puantaj sistem tarafından tamamlandı" : "Puantaj sistem kontrolünde eksik"}</span>
           </div>
         </section>
       )}
@@ -176,15 +263,12 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
         <section className="card payroll-detail-section">
           <div className="card-header-clean"><h4>Kazançlar</h4></div>
           <Line label="Brüt ücret" value={row.baseGross} />
-          <Line label="Fazla mesai" value={row.overtimePay} />
-          <Line label="Prim" value={row.premiumPay} />
-          <Line label="Yol yardımı" value={row.roadAllowance} />
-          <Line label="Yemek yardımı" value={row.mealAllowance} />
-          <Line label="Yan hak / ek ödeme" value={row.benefitPay} />
-          <div className="payroll-note compact">
-            <i aria-hidden="true" className="fa-solid fa-circle-info" />
-            <span>{row.notes || "Not yok."}</span>
-          </div>
+          <Line label="Fazla çalışma" value={row.overtimePay} />
+          <Line label="Prime tabi prim" value={row.premiumPay} />
+          <Line label="Nakit yol (tam tabi)" value={row.roadAllowance} />
+          <Line label="Nakit yemek" value={row.mealAllowance} />
+          <Line label="Diğer ödeme (tam tabi)" value={row.benefitPay} />
+          <div className="payroll-note compact"><i aria-hidden="true" className="fa-solid fa-circle-info" /><span>{row.notes || "Not yok."}</span></div>
         </section>
 
         <section className="card payroll-detail-section">
@@ -193,38 +277,40 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           <Line label="İşsizlik işçi payı" value={row.unemploymentEmployee} tone="deduction" />
           <Line label="Gelir vergisi" value={row.incomeTax} tone="deduction" />
           <Line label="Damga vergisi" value={row.stampTax} tone="deduction" />
-          <Line label="Özel kesintiler" value={row.specialDeductions} tone="deduction" />
+          <Line label="Netten özel kesinti" value={row.specialDeductions} tone="deduction" />
         </section>
 
         <section className="card payroll-detail-section">
-          <div className="card-header-clean"><h4>Vergi / SGK Matrahları</h4></div>
+          <div className="card-header-clean"><h4>Matrahlar ve kanuni istisnalar</h4></div>
           <Line label="Saatlik ücret" value={row.hourlyRate} />
           <Line label="SGK matrahı" value={row.sgkBase} />
           <Line label="Gelir vergisi matrahı" value={row.incomeTaxBase} />
+          <Line label="Engellilik matrah indirimi" value={row.disabilityIncomeTaxBaseDeduction} />
           <Line label="Önceki kümülatif matrah" value={row.previousTaxBase} />
+          <Line label="Önceki işveren açılış matrahı" value={row.previousEmployerIncomeTaxBase} />
           <Line label="Dönem sonu kümülatif" value={(row.previousTaxBase ?? 0) + (row.incomeTaxBase ?? 0)} />
+          <Line label="Yemek SGK istisnası" value={row.sgkExemptMealAllowance} />
+          <Line label="Yemek GV istisnası" value={row.incomeTaxExemptMealAllowance} />
+          <Line label="Asgari ücret GV istisnası" value={row.minimumWageIncomeTaxExemption} />
+          <Line label="Asgari ücret damga istisnası" value={row.minimumWageStampTaxExemption} />
+          <div className="payroll-line"><span>Uygulanan SGK işveren oranı</span><strong>%{formatPayrollNumber(row.appliedEmployerSgkRate)}</strong></div>
           <div className="payroll-warning-stack">
             {(row.warnings ?? []).length > 0
-              ? (row.warnings ?? []).map((warning) => (
-                  <span key={warning} className="status-pill pending">{warning}</span>
-                ))
+              ? row.warnings?.map((warning) => <span key={warning} className="status-pill pending">{warning}</span>)
               : <span className="status-pill approved">Uyarı yok</span>}
           </div>
         </section>
 
         <section className="card payroll-slip-preview">
-          <div className="card-header-clean">
-            <h4>Bordro Pusulası Önizleme</h4>
-            <span className="status-pill info">Demo</span>
-          </div>
+          <div className="card-header-clean"><h4>Bordro Pusulası Önizleme</h4><span className="status-pill info">Denetimli</span></div>
           <div className="slip-paper">
             <div className="slip-brand"><strong>İK Pro</strong><span>{periodName} Bordro Pusulası</span></div>
             <div className="slip-row"><span>Personel</span><strong>{row.name}</strong></div>
-            <div className="slip-row"><span>Çalışılan gün</span><strong>{row.workedDays}</strong></div>
-            <div className="slip-row"><span>Fazla mesai</span><strong>{row.overtimeHours ?? 0} saat · {formatPayrollMoney(row.overtimePay)}</strong></div>
+            <div className="slip-row"><span>SGK prim günü</span><strong>{row.workedDays}</strong></div>
+            <div className="slip-row"><span>Fazla çalışma</span><strong>{row.overtimeHours ?? 0} saat · {formatPayrollMoney(row.overtimePay)}</strong></div>
             <div className="slip-row"><span>Brüt kazanç</span><strong>{formatPayrollMoney(row.grossEarnings)}</strong></div>
             <div className="slip-row"><span>Yasal kesintiler</span><strong>{formatPayrollMoney((row.totalDeductions ?? 0) - (row.specialDeductions ?? 0))}</strong></div>
-            <div className="slip-row"><span>Özel kesintiler</span><strong>{formatPayrollMoney(row.specialDeductions)}</strong></div>
+            <div className="slip-row"><span>Netten özel kesinti</span><strong>{formatPayrollMoney(row.specialDeductions)}</strong></div>
             <div className="slip-row total"><span>Net ödenecek</span><strong>{formatPayrollMoney(row.netPay)}</strong></div>
           </div>
         </section>
@@ -233,17 +319,11 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
       <div className="payroll-detail-footer">
         <button className="btn btn-secondary" onClick={onClose}>Kapat</button>
         {isApproved ? (
-          <button className="btn btn-primary" onClick={downloadSlip}>
-            <i aria-hidden="true" className="fa-solid fa-file-pdf" /> Pusula İndir
-          </button>
+          <button className="btn btn-primary" onClick={downloadSlip}><i aria-hidden="true" className="fa-solid fa-file-pdf" /> Pusula İndir</button>
         ) : (
           <>
-            <button className="btn btn-secondary" onClick={save} disabled={updateRow.isPending}>
-              <i aria-hidden="true" className="fa-solid fa-floppy-disk" /> Kaydet
-            </button>
-            <button className="btn btn-primary" onClick={approve} disabled={approveRow.isPending}>
-              <i aria-hidden="true" className="fa-solid fa-paper-plane" /> Onaya gönder
-            </button>
+            <button className="btn btn-secondary" onClick={save} disabled={updateRow.isPending}><i aria-hidden="true" className="fa-solid fa-floppy-disk" /> Kaydet</button>
+            <button className="btn btn-primary" onClick={approve} disabled={approveRow.isPending}><i aria-hidden="true" className="fa-solid fa-shield-halved" /> Satırı onayla</button>
           </>
         )}
       </div>

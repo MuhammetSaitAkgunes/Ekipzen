@@ -32,6 +32,13 @@ public class PayrollResult : AuditableEntity
     public decimal EmployerUnemployment { get; set; }
     public decimal EmployerCost { get; set; }
 
+    public decimal SgkExemptMealAllowance { get; set; }
+    public decimal IncomeTaxExemptMealAllowance { get; set; }
+    public decimal MinimumWageIncomeTaxExemption { get; set; }
+    public decimal MinimumWageStampTaxExemption { get; set; }
+    public decimal AppliedEmployerSgkRate { get; set; }
+    public decimal DisabilityIncomeTaxBaseDeduction { get; set; }
+
     /// <summary>Uyarı bayrakları (JSON dizi olarak saklanır).</summary>
     public string? WarningsJson { get; set; }
 

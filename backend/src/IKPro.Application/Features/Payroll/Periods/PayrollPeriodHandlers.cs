@@ -81,6 +81,8 @@ public sealed class CreatePayrollPeriodCommandHandler(
             context, new DateOnly(request.Year, request.Month, 1), cancellationToken);
 
         var periodStart = new DateOnly(request.Year, request.Month, 1);
+        var minimumWageIncomeTaxBaseBefore = await PayrollMinimumWageTaxBase.CalculateBeforeAsync(
+            context, request.Year, request.Month, cancellationToken);
         var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
         var employees = await context.Employees
@@ -140,6 +142,7 @@ public sealed class CreatePayrollPeriodCommandHandler(
             Month = request.Month,
             Status = PayrollPeriodStatus.Draft,
             PayrollSettingsId = settings.Id,
+            MinimumWageIncomeTaxBaseBefore = minimumWageIncomeTaxBaseBefore,
         };
 
         foreach (var employee in employees)
@@ -223,7 +226,8 @@ public static class PayrollPeriodProjector
 
         var rows = employeeRows
             .OrderBy(pe => pe.Employee!.FirstName).ThenBy(pe => pe.Employee!.LastName)
-            .Select(pe => ToRow(pe, engine, parameters))
+            .Select(pe => ToRow(
+                pe, engine, parameters, period.MinimumWageIncomeTaxBaseBefore))
             .ToList();
 
         var totals = new PayrollTotalsDto(
@@ -237,17 +241,25 @@ public static class PayrollPeriodProjector
             new("Eksik Puantaj", rows.Count(r => !r.TimesheetComplete), "high"),
             new("Eksik IBAN", rows.Count(r => !r.IbanComplete), "high"),
             new("SGK Matrah Uyarısı", rows.Count(r =>
-                r.SgkBase >= parameters.SgkBaseMax || r.SgkBase <= parameters.SgkBaseMin * 0.95m), "medium"),
+                r.Warnings.Contains("SGK tavan kontrolü")), "medium"),
+            new("Kanuni Sınıflandırma Eksik", rows.Count(r =>
+                r.Warnings.Any(w => w.Contains("sınıfı seçilmedi")
+                    || w.Contains("dağıtım bekliyor")
+                    || w.Contains("istisna günü eksik"))), "high"),
             new("Vergi Matrahı Uyarısı", rows.Count(r => r.Warnings.Contains("Vergi dilimi geçişi")), "medium"),
             new("Onay Bekleyen", rows.Count(r => r.ApprovalStatus != "Onaylandı"), "low"),
         };
 
         return new PayrollPeriodDetailDto(
             period.Id, period.Name, period.Year, period.Month, period.Status.ToDto(),
-            rows, totals, controls);
+            PayrollSettingsResolver.ToDto(period.Settings!), rows, totals, controls);
     }
 
-    public static PayrollRowDto ToRow(PayrollEmployee pe, IPayrollEngine engine, PayrollParameters parameters)
+    public static PayrollRowDto ToRow(
+        PayrollEmployee pe,
+        IPayrollEngine engine,
+        PayrollParameters parameters,
+        decimal minimumWageIncomeTaxBaseBefore)
     {
         PayrollCalculation calc;
         if (pe.ApprovalStatus == PayrollApprovalStatus.Approved && pe.Result is not null)
@@ -261,11 +273,16 @@ public static class PayrollPeriodProjector
                 r.EmployerSgk, r.EmployerUnemployment, r.EmployerCost,
                 r.WarningsJson is null
                     ? []
-                    : JsonSerializer.Deserialize<List<string>>(r.WarningsJson) ?? []);
+                    : JsonSerializer.Deserialize<List<string>>(r.WarningsJson) ?? [],
+                r.SgkExemptMealAllowance, r.IncomeTaxExemptMealAllowance,
+                r.MinimumWageIncomeTaxExemption, r.MinimumWageStampTaxExemption,
+                r.AppliedEmployerSgkRate,
+                r.DisabilityIncomeTaxBaseDeduction);
         }
         else
         {
-            calc = engine.Calculate(pe.ToEngineInput(), parameters);
+            calc = engine.Calculate(
+                pe.ToEngineInput(minimumWageIncomeTaxBaseBefore), parameters);
         }
 
         return new PayrollRowDto(
@@ -274,9 +291,18 @@ public static class PayrollPeriodProjector
             pe.Employee?.FullName ?? string.Empty,
             pe.Employee?.Title ?? string.Empty,
             pe.Employee?.Department?.Name ?? string.Empty,
-            pe.GrossSalary, pe.WorkedDays, pe.OvertimeHours,
-            pe.PremiumPay, pe.RoadAllowance, pe.MealAllowance, pe.BenefitPay,
+            pe.GrossSalary, pe.StatutoryProfile,
+            pe.WorkedDays, pe.SgkPremiumDaysConfirmed,
+            pe.OvertimeHours, pe.OvertimeTreatmentConfirmed, pe.PremiumPay, pe.RoadAllowance, pe.MealAllowance,
+            pe.MealDays, pe.MealTreatment,
+            pe.BenefitPay, pe.BenefitPayFullyTaxableConfirmed,
+            pe.ApplyMinimumWageTaxExemption, pe.EmployerSgkDiscount,
+            pe.EmployerSgkDiscountReference,
+            pe.DisabilityReliefType, pe.DisabilityReliefReference,
+            pe.OtherIncomeTaxBaseDeductionsConfirmedNone,
             pe.SpecialDeductions, pe.PreviousTaxBase,
+            pe.PreviousEmployerIncomeTaxBase, pe.PreviousEmployerIncomeTaxBaseReference,
+            pe.CumulativeIncomeTaxBaseConfirmed,
             pe.IbanComplete, pe.TimesheetComplete,
             pe.ApprovalStatus.ToDto(), pe.Notes,
             calc.HourlyRate, calc.OvertimePay, calc.BaseGross, calc.GrossEarnings,
@@ -284,6 +310,9 @@ public static class PayrollPeriodProjector
             calc.IncomeTaxBase, calc.IncomeTax, calc.StampTax,
             calc.TotalDeductions, calc.NetPay,
             calc.EmployerSgk, calc.EmployerUnemployment, calc.EmployerCost,
+            calc.SgkExemptMealAllowance, calc.IncomeTaxExemptMealAllowance,
+            calc.MinimumWageIncomeTaxExemption, calc.MinimumWageStampTaxExemption,
+            calc.AppliedEmployerSgkRate, calc.DisabilityIncomeTaxBaseDeduction,
             calc.Warnings);
     }
 }

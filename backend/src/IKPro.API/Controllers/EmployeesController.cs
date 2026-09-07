@@ -174,6 +174,22 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.SettlementReference,
             body.SettlementNotes), cancellationToken));
 
+    [HttpPost("{id:int}/offboarding/{caseId:int}/calculation-draft")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeOffboardingCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeOffboardingCaseDto>> GenerateOffboardingCalculationDraft(
+        int id, int caseId, GenerateOffboardingCalculationDraftBody body,
+        CancellationToken cancellationToken) =>
+        Ok(await sender.Send(new GenerateTerminationCalculationDraftCommand(
+            id,
+            caseId,
+            body.ExpectedVersion,
+            body.ConfirmSeveranceEligibility,
+            body.ConfirmNoticeEligibility,
+            body.ExpertReviewReference), cancellationToken));
+
     [HttpPost("{id:int}/offboarding/{caseId:int}/complete")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeOffboardingCaseDto>(StatusCodes.Status200OK)]
@@ -295,6 +311,12 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal NoticePayment,
         string SettlementReference,
         string? SettlementNotes = null);
+
+    public sealed record GenerateOffboardingCalculationDraftBody(
+        int ExpectedVersion,
+        bool ConfirmSeveranceEligibility,
+        bool ConfirmNoticeEligibility,
+        string ExpertReviewReference);
 
     public sealed record OffboardingVersionBody(int ExpectedVersion);
 

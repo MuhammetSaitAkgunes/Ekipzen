@@ -1760,6 +1760,18 @@ button.risk-action:hover {
   margin-top: 16px;
 }
 
+.offboarding-calculation-fieldset {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.offboarding-eligibility-checks {
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .offboarding-form-grid .form-span-2 {
   grid-column: 1 / -1;
 }

@@ -559,6 +559,81 @@
   font-weight: 600;
 }
 
+.payroll-rule-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  margin-top: 1rem;
+}
+
+.payroll-rule-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.payroll-rule-row {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+}
+
+.payroll-rule-row p {
+  margin: 0.25rem 0 0;
+}
+
+.payroll-settings-current {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--success);
+  border-radius: var(--radius-md);
+  background: var(--success-soft);
+}
+
+.payroll-settings-current span,
+.payroll-settings-current small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.payroll-settings-subhead {
+  margin-top: 22px;
+}
+
+.payroll-tax-table-wrap {
+  overflow-x: auto;
+}
+
+.payroll-tax-table {
+  min-width: 760px;
+}
+
+.payroll-tax-table .input-control {
+  min-width: 130px;
+}
+
+.payroll-settings-review {
+  margin-top: 18px;
+}
+
+.payroll-settings-review textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.payroll-settings-actions {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.payroll-input-section {
+  min-height: auto;
+}
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1280px) {
@@ -575,6 +650,11 @@
   .scenario-breakdown-grid {
     grid-template-columns: 1fr;
   }
+
+  .payroll-rule-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 820px) {
@@ -585,7 +665,8 @@
   .payroll-detail-summary,
   .payroll-detail-grid,
   .scenario-highlight-grid,
-  .payroll-settings-grid {
+  .payroll-settings-grid,
+  .payroll-rule-checks {
     grid-template-columns: 1fr;
   }
 

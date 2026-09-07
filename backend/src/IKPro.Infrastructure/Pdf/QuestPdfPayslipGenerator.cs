@@ -7,7 +7,7 @@ using System.Globalization;
 namespace IKPro.Infrastructure.Pdf;
 
 /// <summary>
-/// QuestPDF ile bordro pusulası — payroll.js slip-paper önizlemesinin PDF karşılığı
+/// Onaylı bordro snapshot'ından denetlenebilir hesap dökümü üretir.
 /// (İK Pro başlık, kazanç/kesinti dökümü, net ödenecek).
 /// </summary>
 public sealed class QuestPdfPayslipGenerator : IPayslipGenerator
@@ -46,16 +46,20 @@ public sealed class QuestPdfPayslipGenerator : IPayslipGenerator
                         text.Span("Personel: ").SemiBold();
                         text.Span($"{model.EmployeeName} — {model.Title} · {model.Department}");
                     });
-                    content.Item().Text($"Çalışılan gün: {model.WorkedDays}   ·   " +
-                        $"Fazla mesai: {model.OvertimeHours.ToString("0.##", Turkish)} saat");
+                    content.Item().Text($"SGK prim günü: {model.WorkedDays}   ·   " +
+                        $"Fazla çalışma: {model.OvertimeHours.ToString("0.##", Turkish)} saat");
+                    content.Item().Text(
+                        $"Mevzuat seti: v{model.SettingsVersion} · " +
+                        $"{model.SettingsEffectiveFrom.ToString("dd.MM.yyyy", Turkish)} tarihinden geçerli")
+                        .FontSize(8);
 
                     content.Item().PaddingTop(10).Text("Kazançlar").Bold().FontSize(12);
                     content.Item().Element(e => MoneyRow(e, "Brüt ücret", model.BaseGross));
-                    content.Item().Element(e => MoneyRow(e, "Fazla mesai", model.OvertimePay));
-                    content.Item().Element(e => MoneyRow(e, "Prim", model.PremiumPay));
-                    content.Item().Element(e => MoneyRow(e, "Yol yardımı", model.RoadAllowance));
-                    content.Item().Element(e => MoneyRow(e, "Yemek yardımı", model.MealAllowance));
-                    content.Item().Element(e => MoneyRow(e, "Yan hak / ek ödeme", model.BenefitPay));
+                    content.Item().Element(e => MoneyRow(e, "Fazla çalışma", model.OvertimePay));
+                    content.Item().Element(e => MoneyRow(e, "Prime tabi prim", model.PremiumPay));
+                    content.Item().Element(e => MoneyRow(e, "Nakit yol yardımı (tam tabi)", model.RoadAllowance));
+                    content.Item().Element(e => MoneyRow(e, $"Nakit yemek ({model.MealDays} gün)", model.MealAllowance));
+                    content.Item().Element(e => MoneyRow(e, "Diğer ödeme (tam tabi)", model.BenefitPay));
                     content.Item().Element(e => MoneyRow(e, "Brüt kazanç", model.GrossEarnings, bold: true));
 
                     content.Item().PaddingTop(10).Text("Kesintiler").Bold().FontSize(12);
@@ -63,8 +67,21 @@ public sealed class QuestPdfPayslipGenerator : IPayslipGenerator
                     content.Item().Element(e => MoneyRow(e, "İşsizlik işçi payı", model.UnemploymentEmployee));
                     content.Item().Element(e => MoneyRow(e, "Gelir vergisi", model.IncomeTax));
                     content.Item().Element(e => MoneyRow(e, "Damga vergisi", model.StampTax));
-                    content.Item().Element(e => MoneyRow(e, "Özel kesintiler", model.SpecialDeductions));
+                    content.Item().Element(e => MoneyRow(e, "Netten özel kesinti", model.SpecialDeductions));
                     content.Item().Element(e => MoneyRow(e, "Toplam kesinti", model.TotalDeductions, bold: true));
+
+                    content.Item().PaddingTop(10).Text("Matrahlar ve kanuni istisnalar").Bold().FontSize(12);
+                    content.Item().Element(e => MoneyRow(e, "SGK matrahı", model.SgkBase));
+                    content.Item().Element(e => MoneyRow(e, "Gelir vergisi matrahı", model.IncomeTaxBase));
+                    content.Item().Element(e => MoneyRow(e, "Engellilik matrah indirimi", model.DisabilityIncomeTaxBaseDeduction));
+                    content.Item().Element(e => MoneyRow(e, "Önceki kümülatif GV matrahı", model.PreviousTaxBase));
+                    content.Item().Element(e => MoneyRow(e, "Yemek SGK istisnası", model.SgkExemptMealAllowance));
+                    content.Item().Element(e => MoneyRow(e, "Yemek GV istisnası", model.IncomeTaxExemptMealAllowance));
+                    content.Item().Element(e => MoneyRow(e, "Asgari ücret GV istisnası", model.MinimumWageIncomeTaxExemption));
+                    content.Item().Element(e => MoneyRow(e, "Asgari ücret damga istisnası", model.MinimumWageStampTaxExemption));
+                    content.Item().Text($"Yemek sınıfı: {model.MealTreatment} · Engellilik indirimi: {model.DisabilityReliefType}").FontSize(8);
+                    content.Item().Text($"Uygulanan SGK işveren oranı: %{model.AppliedEmployerSgkRate.ToString("0.##", Turkish)}").FontSize(8);
+                    content.Item().Text($"Kaynak: {model.SettingsSourceReference}").FontSize(7);
 
                     content.Item().PaddingTop(14).BorderTop(1).PaddingTop(6)
                         .Element(e => MoneyRow(e, "NET ÖDENECEK", model.NetPay, bold: true, fontSize: 13));
@@ -72,7 +89,7 @@ public sealed class QuestPdfPayslipGenerator : IPayslipGenerator
 
                 page.Footer().AlignCenter().Text(text =>
                 {
-                    text.Span("İK Pro · Bu pusula bilgilendirme amaçlıdır. ").FontSize(8);
+                    text.Span("İK Pro · Bu doküman onaylı bordro sonucundan üretilmiştir. ").FontSize(8);
                     text.Span(DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm 'UTC'", Turkish)).FontSize(8);
                 });
             });

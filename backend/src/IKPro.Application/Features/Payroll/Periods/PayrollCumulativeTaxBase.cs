@@ -49,7 +49,18 @@ public static class PayrollCumulativeTaxBase
 
         foreach (var row in rows)
         {
-            row.PreviousTaxBase = cumulativeByEmployee.GetValueOrDefault(row.EmployeeId, 0m);
+            if (cumulativeByEmployee.TryGetValue(row.EmployeeId, out var priorPayrollBase))
+            {
+                row.PreviousTaxBase = priorPayrollBase;
+                // Açılış bakiyesi yalnız IK Pro'daki ilk bordroda kullanılır; sonraki
+                // aylarda önceki onaylı snapshot zaten bu bakiyeyi içerir.
+                row.PreviousEmployerIncomeTaxBase = 0m;
+                row.PreviousEmployerIncomeTaxBaseReference = null;
+            }
+            else
+            {
+                row.PreviousTaxBase = row.PreviousEmployerIncomeTaxBase;
+            }
         }
     }
 }

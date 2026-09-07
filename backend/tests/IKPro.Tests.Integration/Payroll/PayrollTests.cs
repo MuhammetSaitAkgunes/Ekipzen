@@ -3,9 +3,12 @@ using IKPro.Application.Common.Models;
 using IKPro.Application.Features.Auth;
 using IKPro.Application.Features.Employees;
 using IKPro.Application.Features.Payroll;
+using IKPro.Domain.Enums;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace IKPro.Tests.Integration.Payroll;
 
@@ -19,6 +22,10 @@ namespace IKPro.Tests.Integration.Payroll;
 public sealed class PayrollTests(IKProApiFactory factory)
 {
     private const string DemoPassword = "demo123";
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
 
     [Fact]
     public async Task Settings_AreSeeded_AndVersionedByEffectiveDate()
@@ -31,31 +38,62 @@ public sealed class PayrollTests(IKProApiFactory factory)
         current.TaxBrackets.Should().HaveCount(5);
         current.TaxBrackets[^1].Limit.Should().BeNull("son dilim sınırsız");
 
-        // 2027 başından geçerli yeni set: çarpan 2.0; 2026 etkilenmez.
-        var updateResponse = await admin.PutAsJsonAsync("/api/payroll/settings", new
-        {
-            effectiveFrom = "2027-01-01",
-            overtimeMultiplier = 2.0m,
-            monthlyWorkingHours = current.MonthlyWorkingHours,
-            defaultWorkedDays = current.DefaultWorkedDays,
-            sgkEmployeeRate = current.SgkEmployeeRate,
-            unemploymentEmployeeRate = current.UnemploymentEmployeeRate,
-            sgkEmployerRate = current.SgkEmployerRate,
-            unemploymentEmployerRate = current.UnemploymentEmployerRate,
-            stampTaxRate = current.StampTaxRate,
-            sgkBaseMin = current.SgkBaseMin,
-            sgkBaseMax = current.SgkBaseMax,
-            monthlyMinWageIncomeTaxExemption = current.MonthlyMinWageIncomeTaxExemption,
-            monthlyMinWageStampTaxExemption = current.MonthlyMinWageStampTaxExemption,
-            minWageGross = current.MinWageGross,
-        });
-        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Onaysız taslak hesaplarda kullanılmaz; açık onaydan sonra yürürlüğe girer.
+        var draftResponse = await admin.PutAsJsonAsync(
+            "/api/payroll/settings",
+            SettingsBody(current, effectiveFrom: "2027-01-01", sgkBaseMin: current.SgkBaseMin,
+                overtimeMultiplier: 2.0m));
+        draftResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var draft2027 = (await draftResponse.Content.ReadFromJsonAsync<PayrollSettingsDto>())!;
+        draft2027.Status.Should().Be("draft");
+        var drafts = await GetAsync<List<PayrollSettingsDto>>(admin, "/api/payroll/settings/drafts");
+        drafts.Should().Contain(item => item.Id == draft2027.Id && item.Version == draft2027.Version);
+
+        (await GetAsync<PayrollSettingsDto>(admin, "/api/payroll/settings?asOf=2027-01-01"))
+            .EffectiveFrom.Should().Be(new DateOnly(2026, 1, 1));
+
+        var approveResponse = await admin.PostAsJsonAsync(
+            $"/api/payroll/settings/{draft2027.Id}/approve",
+            new { id = draft2027.Id, expectedVersion = draft2027.Version });
+        approveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var approved2027 = (await approveResponse.Content.ReadFromJsonAsync<PayrollSettingsDto>())!;
+        approved2027.Status.Should().Be("approved");
+        drafts = await GetAsync<List<PayrollSettingsDto>>(admin, "/api/payroll/settings/drafts");
+        drafts.Should().NotContain(item => item.Id == draft2027.Id);
+
 
         (await GetAsync<PayrollSettingsDto>(admin, "/api/payroll/settings?asOf=2027-01-01"))
             .OvertimeMultiplier.Should().Be(2.0m);
         (await GetAsync<PayrollSettingsDto>(admin, "/api/payroll/settings?asOf=2026-06-01"))
             .OvertimeMultiplier.Should().Be(1.5m);
 
+        (await admin.PutAsJsonAsync(
+            "/api/payroll/settings",
+            SettingsBody(approved2027, "2027-01-01", approved2027.SgkBaseMin)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict,
+                "onaylı mevzuat seti yerinde değiştirilemez");
+
+        (await admin.PutAsJsonAsync(
+            "/api/payroll/settings",
+            SettingsBody(current, "2029-07-15", current.SgkBaseMin)))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest,
+                "aylık bordro parametresi ay ortasında yürürlüğe giremez");
+
+        var brokenBrackets = current.TaxBrackets.ToList();
+        brokenBrackets[1] = brokenBrackets[1] with { BaseTax = 1m };
+        (await admin.PutAsJsonAsync(
+            "/api/payroll/settings",
+            SettingsBody(current, "2029-08-01", current.SgkBaseMin,
+                taxBrackets: brokenBrackets)))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest,
+                "matematiksel sürekliliği bozuk vergi dilimi reddedilmelidir");
+
+        (await admin.PutAsJsonAsync(
+            "/api/payroll/settings",
+            SettingsBody(current, "2029-09-01", current.SgkBaseMin,
+                sourceReference: "https://example.com/not-official")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest,
+                "mevzuat kaynağı resmî gov.tr alanında olmalıdır");
         // Yönetim rolleri dışında kalanlar ve manager ayarlara erişemez.
         var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
         (await manager.GetAsync("/api/payroll/settings")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -73,16 +111,15 @@ public sealed class PayrollTests(IKProApiFactory factory)
         var ocak = await GetAsync<PayrollSettingsDto>(admin, "/api/payroll/settings?asOf=2026-01-01");
 
         // Temmuzdan itibaren geçerli yeni set: SGK tabanı yükseldi.
-        var temmuzSeti = SettingsBody(ocak, effectiveFrom: "2026-07-01", sgkBaseMin: 40000m);
-        (await admin.PutAsJsonAsync("/api/payroll/settings", temmuzSeti))
-            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var temmuzSeti = SettingsBody(ocak, effectiveFrom: "2028-07-01", sgkBaseMin: 40000m);
+        (await SaveAndApproveSettingsAsync(admin, temmuzSeti)).Status.Should().Be("approved");
 
         // Parametrenin hesaba yansıması üzerinden doğrula: brüt tabanın altında
         // kaldığı için SGK matrahı o tarihte yürürlükteki tabana çekilir.
-        (await PreviewSgkBaseAsync(admin, asOf: "2026-06-01"))
+        (await PreviewSgkBaseAsync(admin, asOf: "2028-06-01"))
             .Should().Be(33030m, "haziran, temmuzdaki değişimden etkilenmemeli");
 
-        (await PreviewSgkBaseAsync(admin, asOf: "2026-07-01"))
+        (await PreviewSgkBaseAsync(admin, asOf: "2028-07-01"))
             .Should().Be(40000m, "temmuz döneminde yeni set yürürlükte");
     }
 
@@ -99,6 +136,8 @@ public sealed class PayrollTests(IKProApiFactory factory)
         var response = await admin.PostAsJsonAsync("/api/payroll/preview", new
         {
             grossSalary = 33030,
+            statutoryProfile = "domesticPrivateSectorStandardFourA",
+            disabilityReliefType = "none",
             workedDays = 30,
             overtimeHours = 0,
             premiumPay = 0,
@@ -115,19 +154,46 @@ public sealed class PayrollTests(IKProApiFactory factory)
     }
 
     [Fact]
-    public async Task Preview_MatchesJsParityScenario()
+    public async Task Preview_SayisalKanuniEnumlariReddeder()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+
+        var response = await admin.PostAsJsonAsync("/api/payroll/preview", new
+        {
+            grossSalary = 33030,
+            statutoryProfile = 1,
+            disabilityReliefType = 0,
+            workedDays = 30,
+            overtimeHours = 0,
+            premiumPay = 0,
+            roadAllowance = 0,
+            mealAllowance = 0,
+            specialDeductions = 0,
+            previousTaxBase = 0,
+            asOf = "2026-01-01",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
+            "kanuni profil değerleri yalnızca açık isimlerle kabul edilmelidir");
+    }
+
+    [Fact]
+    public async Task Preview_KanuniYuksekUcretSenaryosunuHesaplar()
     {
         var admin = await AuthedClientAsync("ik@hrmaster.local");
 
         var response = await admin.PostAsJsonAsync("/api/payroll/preview", new
         {
             grossSalary = 85000,
+            statutoryProfile = "domesticPrivateSectorStandardFourA",
+            disabilityReliefType = "none",
             workedDays = 30,
             overtimeHours = 10,
             overtimeMultiplier = 2,
             premiumPay = 1500,
             roadAllowance = 800,
             mealAllowance = 1200,
+            mealTreatment = "fullyTaxable",
             specialDeductions = 500,
             previousTaxBase = 185000,
             asOf = "2026-01-01",
@@ -139,7 +205,7 @@ public sealed class PayrollTests(IKProApiFactory factory)
         // 4.211 yerine tam değerine (4.211,33) çekilince gelir vergisi 0,33 TL azaldı ve
         // net aynı miktarda arttı. Beklenen değer bu düzeltmeyi yansıtır.
         calc.NetPay.Should().BeApproximately(68800.746111m, 0.01m, "istisna düzeltmesi sonrası");
-        calc.EmployerCost.Should().BeApproximately(117668.055556m, 0.01m);
+        calc.EmployerCost.Should().Be(118868.75m, "indirimsiz %21,75 SGK işveren + %2 işsizlik oranı");
         calc.Warnings.Should().Contain("Vergi dilimi geçişi");
     }
 
@@ -171,7 +237,7 @@ public sealed class PayrollTests(IKProApiFactory factory)
         // --- dönem oluştur ---
         var createResponse = await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var period = (await createResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!;
+        var period = (await createResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!;
 
         period.Name.Should().Be("Eylül 2026");
         period.Status.Should().Be("draft");
@@ -206,13 +272,18 @@ public sealed class PayrollTests(IKProApiFactory factory)
             $"/api/payroll/periods/{period.Id}/rows/{incompleteRow.Id}", new
             {
                 grossSalary = 50000,
+                statutoryProfile = "domesticPrivateSectorStandardFourA",
                 workedDays = 30,
+                sgkPremiumDaysConfirmed = true,
                 overtimeHours = 0,
+                disabilityReliefType = "none",
+                otherIncomeTaxBaseDeductionsConfirmedNone = true,
+                cumulativeIncomeTaxBaseConfirmed = true,
                 ibanComplete = true,
                 timesheetComplete = true,
             });
         bypassResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var bypassRow = (await bypassResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
+        var bypassRow = (await bypassResponse.Content.ReadFromJsonAsync<PayrollRowDto>(JsonOptions))!;
         bypassRow.TimesheetComplete.Should().BeFalse();
         bypassRow.ApprovalStatus.Should().Be("Eksik Veri");
         (await admin.PostAsync(
@@ -240,7 +311,7 @@ public sealed class PayrollTests(IKProApiFactory factory)
                 grossSalary = 0, workedDays = 30, overtimeHours = 0,
                 specialDeductions = 100, ibanComplete = true,
             });
-        var zeroRow = (await zeroResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
+        var zeroRow = (await zeroResponse.Content.ReadFromJsonAsync<PayrollRowDto>(JsonOptions))!;
         zeroRow.ApprovalStatus.Should().Be("Eksik Veri");
         zeroRow.Warnings.Should().Contain(["Brüt maaş sıfır", "Net ödeme negatif"]);
         (await admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null))
@@ -252,29 +323,47 @@ public sealed class PayrollTests(IKProApiFactory factory)
             $"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
             {
                 grossSalary = 118000,
+                statutoryProfile = "domesticPrivateSectorStandardFourA",
                 workedDays = 30,
+                sgkPremiumDaysConfirmed = true,
                 overtimeHours = 12,
+                overtimeTreatmentConfirmed = true,
                 premiumPay = 3500,
                 roadAllowance = 1200,
                 mealAllowance = 1800,
+                mealDays = 22,
+                mealTreatment = "cashExemptWhereNoMealProvided",
                 benefitPay = 3200,
+                benefitPayFullyTaxableConfirmed = true,
+                applyMinimumWageTaxExemption = true,
+                employerSgkDiscount = "none",
+                disabilityReliefType = "none",
+                otherIncomeTaxBaseDeductionsConfirmedNone = true,
+                previousEmployerIncomeTaxBase = 85000,
+                previousEmployerIncomeTaxBaseReference = "Çalışan talebi + işveren kabulü TEST-321",
+                cumulativeIncomeTaxBaseConfirmed = true,
                 specialDeductions = 1800,
                 previousTaxBase = 312000,
                 ibanComplete = true,
             });
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var updatedRow = (await updateResponse.Content.ReadFromJsonAsync<PayrollRowDto>())!;
+        var updatedRow = (await updateResponse.Content.ReadFromJsonAsync<PayrollRowDto>(JsonOptions))!;
 
         updatedRow.ApprovalStatus.Should().Be("Kontrol");
-        updatedRow.PreviousTaxBase.Should().Be(0m, "istemci kümülatif matrahı değiştiremez");
-        updatedRow.NetPay.Should().BeGreaterThan(100000m, "ilk dönemde önceki vergi matrahı yoktur");
-        updatedRow.EmployerCost.Should().BeApproximately(167996.5m, 0.01m);
+        updatedRow.StatutoryProfile.Should().Be(
+            PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA);
+        updatedRow.PreviousTaxBase.Should().Be(85000m,
+            "eski sözleşmedeki previousTaxBase yok sayılır; referanslı önceki işveren açılışı kullanılır");
+        updatedRow.NetPay.Should().BeGreaterThan(95000m, "referanslı açılış matrahı vergi dilimine katılır");
+        updatedRow.EmployerCost.Should().Be(169283.25m);
+        updatedRow.SgkExemptMealAllowance.Should().Be(1800m);
+        updatedRow.AppliedEmployerSgkRate.Should().Be(21.75m);
         updatedRow.Warnings.Should().Contain("Kontrol bekliyor");
 
         // --- check: eksiksiz satırlar Onaya Hazır, IBAN'sızlar Eksik Veri ---
         var checkResponse = await admin.PostAsync($"/api/payroll/periods/{period.Id}/check", null);
         checkResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var checkedPeriod = (await checkResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!;
+        var checkedPeriod = (await checkResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!;
         checkedPeriod.Status.Should().Be("control");
         checkedPeriod.Rows.Single(r => r.Id == ahmetRow.Id).ApprovalStatus.Should().Be("Onaya Hazır");
 
@@ -296,8 +385,13 @@ public sealed class PayrollTests(IKProApiFactory factory)
             (await admin.PutAsJsonAsync($"/api/payroll/periods/{period.Id}/rows/{row.Id}", new
             {
                 grossSalary = 50000,
+                statutoryProfile = "domesticPrivateSectorStandardFourA",
                 workedDays = 30,
+                sgkPremiumDaysConfirmed = true,
                 overtimeHours = 0,
+                disabilityReliefType = "none",
+                otherIncomeTaxBaseDeductionsConfirmedNone = true,
+                cumulativeIncomeTaxBaseConfirmed = true,
                 ibanComplete = true,
             })).StatusCode.Should().Be(HttpStatusCode.OK);
         }
@@ -329,7 +423,7 @@ public sealed class PayrollTests(IKProApiFactory factory)
         concurrentSubmissions.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
         var approvedSubmission = concurrentSubmissions.Single(
             response => response.StatusCode == HttpStatusCode.OK);
-        (await approvedSubmission.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!
+        (await approvedSubmission.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!
             .Status.Should().Be("approved");
 
         (await admin.PutAsJsonAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
@@ -358,11 +452,11 @@ public sealed class PayrollTests(IKProApiFactory factory)
         concurrentResponses.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
         var nextPeriod = (await concurrentResponses
             .Single(response => response.StatusCode == HttpStatusCode.Created)
-            .Content.ReadFromJsonAsync<PayrollPeriodDetailDto>())!;
+            .Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!;
 
         nextPeriod.Rows.Single(r => r.Name == "Ahmet Yılmaz").PreviousTaxBase
-            .Should().BeApproximately(approvedAhmet.IncomeTaxBase, 0.01m,
-                "önceki dönemin GV matrahı kümülatife devrolur");
+            .Should().BeApproximately(85000m + approvedAhmet.IncomeTaxBase, 0.01m,
+                "önceki işveren açılışı ve onaylı dönem matrahı birlikte devredilir");
         nextPeriod.Rows.Select(r => r.Name).Should().Contain(futureEmployee.Name,
             "dönem içinde işe başlayan aktif çalışan bordroya girer");
         nextPeriod.Rows.Select(r => r.Name).Should().NotContain(departingEmployee.Name,
@@ -429,7 +523,7 @@ public sealed class PayrollTests(IKProApiFactory factory)
     {
         var response = await client.GetAsync(url);
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"GET {url}");
-        return (await response.Content.ReadFromJsonAsync<T>())!;
+        return (await response.Content.ReadFromJsonAsync<T>(JsonOptions))!;
     }
 
     private static async Task SeedCompleteTimesheetsAsync(
@@ -495,10 +589,16 @@ public sealed class PayrollTests(IKProApiFactory factory)
     }
 
     /// <summary>Mevcut ayarları temel alıp yalnızca istenen alanları değiştiren PUT gövdesi.</summary>
-    private static object SettingsBody(PayrollSettingsDto baseline, string effectiveFrom, decimal sgkBaseMin) => new
+    private static object SettingsBody(
+        PayrollSettingsDto baseline,
+        string effectiveFrom,
+        decimal sgkBaseMin,
+        decimal? overtimeMultiplier = null,
+        IReadOnlyList<TaxBracketDto>? taxBrackets = null,
+        string sourceReference = "https://www.sgk.gov.tr/test-payroll-reference") => new
     {
         effectiveFrom,
-        overtimeMultiplier = baseline.OvertimeMultiplier,
+        overtimeMultiplier = overtimeMultiplier ?? baseline.OvertimeMultiplier,
         monthlyWorkingHours = baseline.MonthlyWorkingHours,
         defaultWorkedDays = baseline.DefaultWorkedDays,
         sgkEmployeeRate = baseline.SgkEmployeeRate,
@@ -510,16 +610,42 @@ public sealed class PayrollTests(IKProApiFactory factory)
         sgkBaseMax = baseline.SgkBaseMax,
         monthlyMinWageIncomeTaxExemption = baseline.MonthlyMinWageIncomeTaxExemption,
         monthlyMinWageStampTaxExemption = baseline.MonthlyMinWageStampTaxExemption,
-        minWageGross = baseline.MinWageGross,
-        taxBrackets = baseline.TaxBrackets,
+        minWageGross = sgkBaseMin,
+        mealSgkDailyExemption = baseline.MealSgkDailyExemption,
+        mealIncomeTaxDailyExemption = baseline.MealIncomeTaxDailyExemption,
+        otherSectorEmployerDiscountPoints = baseline.OtherSectorEmployerDiscountPoints,
+        manufacturingEmployerDiscountPoints = baseline.ManufacturingEmployerDiscountPoints,
+        firstDegreeDisabilityDeduction = baseline.FirstDegreeDisabilityDeduction,
+        secondDegreeDisabilityDeduction = baseline.SecondDegreeDisabilityDeduction,
+        thirdDegreeDisabilityDeduction = baseline.ThirdDegreeDisabilityDeduction,
+        sourceReference,
+        reviewNotes = "Entegrasyon testi taslağı",
+        taxBrackets = taxBrackets ?? baseline.TaxBrackets,
     };
 
+    private static async Task<PayrollSettingsDto> SaveAndApproveSettingsAsync(
+        HttpClient admin,
+        object body)
+    {
+        var save = await admin.PutAsJsonAsync("/api/payroll/settings", body);
+        save.StatusCode.Should().Be(HttpStatusCode.OK);
+        var draft = (await save.Content.ReadFromJsonAsync<PayrollSettingsDto>())!;
+        draft.Status.Should().Be("draft");
+
+        var approve = await admin.PostAsJsonAsync(
+            $"/api/payroll/settings/{draft.Id}/approve",
+            new { id = draft.Id, expectedVersion = draft.Version });
+        approve.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await approve.Content.ReadFromJsonAsync<PayrollSettingsDto>())!;
+    }
     /// <summary>Tabanın altında brütle önizleme: SGK matrahı, o tarihte yürürlükteki tabanı gösterir.</summary>
     private static async Task<decimal> PreviewSgkBaseAsync(HttpClient admin, string asOf)
     {
         var response = await admin.PostAsJsonAsync("/api/payroll/preview", new
         {
             grossSalary = 20000,
+            statutoryProfile = "domesticPrivateSectorStandardFourA",
+            disabilityReliefType = "none",
             workedDays = 30,
             overtimeHours = 0,
             premiumPay = 0,

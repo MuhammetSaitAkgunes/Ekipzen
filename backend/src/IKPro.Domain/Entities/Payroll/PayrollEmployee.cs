@@ -17,16 +17,41 @@ public class PayrollEmployee : AuditableEntity
     public Employee? Employee { get; set; }
 
     public decimal GrossSalary { get; set; }
+    public PayrollStatutoryProfile StatutoryProfile { get; set; }
+        = PayrollStatutoryProfile.Unspecified;
     public int WorkedDays { get; set; }
+    public bool SgkPremiumDaysConfirmed { get; set; }
     public int OvertimeHours { get; set; }
+    public bool OvertimeTreatmentConfirmed { get; set; }
     public decimal PremiumPay { get; set; }
     public decimal RoadAllowance { get; set; }
     public decimal MealAllowance { get; set; }
+    public int MealDays { get; set; }
+    public PayrollMealTreatment MealTreatment { get; set; }
+        = PayrollMealTreatment.Unspecified;
     public decimal BenefitPay { get; set; }
     public decimal SpecialDeductions { get; set; }
 
-    /// <summary>Önceki dönemlere ait kümülatif gelir vergisi matrahı.</summary>
+    /// <summary>Önceki dönemlere ait, sunucu tarafından üretilen kümülatif gelir vergisi matrahı.</summary>
     public decimal PreviousTaxBase { get; set; }
+
+    /// <summary>
+    /// Takvim yılı içinde işveren değişikliğinde, çalışanın talebi ve işverenin kabulüyle
+    /// ilk IK Pro bordrosuna taşınan önceki işveren gelir vergisi matrahı.
+    /// </summary>
+    public decimal PreviousEmployerIncomeTaxBase { get; set; }
+    public string? PreviousEmployerIncomeTaxBaseReference { get; set; }
+    public bool CumulativeIncomeTaxBaseConfirmed { get; set; }
+
+    public bool ApplyMinimumWageTaxExemption { get; set; } = true;
+    public EmployerSgkDiscountType EmployerSgkDiscount { get; set; }
+        = EmployerSgkDiscountType.None;
+    public string? EmployerSgkDiscountReference { get; set; }
+    public bool BenefitPayFullyTaxableConfirmed { get; set; }
+    public PayrollDisabilityReliefType DisabilityReliefType { get; set; }
+        = PayrollDisabilityReliefType.Unspecified;
+    public string? DisabilityReliefReference { get; set; }
+    public bool OtherIncomeTaxBaseDeductionsConfirmedNone { get; set; }
 
     public bool IbanComplete { get; set; }
     public bool TimesheetComplete { get; set; }
