@@ -179,6 +179,18 @@ Kapsam: `A-1/A-3/A-4` gece vardiyası, haftalık fazla mesai ve erken mesai;
 sürümlü/yapılandırılabilir kurala taşınması. `L-1/L-2/L-3/L-4/L-6/L-7`
 E-5C1 kapsamında kapatıldı.
 
+**Kapı 4 / kanuni bordro motoru geliştirme paketi tamamlandı (2026-09-07):**
+standart yurt içi özel sektör 4/a profili resmî 2026 SGK, GİB ve ÇSGB
+parametrelerine taşındı. Yürürlük tarihli ayar seti `Taslak → Onaylı` akışında,
+kaynak/uzman notu zorunlu ve onaylı sürüm değişmezdir. Kümülatif tarife ile
+aylık değişen asgari ücret gelir vergisi istisnası, damga istisnası, SGK
+taban/tavanı, nakit yemek istisnaları, 2/5 puan işveren indirimleri ve 1./2./3.
+derece engellilik indirimi denetlenebilir kırılımla hesaplanır. Çok işveren
+seçimi gelir+damga istisnasını birlikte yönetir; işveren değişikliğinde talep ve
+kabul referanslı önceki matrah yalnız ilk bordroya açılış olur, sonra onaylı
+snapshot devralır. Standart profil dışı veya eksik sınıflandırma sessiz varsayım
+yerine satır onayını durdurur. Pusula kullanılan ayar sürümünü/kaynağını,
+matrahları ve istisnaları gösterir. Ayrıntı `bordro-kanuni-kapsam-ve-isletim.md`.
 Çıkış ölçütü: mali müşavir/uzman tarafından onaylanmış karar kaydı, tarih etkili
 kural sürümü ve yıl sınırı/gece vardiyası regresyonları.
 
