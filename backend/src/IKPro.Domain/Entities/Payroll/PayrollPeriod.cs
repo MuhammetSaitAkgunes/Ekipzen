@@ -18,5 +18,8 @@ public class PayrollPeriod : AuditableEntity
     public int PayrollSettingsId { get; set; }
     public PayrollSettings? Settings { get; set; }
 
+    /// <summary>Dönem ayından önceki takvim aylarının asgari ücret vergi matrahı toplamı.</summary>
+    public decimal MinimumWageIncomeTaxBaseBefore { get; set; }
+
     public ICollection<PayrollEmployee> Employees { get; set; } = new List<PayrollEmployee>();
 }

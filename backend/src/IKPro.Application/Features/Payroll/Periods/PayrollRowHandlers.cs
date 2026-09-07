@@ -15,12 +15,27 @@ namespace IKPro.Application.Features.Payroll.Periods;
 /// <summary>Bordro girdi satırı güncelleme gövdesi (maaş + ek ödemeler + bayraklar).</summary>
 public sealed record PayrollRowInputModel(
     decimal GrossSalary,
+    PayrollStatutoryProfile StatutoryProfile,
     int WorkedDays,
+    bool SgkPremiumDaysConfirmed,
     int OvertimeHours,
+    bool OvertimeTreatmentConfirmed,
     decimal PremiumPay = 0m,
     decimal RoadAllowance = 0m,
     decimal MealAllowance = 0m,
+    int MealDays = 0,
+    PayrollMealTreatment MealTreatment = PayrollMealTreatment.Unspecified,
     decimal BenefitPay = 0m,
+    bool BenefitPayFullyTaxableConfirmed = false,
+    bool ApplyMinimumWageTaxExemption = true,
+    EmployerSgkDiscountType EmployerSgkDiscount = EmployerSgkDiscountType.None,
+    string? EmployerSgkDiscountReference = null,
+    PayrollDisabilityReliefType DisabilityReliefType = PayrollDisabilityReliefType.Unspecified,
+    string? DisabilityReliefReference = null,
+    bool OtherIncomeTaxBaseDeductionsConfirmedNone = false,
+    decimal PreviousEmployerIncomeTaxBase = 0m,
+    string? PreviousEmployerIncomeTaxBaseReference = null,
+    bool CumulativeIncomeTaxBaseConfirmed = false,
     decimal SpecialDeductions = 0m,
     bool IbanComplete = true,
     string? Notes = null);
@@ -30,7 +45,18 @@ public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRow
     public PayrollRowInputModelValidator()
     {
         RuleFor(x => x.GrossSalary).GreaterThanOrEqualTo(0m);
-        RuleFor(x => x.WorkedDays).InclusiveBetween(0, 31);
+        RuleFor(x => x.StatutoryProfile).IsInEnum();
+        RuleFor(x => x.WorkedDays).InclusiveBetween(0, 30);
+        RuleFor(x => x.MealDays).GreaterThanOrEqualTo(0)
+            .LessThanOrEqualTo(x => x.WorkedDays)
+            .WithMessage("Yemek fiili gün sayısı SGK prim gününü aşamaz.");
+        RuleFor(x => x.MealTreatment).IsInEnum();
+        RuleFor(x => x.EmployerSgkDiscount).IsInEnum();
+        RuleFor(x => x.EmployerSgkDiscountReference).MaximumLength(500);
+        RuleFor(x => x.DisabilityReliefType).IsInEnum();
+        RuleFor(x => x.DisabilityReliefReference).MaximumLength(500);
+        RuleFor(x => x.PreviousEmployerIncomeTaxBase).GreaterThanOrEqualTo(0m);
+        RuleFor(x => x.PreviousEmployerIncomeTaxBaseReference).MaximumLength(500);
         RuleFor(x => x.OvertimeHours).InclusiveBetween(0, 300);
         RuleFor(x => x.PremiumPay).GreaterThanOrEqualTo(0m);
         RuleFor(x => x.SpecialDeductions).GreaterThanOrEqualTo(0m);
@@ -75,12 +101,33 @@ public sealed class UpdatePayrollRowCommandHandler(
 
         var m = request.Model;
         row.GrossSalary = m.GrossSalary;
+        row.StatutoryProfile = m.StatutoryProfile;
         row.WorkedDays = m.WorkedDays;
+        row.SgkPremiumDaysConfirmed = m.SgkPremiumDaysConfirmed;
         row.OvertimeHours = m.OvertimeHours;
+        row.OvertimeTreatmentConfirmed = m.OvertimeTreatmentConfirmed;
         row.PremiumPay = m.PremiumPay;
         row.RoadAllowance = m.RoadAllowance;
         row.MealAllowance = m.MealAllowance;
+        row.MealDays = m.MealDays;
+        row.MealTreatment = m.MealTreatment;
         row.BenefitPay = m.BenefitPay;
+        row.BenefitPayFullyTaxableConfirmed = m.BenefitPayFullyTaxableConfirmed;
+        row.ApplyMinimumWageTaxExemption = m.ApplyMinimumWageTaxExemption;
+        row.EmployerSgkDiscount = m.EmployerSgkDiscount;
+        row.EmployerSgkDiscountReference = string.IsNullOrWhiteSpace(m.EmployerSgkDiscountReference)
+            ? null
+            : m.EmployerSgkDiscountReference.Trim();
+        row.DisabilityReliefType = m.DisabilityReliefType;
+        row.DisabilityReliefReference = string.IsNullOrWhiteSpace(m.DisabilityReliefReference)
+            ? null
+            : m.DisabilityReliefReference.Trim();
+        row.OtherIncomeTaxBaseDeductionsConfirmedNone = m.OtherIncomeTaxBaseDeductionsConfirmedNone;
+        row.PreviousEmployerIncomeTaxBase = m.PreviousEmployerIncomeTaxBase;
+        row.PreviousEmployerIncomeTaxBaseReference = string.IsNullOrWhiteSpace(m.PreviousEmployerIncomeTaxBaseReference)
+            ? null
+            : m.PreviousEmployerIncomeTaxBaseReference.Trim();
+        row.CumulativeIncomeTaxBaseConfirmed = m.CumulativeIncomeTaxBaseConfirmed;
         row.SpecialDeductions = m.SpecialDeductions;
         row.IbanComplete = m.IbanComplete;
         row.Notes = m.Notes;
@@ -90,7 +137,7 @@ public sealed class UpdatePayrollRowCommandHandler(
         await PayrollCumulativeTaxBase.RefreshAsync(
             context, [row], row.Period!.Year, row.Period.Month, cancellationToken);
         var parameters = row.Period!.Settings!.ToEngineParameters();
-        var calculation = engine.Calculate(row.ToEngineInput(), parameters);
+        var calculation = engine.Calculate(row.ToEngineInput(row.Period!.MinimumWageIncomeTaxBaseBefore), parameters);
 
         // Girdi değişti: tüm sunucu kapıları açıksa Kontrol, değilse Eksik Veri.
         row.ApprovalStatus = PayrollRowReadiness.IsReady(row, calculation)
@@ -99,7 +146,8 @@ public sealed class UpdatePayrollRowCommandHandler(
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return PayrollPeriodProjector.ToRow(row, engine, parameters);
+        return PayrollPeriodProjector.ToRow(
+            row, engine, parameters, row.Period!.MinimumWageIncomeTaxBaseBefore);
     }
 }
 
@@ -143,7 +191,7 @@ public sealed class RunPayrollCheckCommandHandler(
 
         foreach (var row in pendingRows)
         {
-            var calculation = engine.Calculate(row.ToEngineInput(), parameters);
+            var calculation = engine.Calculate(row.ToEngineInput(row.Period!.MinimumWageIncomeTaxBaseBefore), parameters);
             row.ApprovalStatus = PayrollRowReadiness.IsReady(row, calculation)
                 ? PayrollApprovalStatus.ReadyForApproval
                 : PayrollApprovalStatus.MissingData;
@@ -189,7 +237,7 @@ public sealed class ApprovePayrollRowCommandHandler(
         await PayrollCumulativeTaxBase.RefreshAsync(
             context, [row], row.Period!.Year, row.Period.Month, cancellationToken);
         var parameters = row.Period!.Settings!.ToEngineParameters();
-        var calc = engine.Calculate(row.ToEngineInput(), parameters);
+        var calc = engine.Calculate(row.ToEngineInput(row.Period!.MinimumWageIncomeTaxBaseBefore), parameters);
         PayrollRowReadiness.EnsureApprovable(row, calc);
 
         var result = row.Result ?? new PayrollResult { PayrollEmployeeId = row.Id };
@@ -209,6 +257,12 @@ public sealed class ApprovePayrollRowCommandHandler(
         result.EmployerSgk = calc.EmployerSgk;
         result.EmployerUnemployment = calc.EmployerUnemployment;
         result.EmployerCost = calc.EmployerCost;
+        result.SgkExemptMealAllowance = calc.SgkExemptMealAllowance;
+        result.IncomeTaxExemptMealAllowance = calc.IncomeTaxExemptMealAllowance;
+        result.MinimumWageIncomeTaxExemption = calc.MinimumWageIncomeTaxExemption;
+        result.MinimumWageStampTaxExemption = calc.MinimumWageStampTaxExemption;
+        result.AppliedEmployerSgkRate = calc.AppliedEmployerSgkRate;
+        result.DisabilityIncomeTaxBaseDeduction = calc.DisabilityIncomeTaxBaseDeduction;
         result.WarningsJson = JsonSerializer.Serialize(calc.Warnings);
         result.CalculatedAtUtc = DateTime.UtcNow;
 
@@ -216,7 +270,8 @@ public sealed class ApprovePayrollRowCommandHandler(
         row.ApprovalStatus = PayrollApprovalStatus.Approved;
 
         await context.SaveChangesAsync(cancellationToken);
-        return PayrollPeriodProjector.ToRow(row, engine, parameters);
+        return PayrollPeriodProjector.ToRow(
+            row, engine, parameters, row.Period!.MinimumWageIncomeTaxBaseBefore);
     }
 }
 

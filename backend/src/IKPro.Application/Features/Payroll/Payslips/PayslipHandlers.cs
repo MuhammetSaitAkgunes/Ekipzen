@@ -59,7 +59,22 @@ public sealed record PayslipModel(
     decimal StampTax,
     decimal SpecialDeductions,
     decimal TotalDeductions,
-    decimal NetPay);
+    decimal NetPay,
+    decimal SgkBase,
+    decimal IncomeTaxBase,
+    decimal DisabilityIncomeTaxBaseDeduction,
+    decimal PreviousTaxBase,
+    int MealDays,
+    string MealTreatment,
+    string DisabilityReliefType,
+    decimal SgkExemptMealAllowance,
+    decimal IncomeTaxExemptMealAllowance,
+    decimal MinimumWageIncomeTaxExemption,
+    decimal MinimumWageStampTaxExemption,
+    decimal AppliedEmployerSgkRate,
+    int SettingsVersion,
+    DateOnly SettingsEffectiveFrom,
+    string SettingsSourceReference);
 
 /// <summary>Bordro pusulası PDF üretimi (Infrastructure: QuestPDF).</summary>
 public interface IPayslipGenerator
@@ -85,7 +100,7 @@ public sealed class GetPayslipPdfQueryHandler(
     {
         var row = await context.PayrollEmployees
             .AsNoTracking()
-            .Include(pe => pe.Period)
+            .Include(pe => pe.Period)!.ThenInclude(period => period!.Settings)
             .Include(pe => pe.Employee)!.ThenInclude(e => e!.Department)
             .Include(pe => pe.Result)
             .FirstOrDefaultAsync(
@@ -120,7 +135,33 @@ public sealed class GetPayslipPdfQueryHandler(
             result.StampTax,
             row.SpecialDeductions,
             result.TotalDeductions,
-            result.NetPay);
+            result.NetPay,
+            result.SgkBase,
+            result.IncomeTaxBase,
+            result.DisabilityIncomeTaxBaseDeduction,
+            row.PreviousTaxBase,
+            row.MealDays,
+            row.MealTreatment == PayrollMealTreatment.CashExemptWhereNoMealProvided
+                ? "İşyerinde yemek yok, nakit istisna"
+                : row.MealTreatment == PayrollMealTreatment.FullyTaxable
+                    ? "Tam prime ve vergiye tabi"
+                    : "Yemek yok",
+            row.DisabilityReliefType switch
+            {
+                PayrollDisabilityReliefType.FirstDegree => "1. derece",
+                PayrollDisabilityReliefType.SecondDegree => "2. derece",
+                PayrollDisabilityReliefType.ThirdDegree => "3. derece",
+                PayrollDisabilityReliefType.None => "Yok",
+                _ => "Belirtilmedi",
+            },
+            result.SgkExemptMealAllowance,
+            result.IncomeTaxExemptMealAllowance,
+            result.MinimumWageIncomeTaxExemption,
+            result.MinimumWageStampTaxExemption,
+            result.AppliedEmployerSgkRate,
+            row.Period.Settings!.Version,
+            row.Period.Settings.EffectiveFrom,
+            row.Period.Settings.SourceReference);
 
         var fileName = $"bordro-{row.Period.Year}-{row.Period.Month:00}-{row.Employee.FullName
             .Replace(' ', '-').ToLowerInvariant()}.pdf";

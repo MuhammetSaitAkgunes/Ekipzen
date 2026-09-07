@@ -26,6 +26,10 @@ public class PayrollSettingsConfiguration : IEntityTypeConfiguration<PayrollSett
     {
         // Bir kiracıda aynı tarihten iki set yürürlüğe giremez (çözüm belirsizleşir).
         b.HasIndex(s => new { s.TenantId, s.EffectiveFrom }).IsUnique();
+        b.Property(s => s.Version).IsConcurrencyToken();
+        b.Property(s => s.SourceReference).IsRequired().HasMaxLength(2000);
+        b.Property(s => s.ReviewNotes).HasMaxLength(2000);
+        b.Property(s => s.ApprovedByUserId).HasMaxLength(450);
     }
 }
 
@@ -58,6 +62,9 @@ public class PayrollEmployeeConfiguration : IEntityTypeConfiguration<PayrollEmpl
         b.ToTable(tb => tb.HasTrigger("TR_PayrollEmployees_Audit"));
 
         b.Property(p => p.Notes).HasMaxLength(1000);
+        b.Property(p => p.EmployerSgkDiscountReference).HasMaxLength(500);
+        b.Property(p => p.DisabilityReliefReference).HasMaxLength(500);
+        b.Property(p => p.PreviousEmployerIncomeTaxBaseReference).HasMaxLength(500);
 
         b.HasOne(p => p.Period)
             .WithMany(pp => pp.Employees)

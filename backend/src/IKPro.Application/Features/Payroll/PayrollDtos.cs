@@ -8,6 +8,9 @@ public sealed record TaxBracketDto(int Order, decimal? Limit, decimal Base, deci
 
 /// <summary>Bordro parametreleri — payroll.js payrollDefaultSettings alanlarıyla birebir.</summary>
 public sealed record PayrollSettingsDto(
+    int Id,
+    int Version,
+    string Status,
     DateOnly EffectiveFrom,
     decimal OvertimeMultiplier,
     decimal MonthlyWorkingHours,
@@ -22,7 +25,18 @@ public sealed record PayrollSettingsDto(
     decimal MonthlyMinWageIncomeTaxExemption,
     decimal MonthlyMinWageStampTaxExemption,
     decimal MinWageGross,
-    IReadOnlyList<TaxBracketDto> TaxBrackets);
+    decimal MealSgkDailyExemption,
+    decimal MealIncomeTaxDailyExemption,
+    decimal OtherSectorEmployerDiscountPoints,
+    decimal ManufacturingEmployerDiscountPoints,
+    decimal FirstDegreeDisabilityDeduction,
+    decimal SecondDegreeDisabilityDeduction,
+    decimal ThirdDegreeDisabilityDeduction,
+    IReadOnlyList<TaxBracketDto> TaxBrackets,
+    string SourceReference,
+    string? ReviewNotes,
+    DateTime? ApprovedAtUtc,
+    string? ApprovedByUserId);
 
 public sealed record PayrollPeriodListItemDto(
     int Id, string Name, int Year, int Month, string Status, int EmployeeCount);
@@ -36,14 +50,29 @@ public sealed record PayrollRowDto(
     string Department,
     // girdiler
     decimal GrossSalary,
+    PayrollStatutoryProfile StatutoryProfile,
     int WorkedDays,
+    bool SgkPremiumDaysConfirmed,
     decimal OvertimeHours,
+    bool OvertimeTreatmentConfirmed,
     decimal PremiumPay,
     decimal RoadAllowance,
     decimal MealAllowance,
+    int MealDays,
+    PayrollMealTreatment MealTreatment,
     decimal BenefitPay,
+    bool BenefitPayFullyTaxableConfirmed,
+    bool ApplyMinimumWageTaxExemption,
+    EmployerSgkDiscountType EmployerSgkDiscount,
+    string? EmployerSgkDiscountReference,
+    PayrollDisabilityReliefType DisabilityReliefType,
+    string? DisabilityReliefReference,
+    bool OtherIncomeTaxBaseDeductionsConfirmedNone,
     decimal SpecialDeductions,
     decimal PreviousTaxBase,
+    decimal PreviousEmployerIncomeTaxBase,
+    string? PreviousEmployerIncomeTaxBaseReference,
+    bool CumulativeIncomeTaxBaseConfirmed,
     bool IbanComplete,
     bool TimesheetComplete,
     string ApprovalStatus,
@@ -64,6 +93,12 @@ public sealed record PayrollRowDto(
     decimal EmployerSgk,
     decimal EmployerUnemployment,
     decimal EmployerCost,
+    decimal SgkExemptMealAllowance,
+    decimal IncomeTaxExemptMealAllowance,
+    decimal MinimumWageIncomeTaxExemption,
+    decimal MinimumWageStampTaxExemption,
+    decimal AppliedEmployerSgkRate,
+    decimal DisabilityIncomeTaxBaseDeduction,
     IReadOnlyList<string> Warnings);
 
 public sealed record PayrollTotalsDto(decimal Gross, decimal Net, decimal EmployerCost, decimal Deductions);
@@ -77,6 +112,7 @@ public sealed record PayrollPeriodDetailDto(
     int Year,
     int Month,
     string Status,
+    PayrollSettingsDto Settings,
     IReadOnlyList<PayrollRowDto> Rows,
     PayrollTotalsDto Totals,
     IReadOnlyList<PayrollControlDto> Controls);
@@ -137,10 +173,20 @@ public static class PayrollMappings
         s.TaxBrackets
             .OrderBy(b => b.Order)
             .Select(b => new PayrollBracket(b.Limit, b.Base, b.BaseTax, b.Rate))
-            .ToList());
+            .ToList(),
+        s.MinWageGross,
+        s.MealSgkDailyExemption,
+        s.MealIncomeTaxDailyExemption,
+        s.OtherSectorEmployerDiscountPoints,
+        s.ManufacturingEmployerDiscountPoints,
+        s.FirstDegreeDisabilityDeduction,
+        s.SecondDegreeDisabilityDeduction,
+        s.ThirdDegreeDisabilityDeduction);
 
     /// <summary>PayrollEmployee girdisi → motor girdisi.</summary>
-    public static PayrollInput ToEngineInput(this PayrollEmployee pe) => new(
+    public static PayrollInput ToEngineInput(
+        this PayrollEmployee pe,
+        decimal minimumWageIncomeTaxBaseBefore) => new(
         pe.GrossSalary,
         pe.WorkedDays,
         pe.OvertimeHours,
@@ -152,5 +198,12 @@ public static class PayrollMappings
         pe.PreviousTaxBase,
         pe.IbanComplete,
         pe.TimesheetComplete,
-        AwaitingControl: pe.ApprovalStatus == PayrollApprovalStatus.Control);
+        AwaitingControl: pe.ApprovalStatus == PayrollApprovalStatus.Control,
+        MealDays: pe.MealDays,
+        MinimumWageIncomeTaxBaseBefore: minimumWageIncomeTaxBaseBefore,
+        ApplyMinimumWageTaxExemption: pe.ApplyMinimumWageTaxExemption,
+        MealTreatment: pe.MealTreatment,
+        EmployerSgkDiscount: pe.EmployerSgkDiscount,
+        StatutoryProfile: pe.StatutoryProfile,
+        DisabilityReliefType: pe.DisabilityReliefType);
 }
