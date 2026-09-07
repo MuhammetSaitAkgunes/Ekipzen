@@ -217,7 +217,17 @@ public sealed class LeavesTests(IKProApiFactory factory)
         var client = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
         var mazeret = await GetTypeAsync(client, "Mazeret");
 
-        var createResponse = await CreateAsync(client, mazeret.Id, "2026-09-07", "2026-09-08");
+        // Bugüne bağlı takım-izin testiyle takvim ilerledikçe çakışmaması için
+        // uzak bir pencere seç; başlangıcı çalışma gününe taşı.
+        var start = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(600);
+        while (start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+        {
+            start = start.AddDays(1);
+        }
+
+        var end = start.AddDays(1);
+        var createResponse = await CreateAsync(
+            client, mazeret.Id, start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var request = (await createResponse.Content.ReadFromJsonAsync<LeaveRequestDto>())!;
 
@@ -227,7 +237,7 @@ public sealed class LeavesTests(IKProApiFactory factory)
         (await client.PostAsync($"/api/leaves/{request.Id}/cancel", null))
             .StatusCode.Should().Be(HttpStatusCode.Conflict, "iptal edilen talep tekrar iptal edilemez");
 
-        var mine = await GetAsync<List<LeaveRequestDto>>(client, "/api/leaves/my?year=2026");
+        var mine = await GetAsync<List<LeaveRequestDto>>(client, $"/api/leaves/my?year={start.Year}");
         mine.Should().Contain(r => r.Id == request.Id && r.Status == "cancelled");
     }
 
