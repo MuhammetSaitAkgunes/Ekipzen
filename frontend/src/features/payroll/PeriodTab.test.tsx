@@ -21,6 +21,14 @@ const row = (over: object) => ({
 });
 const detail = {
   id: 3, name: "Temmuz 2026", year: 2026, month: 7, status: "draft",
+  settings: {
+    id: 1, version: 2, status: "approved", effectiveFrom: "2026-01-01", reviewNotes: "Uzman onaylı",
+    sourceReference: "https://www.sgk.gov.tr/resmi", overtimeMultiplier: 1.5, monthlyWorkingHours: 225,
+    minWageGross: 33030, sgkBaseMax: 297270, sgkEmployeeRate: 14, unemploymentEmployeeRate: 1,
+    sgkEmployerRate: 21.75, unemploymentEmployerRate: 2, mealSgkDailyExemption: 158,
+    mealIncomeTaxDailyExemption: 300, otherSectorEmployerDiscountPoints: 2,
+    manufacturingEmployerDiscountPoints: 5, stampTaxRate: 0.759,
+  },
   rows: [row({}), row({ id: 2, employeeId: 4, name: "Selin Koç", department: "Tasarım", approvalStatus: "Onaylandı", warnings: [] })],
   totals: { gross: 274280, net: 177958, employerCost: 335994, deductions: 96322 },
   controls: [
@@ -33,7 +41,7 @@ const detail = {
 };
 const settings = {
   effectiveFrom: "2026-01-01", overtimeMultiplier: 1.5, monthlyWorkingHours: 225, defaultWorkedDays: 30,
-  sgkEmployeeRate: 14, unemploymentEmployeeRate: 1, sgkEmployerRate: 20.5, unemploymentEmployerRate: 2,
+  sgkEmployeeRate: 14, unemploymentEmployeeRate: 1, sgkEmployerRate: 21.75, unemploymentEmployerRate: 2,
   stampTaxRate: 0.759, sgkBaseMin: 33030, sgkBaseMax: 297270,
   monthlyMinWageIncomeTaxExemption: 4211, monthlyMinWageStampTaxExemption: 250.7,
   minWageGross: 33030, taxBrackets: [],

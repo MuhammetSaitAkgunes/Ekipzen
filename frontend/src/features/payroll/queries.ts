@@ -15,6 +15,7 @@ export type PayrollCalculation = components["schemas"]["PayrollCalculation"];
 export type PreviewPayrollCommand = components["schemas"]["PreviewPayrollCommand"];
 export type PayrollSettingsDto = components["schemas"]["PayrollSettingsDto"];
 export type UpdatePayrollSettingsCommand = components["schemas"]["UpdatePayrollSettingsCommand"];
+export type ApprovePayrollSettingsCommand = components["schemas"]["ApprovePayrollSettingsCommand"];
 export type MyPayslipDto = components["schemas"]["MyPayslipDto"];
 
 export const usePayrollPeriods = (enabled: boolean) =>
@@ -107,6 +108,13 @@ export const usePayrollSettings = (enabled: boolean) =>
     enabled,
   });
 
+export const usePayrollSettingsDrafts = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["payroll", "settings", "drafts"],
+    queryFn: () => apiFetch<PayrollSettingsDto[]>("/payroll/settings/drafts"),
+    enabled,
+  });
+
 export const useUpdatePayrollSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -119,6 +127,17 @@ export const useUpdatePayrollSettings = () => {
   });
 };
 
+export const useApprovePayrollSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (command: ApprovePayrollSettingsCommand) =>
+      apiFetch<PayrollSettingsDto>(`/payroll/settings/${command.id}/approve`, {
+        method: "POST",
+        body: JSON.stringify(command),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll", "settings"] }),
+  });
+};
 export const useTerminationCalculationRules = () =>
   useQuery({
     queryKey: ["termination-calculation-rules"],

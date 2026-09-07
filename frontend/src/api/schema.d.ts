@@ -3810,6 +3810,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payroll/settings/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PayrollSettingsDto"][];
+                        "application/json": components["schemas"]["PayrollSettingsDto"][];
+                        "text/json": components["schemas"]["PayrollSettingsDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/settings/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApprovePayrollSettingsCommand"];
+                    "text/json": components["schemas"]["ApprovePayrollSettingsCommand"];
+                    "application/*+json": components["schemas"]["ApprovePayrollSettingsCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PayrollSettingsDto"];
+                        "application/json": components["schemas"]["PayrollSettingsDto"];
+                        "text/json": components["schemas"]["PayrollSettingsDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/payroll/my": {
         parameters: {
             query?: never;
@@ -5449,6 +5542,12 @@ export interface components {
             priority?: string | null;
             recommendedAction?: string | null;
         };
+        ApprovePayrollSettingsCommand: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            expectedVersion?: number;
+        };
         ApproveTerminationCalculationRuleBody: {
             /** Format: int32 */
             expectedVersion?: number;
@@ -6082,6 +6181,8 @@ export interface components {
             signals?: string[] | null;
             recommendedActions?: string[] | null;
         };
+        /** @enum {string} */
+        EmployerSgkDiscountType: "none" | "otherSectorTwoPoints" | "manufacturingFivePoints";
         GenerateOffboardingCalculationDraftBody: {
             /** Format: int32 */
             expectedVersion?: number;
@@ -6355,6 +6456,18 @@ export interface components {
             /** Format: double */
             employerCost?: number;
             warnings?: string[] | null;
+            /** Format: double */
+            sgkExemptMealAllowance?: number;
+            /** Format: double */
+            incomeTaxExemptMealAllowance?: number;
+            /** Format: double */
+            minimumWageIncomeTaxExemption?: number;
+            /** Format: double */
+            minimumWageStampTaxExemption?: number;
+            /** Format: double */
+            appliedEmployerSgkRate?: number;
+            /** Format: double */
+            disabilityIncomeTaxBaseDeduction?: number;
         };
         PayrollControlDto: {
             label?: string | null;
@@ -6362,6 +6475,10 @@ export interface components {
             value?: number;
             level?: string | null;
         };
+        /** @enum {string} */
+        PayrollDisabilityReliefType: "unspecified" | "none" | "firstDegree" | "secondDegree" | "thirdDegree";
+        /** @enum {string} */
+        PayrollMealTreatment: "unspecified" | "cashExemptWhereNoMealProvided" | "fullyTaxable";
         PayrollPeriodDetailDto: {
             /** Format: int32 */
             id?: number;
@@ -6371,6 +6488,7 @@ export interface components {
             /** Format: int32 */
             month?: number;
             status?: string | null;
+            settings?: components["schemas"]["PayrollSettingsDto"];
             rows?: components["schemas"]["PayrollRowDto"][] | null;
             totals?: components["schemas"]["PayrollTotalsDto"];
             controls?: components["schemas"]["PayrollControlDto"][] | null;
@@ -6415,22 +6533,39 @@ export interface components {
             department?: string | null;
             /** Format: double */
             grossSalary?: number;
+            statutoryProfile?: components["schemas"]["PayrollStatutoryProfile"];
             /** Format: int32 */
             workedDays?: number;
+            sgkPremiumDaysConfirmed?: boolean;
             /** Format: double */
             overtimeHours?: number;
+            overtimeTreatmentConfirmed?: boolean;
             /** Format: double */
             premiumPay?: number;
             /** Format: double */
             roadAllowance?: number;
             /** Format: double */
             mealAllowance?: number;
+            /** Format: int32 */
+            mealDays?: number;
+            mealTreatment?: components["schemas"]["PayrollMealTreatment"];
             /** Format: double */
             benefitPay?: number;
+            benefitPayFullyTaxableConfirmed?: boolean;
+            applyMinimumWageTaxExemption?: boolean;
+            employerSgkDiscount?: components["schemas"]["EmployerSgkDiscountType"];
+            employerSgkDiscountReference?: string | null;
+            disabilityReliefType?: components["schemas"]["PayrollDisabilityReliefType"];
+            disabilityReliefReference?: string | null;
+            otherIncomeTaxBaseDeductionsConfirmedNone?: boolean;
             /** Format: double */
             specialDeductions?: number;
             /** Format: double */
             previousTaxBase?: number;
+            /** Format: double */
+            previousEmployerIncomeTaxBase?: number;
+            previousEmployerIncomeTaxBaseReference?: string | null;
+            cumulativeIncomeTaxBaseConfirmed?: boolean;
             ibanComplete?: boolean;
             timesheetComplete?: boolean;
             approvalStatus?: string | null;
@@ -6465,29 +6600,63 @@ export interface components {
             employerUnemployment?: number;
             /** Format: double */
             employerCost?: number;
+            /** Format: double */
+            sgkExemptMealAllowance?: number;
+            /** Format: double */
+            incomeTaxExemptMealAllowance?: number;
+            /** Format: double */
+            minimumWageIncomeTaxExemption?: number;
+            /** Format: double */
+            minimumWageStampTaxExemption?: number;
+            /** Format: double */
+            appliedEmployerSgkRate?: number;
+            /** Format: double */
+            disabilityIncomeTaxBaseDeduction?: number;
             warnings?: string[] | null;
         };
         PayrollRowInputModel: {
             /** Format: double */
             grossSalary?: number;
+            statutoryProfile?: components["schemas"]["PayrollStatutoryProfile"];
             /** Format: int32 */
             workedDays?: number;
+            sgkPremiumDaysConfirmed?: boolean;
             /** Format: int32 */
             overtimeHours?: number;
+            overtimeTreatmentConfirmed?: boolean;
             /** Format: double */
             premiumPay?: number;
             /** Format: double */
             roadAllowance?: number;
             /** Format: double */
             mealAllowance?: number;
+            /** Format: int32 */
+            mealDays?: number;
+            mealTreatment?: components["schemas"]["PayrollMealTreatment"];
             /** Format: double */
             benefitPay?: number;
+            benefitPayFullyTaxableConfirmed?: boolean;
+            applyMinimumWageTaxExemption?: boolean;
+            employerSgkDiscount?: components["schemas"]["EmployerSgkDiscountType"];
+            employerSgkDiscountReference?: string | null;
+            disabilityReliefType?: components["schemas"]["PayrollDisabilityReliefType"];
+            disabilityReliefReference?: string | null;
+            otherIncomeTaxBaseDeductionsConfirmedNone?: boolean;
+            /** Format: double */
+            previousEmployerIncomeTaxBase?: number;
+            previousEmployerIncomeTaxBaseReference?: string | null;
+            cumulativeIncomeTaxBaseConfirmed?: boolean;
             /** Format: double */
             specialDeductions?: number;
             ibanComplete?: boolean;
             notes?: string | null;
         };
         PayrollSettingsDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            version?: number;
+            status?: string | null;
             /** Format: date */
             effectiveFrom?: string;
             /** Format: double */
@@ -6516,8 +6685,29 @@ export interface components {
             monthlyMinWageStampTaxExemption?: number;
             /** Format: double */
             minWageGross?: number;
+            /** Format: double */
+            mealSgkDailyExemption?: number;
+            /** Format: double */
+            mealIncomeTaxDailyExemption?: number;
+            /** Format: double */
+            otherSectorEmployerDiscountPoints?: number;
+            /** Format: double */
+            manufacturingEmployerDiscountPoints?: number;
+            /** Format: double */
+            firstDegreeDisabilityDeduction?: number;
+            /** Format: double */
+            secondDegreeDisabilityDeduction?: number;
+            /** Format: double */
+            thirdDegreeDisabilityDeduction?: number;
             taxBrackets?: components["schemas"]["TaxBracketDto"][] | null;
+            sourceReference?: string | null;
+            reviewNotes?: string | null;
+            /** Format: date-time */
+            approvedAtUtc?: string | null;
+            approvedByUserId?: string | null;
         };
+        /** @enum {string} */
+        PayrollStatutoryProfile: "unspecified" | "domesticPrivateSectorStandardFourA";
         PayrollTotalsDto: {
             /** Format: double */
             gross?: number;
@@ -6544,6 +6734,7 @@ export interface components {
         PreviewPayrollCommand: {
             /** Format: double */
             grossSalary?: number;
+            statutoryProfile?: components["schemas"]["PayrollStatutoryProfile"];
             /** Format: int32 */
             workedDays?: number;
             /** Format: double */
@@ -6556,8 +6747,15 @@ export interface components {
             roadAllowance?: number;
             /** Format: double */
             mealAllowance?: number;
+            /** Format: int32 */
+            mealDays?: number;
+            mealTreatment?: components["schemas"]["PayrollMealTreatment"];
             /** Format: double */
             benefitPay?: number;
+            benefitPayFullyTaxableConfirmed?: boolean;
+            applyMinimumWageTaxExemption?: boolean;
+            disabilityReliefType?: components["schemas"]["PayrollDisabilityReliefType"];
+            employerSgkDiscount?: components["schemas"]["EmployerSgkDiscountType"];
             /** Format: double */
             specialDeductions?: number;
             /** Format: double */
@@ -6985,6 +7183,24 @@ export interface components {
             monthlyMinWageStampTaxExemption?: number;
             /** Format: double */
             minWageGross?: number;
+            /** Format: double */
+            mealSgkDailyExemption?: number;
+            /** Format: double */
+            mealIncomeTaxDailyExemption?: number;
+            /** Format: double */
+            otherSectorEmployerDiscountPoints?: number;
+            /** Format: double */
+            manufacturingEmployerDiscountPoints?: number;
+            /** Format: double */
+            firstDegreeDisabilityDeduction?: number;
+            /** Format: double */
+            secondDegreeDisabilityDeduction?: number;
+            /** Format: double */
+            thirdDegreeDisabilityDeduction?: number;
+            sourceReference?: string | null;
+            reviewNotes?: string | null;
+            /** Format: int32 */
+            expectedVersion?: number | null;
             taxBrackets?: components["schemas"]["TaxBracketDto"][] | null;
         };
         UpdateSecuritySettingsCommand: {

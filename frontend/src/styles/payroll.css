@@ -585,6 +585,55 @@
   margin: 0.25rem 0 0;
 }
 
+.payroll-settings-current {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--success);
+  border-radius: var(--radius-md);
+  background: var(--success-soft);
+}
+
+.payroll-settings-current span,
+.payroll-settings-current small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.payroll-settings-subhead {
+  margin-top: 22px;
+}
+
+.payroll-tax-table-wrap {
+  overflow-x: auto;
+}
+
+.payroll-tax-table {
+  min-width: 760px;
+}
+
+.payroll-tax-table .input-control {
+  min-width: 130px;
+}
+
+.payroll-settings-review {
+  margin-top: 18px;
+}
+
+.payroll-settings-review textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.payroll-settings-actions {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.payroll-input-section {
+  min-height: auto;
+}
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1280px) {
