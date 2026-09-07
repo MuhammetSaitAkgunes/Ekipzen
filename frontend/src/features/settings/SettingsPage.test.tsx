@@ -15,6 +15,7 @@ const settings = {
 
 beforeEach(() =>
   stubApi({
+    "/api/setup": { templateYear: 2026, needsInitialization: false, hasEffectiveApprovedPayrollSettings: true },
     "/api/settings": settings,
     "/api/settings/company": settings.company,
     "/api/settings/notifications": { ...settings.notifications, weeklyReportEmail: true },

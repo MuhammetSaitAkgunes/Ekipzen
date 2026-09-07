@@ -9,6 +9,7 @@ import {
   useUpdatePayrollSettings,
   type PayrollSettingsDto,
 } from "./queries";
+import { TenantSetupPanel } from "../settings/TenantSetupPanel";
 import { TerminationRulesPanel } from "./TerminationRulesPanel";
 
 const FIELDS = [
@@ -76,21 +77,35 @@ export function SettingsTab() {
   const [bracketForm, setBracketForm] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<PayrollSettingsDto | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [approvedInSession, setApprovedInSession] = useState<PayrollSettingsDto | null>(null);
+
+  const noApprovedSettings = settingsQ.error instanceof ApiError && settingsQ.error.status === 404;
+  const initial = settingsQ.data ?? (noApprovedSettings ? draftsQ.data?.[0] ?? approvedInSession : undefined);
+  const initialIsDraft = initial?.status === "draft";
 
   useEffect(() => {
-    if (form === null && settingsQ.data) {
-      setForm(toForm(settingsQ.data));
-      setBracketForm(taxForm(settingsQ.data.taxBrackets ?? []));
+    if (form === null && initial) {
+      setForm(toForm(initial, initialIsDraft));
+      setBracketForm(taxForm(initial.taxBrackets ?? []));
+      setDraft(initialIsDraft ? initial : null);
     }
-  }, [form, settingsQ.data]);
+  }, [form, initial, initialIsDraft]);
 
-  if (settingsQ.isPending || form === null) return <PageLoading />;
-  if (settingsQ.isError) return <PageError error={settingsQ.error} />;
+  if (settingsQ.isError && !noApprovedSettings) return <PageError error={settingsQ.error} />;
+  if (draftsQ.isError) return <PageError error={draftsQ.error} />;
+  if (settingsQ.isPending || draftsQ.isPending) return <PageLoading />;
+  if (!initial && form === null) return <TenantSetupPanel />;
+  if (form === null || !initial) return <PageLoading />;
 
   const data = settingsQ.data;
-  const approvedBrackets = data.taxBrackets ?? [];
-  const drafts = Array.isArray(draftsQ.data) ? draftsQ.data : [];
-  const brackets = draft?.taxBrackets ?? approvedBrackets;
+  const drafts = draftsQ.data ?? [];
+  const baseline = draft ?? initial;
+  const brackets = baseline.taxBrackets ?? [];
+  const draftChanged = draft !== null && (
+    JSON.stringify(form) !== JSON.stringify(toForm(draft, true))
+    || JSON.stringify(bracketForm) !== JSON.stringify(taxForm(draft.taxBrackets ?? []))
+  );
+  const busy = updateSettings.isPending || approveSettings.isPending;
 
   const save = async () => {
     try {
@@ -106,8 +121,8 @@ export function SettingsTab() {
         stampTaxRate: parseNumber(form.stampTaxRate),
         sgkBaseMin: parseNumber(form.minWageGross),
         sgkBaseMax: parseNumber(form.sgkBaseMax),
-        monthlyMinWageIncomeTaxExemption: data.monthlyMinWageIncomeTaxExemption ?? 0,
-        monthlyMinWageStampTaxExemption: data.monthlyMinWageStampTaxExemption ?? 0,
+        monthlyMinWageIncomeTaxExemption: baseline.monthlyMinWageIncomeTaxExemption ?? 0,
+        monthlyMinWageStampTaxExemption: baseline.monthlyMinWageStampTaxExemption ?? 0,
         minWageGross: parseNumber(form.minWageGross),
         mealSgkDailyExemption: parseNumber(form.mealSgkDailyExemption),
         mealIncomeTaxDailyExemption: parseNumber(form.mealIncomeTaxDailyExemption),
@@ -130,6 +145,8 @@ export function SettingsTab() {
         })),
       });
       setDraft(saved);
+      setForm(toForm(saved, true));
+      setBracketForm(taxForm(saved.taxBrackets ?? []));
       setFeedback(`${saved.effectiveFrom} yürürlük tarihli v${saved.version} taslak kaydedildi; hesaplarda henüz kullanılmaz.`);
       showToast("Bordro mevzuat taslağı kaydedildi.", "success");
     } catch (e) {
@@ -138,10 +155,11 @@ export function SettingsTab() {
   };
 
   const approve = async () => {
-    if (!draft?.id || !draft.version) return;
+    if (!draft?.id || !draft.version || draftChanged || busy) return;
     try {
       const approved = await approveSettings.mutateAsync({ id: draft.id, expectedVersion: draft.version });
       setDraft(null);
+      setApprovedInSession(approved);
       setForm(toForm(approved));
       setBracketForm(taxForm(approved.taxBrackets ?? []));
       setFeedback(`${approved.effectiveFrom} yürürlük tarihli v${approved.version} mevzuat seti onaylandı ve değiştirilemez hale geldi.`);
@@ -159,16 +177,17 @@ export function SettingsTab() {
   };
 
   const reset = () => {
-    setForm(toForm(data));
-    setBracketForm(taxForm(approvedBrackets));
-    setDraft(null);
+    setForm(toForm(initial, initialIsDraft));
+    setBracketForm(taxForm(initial.taxBrackets ?? []));
+    setDraft(initialIsDraft ? initial : null);
     setFeedback("");
-    showToast("Form son onaylı mevzuat setinden yeniden hazırlandı.", "info");
+    showToast("Form kayıtlı mevzuat setinden yeniden hazırlandı.", "info");
   };
 
   return (
     <>
       <section className="card payroll-settings-card">
+        <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div className="card-header-clean">
           <div>
             <h4>Bordro Mevzuat Seti</h4>
@@ -177,13 +196,15 @@ export function SettingsTab() {
               onaylanan sürüm yerinde değiştirilemez.
             </p>
           </div>
-          <span className="status-pill approved">Onaylı v{data.version}</span>
+          {data && <span className="status-pill approved">Onaylı v{data.version}</span>}
         </div>
 
         <div className="payroll-settings-current">
-          <strong>{data.effectiveFrom} tarihinden geçerli</strong>
-          <span>{data.reviewNotes}</span>
-          <small>{data.sourceReference}</small>
+          {data ? <>
+            <strong>{data.effectiveFrom} tarihinden geçerli</strong>
+            <span>{data.reviewNotes}</span>
+            <small>{data.sourceReference}</small>
+          </> : <strong>Henüz yürürlükte onaylı mevzuat seti yok. İlk taslağı inceleyip kaydedin; ardından ayrıca onaylayın.</strong>}
         </div>
 
         {drafts.length > 0 && (
@@ -292,15 +313,16 @@ export function SettingsTab() {
           </div>
         </div>
 
+        {draftChanged && <p role="status">Değişiklikleri onaylamadan önce taslağı kaydedin.</p>}
         <div className="payroll-settings-feedback" aria-live="polite">{feedback}</div>
         <div className="toolbar-actions payroll-settings-actions">
-          <button className="btn btn-secondary" onClick={reset}>
-            <i aria-hidden="true" className="fa-solid fa-rotate-left" /> Son onaylı setten hazırla
+          <button className="btn btn-secondary" onClick={reset} disabled={busy}>
+            <i aria-hidden="true" className="fa-solid fa-rotate-left" /> {data ? "Son onaylı setten hazırla" : "Kayıtlı setten hazırla"}
           </button>
           <button className="btn btn-secondary" onClick={save} disabled={updateSettings.isPending}>
             <i aria-hidden="true" className="fa-solid fa-floppy-disk" /> Taslağı kaydet
           </button>
-          <button className="btn btn-primary" onClick={approve} disabled={!draft || approveSettings.isPending}>
+          <button className="btn btn-primary" onClick={approve} disabled={!draft || draftChanged || busy || !form.reviewNotes.trim() || !form.sourceReference.trim()}>
             <i aria-hidden="true" className="fa-solid fa-shield-halved" /> Mevzuat setini onayla
           </button>
         </div>
@@ -311,6 +333,7 @@ export function SettingsTab() {
             tarafından doğrulandığı anlamına gelir. Özel statüler bu standart 4/a motorunda hesaplanmaz.
           </span>
         </div>
+        </fieldset>
       </section>
       <TerminationRulesPanel />
     </>

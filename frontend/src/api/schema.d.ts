@@ -4651,6 +4651,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSetupStatusDto"];
+                        "application/json": components["schemas"]["TenantSetupStatusDto"];
+                        "text/json": components["schemas"]["TenantSetupStatusDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSetupStatusDto"];
+                        "application/json": components["schemas"]["TenantSetupStatusDto"];
+                        "text/json": components["schemas"]["TenantSetupStatusDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants": {
         parameters: {
             query?: never;
@@ -7051,6 +7109,18 @@ export interface components {
             guncel?: boolean;
             bekleyenMigrationlar?: string[] | null;
             hata?: string | null;
+        };
+        TenantSetupStatusDto: {
+            /** Format: int32 */
+            templateYear?: number;
+            companyProfileExists?: boolean;
+            /** Format: int32 */
+            missingLeaveTypeCount?: number;
+            /** Format: int32 */
+            missingFullDayHolidayCount?: number;
+            payrollSettingsExists?: boolean;
+            hasEffectiveApprovedPayrollSettings?: boolean;
+            readonly needsInitialization?: boolean;
         };
         /**
          * Format: int32

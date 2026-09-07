@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "../../api/client";
+import { ApiError, apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
 import type {
   SaveTerminationCalculationRuleBody,
@@ -105,6 +105,7 @@ export const usePayrollSettings = (enabled: boolean) =>
   useQuery({
     queryKey: ["payroll", "settings"],
     queryFn: () => apiFetch<PayrollSettingsDto>("/payroll/settings"),
+    retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
     enabled,
   });
 

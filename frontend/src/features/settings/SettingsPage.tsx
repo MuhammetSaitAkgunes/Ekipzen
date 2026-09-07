@@ -7,6 +7,8 @@ import {
   useUpdateSecurity, useUploadLogo, type NotificationSettingsDto,
 } from "./queries";
 
+import { TenantSetupPanel } from "./TenantSetupPanel";
+
 const SECTIONS: [string, string, string][] = [
   ["general", "fa-building", "Şirket Bilgileri"],
   ["notif", "fa-bell", "Bildirimler"],
@@ -66,8 +68,8 @@ export function SettingsPage() {
     };
   }, [logoPath]);
 
-  if (settingsQ.isPending || company === null) return <PageLoading />;
   if (settingsQ.isError) return <PageError error={settingsQ.error} />;
+  if (settingsQ.isPending || company === null) return <PageLoading />;
 
   const data = settingsQ.data;
   const notifications = data.notifications ?? {};
@@ -157,6 +159,7 @@ export function SettingsPage() {
         </button>
       </div>
 
+      <TenantSetupPanel onInitialized={() => setCompany(null)} />
       <div className="settings-layout">
         <aside className="settings-sidebar">
           <nav className="set-nav">

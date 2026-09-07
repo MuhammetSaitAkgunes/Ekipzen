@@ -6,6 +6,8 @@ Tarih: 8 Eylül 2026. Başlangıç analizi: `raporlar/pilot-hazirlik-analizi-202
 
 İlk müşteri yaklaşık 10 personelli, gündüz çalışan bir muhasebe bürosu. Mevcut Windows / SQL Server sunucusu kullanılacak. Hedef genel satış açılışı değil; tek müşteride destekli, geri alınabilir ve ölçülebilir pilot. İlk bordro, büronun mevcut bordrosuyla paralel hesaplanıp mali müşavir tarafından kalem bazında kabul edilmeden gerçek ödeme veya beyan için esas alınmayacak.
 
+Doğrulanmış çalışma düzeni: yalnız Pazartesi–Cuma, 09.00–18.00, 1 saat yemek molası; günlük net 8, haftalık net 40 saat. Cumartesi çalışma yok. Bu bilgi şimdilik pilot planıdır; uygulamadaki çalışma/fazla mesai kuralı P3 doğrulaması olmadan değiştirilmez.
+
 Öncelik sırası: veri ve hesap doğruluğu → güvenli işletim → günlük kullanım → görsel iyileştirme. Mevzuat veya desteklenmeyen çalışan statüsü kapsam dışına alınarak sessiz hesap yapılmaz; uygunluk doğrulanana kadar o bordro bloke edilir. Puan/yüzde yerine aşağıdaki somut çıkış kapıları kullanılır.
 
 ## Paketler ve çıkış kapıları
@@ -44,9 +46,9 @@ Hedef topoloji: HTTPS üzerinden IIS; React statik dosyaları ve `/api` aynı or
 
 ## P3 — para hesabından önce veri doğruluğu
 
-Bürodan henüz doğrulanması gereken bilgiler: haftanın çalışma günleri (Cumartesi dahil mi), giriş/çıkış ve gerçek mola süreleri; personelin standart 4/a uygunluğu; brüt/net ücret anlaşması; yemek/yol/prim uygulaması; engellilik/teşvik/özel statüler; önceki işveren ve yıl içi kümülatif matrahlar; işe giriş tarihleri ve açılış izin bakiyeleri.
+Bürodan henüz doğrulanması gereken bilgiler: personelin standart 4/a uygunluğu; brüt/net ücret anlaşması; yemek/yol/prim uygulaması; engellilik/teşvik/özel statüler; önceki işveren ve yıl içi kümülatif matrahlar; işe giriş tarihleri ve açılış izin bakiyeleri. Çalışma günleri, saatler ve mola bilgisi yukarıda doğrulandı.
 
-- Gündüz çalışılması otomatik olarak beş günlük/40 saatlik hafta anlamına gelmez. Yanıt alınmadan 480 dakikalık mevcut eşik büro politikası diye kabul edilmez.
+- Pilotun beş günlük/40 saatlik haftası kullanıcı tarafından doğrulandı. Mevcut günlük 480 dakika eşiğinin bu profile rastlaması, haftalık fazla çalışma ve ücret kurallarının da doğru olduğu anlamına gelmez; bu kurallar ayrıca doğrulanır.
 - Yarım gün tatiller, hizmet süresi/yaşa bağlı izin hakları ve bakiye geçişleri resmî kaynaklarla ve uzmanla doğrulanır. Başlangıçta herkese demo bakiyesi verilmez.
 - Bordro onayı sonrası puantaj/izin/ücret girdisinin değişmesi, mevcut onaylı sonucu sessizce geçersizleştirememeli. Düzeltme/açma kuralı ve audit kanıtı tanımlanır.
 - İlk dönem için yıl içi geçmiş matrah ve istisna birikimi açıklanmış olmalı; eksik geçmiş “0” diye varsayılmaz.
