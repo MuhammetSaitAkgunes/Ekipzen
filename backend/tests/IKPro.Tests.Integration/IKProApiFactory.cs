@@ -1,3 +1,8 @@
+using IKPro.API.Services;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
 
@@ -47,6 +52,21 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
     internal static readonly string TestConnectionString = ConnectionFor(TestDatabaseName);
     private static readonly string PlatformTestConnectionString = ConnectionFor(PlatformTestDatabaseName);
 
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureTestServices(services =>
+        {
+            // Test başına katalog silinirken timer'lar aynı kataloğu okuyamaz.
+            // İş mantığı kaldırılmaz: retry ve şema sorguları testlerde açıkça çağrılır.
+            foreach (var descriptor in services.Where(descriptor =>
+                         descriptor.ServiceType == typeof(IHostedService)
+                         && descriptor.ImplementationType == typeof(TenantSchemaCheckService)).ToArray())
+            {
+                services.Remove(descriptor);
+            }
+        });
+    }
+
     public IKProApiFactory()
     {
         StorageRoot = Path.Combine(Path.GetTempPath(), "ikpro-test-storage", Guid.NewGuid().ToString("N"));
@@ -54,6 +74,7 @@ public sealed class IKProApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", TestConnectionString);
         Environment.SetEnvironmentVariable("ConnectionStrings__PlatformConnection", PlatformTestConnectionString);
         Environment.SetEnvironmentVariable("Platform__ProvisioningKey", PlatformKey);
+        Environment.SetEnvironmentVariable("IdentityProvisioning__Enabled", "false");
         // Testler çok sayıda login/provizyon yapar → rate limit'i etkisiz kıl.
         // ("signup" politikası, self-servis kayıt ucuyla birlikte kaldırıldı.)
         Environment.SetEnvironmentVariable("RateLimiting__AuthPermitPerMinute", "1000000");
