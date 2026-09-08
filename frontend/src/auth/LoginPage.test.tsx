@@ -18,7 +18,7 @@ beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal("fetch", vi.fn());
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 // Gerçek ağaçtaki gibi: AuthProvider oturum değişiminde sorgu önbelleğini
 // temizlediği için QueryClientProvider altında çalışır (bkz. App.tsx).
@@ -68,4 +68,14 @@ test("kayıt sekmesi yok — POST /api/auth/register kiracı sızıntısı yüz�
   expect(document.getElementById("auth-login")).toHaveClass("auth-form", "active");
   expect(document.getElementById("auth-signup")).toBeNull();
   expect(document.querySelector(".auth-tabs")).toBeNull();
+});
+
+test("üretimde demo kimliği ve yanıltıcı sabit skorlar gösterilmez", () => {
+  vi.stubEnv("DEV", false);
+  renderLogin();
+  expect(screen.getByLabelText("E-posta")).toHaveValue("");
+  expect(screen.getByLabelText("Şifre")).toHaveValue("");
+  expect(screen.queryByText("Demo erişim")).not.toBeInTheDocument();
+  expect(screen.queryByText("82")).not.toBeInTheDocument();
+  expect(screen.getByText("Şirket hesabı")).toBeInTheDocument();
 });

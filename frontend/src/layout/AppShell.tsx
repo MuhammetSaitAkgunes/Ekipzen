@@ -6,13 +6,6 @@ import { useAuth } from "../auth/AuthContext";
 import { appRoutes, navGroups, navIcons, roleHomeFor, type AppRoute } from "../routes";
 import { GlobalSearch } from "./GlobalSearch";
 
-const DEMO_PASSWORD = "demo123";
-const demoEmails: Record<string, string> = {
-  "hr-admin": "ik@hrmaster.local",
-  manager: "ece.arslan@hrmaster.local",
-  employee: "ahmet.yilmaz@hrmaster.local",
-};
-
 export function AppShell() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
@@ -39,7 +32,13 @@ export function AppShell() {
   const accessibleNav = appRoutes.filter((r) => r.navKey === r.key && r.roles.includes(role));
 
   const switchDemoRole = async (nextRole: string) => {
-    await login(demoEmails[nextRole] ?? demoEmails["hr-admin"], DEMO_PASSWORD);
+    if (!import.meta.env.DEV) return;
+    const demoEmails: Record<string, string> = {
+      "hr-admin": "ik@hrmaster.local",
+      manager: "ece.arslan@hrmaster.local",
+      employee: "ahmet.yilmaz@hrmaster.local",
+    };
+    await login(demoEmails[nextRole] ?? demoEmails["hr-admin"], "demo123");
     navigate(roleHomeFor(nextRole));
   };
 
@@ -128,11 +127,11 @@ export function AppShell() {
             <strong>{user?.name}</strong>
             <span>{user?.roleLabel}</span>
           </div>
-          <select className="role-switcher" value={role} onChange={(e) => switchDemoRole(e.target.value)} title="Demo rol değiştir" aria-label="Demo rol değiştir">
+          {import.meta.env.DEV && <select className="role-switcher" value={role} onChange={(e) => switchDemoRole(e.target.value)} title="Demo rol değiştir" aria-label="Demo rol değiştir">
             <option value="hr-admin">İK Admin</option>
             <option value="manager">Yönetici</option>
             <option value="employee">Çalışan</option>
-          </select>
+          </select>}
           <button className="btn-icon-sm" onClick={handleDataExport} title="Verilerimi indir" aria-label="Verilerimi indir (KVKK)">
             <i aria-hidden="true" className="fa-solid fa-file-export" />
           </button>

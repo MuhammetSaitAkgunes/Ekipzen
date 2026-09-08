@@ -4,7 +4,7 @@ import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import {
   useChangePassword, useSettings, useUpdateCompany, useUpdateNotifications,
-  useUpdateSecurity, useUploadLogo, type NotificationSettingsDto,
+  useUploadLogo, type NotificationSettingsDto,
 } from "./queries";
 
 import { TenantSetupPanel } from "./TenantSetupPanel";
@@ -19,7 +19,7 @@ const SECTIONS: [string, string, string][] = [
 const NOTIF_ROWS: [keyof NotificationSettingsDto & string, string, string][] = [
   ["newPersonnelEmail", "Yeni Personel Kaydı", "Sisteme yeni biri eklendiğinde yöneticilere bildir."],
   ["leaveRequestEmail", "İzin Talepleri", "Personel izin talebi oluşturduğunda anında e-posta gönder."],
-  ["weeklyReportEmail", "Haftalık Rapor", "Her pazartesi sabahı özet operasyon raporu gönder."],
+  ["weeklyReportEmail", "Haftalık Rapor", "Henüz desteklenmiyor; otomatik rapor gönderilmez."],
 ];
 
 export function SettingsPage() {
@@ -27,7 +27,6 @@ export function SettingsPage() {
   const settingsQ = useSettings();
   const updateCompany = useUpdateCompany();
   const updateNotifications = useUpdateNotifications();
-  const updateSecurity = useUpdateSecurity();
   const uploadLogo = useUploadLogo();
   const changePassword = useChangePassword();
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -97,21 +96,12 @@ export function SettingsPage() {
       await updateNotifications.mutateAsync({
         newPersonnelEmail: notifications.newPersonnelEmail ?? false,
         leaveRequestEmail: notifications.leaveRequestEmail ?? false,
-        weeklyReportEmail: notifications.weeklyReportEmail ?? false,
+        weeklyReportEmail: false,
         [key]: !notifications[key],
       });
       showToast("Bildirim tercihi güncellendi.", "success");
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Tercih kaydedilemedi.", "error");
-    }
-  };
-
-  const toggleTwoFactor = async () => {
-    try {
-      await updateSecurity.mutateAsync({ twoFactorSmsEnabled: !(data.security?.twoFactorSmsEnabled ?? false) });
-      showToast("Güvenlik ayarı güncellendi.", "success");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Ayar kaydedilemedi.", "error");
     }
   };
 
@@ -238,7 +228,8 @@ export function SettingsPage() {
                         <input
                           type="checkbox"
                           aria-label={title}
-                          checked={notifications[key] ?? false}
+                          checked={key === "weeklyReportEmail" ? false : notifications[key] ?? false}
+                          disabled={key === "weeklyReportEmail" || updateNotifications.isPending}
                           onChange={() => toggleNotification(key)}
                         />
                         <span className="slider round" />
@@ -277,13 +268,13 @@ export function SettingsPage() {
               <div className="set-card mt-4">
                 <div className="card-head"><h3>İki Aşamalı Doğrulama</h3></div>
                 <div className="toggle-row">
-                  <div><strong>SMS ile doğrulama</strong><p>Giriş yaparken telefonunuza tek kullanımlık kod gönderilir.</p></div>
+                  <div><strong>SMS ile doğrulama</strong><p>Henüz desteklenmiyor. Bu sürüm SMS koduyla giriş doğrulaması yapmaz.</p></div>
                   <label className="switch">
                     <input
                       type="checkbox"
                       aria-label="SMS ile doğrulama"
-                      checked={data.security?.twoFactorSmsEnabled ?? false}
-                      onChange={toggleTwoFactor}
+                      checked={false}
+                      disabled
                     />
                     <span className="slider round" />
                   </label>

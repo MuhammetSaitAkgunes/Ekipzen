@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { buildRouteObjects } from "../routes";
 import { AuthProvider } from "../auth/AuthContext";
 import { ToastProvider } from "./ToastProvider";
@@ -36,6 +36,7 @@ const renderShellAt = (path: string, role: string, name: string) => {
 };
 
 beforeEach(() => localStorage.clear());
+afterEach(() => vi.unstubAllEnvs());
 
 test("hr-admin tüm menü gruplarını görür, başlık rotadan gelir", async () => {
   renderShellAt("/dashboard", "hr-admin", "İK Yöneticisi");
@@ -49,4 +50,18 @@ test("employee menüsünde yalnız yetkili modüller görünür", () => {
   expect(screen.queryByText("Ayarlar")).not.toBeInTheDocument();
   expect(screen.queryByText("Personel Yönetimi")).not.toBeInTheDocument();
   expect(screen.getByText("İzinlerim")).toBeInTheDocument();
+});
+
+test("üretimde demo rol geçişi sunulmaz, gerçek oturum korunur", () => {
+  vi.stubEnv("DEV", false);
+  renderShellAt("/overview", "employee", "Pilot Kullanıcı");
+  expect(screen.queryByRole("combobox", { name: "Demo rol değiştir" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Çıkış yap" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(SESSION_KEY)!).user.name).toBe("Pilot Kullanıcı");
+});
+
+test("geliştirmede demo rol geçişi korunur", () => {
+  vi.stubEnv("DEV", true);
+  renderShellAt("/overview", "employee", "Ahmet Yılmaz");
+  expect(screen.getByRole("combobox", { name: "Demo rol değiştir" })).toHaveValue("employee");
 });

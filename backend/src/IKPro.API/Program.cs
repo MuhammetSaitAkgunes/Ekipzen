@@ -1,3 +1,4 @@
+using IKPro.API.Hosting;
 using IKPro.API.Middleware;
 using IKPro.API.Services;
 using IKPro.Application;
@@ -20,29 +21,29 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    PilotHosting.LoadExternalConfiguration(builder, args);
+    PilotHosting.Configure(builder);
+    if (builder.Configuration.GetValue("verify-production", false))
+    {
+        if (builder.Environment.IsDevelopment()) throw new InvalidOperationException("Kontrol Production ortamında çalıştırılmalıdır.");
+        Console.WriteLine("Üretim yapılandırması ve DataProtection sertifikası doğrulandı. SQL/SMTP/IIS bağlantısı veya migration yapılmadı.");
+        return;
+    }
 
     // Serilog reads its full configuration from appsettings.json.
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext());
+    builder.Host.UseSerilog((context, services, configuration) =>
+    {
+        configuration.ReadFrom.Configuration(context.Configuration).ReadFrom.Services(services).Enrich.FromLogContext();
+        if (!context.HostingEnvironment.IsDevelopment())
+            configuration.WriteTo.File(context.Configuration["Logging:FilePath"]!,
+                rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14,
+                fileSizeLimitBytes: 10 * 1024 * 1024, rollOnFileSizeLimit: true);
+    });
 
     // Application (MediatR + FluentValidation + Mapster) ve
     // Infrastructure (EF Core + MSSQL + audit interceptor + Identity/JWT).
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
-
-    // Güvenlik sertleştirme: üretimde dev placeholder sır kabul edilmez — güçlü bir
-    // Jwt:Secret ortam değişkeninden gelmelidir. (DI ayrıca uzunluk kontrolü yapar.)
-    if (!builder.Environment.IsDevelopment())
-    {
-        var jwtSecret = builder.Configuration["Jwt:Secret"] ?? string.Empty;
-        if (jwtSecret.Contains("do-not-use-in-prod", StringComparison.OrdinalIgnoreCase) || jwtSecret.Length < 32)
-        {
-            throw new InvalidOperationException(
-                "Üretimde Jwt:Secret güçlü bir değerle (ortam değişkeni/secret store) sağlanmalı; dev placeholder reddedilir.");
-        }
-    }
 
     // Rate limiting: kimlik/provizyon uçlarında brute-force/kötüye kullanımı sınırlar.
     // Limit yapılandırmadan gelir; testler yüksek bir değerle bunu etkisiz kılar.
@@ -170,11 +171,6 @@ try
     // POST /api/tenants/migrate. Bkz. TenantSchemaCheckService xmldoc.
     builder.Services.AddHostedService<TenantSchemaCheckService>();
 
-    // CORS — allow the local frontend origin during development.
-    const string frontendCors = "frontend";
-    builder.Services.AddCors(options => options.AddPolicy(frontendCors, policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
-
     var app = builder.Build();
 
     // Development'ta migration + demo seed otomatik uygulanır (docker-compose MSSQL).
@@ -217,8 +213,7 @@ try
         });
     }
 
-    app.UseHttpsRedirection();
-    app.UseCors(frontendCors);
+    PilotHosting.UseWebSecurity(app);
     app.UseRateLimiter();
     app.UseAuthentication();
     // Erişim kapısının HTTP ayağı — kimlik doğrulamadan SONRA (claim okunabilir
@@ -235,6 +230,7 @@ try
 catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "İK Pro API başlatılırken kritik hata oluştu.");
+    Environment.ExitCode = 1;
 }
 finally
 {

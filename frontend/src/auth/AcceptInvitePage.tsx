@@ -23,12 +23,13 @@ export function AcceptInvitePage() {
   const [busy, setBusy] = useState(false);
 
   const missingLink = !email || !token;
+  const minimumPasswordLength = import.meta.env.DEV ? 6 : 12;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalı.");
+    if (password.length < minimumPasswordLength) {
+      setError(`Şifre en az ${minimumPasswordLength} karakter olmalı.`);
       return;
     }
     if (password !== confirm) {
@@ -77,6 +78,7 @@ export function AcceptInvitePage() {
           ) : (
             <>
               <p>{email} için bir şifre belirleyin.</p>
+              {!import.meta.env.DEV && <p>En az 12 karakter, büyük harf ve rakam kullanın.</p>}
               <div className="input-group">
                 <label htmlFor="invite-password">Yeni şifre</label>
                 <input

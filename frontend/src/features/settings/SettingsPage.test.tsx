@@ -18,7 +18,7 @@ beforeEach(() =>
     "/api/setup": { templateYear: 2026, needsInitialization: false, hasEffectiveApprovedPayrollSettings: true },
     "/api/settings": settings,
     "/api/settings/company": settings.company,
-    "/api/settings/notifications": { ...settings.notifications, weeklyReportEmail: true },
+    "/api/settings/notifications": { ...settings.notifications, newPersonnelEmail: false },
     "/api/auth/change-password": {},
   }),
 );
@@ -51,13 +51,13 @@ test("bildirim toggle değişimi anında PUT notifications atar", async () => {
   renderShell();
   await screen.findByLabelText("Şirket Adı");
   await userEvent.click(screen.getByRole("button", { name: /Bildirimler/ }));
-  await userEvent.click(screen.getByLabelText("Haftalık Rapor"));
+  await userEvent.click(screen.getByLabelText("Yeni Personel Kaydı"));
   await waitFor(() => {
     const put = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/settings/notifications" && i?.method === "PUT",
     );
     expect(put).toBeTruthy();
-    expect(JSON.parse(String(put![1]?.body))).toMatchObject({ weeklyReportEmail: true, newPersonnelEmail: true });
+    expect(JSON.parse(String(put![1]?.body))).toMatchObject({ weeklyReportEmail: false, newPersonnelEmail: false });
   });
 });
 
@@ -88,4 +88,15 @@ test("abonelik bölümü salt-okur plan bilgisi gösterir", async () => {
   await userEvent.click(screen.getByRole("button", { name: /Abonelik & Fatura/ }));
   expect(screen.getByText("HR Master Kurumsal")).toBeInTheDocument();
   expect(screen.getByText("•••• •••• •••• 4582")).toBeInTheDocument();
+});
+
+test("desteklenmeyen haftalık rapor ve SMS 2FA yanlışlıkla etkinleştirilemez", async () => {
+  renderShell();
+  await screen.findByLabelText("Şirket Adı");
+  await userEvent.click(screen.getByRole("button", { name: /Bildirimler/ }));
+  expect(screen.getByLabelText("Haftalık Rapor")).toBeDisabled();
+  expect(screen.getByLabelText("Haftalık Rapor")).not.toBeChecked();
+  await userEvent.click(screen.getByRole("button", { name: /Güvenlik & Yetki/ }));
+  expect(screen.getByLabelText("SMS ile doğrulama")).toBeDisabled();
+  expect(screen.getByLabelText("SMS ile doğrulama")).not.toBeChecked();
 });

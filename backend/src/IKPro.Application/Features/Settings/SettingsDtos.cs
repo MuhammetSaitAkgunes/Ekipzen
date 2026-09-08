@@ -43,10 +43,11 @@ public static class SettingsMappings
         profile.HeadquartersAddress, profile.LogoPath);
 
     public static NotificationSettingsDto ToNotificationsDto(this NotificationSettings settings)
-        => new(settings.NewPersonnelEmail, settings.LeaveRequestEmail, settings.WeeklyReportEmail);
+        => new(settings.NewPersonnelEmail, settings.LeaveRequestEmail, false);
 
     public static SecuritySettingsDto ToSecurityDto(this NotificationSettings settings)
-        => new(settings.TwoFactorSmsEnabled);
+        // Eski kayıtta true olsa da gerçek bir 2FA akışı yok; etkin güvenlik gibi sunulamaz.
+        => new(false);
 
     public static SubscriptionDto ToDto(this Subscription subscription) => new(
         subscription.Plan, subscription.PlanName, subscription.BillingCycle,

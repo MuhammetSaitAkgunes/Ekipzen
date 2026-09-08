@@ -66,13 +66,17 @@ public sealed class SettingsTests(IKProApiFactory factory)
         {
             twoFactorSmsEnabled = true,
         });
-        securityResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await securityResponse.Content.ReadFromJsonAsync<SecuritySettingsDto>())!
-            .TwoFactorSmsEnabled.Should().BeTrue();
+        securityResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await admin.PutAsJsonAsync("/api/settings/security", new { twoFactorSmsEnabled = false }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await admin.PutAsJsonAsync("/api/settings/notifications", new
+        {
+            newPersonnelEmail = true, leaveRequestEmail = true, weeklyReportEmail = true,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var settings = await GetAsync<SettingsDto>(admin, "/api/settings");
         settings.Company.Phone.Should().Be("+90 212 555 11 11");
-        settings.Security.TwoFactorSmsEnabled.Should().BeTrue();
+        settings.Security.TwoFactorSmsEnabled.Should().BeFalse();
 
         // Ayarlar yalnız hr-admin: manager ve employee 403 alır.
         var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");

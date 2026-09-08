@@ -7,8 +7,8 @@ import { roleHomeFor } from "../routes";
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("ik@hrmaster.local");
-  const [password, setPassword] = useState("demo123");
+  const [email, setEmail] = useState(import.meta.env.DEV ? "ik@hrmaster.local" : "");
+  const [password, setPassword] = useState(import.meta.env.DEV ? "demo123" : "");
   const [error, setError] = useState<string | null>(null);
 
   const run = async (event: FormEvent, action: () => Promise<unknown>) => {
@@ -33,14 +33,14 @@ export function LoginPage() {
           </div>
         </div>
         <div className="auth-copy">
-          <span className="status-pill info">Demo erişim</span>
+          <span className="status-pill info">{import.meta.env.DEV ? "Demo erişim" : "Şirket hesabı"}</span>
           <h1>Risk, bordro ve İK operasyonlarını tek merkezden yönetin.</h1>
-          <p>Bu giriş ekranı gerçek backend oturumu açar; yetki kontrolü .NET policy katmanındadır.</p>
+          <p>Şirketinizin size tanımladığı hesapla giriş yapın.</p>
         </div>
         <div className="auth-insight-grid">
-          <div><strong>7</strong><span>kritik aksiyon</span></div>
-          <div><strong>5</strong><span>bordro kontrolü</span></div>
-          <div><strong>82</strong><span>uyum skoru</span></div>
+          <div><strong>Personel</strong><span>özlük kayıtları</span></div>
+          <div><strong>İzin</strong><span>talep ve onay</span></div>
+          <div><strong>Bordro</strong><span>kontrollü hesap</span></div>
         </div>
       </section>
 
@@ -52,14 +52,14 @@ export function LoginPage() {
             bir düğmenin bunu tetiklemesi kaynak tüketme açığıdır. */}
         <form id="auth-login" className="auth-form active" onSubmit={(e) => run(e, () => login(email, password))}>
           <h2>Hoş geldiniz</h2>
-          <p>Demo hesaba giriş yaparak uygulamayı inceleyebilirsiniz.</p>
+          <p>{import.meta.env.DEV ? "Demo hesaba giriş yaparak uygulamayı inceleyebilirsiniz." : "Kurumsal e-posta adresiniz ve şifrenizle giriş yapın."}</p>
           <div className="input-group">
             <label htmlFor="login-email">E-posta</label>
-            <input id="login-email" className="input-control" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input id="login-email" type="email" autoComplete="username" required className="input-control" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="input-group">
             <label htmlFor="login-password">Şifre</label>
-            <input id="login-password" className="input-control" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input id="login-password" autoComplete="current-password" required className="input-control" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <button type="submit" className="btn btn-primary auth-submit">

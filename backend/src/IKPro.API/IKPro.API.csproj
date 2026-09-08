@@ -4,6 +4,7 @@
     <!-- Swagger uç açıklamaları için XML yorumları (CS1591 gürültüsü kapalı). -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +21,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IKPro.Infrastructure\IKPro.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Remove="App_Data/**" />
+    <None Remove="App_Data/**" />
   </ItemGroup>
 
 </Project>

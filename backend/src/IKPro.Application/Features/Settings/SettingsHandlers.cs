@@ -93,6 +93,15 @@ public sealed record UpdateNotificationSettingsCommand(
     bool LeaveRequestEmail,
     bool WeeklyReportEmail) : IRequest<NotificationSettingsDto>;
 
+public sealed class UpdateNotificationSettingsCommandValidator : AbstractValidator<UpdateNotificationSettingsCommand>
+{
+    public UpdateNotificationSettingsCommandValidator()
+    {
+        RuleFor(x => x.WeeklyReportEmail).Equal(false)
+            .WithMessage("Haftalık rapor gönderimi henüz desteklenmiyor.");
+    }
+}
+
 public sealed class UpdateNotificationSettingsCommandHandler(IApplicationDbContext context)
     : IRequestHandler<UpdateNotificationSettingsCommand, NotificationSettingsDto>
 {
@@ -127,6 +136,15 @@ public sealed class UpdateNotificationSettingsCommandHandler(IApplicationDbConte
 
 public sealed record UpdateSecuritySettingsCommand(bool TwoFactorSmsEnabled)
     : IRequest<SecuritySettingsDto>;
+
+public sealed class UpdateSecuritySettingsCommandValidator : AbstractValidator<UpdateSecuritySettingsCommand>
+{
+    public UpdateSecuritySettingsCommandValidator()
+    {
+        RuleFor(x => x.TwoFactorSmsEnabled).Equal(false)
+            .WithMessage("SMS ile iki aşamalı doğrulama henüz desteklenmiyor.");
+    }
+}
 
 public sealed class UpdateSecuritySettingsCommandHandler(IApplicationDbContext context)
     : IRequestHandler<UpdateSecuritySettingsCommand, SecuritySettingsDto>
