@@ -4,7 +4,7 @@ Tarih: 8 Eylül 2026. Başlangıç analizi: `raporlar/pilot-hazirlik-analizi-202
 
 ## Hedef ve sınır
 
-İlk müşteri yaklaşık 10 personelli, gündüz çalışan bir muhasebe bürosu. Mevcut Windows / SQL Server sunucusu kullanılacak. Hedef genel satış açılışı değil; tek müşteride destekli, geri alınabilir ve ölçülebilir pilot. İlk bordro, büronun mevcut bordrosuyla paralel hesaplanıp mali müşavir tarafından kalem bazında kabul edilmeden gerçek ödeme veya beyan için esas alınmayacak.
+İlk müşteri yaklaşık 10 personelli, gündüz çalışan bir muhasebe bürosu. Kullanıcının satın aldığı Turhost Windows Profesyonel paketinde barındırılacak; SQL de Turhost'ta olacak. Kullanıcı normal alan adını açacak, arayüz ve API ayrı yayınlanacak. Hedef genel satış açılışı değil; tek müşteride destekli, geri alınabilir ve ölçülebilir pilot. İlk bordro, büronun mevcut bordrosuyla paralel hesaplanıp mali müşavir tarafından kalem bazında kabul edilmeden gerçek ödeme veya beyan için esas alınmayacak.
 
 Doğrulanmış çalışma düzeni: yalnız Pazartesi–Cuma, 09.00–18.00, 1 saat yemek molası; günlük net 8, haftalık net 40 saat. Cumartesi çalışma yok. Bu bilgi şimdilik pilot planıdır; uygulamadaki çalışma/fazla mesai kuralı P3 doğrulaması olmadan değiştirilmez.
 
@@ -33,11 +33,11 @@ Toplam yaklaşık 9–15 mühendislik günü; takvim taahhüdü değildir. Sunuc
 
 P1 yerel testleri geçti (91 birim + 207 entegrasyon + 165 frontend). `518ab53` commit’i ile `main` ve `ikpro/main` eşitlendi. Gerçek müşteri sunucusuna yayın veya gerçek personel aktarımı yapılmadı.
 
-## P2 — mevcut Windows / SQL Server üzerinde işletim
+## P2 — Turhost Windows Profesyonel üzerinde işletim
 
-Hedef topoloji: HTTPS üzerinden IIS; React statik dosyaları ve `/api` aynı origin altında ASP.NET Core uygulaması; mevcut SQL Server üzerinde platform ve ayrı müşteri kataloğu. Sunucu sürümü, SQL sürümü/edition/lisansı, kaynakları ve IIS erişimi doğrulanmadan kurulum komutları çalıştırılmaz. Demo Docker Compose üretim kurulumu olarak kullanılmaz.
+Hedef kullanıcı deneyimi: normal alan adında React arayüzü; ayrı API uygulaması arka planda çalışır; SQL Turhost'tadır. Önceki kök IIS uygulaması varsayımı doğrudan Turhost `/api` alt uygulamasına taşınmaz. Adres/yetki/runtime uygunluğu teyit edilip uyarlanmalı; demo Docker Compose üretim kurulumu değildir. Resmî paket araştırması, açık koşullar ve destek soruları: `docs/turhost-pilot-onkontrol.md`.
 
-1. Sunucu envanteri, alan adı/TLS, test yayın alanı, ağ erişimi ve SQL yetkileri alınır. Servis hesabı ve provision/migration yetkileri ayrıştırılır.
+1. Turhost paneli/destekten hesaba özel runtime, alan adı/TLS, test yayın alanı, dosya ve SQL yetkileri alınır. RDP/sistem yöneticisi yetkisi varsayılmaz. Günlük uygulama ve provision/migration yetkileri ayrıştırılır.
 2. Production yapılandırması doğrulanır: demo seed kapalı; izinli origin/host listesi; HTTPS/proxy davranışı; sırların repo dışında ve erişimi kısıtlı tutulması; loglarda hassas veri bulunmaması.
 3. Dosyalar ve veri koruma anahtarları sürüm klasörü dışında kalıcı dizinlere alınır. Yeniden yayın ve servis yeniden başlatma bunları kaybettirmemeli.
 4. Gerçek SMTP ile davet ve şifre işlemleri test edilir. Dosyaya e-posta bırakılması teslim edilmiş e-posta sayılmaz.
@@ -48,7 +48,9 @@ Hedef topoloji: HTTPS üzerinden IIS; React statik dosyaları ve `/api` aynı or
 
 P2-A yerel üretim hazırlığı: demo içermeyen Windows/IIS paket betiği, dış yapılandırma ve açılış doğrulaması, HTTPS/host/CORS güvenlik sınırları, sertifikayla şifreli kalıcı Data Protection anahtarları, sınırlı dönen loglar, üretimde daha güçlü şifre politikası ve işlevsiz SMS/haftalık rapor seçeneklerinin kapatılması uygulandı. Ayrıntılar ve sınırlar: `docs/windows-pilot-yayin.md`.
 
-P2-B gerçek ortam kabulü henüz açık: sunucu envanteri (kullanıcı sürümleri bilmiyor), servis/SQL yönetim yetkisi ayrımı, alan adı/TLS, SMTP teslimi, IIS/gerçek tarayıcı ve yeniden başlatma provası, başarılı GitHub CI kanıtı. Runtime hesabına kalıcı `sysadmin` vererek bu kapı geçilemez. Sunucu bilgilerini toplamak için salt okunur `scripts/get-windows-server-inventory.ps1` hazır. Git senkronizasyon onayı sunucuya yayın veya migration yetkisi değildir.
+P2-A `09c2b34` ile senkronize edildi. Son GitHub CI koşumu frontend'de geçti, backend'de test sonu katalog temizliğinde 1 hata verdi. P2-B'nin ilk yerel alt paketi bu test ortamı yarışma riskini ve bağımlılık uyarılarını ele alır; yeni CI başarısı push sonrasında ayrıca kanıtlanmalı.
+
+P2-B gerçek ortam kabulü açık: .NET 9 ve SQL hesap yetkileri, uygulama havuzu, güvenli kalıcı yollar, SMTP teslimi, alt uygulama adres uyumu ve gerçek tarayıcı/restart provası. Paylaşımlı hosting'de `get-windows-server-inventory.ps1` çalıştırma yetkisi varsayılmaz; sağlayıcı/panel kanıtı kullanılır. SQL yönetim yetkisi ayrımı destek yanıtından sonra karara bağlanacak. Runtime hesabına kalıcı `sysadmin` verilmez. Git senkronizasyon onayı yayın veya migration yetkisi değildir.
 
 ## P3 — para hesabından önce veri doğruluğu
 
@@ -85,4 +87,4 @@ Pilot sırasında haftalık kullanım ve sorun kaydı tutulur: başarılı giri�
 
 Mevcut katmanlı/modüler monolit korunur. İş kuralları Application/Domain, veri erişimi Infrastructure, yetki ve sözleşme API sınırında kalır. Bu küçük pilot için mikroservis veya gereksiz yeniden yazım yok. Testler önce etkilenen alanda, ardından paket sonunda bütünleşik çalıştırılır; aynı değişmemiş taramalar tekrarlanmaz.
 
-Sıradaki teslim P2-A doğrulama kaydı ve tek Git senkronizasyon onayıdır. Ardından P2-B için sunucu bilgileri ve SQL runtime/provizyon yetkisi ayrımı karara bağlanır. P3 yerel çalışması bu dış bilgiler beklenirken ayrıca planlanabilir; P2/P3/P4/P5 kanıtları olmadan pilot açılmış sayılmaz.
+Sıradaki teslim P2-B'nin CI/bağımlılık alt paketi ve tek Git senkronizasyon onayıdır. Ardından sağlayıcı cevaplarıyla SQL runtime/provizyon ve API yayın tasarımı karara bağlanır. P3 yerel çalışması bu dış bilgiler beklenirken ayrıca planlanabilir; P2/P3/P4/P5 kanıtları olmadan pilot açılmış sayılmaz.

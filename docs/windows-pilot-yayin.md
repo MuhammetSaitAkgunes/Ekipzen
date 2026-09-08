@@ -2,6 +2,8 @@
 
 8 Eylül 2026 — P2-A yazılım ve paket hazırlığı. **Bu belge yayın yapıldığı veya pilot kabulü verildiği anlamına gelmez.** Hedef: mevcut Windows / SQL Server üzerinde tek büro, yaklaşık 10 personel. Sunucu sürümleri henüz bilinmiyor.
 
+Güncel hedef Turhost Windows Profesyonel olarak netleşti. Bu genel IIS kılavuzunu, paylaşımlı hosting'e doğrudan uygulanacak talimat gibi kullanmayın; hesaba özel ön koşullar ve ayrı API düzeni için önce `docs/turhost-pilot-onkontrol.md` belgesini okuyun.
+
 ## 1. Önce envanter ve yetki
 
 Sistem yöneticisi hedef sunucuda `scripts/get-windows-server-inventory.ps1` dosyasını PowerShell ile çalıştırır. Script yalnız Windows, IIS, .NET ve kayıtlı SQL instance sürümlerini okur; yazılım kurmaz, SQL'e bağlanmaz, şifre/personel verisi toplamaz. Çıktı hedefin destek durumuyla karşılaştırılmadan yayın yapılmaz. SQL edition bilgisi tek başına lisans hakkını kanıtlamaz.
