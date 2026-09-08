@@ -22,7 +22,7 @@ Doğrulanmış çalışma düzeni: yalnız Pazartesi–Cuma, 09.00–18.00, 1 sa
 
 Toplam yaklaşık 9–15 mühendislik günü; takvim taahhüdü değildir. Sunucu erişimi, uzman değerlendirmesi ve paralel bordro dönemi bekleme süresi ayrıca değerlendirilir. Her paket küçük yerel commitlerle ilerler. Doğrulama sonrası kaynak/hedef refs, commitler, dosyalar ve test sonuçları bildirilir; feature push + main merge + main push için tek paket onayı alınır. Önceki onay yeni pakete taşınmaz.
 
-## P1 — uygulanmakta olan ilk paket
+## P1 — tamamlandı ve senkronize edildi
 
 - İK yöneticisine özel başlangıç durumu ve açık kurulum işlemi. Şirket adı platformdaki ilgili tenant kaydından gelir.
 - Kurulum yalnız eksik kayıtları ekler; müşteri profilini, izin türlerini, tatillerini ve mevzuat setlerini ezmez. Eşzamanlı istekler tenant veritabanı kilidi ve transaction ile sıralanır.
@@ -31,7 +31,7 @@ Toplam yaklaşık 9–15 mühendislik günü; takvim taahhüdü değildir. Sunuc
 - Taslak değişiklikleri kaydedilmeden eski kayıt onaylanamaz; inceleme notu olmadan onay butonu açılmaz. Sunucu tarafındaki sürüm ve yetki kontrolleri korunur.
 - Kapsam uyarısı: mevcut takvim şablonu yalnız 2026 tam gün tatilleridir. Yarım günler ve işyeri politikası P3 çıkış şartıdır. “Başlangıç kayıtları mevcut” ifadesi mevzuat veya pilot uygunluğu anlamına gelmez.
 
-P1 çıkışında henüz gerçek müşteri sunucusuna yayın veya gerçek personel aktarımı yapılmayacak.
+P1 yerel testleri geçti (91 birim + 207 entegrasyon + 165 frontend). `518ab53` commit’i ile `main` ve `ikpro/main` eşitlendi. Gerçek müşteri sunucusuna yayın veya gerçek personel aktarımı yapılmadı.
 
 ## P2 — mevcut Windows / SQL Server üzerinde işletim
 
@@ -43,6 +43,12 @@ Hedef topoloji: HTTPS üzerinden IIS; React statik dosyaları ve `/api` aynı or
 4. Gerçek SMTP ile davet ve şifre işlemleri test edilir. Dosyaya e-posta bırakılması teslim edilmiş e-posta sayılmaz.
 5. İşlevsiz SMS 2FA ve haftalık rapor vaatleri kapatılır veya açıkça kullanılamıyor gösterilir; sahte güvenlik hissi veren toggle bırakılmaz. Şifre politikası ve oturum saklama riskleri karara bağlanır.
 6. Bağımlılık/SDK/CI kontrolleri ve .NET destek takvimi ele alınır; yalnız test edilerek sürüm değişir. CI'ın varlığı değil başarılı koşum kaydı kanıttır.
+
+### P2 güncel ayrımı
+
+P2-A yerel üretim hazırlığı: demo içermeyen Windows/IIS paket betiği, dış yapılandırma ve açılış doğrulaması, HTTPS/host/CORS güvenlik sınırları, sertifikayla şifreli kalıcı Data Protection anahtarları, sınırlı dönen loglar, üretimde daha güçlü şifre politikası ve işlevsiz SMS/haftalık rapor seçeneklerinin kapatılması uygulandı. Ayrıntılar ve sınırlar: `docs/windows-pilot-yayin.md`.
+
+P2-B gerçek ortam kabulü henüz açık: sunucu envanteri (kullanıcı sürümleri bilmiyor), servis/SQL yönetim yetkisi ayrımı, alan adı/TLS, SMTP teslimi, IIS/gerçek tarayıcı ve yeniden başlatma provası, başarılı GitHub CI kanıtı. Runtime hesabına kalıcı `sysadmin` vererek bu kapı geçilemez. Sunucu bilgilerini toplamak için salt okunur `scripts/get-windows-server-inventory.ps1` hazır. Git senkronizasyon onayı sunucuya yayın veya migration yetkisi değildir.
 
 ## P3 — para hesabından önce veri doğruluğu
 
@@ -79,4 +85,4 @@ Pilot sırasında haftalık kullanım ve sorun kaydı tutulur: başarılı giri�
 
 Mevcut katmanlı/modüler monolit korunur. İş kuralları Application/Domain, veri erişimi Infrastructure, yetki ve sözleşme API sınırında kalır. Bu küçük pilot için mikroservis veya gereksiz yeniden yazım yok. Testler önce etkilenen alanda, ardından paket sonunda bütünleşik çalıştırılır; aynı değişmemiş taramalar tekrarlanmaz.
 
-P1 doğrulanıp senkronizasyon onayı alındıktan sonraki teslim P2 Windows yayın ve güvenli yapılandırma paketidir. Sunucuya müdahale için erişim ve hedefler ayrıca netleştirilir. P3/P4/P5 kanıtları olmadan pilot açılmış sayılmaz.
+Sıradaki teslim P2-A doğrulama kaydı ve tek Git senkronizasyon onayıdır. Ardından P2-B için sunucu bilgileri ve SQL runtime/provizyon yetkisi ayrımı karara bağlanır. P3 yerel çalışması bu dış bilgiler beklenirken ayrıca planlanabilir; P2/P3/P4/P5 kanıtları olmadan pilot açılmış sayılmaz.
