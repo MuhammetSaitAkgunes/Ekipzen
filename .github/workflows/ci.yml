@@ -30,6 +30,9 @@ jobs:
       # geliştirme aracı, çalışma zamanını etkilemez) — kurulum bu yüzden esnek.
       - run: npm ci --legacy-peer-deps
 
+      - name: Bağımlılık güvenlik kapısı
+        run: npm audit --audit-level=moderate
+
       - name: Tip kontrolü
         run: npx tsc -b
 
