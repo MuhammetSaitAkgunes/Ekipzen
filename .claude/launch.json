@@ -8,6 +8,18 @@
       "port": 3210
     },
     {
+      "name": "ekipzen-api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "backend/src/Ekipzen.API", "--launch-profile", "http"],
+      "port": 5053
+    },
+    {
+      "name": "ekipzen-api-noseed",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "backend/src/Ekipzen.API", "--launch-profile", "http", "--", "--Seed:Enabled=false"],
+      "port": 5053
+    },
+    {
       "name": "ekipzen-frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
