@@ -49,7 +49,7 @@ Hosting hesabına müdahale, migration, gerçek müşteri verisi aktarımı, e-p
 
 ## Tek onaya sunulan senkronizasyon kapsamı
 
-- Remote yalnız `ekipzen`: `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
+- Remote yalnız `ekipzen`: `https://github.com/MuhammetSaitAkgunes/Ekipzen.git`.
 - Kaynak: `refs/heads/codex/pilot2b-ci-dependency-readiness`.
 - Hedef: yerel ve uzak `refs/heads/main`; beklenen taban `09c2b3491ea8fd6dd68e87b45ab4b89074a04482`.
 - Commit 1: `42e7cccb51225586d4aabd58de2f081ec38b0de3` — `fix(deps): resolve frontend advisories and enforce audit gate`.

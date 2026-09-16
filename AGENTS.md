@@ -17,8 +17,7 @@
 - Project key: `ekipzen` — always pass `project="ekipzen"`.
 - The product is named **Ekipzen** in code, UI and docs (formerly **İK Pro**; renamed by
   explicit user decision). The Project Memory key `ekipzen` matches the product name.
-- The Git remote is named `ekipzen`. The GitHub repository itself is renamed by the user;
-  update the remote URL when that happens.
+- The Git remote is named `ekipzen` and points to `https://github.com/MuhammetSaitAkgunes/Ekipzen.git`.
 
 ## Local-task fast path
 

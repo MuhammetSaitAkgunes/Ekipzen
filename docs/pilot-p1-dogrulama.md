@@ -40,7 +40,7 @@ Toplam **463 başarılı test**, önceki 447 teste göre **16 yeni test**. Yeni 
 
 ## Onaya sunulan Git kapsamı
 
-- Uzak depo: yalnız `ekipzen` — `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
+- Uzak depo: yalnız `ekipzen` — `https://github.com/MuhammetSaitAkgunes/Ekipzen.git`.
 - Kaynak: `refs/heads/codex/pilot1-customer-bootstrap`.
 - Hedef: `refs/heads/main`; uzak hedef `refs/heads/main` (`ekipzen/main`).
 - Başlangıç/hedef mevcut tabanı: `309c4dee57bb1c68b99b51a8ea74276e44ec879a`.

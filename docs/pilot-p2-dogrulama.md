@@ -57,7 +57,7 @@ Toplam **501 farklı test senaryosu doğrulandı**: 91 birim + 241 entegrasyon +
 
 ## Onaya sunulan Git kapsamı
 
-- Remote: yalnız `ekipzen` — `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
+- Remote: yalnız `ekipzen` — `https://github.com/MuhammetSaitAkgunes/Ekipzen.git`.
 - Kaynak ref: `refs/heads/codex/pilot2-production-hosting`.
 - Hedef ref: yerel ve uzak `refs/heads/main` (`ekipzen/main`).
 - Hedef mevcut tabanı: `518ab5368c62379872d102a29ba5942d48fb6236`.
