@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    İK Pro veritabanlarının işlem günlüğü (LOG) yedeğini alır. RPO'yu GERÇEK yapan
+    Ekipzen veritabanlarının işlem günlüğü (LOG) yedeğini alır. RPO'yu GERÇEK yapan
     parça budur.
 
 .DESCRIPTION
@@ -9,7 +9,7 @@
     günlüğü yedeğiyle mümkündür ve `RESTORE ... STOPAT` de bu günlüklere dayanır.
 
     Yedeklenecek veritabanları tam yedekle AYNI kaynaktan (platform tablosu)
-    keşfedilir — ortak mantık IKProBackup.psm1 içindedir. İki liste ayrışırsa
+    keşfedilir — ortak mantık EkipzenBackup.psm1 içindedir. İki liste ayrışırsa
     sonuç sessiz olur: tam yedeği alınan ama günlüğü alınmayan müşteri, felaket
     anına kadar fark edilmez.
 
@@ -44,7 +44,7 @@
     YALNIZ bu veritabanının günlüğünü al (keşif yapılmaz).
 
 .EXAMPLE
-    powershell -File scripts\backup-log.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro"
+    powershell -File scripts\backup-log.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen"
 
 .OUTPUTS
     Çıkış kodu 0 = tüm veritabanlarının günlüğü alındı. 1 = en az biri
@@ -54,8 +54,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$BackupPath,
     [string]$Database,
-    [string]$PlatformDatabase = "IKProPlatform",
-    [string]$SharedDatabase = "IKProDb",
+    [string]$PlatformDatabase = "EkipzenPlatform",
+    [string]$SharedDatabase = "EkipzenDb",
     [string]$ServerInstance = "localhost",
     [int]$RetentionDays = 7,
     [string]$LogPath,
@@ -63,19 +63,19 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Import-Module (Join-Path $PSScriptRoot "IKProBackup.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "EkipzenBackup.psm1") -Force
 
 $script:startedAt = Get-Date
 
 function Backup-OneDatabaseLog {
     param([Parameter(Mandatory = $true)][string]$Database)
 
-    $model = Get-IKProRecoveryModel -ServerInstance $ServerInstance -Database $Database
+    $model = Get-EkipzenRecoveryModel -ServerInstance $ServerInstance -Database $Database
     if ($model -ne "FULL") {
         $mesaj = "Kurtarma modeli $model — işlem günlüğü yedeği ALINAMAZ, RPO (1 saat) bu " +
                  "veritabanı için geçersiz. Düzeltme: ALTER DATABASE [$Database] SET RECOVERY FULL;"
         Write-Host "  $Database : $mesaj" -ForegroundColor Red
-        Write-IKProResult -Islem "log-yedegi" -Success $false -Message $mesaj `
+        Write-EkipzenResult -Islem "log-yedegi" -Success $false -Message $mesaj `
             -ServerInstance $ServerInstance -ForDatabase $Database `
             -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
         return $false
@@ -95,25 +95,25 @@ function Backup-OneDatabaseLog {
     #   * veritabanı yedekten geri yüklenmiş.
     # Denemek ve hataya göre davranmak, hepsini tek yoldan çözer.
     try {
-        Invoke-IKProSql -ServerInstance $ServerInstance -Query $logKomut | Out-Null
+        Invoke-EkipzenSql -ServerInstance $ServerInstance -Query $logKomut | Out-Null
     }
     catch {
         if ("$_" -notmatch '4214|no current database backup') { throw }
 
         $tamDosya = Join-Path $BackupPath "$Database-$stamp-TABAN.bak"
         Write-Host "  $Database : log zinciri yok — önce TABAN tam yedeği alınıyor"
-        Invoke-IKProSql -ServerInstance $ServerInstance `
+        Invoke-EkipzenSql -ServerInstance $ServerInstance `
             -Query "BACKUP DATABASE [$Database] TO DISK = N'$tamDosya' WITH INIT, CHECKSUM;" | Out-Null
 
         # Tek sefer yeniden dene. İkinci kez 4214 gelirse bu artık "temeli yok"
         # değil başka bir arızadır ve yukarı fırlamalı — sonsuz döngü kurmuyoruz.
-        Invoke-IKProSql -ServerInstance $ServerInstance -Query $logKomut | Out-Null
+        Invoke-EkipzenSql -ServerInstance $ServerInstance -Query $logKomut | Out-Null
     }
 
     $boyutKb = [Math]::Round((Get-Item $logDosya).Length / 1KB, 1)
     Write-Host ("  {0} : {1} KB" -f $Database, $boyutKb)
 
-    Write-IKProResult -Islem "log-yedegi" -Success $true -Message "İşlem günlüğü alındı" `
+    Write-EkipzenResult -Islem "log-yedegi" -Success $true -Message "İşlem günlüğü alındı" `
         -ServerInstance $ServerInstance -ForDatabase $Database `
         -Details @{ dosya = $logDosya; boyutKb = $boyutKb } `
         -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
@@ -144,7 +144,7 @@ try {
     $BackupPath = (Resolve-Path $BackupPath).Path
 
     $hedefler = @(if ($Database) { $Database } else {
-        Get-IKProBackupTargets -ServerInstance $ServerInstance `
+        Get-EkipzenBackupTargets -ServerInstance $ServerInstance `
             -PlatformDatabase $PlatformDatabase -SharedDatabase $SharedDatabase
     })
 
@@ -159,7 +159,7 @@ try {
         }
         catch {
             Write-Host "  $hedef : $_" -ForegroundColor Red
-            Write-IKProResult -Islem "log-yedegi" -Success $false -Message "$_" `
+            Write-EkipzenResult -Islem "log-yedegi" -Success $false -Message "$_" `
                 -ServerInstance $ServerInstance -ForDatabase $hedef `
                 -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
             $basarisizlar += $hedef
@@ -171,7 +171,7 @@ try {
     if ($basarisizlar.Count -gt 0) {
         Write-Host ("LOG YEDEĞİ BAŞARISIZ — {0}/{1}: {2}" -f `
             $basarisizlar.Count, $hedefler.Count, ($basarisizlar -join ", ")) -ForegroundColor Red
-        Write-IKProResult -Islem "log-yedegi-ozet" -Success $false `
+        Write-EkipzenResult -Islem "log-yedegi-ozet" -Success $false `
             -Message "Bazı veritabanlarının günlüğü alınamadı" -ServerInstance $ServerInstance `
             -Details @{ basarisizVeritabanlari = $basarisizlar; toplamVeritabani = $hedefler.Count } `
             -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
@@ -179,7 +179,7 @@ try {
     }
 
     Write-Host ("LOG YEDEĞİ TAMAM — {0} veritabanı." -f $hedefler.Count) -ForegroundColor Green
-    Write-IKProResult -Islem "log-yedegi-ozet" -Success $true -Message "Tüm günlükler alındı" `
+    Write-EkipzenResult -Islem "log-yedegi-ozet" -Success $true -Message "Tüm günlükler alındı" `
         -ServerInstance $ServerInstance `
         -Details @{ veritabanlari = $hedefler; toplamVeritabani = $hedefler.Count } `
         -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
@@ -188,7 +188,7 @@ try {
 catch {
     $hata = "$_"
     Write-Host "LOG YEDEĞİ BAŞARISIZ: $hata" -ForegroundColor Red
-    Write-IKProResult -Islem "log-yedegi-ozet" -Success $false -Message $hata `
+    Write-EkipzenResult -Islem "log-yedegi-ozet" -Success $false -Message $hata `
         -ServerInstance $ServerInstance -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl `
         -StartedAt $script:startedAt
     exit 1

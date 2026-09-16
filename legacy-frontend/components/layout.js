@@ -61,7 +61,7 @@ const Layout = (content) => {
         <div class="brand">
           <div class="brand-mark"><i aria-hidden="true" class="fa-solid fa-users-gear"></i></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>HR MASTER Suite</span>
           </div>
         </div>
@@ -85,7 +85,7 @@ const Layout = (content) => {
           </button>
         </div>
         <div class="header-heading">
-          <span id="page-eyebrow">İK Pro</span>
+          <span id="page-eyebrow">Ekipzen</span>
           <div class="header-title" id="page-title">Risk Merkezi</div>
         </div>
         <button class="header-action-button" onclick="navigateTo('actions', event)" title="Aksiyon Merkezi" aria-label="Aksiyon Merkezi: ${actionCount} açık aksiyon">

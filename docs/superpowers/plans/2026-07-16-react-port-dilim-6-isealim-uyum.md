@@ -1828,7 +1828,7 @@ git commit -m "feat(frontend): uyum belge mutasyonları — oluşturma, durum ge
 **Files:**
 - Modify: `docs/gelistirme-gunlugu.md`; gerekirse küçük düzeltmeler.
 
-- [x] **Step 1: Backend + frontend'i başlat** (önceki dilimlerle aynı: `cd backend && dotnet run --project src/IKPro.API --launch-profile http` + `cd frontend && npm run dev`)
+- [x] **Step 1: Backend + frontend'i başlat** (önceki dilimlerle aynı: `cd backend && dotnet run --project src/Ekipzen.API --launch-profile http` + `cd frontend && npm run dev`)
 
 - [x] **Step 2: Duman testi** (Playwright, scratchpad script'i; giriş: `ik@hrmaster.local` / `demo123`)
 

@@ -20,13 +20,13 @@
 
 ## Dosya Yapısı
 
-- **Create:** `backend/src/IKPro.Application/Common/Interfaces/ITenantPurger.cs` — soyutlama.
-- **Create:** `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs` — implementasyon.
-- **Modify:** `backend/src/IKPro.Infrastructure/DependencyInjection.cs` — DI kaydı.
-- **Create:** `backend/src/IKPro.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs`
-- **Create:** `backend/src/IKPro.Application/Features/Tenancy/Commands/CleanupUnverifiedTenantsCommand.cs`
-- **Modify:** `backend/src/IKPro.API/Controllers/TenancyController.cs` — `DELETE /api/tenants/{id}`, `POST /api/tenants/cleanup-unverified`.
-- **Create:** `backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs`
+- **Create:** `backend/src/Ekipzen.Application/Common/Interfaces/ITenantPurger.cs` — soyutlama.
+- **Create:** `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs` — implementasyon.
+- **Modify:** `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs` — DI kaydı.
+- **Create:** `backend/src/Ekipzen.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs`
+- **Create:** `backend/src/Ekipzen.Application/Features/Tenancy/Commands/CleanupUnverifiedTenantsCommand.cs`
+- **Modify:** `backend/src/Ekipzen.API/Controllers/TenancyController.cs` — `DELETE /api/tenants/{id}`, `POST /api/tenants/cleanup-unverified`.
+- **Create:** `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs`
 - **Modify:** `docs/kvkk-veri-izolasyonu.md` — Bölüm 7.1 güncelle.
 - **Modify:** `docs/gelistirme-gunlugu.md` — kayıt.
 
@@ -35,10 +35,10 @@
 ## Task 1: TenantPurger (çekirdek silme mekanizması)
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Common/Interfaces/ITenantPurger.cs`
-- Create: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/ITenantPurger.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs`
 
 **Interfaces:**
 - Produces: `interface ITenantPurger { Task PurgeAsync(int tenantId, CancellationToken); }`
@@ -46,8 +46,8 @@
 - [ ] **Step 1: Soyutlama**
 
 ```csharp
-// backend/src/IKPro.Application/Common/Interfaces/ITenantPurger.cs
-namespace IKPro.Application.Common.Interfaces;
+// backend/src/Ekipzen.Application/Common/Interfaces/ITenantPurger.cs
+namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
 /// Bir kiracının tüm verisini kalıcı siler (KVKK unutulma hakkı). Tüm ITenantScoped
@@ -63,18 +63,18 @@ public interface ITenantPurger
 - [ ] **Step 2: Failing entegrasyon testi**
 
 ```csharp
-// backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs
+// backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Organization;
-using IKPro.Infrastructure.Persistence;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Organization;
+using Ekipzen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 [Collection(ApiCollection.Name)]
-public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public sealed class TenantPurgeTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     [Fact]
     public async Task Purge_RemovesTargetTenantData_LeavesOthersIntact()
@@ -99,7 +99,7 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
 
             // A tamamen gitti (filtresiz sorgu): kiracı satırı + kullanıcılar yok.
             (await db.Tenants.AnyAsync(t => t.Id == a.TenantId)).Should().BeFalse();
-            (await db.Set<IKPro.Infrastructure.Identity.ApplicationUser>()
+            (await db.Set<Ekipzen.Infrastructure.Identity.ApplicationUser>()
                 .AnyAsync(u => u.TenantId == a.TenantId)).Should().BeFalse();
             (await db.Departments.IgnoreQueryFilters().AnyAsync(d => d.TenantId == a.TenantId)).Should().BeFalse();
 
@@ -113,21 +113,21 @@ public sealed class TenantPurgeTests(IKProApiFactory factory) : TenancyTestBase(
 
 - [ ] **Step 3: Testi çalıştır, başarısızlığı gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~TenantPurge"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~TenantPurge"`
 Expected: FAIL (ITenantPurger DI'da yok).
 
 - [ ] **Step 4: TenantPurger implementasyonu**
 
 ```csharp
-// backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Common;
-using IKPro.Domain.Entities.Organization;
-using IKPro.Infrastructure.Identity;
+// backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Common;
+using Ekipzen.Domain.Entities.Organization;
+using Ekipzen.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
-namespace IKPro.Infrastructure.Persistence;
+namespace Ekipzen.Infrastructure.Persistence;
 
 /// <summary>
 /// Kiracının tüm verisini FK-güvenli sırada siler. Silinecek tablolar EF model
@@ -225,20 +225,20 @@ Not: `ExecuteSqlRaw` içinde tablo adı sabit metadata'dan gelir (kullanıcı gi
 
 `DependencyInjection.cs` — `ITenantPurger` scoped kaydı (AppDbContext ile aynı scope):
 ```csharp
-services.AddScoped<IKPro.Application.Common.Interfaces.ITenantPurger, Persistence.TenantPurger>();
+services.AddScoped<Ekipzen.Application.Common.Interfaces.ITenantPurger, Persistence.TenantPurger>();
 ```
 (Uygun `using` zaten varsa kısalt.)
 
 - [ ] **Step 6: Testi çalıştır, geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~TenantPurge"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~TenantPurge"`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git checkout -b feature/tenant-purge
-git add backend/src/IKPro.Application/Common/Interfaces/ITenantPurger.cs backend/src/IKPro.Infrastructure/ backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs
+git add backend/src/Ekipzen.Application/Common/Interfaces/ITenantPurger.cs backend/src/Ekipzen.Infrastructure/ backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs
 git commit -m "feat(tenancy): TenantPurger — kiracı verisini FK-güvenli topluca siler"
 ```
 
@@ -247,7 +247,7 @@ git commit -m "feat(tenancy): TenantPurger — kiracı verisini FK-güvenli topl
 ## Task 2: PurgeTenantCommand (confirm-slug güvenliği)
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs`
 
 **Interfaces:**
 - Consumes: `ITenantPurger`, `IApplicationDbContext.Tenants`.
@@ -256,14 +256,14 @@ git commit -m "feat(tenancy): TenantPurger — kiracı verisini FK-güvenli topl
 - [ ] **Step 1: Command + validator + handler**
 
 ```csharp
-// backend/src/IKPro.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs
+// backend/src/Ekipzen.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs
 using FluentValidation;
-using IKPro.Application.Common.Exceptions;
-using IKPro.Application.Common.Interfaces;
+using Ekipzen.Application.Common.Exceptions;
+using Ekipzen.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Features.Tenancy.Commands;
+namespace Ekipzen.Application.Features.Tenancy.Commands;
 
 /// <summary>
 /// Bir kiracının tüm verisini kalıcı siler (KVKK unutulma hakkı). Yıkıcıdır:
@@ -312,7 +312,7 @@ Expected: 0 Hata.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add backend/src/IKPro.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs
+git add backend/src/Ekipzen.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs
 git commit -m "feat(tenancy): PurgeTenantCommand (confirm-slug güvenlik kapısı)"
 ```
 
@@ -321,9 +321,9 @@ git commit -m "feat(tenancy): PurgeTenantCommand (confirm-slug güvenlik kapıs�
 ## Task 3: DELETE ucu + cleanup komutu/ucu
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Tenancy/Commands/CleanupUnverifiedTenantsCommand.cs`
-- Modify: `backend/src/IKPro.API/Controllers/TenancyController.cs`
-- Modify: `backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/CleanupUnverifiedTenantsCommand.cs`
+- Modify: `backend/src/Ekipzen.API/Controllers/TenancyController.cs`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs`
 
 **Interfaces:**
 - Produces: `DELETE /api/tenants/{id}?confirmSlug=`; `POST /api/tenants/cleanup-unverified`; `CleanupUnverifiedTenantsCommand(int OlderThanDays) : IRequest<CleanupUnverifiedResult>`; `CleanupUnverifiedResult(int PurgedCount)`.
@@ -331,13 +331,13 @@ git commit -m "feat(tenancy): PurgeTenantCommand (confirm-slug güvenlik kapıs�
 - [ ] **Step 1: Cleanup komutu**
 
 ```csharp
-// backend/src/IKPro.Application/Features/Tenancy/Commands/CleanupUnverifiedTenantsCommand.cs
-using IKPro.Application.Common.Interfaces;
-using IKPro.Infrastructure.Identity; // NOT: Application katmanı Identity'ye bağımlı olmasın — bkz. Step 1b
+// backend/src/Ekipzen.Application/Features/Tenancy/Commands/CleanupUnverifiedTenantsCommand.cs
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Infrastructure.Identity; // NOT: Application katmanı Identity'ye bağımlı olmasın — bkz. Step 1b
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Features.Tenancy.Commands;
+namespace Ekipzen.Application.Features.Tenancy.Commands;
 
 /// <summary>
 /// Doğrulanmamış (hiç etkinleşmemiş) self-servis kiracıları temizler: pasif + verilen
@@ -354,14 +354,14 @@ public sealed record CleanupUnverifiedResult(int PurgedCount);
 Application handler'ı `IApplicationDbContext` üzerinden "şifreli kullanıcı var mı" bilgisine erişemez (ApplicationUser Identity tipidir). Bu yüzden handler'ı Infrastructure'a koy:
 
 ```csharp
-// backend/src/IKPro.Infrastructure/Persistence/CleanupUnverifiedTenantsHandler.cs
-using IKPro.Application.Common.Interfaces;
-using IKPro.Application.Features.Tenancy.Commands;
-using IKPro.Infrastructure.Identity;
+// backend/src/Ekipzen.Infrastructure/Persistence/CleanupUnverifiedTenantsHandler.cs
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Tenancy.Commands;
+using Ekipzen.Infrastructure.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Infrastructure.Persistence;
+namespace Ekipzen.Infrastructure.Persistence;
 
 public sealed class CleanupUnverifiedTenantsHandler(AppDbContext context, ITenantPurger purger)
     : IRequestHandler<CleanupUnverifiedTenantsCommand, CleanupUnverifiedResult>
@@ -436,7 +436,7 @@ private bool PlatformKeyValid()
     return !string.IsNullOrEmpty(expected) && provided == expected;
 }
 ```
-`Provision`'ı da bu yardımcıyı kullanacak şekilde güncelle. `using IKPro.Application.Features.Tenancy.Commands;` mevcut.
+`Provision`'ı da bu yardımcıyı kullanacak şekilde güncelle. `using Ekipzen.Application.Features.Tenancy.Commands;` mevcut.
 
 - [ ] **Step 3: Testler (TenantPurgeTests'e ekle)**
 
@@ -446,7 +446,7 @@ public async Task Delete_WithWrongSlug_Returns409_AndKeepsData()
 {
     var t = await ProvisionAndActivateAsync("Yanlış Onay A.Ş.", $"w-{Guid.NewGuid():N}@purge.local");
     var client = Factory.CreateClient();
-    client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
+    client.DefaultRequestHeaders.Add("X-Platform-Key", EkipzenApiFactory.PlatformKey);
 
     var resp = await client.DeleteAsync($"/api/tenants/{t.TenantId}?confirmSlug=yanlis-slug");
     resp.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
@@ -487,7 +487,7 @@ public async Task CleanupUnverified_PurgesUnverified_KeepsVerifiedAndActive()
     var kept = await ProvisionAndActivateAsync("Aktif A.Ş.", $"a-{Guid.NewGuid():N}@cleanup.local");
 
     var client = Factory.CreateClient();
-    client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
+    client.DefaultRequestHeaders.Add("X-Platform-Key", EkipzenApiFactory.PlatformKey);
     var resp = await client.PostAsync("/api/tenants/cleanup-unverified?olderThanDays=7", null);
     resp.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
@@ -504,7 +504,7 @@ public async Task CleanupUnverified_PurgesUnverified_KeepsVerifiedAndActive()
 
 - [ ] **Step 4: Testleri çalıştır**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~TenantPurge"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~TenantPurge"`
 Expected: PASS (4 test).
 
 - [ ] **Step 5: Tüm backend paketi**
@@ -515,7 +515,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/IKPro.Application/ backend/src/IKPro.Infrastructure/ backend/src/IKPro.API/ backend/tests/
+git add backend/src/Ekipzen.Application/ backend/src/Ekipzen.Infrastructure/ backend/src/Ekipzen.API/ backend/tests/
 git commit -m "feat(tenancy): purge/cleanup uçları (DELETE /tenants/{id}, cleanup-unverified)"
 ```
 

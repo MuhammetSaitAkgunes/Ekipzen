@@ -1,24 +1,24 @@
 {
-  "AllowedHosts": "ikpro.example.com",
-  "App": { "BaseUrl": "https://ikpro.example.com" },
+  "AllowedHosts": "ekipzen.example.com",
+  "App": { "BaseUrl": "https://ekipzen.example.com" },
   "ConnectionStrings": {
-    "DefaultConnection": "Server=SQL-SERVER-FQDN;Database=IKProDb;Integrated Security=True;Encrypt=True;TrustServerCertificate=False",
-    "PlatformConnection": "Server=SQL-SERVER-FQDN;Database=IKProPlatform;Integrated Security=True;Encrypt=True;TrustServerCertificate=False"
+    "DefaultConnection": "Server=SQL-SERVER-FQDN;Database=EkipzenDb;Integrated Security=True;Encrypt=True;TrustServerCertificate=False",
+    "PlatformConnection": "Server=SQL-SERVER-FQDN;Database=EkipzenPlatform;Integrated Security=True;Encrypt=True;TrustServerCertificate=False"
   },
   "Jwt": { "Secret": "REPLACE_WITH_A_CRYPTOGRAPHIC_RANDOM_SECRET_AT_LEAST_32_CHARS", "AccessTokenMinutes": 15 },
   "Platform": { "ProvisioningKey": "REPLACE_WITH_A_DIFFERENT_CRYPTOGRAPHIC_RANDOM_SECRET_AT_LEAST_32_CHARS" },
   "Email": { "Mode": "smtp" },
   "Smtp": {
     "Host": "smtp.example.com", "Port": 587, "User": "REPLACE", "Password": "REPLACE",
-    "From": "ikpro@example.com", "FromName": "İK Pro", "UseStartTls": true
+    "From": "ekipzen@example.com", "FromName": "Ekipzen", "UseStartTls": true
   },
-  "Storage": { "Root": "D:\\IKPro\\data\\storage" },
+  "Storage": { "Root": "D:\\Ekipzen\\data\\storage" },
   "DataProtection": {
-    "KeysPath": "D:\\IKPro\\data\\keys",
-    "CertificatePath": "D:\\IKPro\\secrets\\data-protection.pfx",
+    "KeysPath": "D:\\Ekipzen\\data\\keys",
+    "CertificatePath": "D:\\Ekipzen\\secrets\\data-protection.pfx",
     "CertificatePassword": "REPLACE_WITH_CERTIFICATE_PASSWORD"
   },
-  "Logging": { "FilePath": "D:\\IKPro\\data\\logs\\ikpro-.log" },
+  "Logging": { "FilePath": "D:\\Ekipzen\\data\\logs\\ekipzen-.log" },
   "Cors": { "AllowedOrigins": [] },
   "Seed": { "Enabled": false }
 }

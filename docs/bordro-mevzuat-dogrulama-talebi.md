@@ -37,7 +37,7 @@ Uzmanın kullandığı bağımsız bordro yazılımı veya imzalı hesap döküm
 7. Önceki işveren kümülatif matrahı taşınan yeni çalışan.
 8. 2 ve 5 puan indirimli/indirimsiz işveren maliyeti.
 
-Her vaka için girdi, beklenen kalemler, İK Pro çıktısı, kuruş farkı ve açıklaması
+Her vaka için girdi, beklenen kalemler, Ekipzen çıktısı, kuruş farkı ve açıklaması
 eklenmelidir. Açıklanamayan fark varsa üretim kabulü verilmez.
 
 ## Kabul

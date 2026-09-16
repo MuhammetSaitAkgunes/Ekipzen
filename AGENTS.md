@@ -15,9 +15,11 @@
 
 - MCP server: `msa_project_memory`
 - Project key: `ekipzen` — always pass `project="ekipzen"`.
-- The product is named **İK Pro** in code, UI and docs. `ekipzen` is only the Project Memory
-  identity. Do not rename product text, and do not record "Ekipzen" as a product or brand
-  decision; that relationship is unverified.
+- The product is named **Ekipzen** in code, UI and docs (formerly **İK Pro**; renamed by
+  explicit user decision). The Project Memory key `ekipzen` matches the product name.
+- The Git remote is still named `ikpro` and points to the GitHub repository `IKPro`; the
+  canonical checkout folder on disk still contains `İK Pro`. These are external identities
+  and were intentionally not renamed.
 
 ## Local-task fast path
 

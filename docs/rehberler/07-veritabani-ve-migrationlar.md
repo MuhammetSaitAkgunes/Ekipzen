@@ -13,7 +13,7 @@ flowchart LR
     U --> DB[("MSSQL")]
 ```
 
-- Migration'lar: `backend/src/IKPro.Infrastructure/Persistence/Migrations/`
+- Migration'lar: `backend/src/Ekipzen.Infrastructure/Persistence/Migrations/`
   (kiracı şeması) ve `.../Migrations/Platform/` (platform şeması)
 - Her migration zaman damgalı: `20260717114308_MultiTenancyFoundation.cs`
 
@@ -24,9 +24,9 @@ kataloğuna ayrı ayrı uygulanır:
 
 | Veritabanı | Şema kaynağı | Ne zaman uygulanır |
 | --- | --- | --- |
-| `IKProPlatform` | `PlatformDbContext` | Açılışta, otomatik |
-| `IKProDb` (paylaşılan, boş) | `AppDbContext` | Açılışta, otomatik |
-| `IKPro_{slug}` × N | `AppDbContext` | **Provizyonda** (yeni kiracı) + **`POST /api/tenants/migrate`** (mevcut kiracılar) |
+| `EkipzenPlatform` | `PlatformDbContext` | Açılışta, otomatik |
+| `EkipzenDb` (paylaşılan, boş) | `AppDbContext` | Açılışta, otomatik |
+| `Ekipzen_{slug}` × N | `AppDbContext` | **Provizyonda** (yeni kiracı) + **`POST /api/tenants/migrate`** (mevcut kiracılar) |
 
 **Kiracı veritabanları açılışta migrate EDİLMEZ.** Bu, fazın en önemli işletim
 kararı ve gerekçesi somut: açılışta migrate etmek açılış süresini müşteri
@@ -50,8 +50,8 @@ provizyon yolundan kurduğu için şemaları zaten günceldir.
 
 ## Yeni Migration Ekleme
 
-> **Ekim 2026 itibarıyla iki `DbContext` var** (`AppDbContext` → `IKProDb`,
-> `PlatformDbContext` → `IKProPlatform`, bkz. [06](06-multi-tenancy.md)). `dotnet ef`
+> **Ekim 2026 itibarıyla iki `DbContext` var** (`AppDbContext` → `EkipzenDb`,
+> `PlatformDbContext` → `EkipzenPlatform`, bkz. [06](06-multi-tenancy.md)). `dotnet ef`
 > hangi context olduğunu tek başına çıkaramaz ve **"More than one DbContext was
 > found... Specify which one to use."** hatası verir — her komuta `--context
 > AppDbContext` ya da `--context PlatformDbContext` eklemek ZORUNLUDUR. Aşağıdaki
@@ -63,14 +63,14 @@ Bir varlık ekledin/değiştirdin diyelim (örnek `AppDbContext` için — kirac
 cd backend
 # 1) Migration üret (Infrastructure projesi, başlangıç projesi API)
 dotnet ef migrations add AçıklayıcıBirİsim \
-  --project src/IKPro.Infrastructure \
-  --startup-project src/IKPro.API \
+  --project src/Ekipzen.Infrastructure \
+  --startup-project src/Ekipzen.API \
   --context AppDbContext
 
 # 2) Veritabanına uygula (ya da uygulamayı Development'ta çalıştır)
 dotnet ef database update \
-  --project src/IKPro.Infrastructure \
-  --startup-project src/IKPro.API \
+  --project src/Ekipzen.Infrastructure \
+  --startup-project src/Ekipzen.API \
   --context AppDbContext
 ```
 
@@ -79,10 +79,10 @@ PlatformDbContext` kullan. Hangi context'in hangi veritabanına eşlendiğini
 doğrulamak için:
 
 ```bash
-dotnet ef dbcontext info --project src/IKPro.Infrastructure --startup-project src/IKPro.API --context AppDbContext
-# → Database name: IKProDb
-dotnet ef dbcontext info --project src/IKPro.Infrastructure --startup-project src/IKPro.API --context PlatformDbContext
-# → Database name: IKProPlatform
+dotnet ef dbcontext info --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.API --context AppDbContext
+# → Database name: EkipzenDb
+dotnet ef dbcontext info --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.API --context PlatformDbContext
+# → Database name: EkipzenPlatform
 ```
 
 > `dotnet ef` kurulu değilse: `dotnet tool install --global dotnet-ef`
@@ -104,12 +104,12 @@ değil, migration içinde **`migrationBuilder.Sql("CREATE VIEW ...")`** ile yön
 ## Seed (Örnek Veri)
 
 Açılış sırası (yalnız Development):
-1. `PlatformDbInitializer` — `IKProPlatform` migrate edilir.
-2. `AppDbContextInitializer.InitialiseAsync()` — **paylaşılan** `IKProDb` migrate
+1. `PlatformDbInitializer` — `EkipzenPlatform` migrate edilir.
+2. `AppDbContextInitializer.InitialiseAsync()` — **paylaşılan** `EkipzenDb` migrate
    edilir. İçi boş kalır; kiracı bağlamı olmayan işler (sağlık kontrolü, henüz
    ayrılmamış kiracılar) buraya bağlandığı için var olmak zorunda.
 3. `DemoTenantSeeder` — iki demo kiracıyı **gerçek provizyon yolundan** kurar
-   (`IKPro_demo`, `IKPro_globex`) ve içlerini doldurur.
+   (`Ekipzen_demo`, `Ekipzen_globex`) ve içlerini doldurur.
 
 Demo veri: departman/personel/izin/bordro + üç kullanıcı (`ik@`, `ece.arslan@`,
 `ahmet.yilmaz@` — hepsi `demo123`) ve izolasyonu göstermek için ikinci bir kiracı
@@ -120,8 +120,8 @@ Demo veri: departman/personel/izin/bordro + üç kullanıcı (`ik@`, `ece.arslan
 > akışı, uygulamayı açan her geliştiricinin karşısında baştan sona çalışır.
 > Demo admin'leri de bu yüzden şifresiz doğar; seed yalnız şifrelerini verir.
 
-> **⚠️ Sıfırlarken:** `IKProDb` + `IKProPlatform` düşürmek ARTIK YETMEZ. Tüm
-> `IKPro_*` kiracı veritabanlarını da birlikte düşürün — aksi halde provizyon
+> **⚠️ Sıfırlarken:** `EkipzenDb` + `EkipzenPlatform` düşürmek ARTIK YETMEZ. Tüm
+> `Ekipzen_*` kiracı veritabanlarını da birlikte düşürün — aksi halde provizyon
 > "katalog zaten var" diye reddeder (yarıda kalmış kurulumun artığını sessizce
 > yeniden kullanmamak için konulmuş bilinçli koruma).
 
@@ -139,8 +139,8 @@ eder, sonra `ITenantScopeFactory.Create(kiracıId)` ile açtığı kapsamdan
 
 ## Test Veritabanı
 
-Entegrasyon testleri ayrı bir `IKProDb_Test` veritabanı kullanır ve **her koşuda
-sıfırlar** (`IKProApiFactory`). Böylece testler birbirinden ve gerçek veriden yalıtılır.
+Entegrasyon testleri ayrı bir `EkipzenDb_Test` veritabanı kullanır ve **her koşuda
+sıfırlar** (`EkipzenApiFactory`). Böylece testler birbirinden ve gerçek veriden yalıtılır.
 
 ## Üretim Uyarısı (satışa hazırlık)
 
@@ -148,24 +148,24 @@ sıfırlar** (`IKProApiFactory`). Böylece testler birbirinden ve gerçek veride
 ve `AppDbContextInitializer` ikisi de `if (app.Environment.IsDevelopment())` bloğunun
 içindedir). Üretim dağıtımında **HER İKİ** veritabanının migration'larını elle veya bir
 dağıtım adımıyla uygulaman gerekir — yalnız `AppDbContext`'i migrate edip
-`PlatformDbContext`'i unutursan `IKProPlatform` üzerinde `Tenants`/`TenantDirectoryEntries`
+`PlatformDbContext`'i unutursan `EkipzenPlatform` üzerinde `Tenants`/`TenantDirectoryEntries`
 tabloları hiç oluşmaz ve ilk login denemesi "Invalid object name 'Tenants'" ile **tam giriş
 kesintisiyle** patlar:
 
 ```bash
-# 1) Kiracı verisi (IKProDb)
+# 1) Kiracı verisi (EkipzenDb)
 dotnet ef database update \
-  --project src/IKPro.Infrastructure --startup-project src/IKPro.API \
+  --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.API \
   --context AppDbContext --connection "<prod-app-connection>"
 
-# 2) Kiracı kimliği (IKProPlatform) — UNUTMA, ayrı bir veritabanıdır
+# 2) Kiracı kimliği (EkipzenPlatform) — UNUTMA, ayrı bir veritabanıdır
 dotnet ef database update \
-  --project src/IKPro.Infrastructure --startup-project src/IKPro.API \
+  --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.API \
   --context PlatformDbContext --connection "<prod-platform-connection>"
 ```
 
 **3) KİRACI VERİTABANLARI — dağıtımın son adımı.** Yukarıdaki iki komut
-müşterilerin veritabanlarına DOKUNMAZ; onlar `IKPro_{slug}` kataloglarındadır ve
+müşterilerin veritabanlarına DOKUNMAZ; onlar `Ekipzen_{slug}` kataloglarındadır ve
 `dotnet ef` onları tek tek bilmez. Uygulama yeni sürümle ayağa kalktıktan sonra:
 
 ```bash
@@ -194,7 +194,7 @@ içindeki başka bir sunucuya bağlanır — **hata vermeden**. İkisini birlikt
 ## Yerel Kurulumu Sıfırlama
 
 Kiracı başına veritabanına geçildikten sonra iki veritabanı düşürmek **yetmez**:
-demo kiracıların katalogları (`IKPro_demo`, `IKPro_globex`) yerinde kalırsa
+demo kiracıların katalogları (`Ekipzen_demo`, `Ekipzen_globex`) yerinde kalırsa
 provizyon onları "katalog zaten var" diye reddeder ve uygulama açılmaz. Bu,
 yarıda kalmış bir kurulumun artığını sessizce yeniden kullanmamak için konulmuş
 bilinçli bir korumadır — hata mesajı da ne yapmanız gerektiğini söyler.
@@ -208,7 +208,7 @@ SELECT @sql = @sql +
     'ALTER DATABASE [' + name + '] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; ' +
     'DROP DATABASE [' + name + '];'
 FROM sys.databases
-WHERE name IN ('IKProDb', 'IKProPlatform') OR name LIKE 'IKPro[_]%';
+WHERE name IN ('EkipzenDb', 'EkipzenPlatform') OR name LIKE 'Ekipzen[_]%';
 EXEC sp_executesql @sql;
 ```
 

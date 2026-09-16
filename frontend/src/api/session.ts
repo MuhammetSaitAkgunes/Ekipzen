@@ -3,7 +3,7 @@ import type { components } from "./schema";
 export type UserDto = components["schemas"]["UserDto"];
 export type Session = { token: string; refreshToken: string; user: UserDto };
 
-export const SESSION_KEY = "ikpro-session";
+export const SESSION_KEY = "ekipzen-session";
 
 // Oturum tek kaynaktan okunur ve değişimi abonelere duyurulur: 401 kurtarması
 // (api/client.ts) oturumu sildiğinde React tarafı da anında "çıkış yapmış"

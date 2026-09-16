@@ -10,15 +10,15 @@ export function AppShell() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [theme, setTheme] = useState(() => localStorage.getItem("ikpro-theme") || "light");
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ikpro-sidebar") === "collapsed");
+  const [theme, setTheme] = useState(() => localStorage.getItem("ekipzen-theme") || "light");
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ekipzen-sidebar") === "collapsed");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("ikpro-theme", theme);
+    localStorage.setItem("ekipzen-theme", theme);
   }, [theme]);
   useEffect(() => {
-    localStorage.setItem("ikpro-sidebar", collapsed ? "collapsed" : "expanded");
+    localStorage.setItem("ekipzen-sidebar", collapsed ? "collapsed" : "expanded");
   }, [collapsed]);
 
   const badge = useQuery({
@@ -53,7 +53,7 @@ export function AppShell() {
       const { blob, fileName } = await apiDownload("/me/data-export");
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = fileName ?? "ikpro-verilerim.json";
+      link.download = fileName ?? "ekipzen-verilerim.json";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -69,7 +69,7 @@ export function AppShell() {
         <div className="brand">
           <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>{user?.tenantName || "HR MASTER Suite"}</span>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function AppShell() {
           </button>
         </div>
         <div className="header-heading">
-          <span id="page-eyebrow">{current?.eyebrow ?? "İK Pro"}</span>
+          <span id="page-eyebrow">{current?.eyebrow ?? "Ekipzen"}</span>
           <div className="header-title" id="page-title">{current?.title ?? "Yakında"}</div>
         </div>
         <button className="header-action-button" onClick={() => navigate("/actions")} title="Aksiyon Merkezi" aria-label={`Aksiyon Merkezi: ${actionCount} açık aksiyon`}>

@@ -1,4 +1,4 @@
-const AUTH_STORAGE_KEY = "ikpro-demo-session";
+const AUTH_STORAGE_KEY = "ekipzen-demo-session";
 
 const getCurrentSession = () => {
   try {

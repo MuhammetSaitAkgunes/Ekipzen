@@ -2,13 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "ikpro-static",
+      "name": "ekipzen-static",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "serve", "-l", "3210", "legacy-frontend"],
       "port": 3210
     },
     {
-      "name": "ikpro-frontend",
+      "name": "ekipzen-frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
       "port": 5173

@@ -1,4 +1,4 @@
-# İK Pro — Backend API Sözleşmesi
+# Ekipzen — Backend API Sözleşmesi
 
 > Faz 12 teslim dokümanı · Base URL: `https://localhost:7001/api` · Auth: JWT Bearer
 > Roller: **A** = hr-admin, **M** = manager, **E** = employee (routes.js matrisiyle birebir)

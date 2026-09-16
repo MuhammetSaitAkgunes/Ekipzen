@@ -4,7 +4,7 @@
 
 **Goal:** Kiracı kimliğini (kim var, hangi durumda, hangi e-posta kime ait) ayrı bir platform veritabanına taşımak; böylece Faz 1b'deki bağlantı çözücü kiracıyı uygulama veritabanına sormadan bulabilsin.
 
-**Architecture:** İki DbContext. `PlatformDbContext` yeni `IKProPlatform` veritabanına bağlanır ve `Tenants` + `TenantDirectory` tablolarını tutar. `AppDbContext` bugünkü `IKProDb`'de kalır ve tüm kiracıların İK verisini `TenantId` ile ayırmaya devam eder — bu fazda hiçbir veri bölünmez. Kiracı satırı uygulama veritabanından çıktığı için provizyon ve purge artık iki veritabanına dokunur; atomiklik kaybı `Tenants.Status` durum makinesiyle telafi edilir.
+**Architecture:** İki DbContext. `PlatformDbContext` yeni `EkipzenPlatform` veritabanına bağlanır ve `Tenants` + `TenantDirectory` tablolarını tutar. `AppDbContext` bugünkü `EkipzenDb`'de kalır ve tüm kiracıların İK verisini `TenantId` ile ayırmaya devam eder — bu fazda hiçbir veri bölünmez. Kiracı satırı uygulama veritabanından çıktığı için provizyon ve purge artık iki veritabanına dokunur; atomiklik kaybı `Tenants.Status` durum makinesiyle telafi edilir.
 
 **Tech Stack:** .NET 9, EF Core 9, SQL Server, xUnit + FluentAssertions.
 
@@ -13,7 +13,7 @@ Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 ## Global Constraints
 
 - **Gerçek müşteri verisi yoktur.** Yalnız demo kiracılar var; taşıma script'i yazılmaz, demo veri seed'den yeniden üretilir.
-- Bu fazda **hiçbir kiracı verisi bölünmez.** `AppDbContext` tek `IKProDb`'ye bağlı kalır, global query filter'lar ve `TenantId` sütunları aynen çalışır.
+- Bu fazda **hiçbir kiracı verisi bölünmez.** `AppDbContext` tek `EkipzenDb`'ye bağlı kalır, global query filter'lar ve `TenantId` sütunları aynen çalışır.
 - Faz sonunda **158 testin tamamı geçmelidir** (47 birim + 111 entegrasyon). Yeni testler bunun üstüne eklenir.
 - Derleme uyarısız kalır — CI `-warnaserror` ile koşar.
 - TDD: her görevde önce kırmızı test.
@@ -38,24 +38,24 @@ Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 
 | Dosya | Sorumluluk |
 | --- | --- |
-| `backend/src/IKPro.Domain/Entities/Tenancy/Tenant.cs` | `IsActive` → `Status` (değiştir) |
-| `backend/src/IKPro.Domain/Entities/Tenancy/TenantStatus.cs` | Kiracı durumu enum'ı (oluştur) |
-| `backend/src/IKPro.Domain/Entities/Tenancy/TenantDirectoryEntry.cs` | E-posta → kiracı yönlendirme kaydı (oluştur) |
-| `backend/src/IKPro.Application/Common/Interfaces/IPlatformDbContext.cs` | Platform context sözleşmesi (oluştur) |
-| `backend/src/IKPro.Application/Common/Interfaces/IApplicationDbContext.cs` | `Tenants` çıkarılır (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs` | Platform DbContext (oluştur) |
-| `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContextFactory.cs` | Tasarım zamanı fabrika (oluştur) |
-| `backend/src/IKPro.Infrastructure/Persistence/PlatformDbInitializer.cs` | Platform migrate + demo seed (oluştur) |
-| `backend/src/IKPro.Infrastructure/Persistence/Migrations/Platform/` | Platform migration'ları (oluştur) |
-| `backend/src/IKPro.Infrastructure/Persistence/AppDbContext.cs` | `Tenants` DbSet çıkarılır (değiştir) |
-| `backend/src/IKPro.Infrastructure/DependencyInjection.cs` | Platform context kaydı (değiştir) |
-| `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs` | Kiracı sorguları platform context'e (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs` | Platform satırlarını da siler (değiştir) |
-| `backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs` | Durum makinesi (değiştir) |
-| `backend/src/IKPro.Application/Features/Tenancy/Commands/*.cs` | Platform context (değiştir) |
-| `backend/src/IKPro.Api/Program.cs` | Platform initializer çağrısı (değiştir) |
-| `backend/tests/IKPro.Tests.Integration/IKProApiFactory.cs` | Platform test DB'si (değiştir) |
-| `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs` | Yeni testler (oluştur) |
+| `backend/src/Ekipzen.Domain/Entities/Tenancy/Tenant.cs` | `IsActive` → `Status` (değiştir) |
+| `backend/src/Ekipzen.Domain/Entities/Tenancy/TenantStatus.cs` | Kiracı durumu enum'ı (oluştur) |
+| `backend/src/Ekipzen.Domain/Entities/Tenancy/TenantDirectoryEntry.cs` | E-posta → kiracı yönlendirme kaydı (oluştur) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/IPlatformDbContext.cs` | Platform context sözleşmesi (oluştur) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/IApplicationDbContext.cs` | `Tenants` çıkarılır (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs` | Platform DbContext (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContextFactory.cs` | Tasarım zamanı fabrika (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbInitializer.cs` | Platform migrate + demo seed (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/Migrations/Platform/` | Platform migration'ları (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/AppDbContext.cs` | `Tenants` DbSet çıkarılır (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs` | Platform context kaydı (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs` | Kiracı sorguları platform context'e (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs` | Platform satırlarını da siler (değiştir) |
+| `backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs` | Durum makinesi (değiştir) |
+| `backend/src/Ekipzen.Application/Features/Tenancy/Commands/*.cs` | Platform context (değiştir) |
+| `backend/src/Ekipzen.Api/Program.cs` | Platform initializer çağrısı (değiştir) |
+| `backend/tests/Ekipzen.Tests.Integration/EkipzenApiFactory.cs` | Platform test DB'si (değiştir) |
+| `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs` | Yeni testler (oluştur) |
 
 ---
 
@@ -64,15 +64,15 @@ Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 Boş ama gerçek bir platform veritabanı ayağa kaldırılır. Henüz hiçbir şey taşınmaz — sadece ikinci context'in kurulabildiği ve testlerin onu düşürüp yeniden kurabildiği kanıtlanır.
 
 **Files:**
-- Create: `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs`
-- Create: `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContextFactory.cs`
-- Create: `backend/src/IKPro.Infrastructure/Persistence/PlatformDbInitializer.cs`
-- Create: `backend/src/IKPro.Application/Common/Interfaces/IPlatformDbContext.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
-- Modify: `backend/src/IKPro.Api/Program.cs`
-- Modify: `backend/src/IKPro.Api/appsettings.Development.json`
-- Modify: `backend/tests/IKPro.Tests.Integration/IKProApiFactory.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContextFactory.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbInitializer.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/IPlatformDbContext.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
+- Modify: `backend/src/Ekipzen.Api/Program.cs`
+- Modify: `backend/src/Ekipzen.Api/appsettings.Development.json`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/EkipzenApiFactory.cs`
 
 **Interfaces:**
 - Produces:
@@ -83,16 +83,16 @@ Boş ama gerçek bir platform veritabanı ayağa kaldırılır. Henüz hiçbir �
 
 - [ ] **Step 1: Failing testi yaz**
 
-`backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
+using Ekipzen.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 /// <summary>
 /// Platform katmanı: kiracı kimliği uygulama veritabanından ayrı, kendi
@@ -100,7 +100,7 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// veritabanındadır — ayrılan yalnız kiracının kendisidir.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class PlatformKatmaniTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class PlatformKatmaniTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     [Fact]
     public async Task PlatformVeritabani_AyagaKalkarVeSorgulanabilir()
@@ -131,20 +131,20 @@ public class PlatformKatmaniTests(IKProApiFactory factory) : TenancyTestBase(fac
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "FullyQualifiedName~PlatformKatmani"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~PlatformKatmani"
 ```
 
 Beklenen: derleme hatası — `IPlatformDbContext` tipi bulunamıyor.
 
 - [ ] **Step 3: `IPlatformDbContext` sözleşmesini yaz**
 
-`backend/src/IKPro.Application/Common/Interfaces/IPlatformDbContext.cs`:
+`backend/src/Ekipzen.Application/Common/Interfaces/IPlatformDbContext.cs`:
 
 ```csharp
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Common.Interfaces;
+namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
 /// Platform veritabanı: kiracı kimliği ve yönlendirme. Kiracı İK verisi burada
@@ -163,17 +163,17 @@ public interface IPlatformDbContext
 
 - [ ] **Step 4: `PlatformDbContext`'i yaz**
 
-`backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs`:
+`backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Infrastructure.Persistence;
+namespace Ekipzen.Infrastructure.Persistence;
 
 /// <summary>
-/// Platform veritabanının (IKProPlatform) context'i. Yalnız kiracı kimliğini
+/// Platform veritabanının (EkipzenPlatform) context'i. Yalnız kiracı kimliğini
 /// tutar; İK verisi <see cref="AppDbContext"/> tarafındadır.
 ///
 /// Migration'ları AYRI bir klasörde tutulur (Migrations/Platform) ve ayrı bir
@@ -201,17 +201,17 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
 
 - [ ] **Step 5: Tasarım zamanı fabrikayı yaz**
 
-`backend/src/IKPro.Infrastructure/Persistence/PlatformDbContextFactory.cs`:
+`backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContextFactory.cs`:
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace IKPro.Infrastructure.Persistence;
+namespace Ekipzen.Infrastructure.Persistence;
 
 /// <summary>
 /// Tasarım zamanı (dotnet ef) platform context üreticisi. Bağlantı dizesi
-/// IKPRO_PLATFORM_CONNECTION ortam değişkeninden ya da varsayılan yerel
+/// EKIPZEN_PLATFORM_CONNECTION ortam değişkeninden ya da varsayılan yerel
 /// MSSQL'den alınır (migration üretimi için içerik önemsizdir).
 /// </summary>
 public sealed class PlatformDbContextFactory : IDesignTimeDbContextFactory<PlatformDbContext>
@@ -219,8 +219,8 @@ public sealed class PlatformDbContextFactory : IDesignTimeDbContextFactory<Platf
     public PlatformDbContext CreateDbContext(string[] args)
     {
         var connectionString =
-            Environment.GetEnvironmentVariable("IKPRO_PLATFORM_CONNECTION")
-            ?? "Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False";
+            Environment.GetEnvironmentVariable("EKIPZEN_PLATFORM_CONNECTION")
+            ?? "Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False";
 
         var options = new DbContextOptionsBuilder<PlatformDbContext>()
             .UseSqlServer(connectionString, sql =>
@@ -237,13 +237,13 @@ public sealed class PlatformDbContextFactory : IDesignTimeDbContextFactory<Platf
 
 - [ ] **Step 6: Initializer'ı yaz**
 
-`backend/src/IKPro.Infrastructure/Persistence/PlatformDbInitializer.cs`:
+`backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbInitializer.cs`:
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace IKPro.Infrastructure.Persistence;
+namespace Ekipzen.Infrastructure.Persistence;
 
 /// <summary>
 /// Platform veritabanını migrate eder. Platform DB küçüktür ve onsuz hiçbir
@@ -262,7 +262,7 @@ public sealed class PlatformDbInitializer(PlatformDbContext context, ILogger<Pla
 
 - [ ] **Step 7: DI kaydını ekle**
 
-`backend/src/IKPro.Infrastructure/DependencyInjection.cs` içinde, `AddDbContext<AppDbContext>` bloğundan hemen SONRA:
+`backend/src/Ekipzen.Infrastructure/DependencyInjection.cs` içinde, `AddDbContext<AppDbContext>` bloğundan hemen SONRA:
 
 ```csharp
         // Platform veritabanı: kiracı kimliği. Uygulama veritabanından AYRI bir
@@ -284,30 +284,30 @@ public sealed class PlatformDbInitializer(PlatformDbContext context, ILogger<Pla
 
 - [ ] **Step 8: Development bağlantı dizesini ekle**
 
-`backend/src/IKPro.Api/appsettings.Development.json` içindeki `ConnectionStrings` bloğuna ekle:
+`backend/src/Ekipzen.Api/appsettings.Development.json` içindeki `ConnectionStrings` bloğuna ekle:
 
 ```json
-    "PlatformConnection": "Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False"
+    "PlatformConnection": "Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False"
 ```
 
 - [ ] **Step 9: Açılışta platform migrate et**
 
-`backend/src/IKPro.Api/Program.cs`, Development bloğunda `AppDbContextInitializer` satırlarından ÖNCE:
+`backend/src/Ekipzen.Api/Program.cs`, Development bloğunda `AppDbContextInitializer` satırlarından ÖNCE:
 
 ```csharp
         var platformInitializer = scope.ServiceProvider
-            .GetRequiredService<IKPro.Infrastructure.Persistence.PlatformDbInitializer>();
+            .GetRequiredService<Ekipzen.Infrastructure.Persistence.PlatformDbInitializer>();
         await platformInitializer.InitialiseAsync();
 ```
 
 - [ ] **Step 10: Test fabrikasını platform DB'sini kuracak şekilde güncelle**
 
-`backend/tests/IKPro.Tests.Integration/IKProApiFactory.cs`:
+`backend/tests/Ekipzen.Tests.Integration/EkipzenApiFactory.cs`:
 
 `TestDatabaseName` sabitinin yanına ekle:
 
 ```csharp
-    private const string PlatformTestDatabaseName = "IKProPlatform_Test";
+    private const string PlatformTestDatabaseName = "EkipzenPlatform_Test";
 ```
 
 `TestConnectionString` alanının yanına ekle:
@@ -353,13 +353,13 @@ Ve `DropTestDatabase` metodunu şununla değiştir:
 
 ```bash
 cd backend
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add PlatformInitial --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add PlatformInitial --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
 ```
 
 - [ ] **Step 12: Testleri koş, geçtiğini doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "FullyQualifiedName~PlatformKatmani"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~PlatformKatmani"
 ```
 
 Beklenen: 2 test PASS.
@@ -386,16 +386,16 @@ git commit -m "feat(platform): ayrı platform veritabanı ve PlatformDbContext"
 Kiracı satırı uygulama veritabanından çıkar. 15 çağrı noktası platform context'ine geçer.
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/AppDbContext.cs`
-- Modify: `backend/src/IKPro.Application/Common/Interfaces/IApplicationDbContext.cs:22`
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/AppDbContextInitializer.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs`
-- Test: `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/AppDbContext.cs`
+- Modify: `backend/src/Ekipzen.Application/Common/Interfaces/IApplicationDbContext.cs:22`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/AppDbContextInitializer.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/PurgeTenantCommand.cs`
+- Test: `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
 
 **Interfaces:**
 - Consumes: `IPlatformDbContext` (Task 1)
@@ -437,14 +437,14 @@ Kiracı satırı uygulama veritabanından çıkar. 15 çağrı noktası platform
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "FullyQualifiedName~PlatformKatmani"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~PlatformKatmani"
 ```
 
 Beklenen: `KiraciSatiri_UygulamaVeritabaninda_ARTIK_YOK` FAIL — `Tenants` hâlâ uygulama modelinde.
 
 - [ ] **Step 3: `Tenants`'ı uygulama context'inden çıkar**
 
-`backend/src/IKPro.Infrastructure/Persistence/AppDbContext.cs` içinde şu iki satırı SİL:
+`backend/src/Ekipzen.Infrastructure/Persistence/AppDbContext.cs` içinde şu iki satırı SİL:
 
 ```csharp
     // Tenancy
@@ -457,7 +457,7 @@ ve `OnModelCreating` içindeki şu satırı SİL:
         builder.Entity<Tenant>().HasIndex(t => t.Slug).IsUnique();
 ```
 
-`backend/src/IKPro.Application/Common/Interfaces/IApplicationDbContext.cs:22` satırındaki `DbSet<Tenant> Tenants { get; }` satırını SİL.
+`backend/src/Ekipzen.Application/Common/Interfaces/IApplicationDbContext.cs:22` satırındaki `DbSet<Tenant> Tenants { get; }` satırını SİL.
 
 - [ ] **Step 4: `IdentityService`'i platform context'e bağla**
 
@@ -516,7 +516,7 @@ Yapıcıya `IPlatformDbContext platform` ekle. `QualifiedTableName(typeof(Tenant
 
 ```bash
 cd backend
-IKPRO_CONNECTION="Server=localhost;Database=IKProDb;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add DropTenantsFromAppDb --context AppDbContext --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
+EKIPZEN_CONNECTION="Server=localhost;Database=EkipzenDb;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add DropTenantsFromAppDb --context AppDbContext --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
 ```
 
 Üretilen migration'ın başına şu açıklamayı ekle:
@@ -537,8 +537,8 @@ IKPRO_CONNECTION="Server=localhost;Database=IKProDb;Trusted_Connection=True;Trus
 
 ```bash
 cd backend
-IKPRO_CONNECTION="Server=localhost;Database=IKProDb;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context AppDbContext --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context PlatformDbContext --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
+EKIPZEN_CONNECTION="Server=localhost;Database=EkipzenDb;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context AppDbContext --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context PlatformDbContext --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
 dotnet test --configuration Release
 ```
 
@@ -558,14 +558,14 @@ git commit -m "feat(platform): kiracı satırı platform veritabanına taşınd�
 İki durumlu bayrak dört durumu ifade edemez. Bugün `IsActive=false` iki ayrı anlamda kullanılıyor ("kayıt doğrulanmadı" ve "kiracı kapalı"); ayrım netleşir.
 
 **Files:**
-- Create: `backend/src/IKPro.Domain/Entities/Tenancy/TenantStatus.cs`
-- Modify: `backend/src/IKPro.Domain/Entities/Tenancy/Tenant.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs`
-- Test: `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
+- Create: `backend/src/Ekipzen.Domain/Entities/Tenancy/TenantStatus.cs`
+- Modify: `backend/src/Ekipzen.Domain/Entities/Tenancy/Tenant.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs`
+- Test: `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -605,22 +605,22 @@ git commit -m "feat(platform): kiracı satırı platform veritabanına taşınd�
     }
 ```
 
-Dosyanın başına gereken using'leri ekle: `IKPro.Domain.Entities.Tenancy`, `System.Net`, `System.Net.Http.Json`.
+Dosyanın başına gereken using'leri ekle: `Ekipzen.Domain.Entities.Tenancy`, `System.Net`, `System.Net.Http.Json`.
 
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "DondurulmusKiraci"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "DondurulmusKiraci"
 ```
 
 Beklenen: derleme hatası — `TenantStatus` yok.
 
 - [ ] **Step 3: Enum'ı yaz**
 
-`backend/src/IKPro.Domain/Entities/Tenancy/TenantStatus.cs`:
+`backend/src/Ekipzen.Domain/Entities/Tenancy/TenantStatus.cs`:
 
 ```csharp
-namespace IKPro.Domain.Entities.Tenancy;
+namespace Ekipzen.Domain.Entities.Tenancy;
 
 /// <summary>
 /// Kiracının yaşam döngüsü durumu. Yalnız <see cref="Active"/> erişime izin verir.
@@ -647,7 +647,7 @@ public enum TenantStatus
 
 - [ ] **Step 4: `Tenant`'ı güncelle**
 
-`backend/src/IKPro.Domain/Entities/Tenancy/Tenant.cs` içinde `IsActive` özelliğini şununla DEĞİŞTİR:
+`backend/src/Ekipzen.Domain/Entities/Tenancy/Tenant.cs` içinde `IsActive` özelliğini şununla DEĞİŞTİR:
 
 ```csharp
     /// <summary>
@@ -707,8 +707,8 @@ tüm adımlar bittikten sonra uygulanır. Bu adımda geçici olarak oluşturmada
 
 ```bash
 cd backend
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add TenantStatus --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context PlatformDbContext --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add TenantStatus --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context PlatformDbContext --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
 ```
 
 - [ ] **Step 8: Testleri koş**
@@ -733,11 +733,11 @@ git commit -m "feat(platform): TenantStatus IsActive'in yerini aldı"
 Login'in kiracıyı uygulama veritabanına sormadan bulabilmesi için dizin kurulur. Bu fazda login hâlâ tek veritabanına gidiyor; dizin **yazılır ve doğrulanır**, Faz 1b'de kullanılır.
 
 **Files:**
-- Create: `backend/src/IKPro.Domain/Entities/Tenancy/TenantDirectoryEntry.cs`
-- Modify: `backend/src/IKPro.Application/Common/Interfaces/IPlatformDbContext.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Test: `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
+- Create: `backend/src/Ekipzen.Domain/Entities/Tenancy/TenantDirectoryEntry.cs`
+- Modify: `backend/src/Ekipzen.Application/Common/Interfaces/IPlatformDbContext.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Test: `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
 
 **Interfaces:**
 - Produces:
@@ -788,17 +788,17 @@ Login'in kiracıyı uygulama veritabanına sormadan bulabilmesi için dizin kuru
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "Dizine|IkinciKiracida"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "Dizine|IkinciKiracida"
 ```
 
 Beklenen: derleme hatası — `TenantDirectoryEntry` ve `platform.Directory` yok.
 
 - [ ] **Step 3: Varlığı yaz**
 
-`backend/src/IKPro.Domain/Entities/Tenancy/TenantDirectoryEntry.cs`:
+`backend/src/Ekipzen.Domain/Entities/Tenancy/TenantDirectoryEntry.cs`:
 
 ```csharp
-namespace IKPro.Domain.Entities.Tenancy;
+namespace Ekipzen.Domain.Entities.Tenancy;
 
 /// <summary>
 /// E-posta → kiracı yönlendirmesi. Login kiracıyı SORMADAN yapıldığı için,
@@ -922,8 +922,8 @@ kapatan şey rezervasyondur.
 
 ```bash
 cd backend
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add TenantDirectory --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context PlatformDbContext --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add TenantDirectory --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef database update --context PlatformDbContext --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
 ```
 
 - [ ] **Step 8: Testleri koş**
@@ -948,9 +948,9 @@ git commit -m "feat(platform): e-posta → kiracı yönlendirme dizini"
 Dizin türetilmiş olduğunu ancak yeniden kurulabildiğinde kanıtlar. Geri yükleme prosedürünün zorunlu adımı budur.
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Tenancy/Commands/RebuildDirectoryCommand.cs`
-- Modify: `backend/src/IKPro.Api/Controllers/TenancyController.cs`
-- Test: `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/RebuildDirectoryCommand.cs`
+- Modify: `backend/src/Ekipzen.Api/Controllers/TenancyController.cs`
+- Test: `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
 
 **Interfaces:**
 - Consumes: `IPlatformDbContext.Directory` (Task 4)
@@ -978,7 +978,7 @@ Dizin türetilmiş olduğunu ancak yeniden kurulabildiğinde kanıtlar. Geri yü
         }
 
         var client = Factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
+        client.DefaultRequestHeaders.Add("X-Platform-Key", EkipzenApiFactory.PlatformKey);
         var yanit = await client.PostAsync($"/api/tenants/{kiraci.TenantId}/rebuild-directory", null);
 
         yanit.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -995,22 +995,22 @@ Dizin türetilmiş olduğunu ancak yeniden kurulabildiğinde kanıtlar. Geri yü
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "DizinYenidenKurma"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "DizinYenidenKurma"
 ```
 
 Beklenen: 404 — uç nokta yok.
 
 - [ ] **Step 3: Komutu yaz**
 
-`backend/src/IKPro.Application/Features/Tenancy/Commands/RebuildDirectoryCommand.cs`:
+`backend/src/Ekipzen.Application/Features/Tenancy/Commands/RebuildDirectoryCommand.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Features.Tenancy.Commands;
+namespace Ekipzen.Application.Features.Tenancy.Commands;
 
 /// <summary>
 /// Bir kiracının yönlendirme dizinini kiracı veritabanındaki kullanıcılardan
@@ -1058,10 +1058,10 @@ public sealed class RebuildDirectoryCommandHandler(
 
 - [ ] **Step 4: Kullanıcı kaynağı arayüzünü yaz**
 
-`backend/src/IKPro.Application/Common/Interfaces/IUserDirectorySource.cs`:
+`backend/src/Ekipzen.Application/Common/Interfaces/IUserDirectorySource.cs`:
 
 ```csharp
-namespace IKPro.Application.Common.Interfaces;
+namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
 /// Bir kiracının kullanıcı e-postalarını, dizin yeniden kurmak için verir.
@@ -1076,14 +1076,14 @@ public interface IUserDirectorySource
 
 - [ ] **Step 5: Uygulamasını yaz**
 
-`backend/src/IKPro.Infrastructure/Identity/UserDirectorySource.cs`:
+`backend/src/Ekipzen.Infrastructure/Identity/UserDirectorySource.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
-using IKPro.Infrastructure.Persistence;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Infrastructure.Identity;
+namespace Ekipzen.Infrastructure.Identity;
 
 /// <summary>Kiracının kullanıcı e-postalarını uygulama veritabanından okur.</summary>
 public sealed class UserDirectorySource(AppDbContext context) : IUserDirectorySource
@@ -1105,7 +1105,7 @@ public sealed class UserDirectorySource(AppDbContext context) : IUserDirectorySo
 
 - [ ] **Step 6: Uç noktayı ekle**
 
-`backend/src/IKPro.Api/Controllers/TenancyController.cs` içine, mevcut platform-key korumalı uçların yanına:
+`backend/src/Ekipzen.Api/Controllers/TenancyController.cs` içine, mevcut platform-key korumalı uçların yanına:
 
 ```csharp
     /// <remarks>Kiracının yönlendirme dizinini yeniden kurar (geri yükleme sonrası zorunlu adım).</remarks>
@@ -1150,12 +1150,12 @@ git commit -m "feat(platform): dizin yeniden kurma komutu"
 Kiracı satırı platform veritabanına taşındığı için provizyon ve purge artık tek transaction değil. Yarıda kalan iş görünür kalmalı, asla erişilebilir kalmamalı.
 
 **Files:**
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Create: `backend/src/IKPro.Application/Features/Tenancy/Queries/GetStuckTenantsQuery.cs`
-- Modify: `backend/src/IKPro.Api/Controllers/TenancyController.cs`
-- Test: `backend/tests/IKPro.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/Queries/GetStuckTenantsQuery.cs`
+- Modify: `backend/src/Ekipzen.Api/Controllers/TenancyController.cs`
+- Test: `backend/tests/Ekipzen.Tests.Integration/Tenancy/PlatformKatmaniTests.cs`
 
 **Interfaces:**
 - Consumes: `TenantStatus` (Task 3), `IPlatformDbContext` (Task 1)
@@ -1200,7 +1200,7 @@ Kiracı satırı platform veritabanına taşındığı için provizyon ve purge 
         }
 
         var client = Factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
+        client.DefaultRequestHeaders.Add("X-Platform-Key", EkipzenApiFactory.PlatformKey);
         var takililar = await GetAsync<List<StuckTenantDto>>(client, "/api/tenants/stuck?olderThanMinutes=60");
 
         takililar.Should().Contain(t => t.TenantId == tenantId,
@@ -1211,7 +1211,7 @@ Kiracı satırı platform veritabanına taşındığı için provizyon ve purge 
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-dotnet test backend/tests/IKPro.Tests.Integration --filter "YaridaKalanProvizyon|ProvizyonBasarili"
+dotnet test backend/tests/Ekipzen.Tests.Integration --filter "YaridaKalanProvizyon|ProvizyonBasarili"
 ```
 
 Beklenen: `StuckTenantDto` derlenmiyor; uç nokta 404.
@@ -1237,15 +1237,15 @@ istenen davranış budur.
 
 - [ ] **Step 4: Takılı kiracı sorgusunu yaz**
 
-`backend/src/IKPro.Application/Features/Tenancy/Queries/GetStuckTenantsQuery.cs`:
+`backend/src/Ekipzen.Application/Features/Tenancy/Queries/GetStuckTenantsQuery.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Features.Tenancy.Queries;
+namespace Ekipzen.Application.Features.Tenancy.Queries;
 
 /// <summary>
 /// Provizyonu ya da silmesi yarıda kalmış kiracıları listeler.
@@ -1372,12 +1372,12 @@ Platform veritabanı CI'da da kurulmalı; runbook iki veritabanını yansıtmal�
 
 - [ ] **Step 1: CI'da değişiklik gerekmediğini doğrula**
 
-İş akışı `IKPRO_TEST_SQL` değişkenini **katalog adı olmadan** veriyor
-(`Server=localhost,1433;User Id=sa;...`), katalog adını `IKProApiFactory.ConnectionFor`
+İş akışı `EKIPZEN_TEST_SQL` değişkenini **katalog adı olmadan** veriyor
+(`Server=localhost,1433;User Id=sa;...`), katalog adını `EkipzenApiFactory.ConnectionFor`
 ekliyor. Platform test veritabanı da aynı yoldan türetildiği için **CI'da
 değişiklik gerekmez.**
 
-Doğrulama: iş akışındaki `IKPRO_TEST_SQL` satırında `Database=` ya da
+Doğrulama: iş akışındaki `EKIPZEN_TEST_SQL` satırında `Database=` ya da
 `Initial Catalog=` bulunmadığını gör. Bulunuyorsa (biri sonradan eklemişse)
 kaldır — yoksa fabrikanın belirlediği ad ezilir ve iki context aynı
 veritabanına bağlanır.
@@ -1387,7 +1387,7 @@ veritabanına bağlanır.
 `backend/docker-compose.yml` içindeki `api` servisinin `environment` bloğuna:
 
 ```yaml
-      ConnectionStrings__PlatformConnection: "Server=mssql,1433;Database=IKProPlatform;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True;Encrypt=False"
+      ConnectionStrings__PlatformConnection: "Server=mssql,1433;Database=EkipzenPlatform;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True;Encrypt=False"
 ```
 
 - [ ] **Step 3: Runbook'u güncelle**
@@ -1396,7 +1396,7 @@ veritabanına bağlanır.
 
 ```markdown
 - 🔄 **Kiracı bazına bölme sürüyor** — Faz 1a tamamlandı: kiracı kimliği
-  `IKProPlatform` veritabanına ayrıldı. Kiracı VERİSİ hâlâ tek `IKProDb`
+  `EkipzenPlatform` veritabanına ayrıldı. Kiracı VERİSİ hâlâ tek `EkipzenDb`
   içindedir; tek müşteriyi geri yükleme yeteneği Faz 2'de gelir.
   Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 ```
@@ -1404,7 +1404,7 @@ veritabanına bağlanır.
 Ayrıca "Yedek planı" tablosunun altına ekle:
 
 ```markdown
-> **İki veritabanı:** `IKProDb` (kiracı verisi) ve `IKProPlatform` (kiracı
+> **İki veritabanı:** `EkipzenDb` (kiracı verisi) ve `EkipzenPlatform` (kiracı
 > kimliği ve yönlendirme). İkisi de yedek planına dahildir — platform küçüktür
 > ama onsuz hiçbir kullanıcı giriş yapamaz.
 ```
@@ -1463,7 +1463,7 @@ Bunlar bilinçli olarak ertelendi; 1b planına girdi olacak.
 
 ## Faz sonu doğrulama
 
-- [ ] `IKProDb` ve `IKProPlatform` sıfırdan kurulup uygulama açılıyor
+- [ ] `EkipzenDb` ve `EkipzenPlatform` sıfırdan kurulup uygulama açılıyor
 - [ ] Demo kiracılarla giriş yapılabiliyor
 - [ ] Yeni kiracı provizyonu uçtan uca çalışıyor, durum `Active` bitiyor
 - [ ] Dondurulmuş kiracı giriş yapamıyor

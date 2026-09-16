@@ -18,7 +18,7 @@ Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 - Mevcut testler geçmeye devam etmeli. **Faz başlangıcı: 47 birim + 128 entegrasyon = 175.**
 - Derleme uyarısız (`-warnaserror`). `await` içermeyen `async` test metodu CS1998 verir.
 - Türkçe kod yorumları ve test adları; yorumlar "ne" değil "neden" anlatır.
-- Testler gerçek SQL Server'a bağlanır (localhost, Windows auth). Derlemeden önce `taskkill //F //IM IKPro.API.exe`.
+- Testler gerçek SQL Server'a bağlanır (localhost, Windows auth). Derlemeden önce `taskkill //F //IM Ekipzen.API.exe`.
 - Her görev ayrı commit.
 - `Tenants.DatabaseName` bu fazda **yok** — kütük yalnız `Status` tutar. Katalog adı Faz 2'de gelir.
 
@@ -39,22 +39,22 @@ Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 
 | Dosya | Sorumluluk |
 | --- | --- |
-| `backend/src/IKPro.Application/Common/Interfaces/ITenantDirectory.cs` | Dizin okuma/yazma sözleşmesi (oluştur) |
-| `backend/src/IKPro.Infrastructure/Tenancy/TenantDirectory.cs` | Dizin uygulaması (oluştur) |
-| `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs` | Dizin yazımı soyutlamaya devredilir (değiştir) |
-| `backend/src/IKPro.Application/Common/Interfaces/ITenantRegistry.cs` | Kiracı kütüğü sözleşmesi (oluştur) |
-| `backend/src/IKPro.Infrastructure/Tenancy/TenantRegistry.cs` | Önbellekli kütük (oluştur) |
-| `backend/src/IKPro.Application/Common/Interfaces/ITenantAccessGuard.cs` | Erişim kapısı sözleşmesi (oluştur) |
-| `backend/src/IKPro.Infrastructure/Tenancy/TenantAccessGuard.cs` | Kapı uygulaması (oluştur) |
-| `backend/src/IKPro.Api/Middleware/TenantAccessMiddleware.cs` | Yetkili isteklerde kapı (oluştur) |
-| `backend/src/IKPro.Application/Common/Interfaces/ITenantConnectionResolver.cs` | Bağlantı çözücü sözleşmesi (oluştur) |
-| `backend/src/IKPro.Infrastructure/Tenancy/TenantConnectionResolver.cs` | Çözücü uygulaması (oluştur) |
-| `backend/src/IKPro.Application/Common/Interfaces/ITenantScopeFactory.cs` | Kiracıya sabitlenmiş kapsam (oluştur) |
-| `backend/src/IKPro.Infrastructure/Tenancy/TenantScopeFactory.cs` | Fabrika uygulaması (oluştur) |
-| `backend/src/IKPro.Infrastructure/DependencyInjection.cs` | Kayıtlar (değiştir) |
-| `backend/src/IKPro.Api/Program.cs` | Middleware sırası (değiştir) |
-| `backend/tests/IKPro.Tests.Integration/Tenancy/ErisimKapisiTests.cs` | Kapı testleri (oluştur) |
-| `backend/tests/IKPro.Tests.Integration/Tenancy/DizinButunluguTests.cs` | Devredilen dizin testleri (oluştur) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/ITenantDirectory.cs` | Dizin okuma/yazma sözleşmesi (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Tenancy/TenantDirectory.cs` | Dizin uygulaması (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs` | Dizin yazımı soyutlamaya devredilir (değiştir) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/ITenantRegistry.cs` | Kiracı kütüğü sözleşmesi (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Tenancy/TenantRegistry.cs` | Önbellekli kütük (oluştur) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/ITenantAccessGuard.cs` | Erişim kapısı sözleşmesi (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Tenancy/TenantAccessGuard.cs` | Kapı uygulaması (oluştur) |
+| `backend/src/Ekipzen.Api/Middleware/TenantAccessMiddleware.cs` | Yetkili isteklerde kapı (oluştur) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/ITenantConnectionResolver.cs` | Bağlantı çözücü sözleşmesi (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Tenancy/TenantConnectionResolver.cs` | Çözücü uygulaması (oluştur) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/ITenantScopeFactory.cs` | Kiracıya sabitlenmiş kapsam (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Tenancy/TenantScopeFactory.cs` | Fabrika uygulaması (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs` | Kayıtlar (değiştir) |
+| `backend/src/Ekipzen.Api/Program.cs` | Middleware sırası (değiştir) |
+| `backend/tests/Ekipzen.Tests.Integration/Tenancy/ErisimKapisiTests.cs` | Kapı testleri (oluştur) |
+| `backend/tests/Ekipzen.Tests.Integration/Tenancy/DizinButunluguTests.cs` | Devredilen dizin testleri (oluştur) |
 
 ---
 
@@ -63,13 +63,13 @@ Tasarım: `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`
 Bugün dizine yazan tek yol `IdentityService.DizineYazAsync`. Login yolu da dizini kullanmaya başlayacağı (Görev 6) ve bağlantı katmanı da ona bakacağı için, dizin Identity'nin içinden çıkıp kendi soyutlamasına taşınır. Faz 1a'dan devredilen iki test de burada kapatılır.
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Common/Interfaces/ITenantDirectory.cs`
-- Create: `backend/src/IKPro.Infrastructure/Tenancy/TenantDirectory.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/DizinButunluguTests.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Modify: `backend/src/IKPro.Application/Common/Interfaces/IIdentityService.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/RebuildDirectoryCommand.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/ITenantDirectory.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Tenancy/TenantDirectory.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/DizinButunluguTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/src/Ekipzen.Application/Common/Interfaces/IIdentityService.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/RebuildDirectoryCommand.cs`
 
 **Interfaces:**
 - Produces:
@@ -81,17 +81,17 @@ Bugün dizine yazan tek yol `IdentityService.DizineYazAsync`. Login yolu da dizi
 
 - [ ] **Step 1: Devredilen iki testi yaz (kırmızı olmalı)**
 
-`backend/tests/IKPro.Tests.Integration/Tenancy/DizinButunluguTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Tenancy/DizinButunluguTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 /// <summary>
 /// Dizin bütünlüğü: kullanıcı yaratan HER yol dizine yazmalı. Dizinde olmayan
@@ -100,7 +100,7 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// hata vermediği için sessizce kaybolur.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class DizinButunluguTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class DizinButunluguTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     /// <summary>
     /// İşe alım (aday → personel), ürünün en yüksek hacimli kullanıcı yaratma
@@ -211,7 +211,7 @@ public class DizinButunluguTests(IKProApiFactory factory) : TenancyTestBase(fact
 - [ ] **Step 2: Testleri koş, davranışı gör**
 
 ```bash
-cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~DizinButunlugu"
+cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~DizinButunlugu"
 ```
 
 Uç nokta ve gövde alanları doğrulanmıştır: `POST /api/candidates/{id}/hire`, gövde
@@ -230,10 +230,10 @@ olduğu için regresyon aksi hâlde Faz 2'ye kadar fark edilmez.
 
 - [ ] **Step 3: `ITenantDirectory` sözleşmesini yaz**
 
-`backend/src/IKPro.Application/Common/Interfaces/ITenantDirectory.cs`:
+`backend/src/Ekipzen.Application/Common/Interfaces/ITenantDirectory.cs`:
 
 ```csharp
-namespace IKPro.Application.Common.Interfaces;
+namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
 /// E-posta → kiracı yönlendirme dizini. Kiracı veritabanları ayrıldığında
@@ -276,7 +276,7 @@ public sealed record RebuildOutcome(int YazilanKayit, IReadOnlyList<string> Caki
 
 - [ ] **Step 4: Uygulamayı yaz**
 
-`backend/src/IKPro.Infrastructure/Tenancy/TenantDirectory.cs` — mevcut `IdentityService.DizineYazAsync` ve `RebuildDirectoryCommandHandler` gövdelerini buraya taşı. Davranışı **değiştirme**, yalnız yerini değiştir: idempotent rezervasyon (yok→ekle, aynı kiracı→no-op, farklı kiracı→`ConflictException`, `DbUpdateException`→`ConflictException`), ve atla-ve-raporla yeniden kurma.
+`backend/src/Ekipzen.Infrastructure/Tenancy/TenantDirectory.cs` — mevcut `IdentityService.DizineYazAsync` ve `RebuildDirectoryCommandHandler` gövdelerini buraya taşı. Davranışı **değiştirme**, yalnız yerini değiştir: idempotent rezervasyon (yok→ekle, aynı kiracı→no-op, farklı kiracı→`ConflictException`, `DbUpdateException`→`ConflictException`), ve atla-ve-raporla yeniden kurma.
 
 - [ ] **Step 5: Çağıranları yeni soyutlamaya bağla**
 
@@ -308,10 +308,10 @@ git add -A && git commit -m "refactor(tenancy): dizin erişimi Identity'den ayr�
 Kiracının durumunu her istekte platform veritabanından sormak, tek veritabanına dolambaçlı bir dönüş olurdu. Kütük bunu bellekte tutar ve durum değişince **anında** düşürür.
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Common/Interfaces/ITenantRegistry.cs`
-- Create: `backend/src/IKPro.Infrastructure/Tenancy/TenantRegistry.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/KiraciKutuguTests.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/ITenantRegistry.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Tenancy/TenantRegistry.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/KiraciKutuguTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
 
 **Interfaces:**
 - Produces:
@@ -320,17 +320,17 @@ Kiracının durumunu her istekte platform veritabanından sormak, tek veritaban�
 
 - [ ] **Step 1: Failing testi yaz**
 
-`backend/tests/IKPro.Tests.Integration/Tenancy/KiraciKutuguTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Tenancy/KiraciKutuguTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 /// <summary>
 /// Kiracı kütüğü: durum bellekte önbelleklenir ki her istek platform
@@ -338,7 +338,7 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// işleminin bir sonraki istekte etkili olması buna bağlı.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class KiraciKutuguTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     [Fact]
     public async Task Kutuk_KiracininDurumunuDoner()
@@ -396,19 +396,19 @@ public class KiraciKutuguTests(IKProApiFactory factory) : TenancyTestBase(factor
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~KiraciKutugu"
+cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~KiraciKutugu"
 ```
 
 Beklenen: derleme hatası — `ITenantRegistry` yok.
 
 - [ ] **Step 3: Sözleşmeyi yaz**
 
-`backend/src/IKPro.Application/Common/Interfaces/ITenantRegistry.cs`:
+`backend/src/Ekipzen.Application/Common/Interfaces/ITenantRegistry.cs`:
 
 ```csharp
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Domain.Entities.Tenancy;
 
-namespace IKPro.Application.Common.Interfaces;
+namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
 /// Kiracı kütüğü: kiracının durumunu bellekte önbellekler.
@@ -436,15 +436,15 @@ public interface ITenantRegistry
 
 - [ ] **Step 4: Uygulamayı yaz**
 
-`backend/src/IKPro.Infrastructure/Tenancy/TenantRegistry.cs`:
+`backend/src/Ekipzen.Infrastructure/Tenancy/TenantRegistry.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace IKPro.Infrastructure.Tenancy;
+namespace Ekipzen.Infrastructure.Tenancy;
 
 /// <summary>
 /// Kütüğün önbelleği SINGLETON'dır (tüm istekler paylaşır), ama platform
@@ -510,13 +510,13 @@ git add -A && git commit -m "feat(tenancy): kiracı kütüğü — durum önbell
 Bugün dondurma yalnız yeni girişleri kesiyor; elinde refresh token olan biri oturumunu süresiz uzatabiliyor. Kapı iki darboğaza yerleşince bu yapısal olarak kapanır.
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Common/Interfaces/ITenantAccessGuard.cs`
-- Create: `backend/src/IKPro.Infrastructure/Tenancy/TenantAccessGuard.cs`
-- Create: `backend/src/IKPro.Api/Middleware/TenantAccessMiddleware.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/ErisimKapisiTests.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Modify: `backend/src/IKPro.Api/Program.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/ITenantAccessGuard.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Tenancy/TenantAccessGuard.cs`
+- Create: `backend/src/Ekipzen.Api/Middleware/TenantAccessMiddleware.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/ErisimKapisiTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/src/Ekipzen.Api/Program.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
 
 **Interfaces:**
 - Consumes: `ITenantRegistry` (Görev 2)
@@ -524,19 +524,19 @@ Bugün dondurma yalnız yeni girişleri kesiyor; elinde refresh token olan biri 
 
 - [ ] **Step 1: Failing testleri yaz**
 
-`backend/tests/IKPro.Tests.Integration/Tenancy/ErisimKapisiTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Tenancy/ErisimKapisiTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 /// <summary>
 /// Erişim kapısı: dondurulmuş bir kiracının HİÇBİR yolu çalışmamalı.
@@ -546,7 +546,7 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// edebiliyordu. Bu testler üç yolun üçünü de kapatır.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class ErisimKapisiTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class ErisimKapisiTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     /// <summary>
     /// Login 403 döner, 401 değil: kimlik bilgileri DOĞRU, engelleyen şey
@@ -633,19 +633,19 @@ Refresh uç noktasının gerçek yolunu ve gövde alan adını `AuthController`'
 - [ ] **Step 2: Testleri koş**
 
 ```bash
-cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~ErisimKapisi"
+cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~ErisimKapisi"
 ```
 
 Beklenen: `LoginYapamaz` ve `UcYoldaDaCalisir` yeşil (mevcut davranış), `ElindekiTokenlaIstekYapamaz` ve `RefreshIleOturumUzatamaz` **kırmızı** — kapatacağımız açık bunlar.
 
 - [ ] **Step 3: İstisna tipini ve sözleşmeyi yaz**
 
-`backend/src/IKPro.Application/Common/Exceptions/` altındaki mevcut istisna desenini izleyerek `TenantInaccessibleException` ekle ve `GlobalExceptionHandler`'da **403 Forbidden**'a eşle. Gerekçe: kimlik doğrulama başarılı (401 değil), ama kiracı erişime kapalı.
+`backend/src/Ekipzen.Application/Common/Exceptions/` altındaki mevcut istisna desenini izleyerek `TenantInaccessibleException` ekle ve `GlobalExceptionHandler`'da **403 Forbidden**'a eşle. Gerekçe: kimlik doğrulama başarılı (401 değil), ama kiracı erişime kapalı.
 
-`backend/src/IKPro.Application/Common/Interfaces/ITenantAccessGuard.cs`:
+`backend/src/Ekipzen.Application/Common/Interfaces/ITenantAccessGuard.cs`:
 
 ```csharp
-namespace IKPro.Application.Common.Interfaces;
+namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
 /// Kiracının erişilebilir olduğunu doğrular. Yalnız <c>Active</c> geçer;
@@ -661,7 +661,7 @@ public interface ITenantAccessGuard
 
 - [ ] **Step 4: Kapıyı uygula**
 
-`backend/src/IKPro.Infrastructure/Tenancy/TenantAccessGuard.cs` — `ITenantRegistry`'den durumu okur, `Active` değilse `TenantInaccessibleException` fırlatır. Kiracı bulunamazsa da fırlatır (var olmayan kiracıya erişim verilmez). Mesaj kullanıcıya anlamlı olsun ama **iç durum adını sızdırmasın** — "Şirket hesabınız şu anda kullanıma kapalı. Yöneticinizle iletişime geçin." yeterli; gerçek durum loga yazılır.
+`backend/src/Ekipzen.Infrastructure/Tenancy/TenantAccessGuard.cs` — `ITenantRegistry`'den durumu okur, `Active` değilse `TenantInaccessibleException` fırlatır. Kiracı bulunamazsa da fırlatır (var olmayan kiracıya erişim verilmez). Mesaj kullanıcıya anlamlı olsun ama **iç durum adını sızdırmasın** — "Şirket hesabınız şu anda kullanıma kapalı. Yöneticinizle iletişime geçin." yeterli; gerçek durum loga yazılır.
 
 - [ ] **Step 5: Token darboğazına yerleştir**
 
@@ -688,7 +688,7 @@ Bu değişiklik üç yerde takip gerektirir, üçünü de yap:
 
 - [ ] **Step 6: HTTP boru hattına yerleştir**
 
-`backend/src/IKPro.Api/Middleware/TenantAccessMiddleware.cs` — kimliği doğrulanmış istekte JWT'deki `tenant` claim'ini okur, kapıyı çağırır. Claim yoksa (anonim uç, platform-key ucu, health) dokunmadan geçirir.
+`backend/src/Ekipzen.Api/Middleware/TenantAccessMiddleware.cs` — kimliği doğrulanmış istekte JWT'deki `tenant` claim'ini okur, kapıyı çağırır. Claim yoksa (anonim uç, platform-key ucu, health) dokunmadan geçirir.
 
 `Program.cs`'te **`UseAuthentication()`'dan SONRA, `UseAuthorization()`'dan ÖNCE** ekle — claim'ler ancak kimlik doğrulandıktan sonra okunabilir.
 
@@ -706,25 +706,25 @@ git add -A && git commit -m "feat(tenancy): erişim kapısı — token üretimi 
 Bağlantı dizesi artık kiracıdan çözülür. Bu fazda çözücü herkese aynı dizeyi döndürür — ayrılma noktası kurulur, ama henüz ayrılmaz.
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Common/Interfaces/ITenantConnectionResolver.cs`
-- Create: `backend/src/IKPro.Infrastructure/Tenancy/TenantConnectionResolver.cs`
-- Create: `backend/tests/IKPro.Tests.Unit/Tenancy/BaglantiCozucuTests.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/ITenantConnectionResolver.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Tenancy/TenantConnectionResolver.cs`
+- Create: `backend/tests/Ekipzen.Tests.Unit/Tenancy/BaglantiCozucuTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
 
 **Interfaces:**
 - Produces: `ITenantConnectionResolver.ResolveFor(int? tenantId) → string`
 
 - [ ] **Step 1: Failing birim testini yaz**
 
-`backend/tests/IKPro.Tests.Unit/Tenancy/BaglantiCozucuTests.cs`:
+`backend/tests/Ekipzen.Tests.Unit/Tenancy/BaglantiCozucuTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Infrastructure.Tenancy;
+using Ekipzen.Infrastructure.Tenancy;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
-namespace IKPro.Tests.Unit.Tenancy;
+namespace Ekipzen.Tests.Unit.Tenancy;
 
 /// <summary>
 /// Bağlantı çözücü, kiracıdan veritabanına giden ayrılma noktasıdır.
@@ -733,7 +733,7 @@ namespace IKPro.Tests.Unit.Tenancy;
 /// </summary>
 public class BaglantiCozucuTests
 {
-    private const string Dize = "Server=localhost;Database=IKProDb;Trusted_Connection=True;";
+    private const string Dize = "Server=localhost;Database=EkipzenDb;Trusted_Connection=True;";
 
     private static TenantConnectionResolver Cozucu() =>
         new(new ConfigurationBuilder()
@@ -769,7 +769,7 @@ public class BaglantiCozucuTests
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~BaglantiCozucu"
+cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~BaglantiCozucu"
 ```
 
 Beklenen: derleme hatası.
@@ -834,13 +834,13 @@ git add -A && git commit -m "feat(tenancy): bağlantı çözücü — kiracıdan
 `ICurrentTenant.Impersonate` bugün yalnız bir tamsayı atıyor. Görev 4'ten sonra kiracı, DbContext oluşturulurken **bağlantıyı belirliyor** — yani `Impersonate`'i context alındıktan sonra çağırırsan context yanlış kiracıyla kurulmuş olur ve bu **sessizce** olur. Sıraya güvenmek yerine sırayı imkânsız kılıyoruz.
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Common/Interfaces/ITenantScopeFactory.cs`
-- Create: `backend/src/IKPro.Infrastructure/Tenancy/TenantScopeFactory.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/KiraciKapsamiTests.cs`
-- Modify: `backend/src/IKPro.Api/Services/UnverifiedTenantCleanupService.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs`
-- Modify: `backend/tests/IKPro.Tests.Integration/Tenancy/TenancyTestBase.cs`
+- Create: `backend/src/Ekipzen.Application/Common/Interfaces/ITenantScopeFactory.cs`
+- Create: `backend/src/Ekipzen.Infrastructure/Tenancy/TenantScopeFactory.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/KiraciKapsamiTests.cs`
+- Modify: `backend/src/Ekipzen.Api/Services/UnverifiedTenantCleanupService.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenancyTestBase.cs`
 
 **Interfaces:**
 - Produces:
@@ -849,15 +849,15 @@ git add -A && git commit -m "feat(tenancy): bağlantı çözücü — kiracıdan
 
 - [ ] **Step 1: Failing testi yaz**
 
-`backend/tests/IKPro.Tests.Integration/Tenancy/KiraciKapsamiTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Tenancy/KiraciKapsamiTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
+using Ekipzen.Application.Common.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 /// <summary>
 /// Kiracıya sabitlenmiş kapsam: kiracı, kapsam açılırken sabitlenir ve
@@ -866,7 +866,7 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// yanlış veritabanına bağlanmakla sonuçlanırdı.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class KiraciKapsamiTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class KiraciKapsamiTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     [Fact]
     public async Task Kapsam_IcindekiServisleriVerilenKiraciyaBaglar()
@@ -885,7 +885,7 @@ public class KiraciKapsamiTests(IKProApiFactory factory) : TenancyTestBase(facto
 - [ ] **Step 2: Testi koş, kırıldığını doğrula**
 
 ```bash
-cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~KiraciKapsami"
+cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~KiraciKapsami"
 ```
 
 Beklenen: derleme hatası.
@@ -914,24 +914,24 @@ git add -A && git commit -m "feat(tenancy): kiracıya sabitlenmiş kapsam fabrik
 Login bugün `FindByEmailAsync` ile kullanıcıyı bulup `user.TenantId`'yi okuyor. Dizin üzerinden çözmek, dizini "yazılan ama kullanılmayan" bir tablodan **yük taşıyan** bir tabloya çevirir — böylece bir dizin hatası Faz 2'de değil, bugün görünür olur.
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/LoginDizinTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/LoginDizinTests.cs`
 
 - [ ] **Step 1: Failing testi yaz**
 
-`backend/tests/IKPro.Tests.Integration/Tenancy/LoginDizinTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Tenancy/LoginDizinTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 /// <summary>
 /// Login, kiracıyı yönlendirme dizininden çözer. Faz 2'de kullanıcı tablosu
@@ -939,7 +939,7 @@ namespace IKPro.Tests.Integration.Tenancy;
 /// kullanıcı aranamaz — dizin bu yüzden login'in ÖN adımıdır.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class LoginDizinTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class LoginDizinTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     [Fact]
     public async Task DizindeOlmayanEposta_GirisYapamaz()
@@ -965,7 +965,7 @@ public class LoginDizinTests(IKProApiFactory factory) : TenancyTestBase(factory)
 
         // Kurtarma yolu çalışmalı: dizin yeniden kurulunca giriş geri gelmeli.
         var platformClient = Factory.CreateClient();
-        platformClient.DefaultRequestHeaders.Add("X-Platform-Key", IKProApiFactory.PlatformKey);
+        platformClient.DefaultRequestHeaders.Add("X-Platform-Key", EkipzenApiFactory.PlatformKey);
         (await platformClient.PostAsync($"/api/tenants/{kiraci.TenantId}/rebuild-directory", null))
             .EnsureSuccessStatusCode();
 
@@ -1045,7 +1045,7 @@ git add -A && git commit -m "docs(tenancy): Faz 1b sonucu ve dondurma prosedür�
       constructor'da zaten kurulduğundan yeni bir fabrika kapsamı açmak ambient `context`'i
       etkilemez, düzeltme Program.cs'in bu sınıfı hangi kapsamdan çözdüğünü değiştirmeyi
       gerektirir — Faz 2'ye devredildi). Nihai dal incelemesi madde 1 kapsamında
-      `UserDirectorySource` (`backend/src/IKPro.Infrastructure/Identity/UserDirectorySource.cs`)
+      `UserDirectorySource` (`backend/src/Ekipzen.Infrastructure/Identity/UserDirectorySource.cs`)
       ikinci bir istisna olacaktı — bu görevde `ITenantScopeFactory`'ye geçirilerek kapatıldı.
 - [x] Login dizin üzerinden çözüyor; dizin silinince giriş kesiliyor, yeniden kurulunca dönüyor
 - [x] Bağlantı çözücü devrede ve tüm testler geçiyor (davranış değişmedi)
@@ -1104,7 +1104,7 @@ eklendi — kapsamın genişletilmesi değil.
 - Provizyonun gerçek `CREATE DATABASE` yapması, `Tenants.DatabaseName` alanı.
 - `Subscriptions`'ın platform veritabanına taşınması.
 - Bağlantı çözücünün içinin katalog adı üretmeye başlaması (bugün hâlâ tek
-  paylaşılan `IKProDb`).
+  paylaşılan `EkipzenDb`).
 - Kiracı başına gerçek fiziksel izolasyon ve tek-kiracı nokta-zaman geri yükleme
   (bkz. `docs/superpowers/specs/2026-08-06-kiraci-basina-veritabani-design.md`).
   Bugünkü `freeze`/`unfreeze` ucu bu tasarımın öngördüğü "1. `Status = Frozen`"

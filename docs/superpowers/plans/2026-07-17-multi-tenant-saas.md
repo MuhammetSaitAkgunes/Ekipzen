@@ -5,7 +5,7 @@
 > temeldir. Adımlar checkbox (`- [ ]`) ile izlenir. Yürütme için
 > superpowers:subagent-driven-development veya executing-plans kullan.
 
-**Goal:** İK Pro'yu tek-kiracılı (single-tenant) yapıdan **çok-kiracılı (multi-tenant)
+**Goal:** Ekipzen'i tek-kiracılı (single-tenant) yapıdan **çok-kiracılı (multi-tenant)
 SaaS**'a dönüştürmek: birçok müşteri şirket aynı sistemde, verileri birbirinden
 tam izole, tek veritabanında.
 
@@ -97,7 +97,7 @@ eklenmiş, global filtre aktif, mevcut veri default tenant'a taşınmış.
     bileşik index düşün.
 
 - [ ] **T0.7 — İZOLASYON TESTİ (bu fazın kanıtı)**
-  - Create: `tests/IKPro.Tests.Integration/Tenancy/TenantIsolationTests.cs`.
+  - Create: `tests/Ekipzen.Tests.Integration/Tenancy/TenantIsolationTests.cs`.
   - Test altyapısı iki kiracı + her birinde birer kullanıcı/veri kurabilmeli
     (Faz 1'deki provizyon ucuyla ya da seed yardımcısıyla).
   - Doğrula: Kiracı A'nın token'ıyla `/api/employees` çağrısı **yalnız** A'nın
@@ -197,7 +197,7 @@ read-model'ler onu baypas eder → **sessiz çapraz-kiracı sızıntısı riski*
     görünür olmasını sağlar.
 
 - [ ] **T3.2 — Test altyapısı kiracı yardımcıları**
-  - `IKProApiFactory`/collection'a: "kiracı oluştur + o kiracıda authed client"
+  - `EkipzenApiFactory`/collection'a: "kiracı oluştur + o kiracıda authed client"
     yardımcısı. Mevcut testler default/tek kiracıda çalışmaya devam etmeli (backfill
     sayesinde), ama yeni testler çoklu kiracı kurabilmeli.
   - **Mevcut 71 entegrasyon testini gözden geçir:** paylaşımlı DB + kiracı filtresi

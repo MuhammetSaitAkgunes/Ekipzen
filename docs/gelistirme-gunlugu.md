@@ -1,4 +1,4 @@
-# İK Pro — Geliştirme Günlüğü
+# Ekipzen — Geliştirme Günlüğü
 
 > **Amaç:** Geliştirme kesilirse en son nerede kalındığını bu dosyadan anlamak.
 > Her oturum sonunda buraya tarihli bir kayıt eklenir; en üstteki "Şu an neredeyiz"
@@ -27,12 +27,12 @@
   `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`
   `d58181c` commitine push edildi. E-1 kritik erişim açığı kapalıdır.
   **FAZ 2b TAMAMLANDI (Görev 0–7).** Her kiracı kendi veritabanında
-  (`IKPro_demo`, `IKPro_globex`); paylaşılan `IKProDb` boş ama duruyor. Purge
+  (`Ekipzen_demo`, `Ekipzen_globex`); paylaşılan `EkipzenDb` boş ama duruyor. Purge
   `DROP DATABASE`, abonelikler platformda, migration ayrı bir dağıtım adımı.
   Faz 3'ün kalan operasyon maddeleri yeni yol haritasındaki **Kapı 5 — üretim
   güvenliği ve felaket kurtarma** kapsamına taşındı.
-- **⚠️ Dağıtım sırası değişti:** üretimde artık üç adım var — (1) `IKProDb`
-  migrate, (2) `IKProPlatform` migrate, (3) **`POST /api/tenants/migrate`**
+- **⚠️ Dağıtım sırası değişti:** üretimde artık üç adım var — (1) `EkipzenDb`
+  migrate, (2) `EkipzenPlatform` migrate, (3) **`POST /api/tenants/migrate`**
   (kiracı katalogları). 3. adım atlanırsa müşteriler 503 alır (kasıtlı) ve durum
   açılış logunda + `GET /api/tenants/schema-status`'ta görünür.
 - **⏸️ Faz 3 GEÇİCİ OLARAK RAFA KALDIRILDI (2026-08-13, kullanıcı kararı).**
@@ -57,11 +57,11 @@
   geri yüklenmesi hiç denenmedi — tatbikatlar veritabanı ve uygulama katmanını
   kapsadı, dosya katmanını değil.
 - **⚠️ Üretim öncesi kritik açık:** yedekleme script'leri hâlâ tek bir
-  `-Database IKProDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
-  yedekler gerçek müşteri verisini içermiyor. Script'ler `IKPro[_]%` desenini
+  `-Database EkipzenDb` alıyor ve o katalog artık **boş**. Yani şu anda alınan
+  yedekler gerçek müşteri verisini içermiyor. Script'ler `Ekipzen[_]%` desenini
   keşfedip her kiracı için ayrı yedek almalı — bkz. `docs/yedekleme-ve-kurtarma.md`.
-- **Geliştirme kurulumunu sıfırlarken:** artık `IKProDb` + `IKProPlatform`
-  yetmez, **tüm `IKPro_*` kiracı veritabanları da birlikte düşürülmeli**. Aksi
+- **Geliştirme kurulumunu sıfırlarken:** artık `EkipzenDb` + `EkipzenPlatform`
+  yetmez, **tüm `Ekipzen_*` kiracı veritabanları da birlikte düşürülmeli**. Aksi
   halde provizyon "katalog zaten var" diye reddeder (bilinçli koruma).
 - **Kayıt (signup) politikası — kalıcı karar:** Uygulamada **hiçbir** self-servis
   kayıt ucu yok. Yeni şirket yalnız operatör tarafından `POST /api/tenants`
@@ -153,7 +153,7 @@
   - Dilim 8 planı (tamamlandı): `docs/superpowers/plans/2026-07-16-react-port-dilim-8-kapanis.md`
   - Backend faz planı: `raporlar/backend-development-plan.md`
 - **Çalıştırma komutları:**
-  - Backend: `cd backend && dotnet run --project src/IKPro.API --launch-profile http` → `http://localhost:5053`
+  - Backend: `cd backend && dotnet run --project src/Ekipzen.API --launch-profile http` → `http://localhost:5053`
   - Frontend: `cd frontend && npm run dev` → `http://localhost:5173`
   - Testler: `cd frontend && npm test -- --run`
   - Eski mock uygulama (parite referansı): `npx serve -l 4173 legacy-frontend`
@@ -167,7 +167,7 @@
 Belgede yazan tam prosedür (`freeze → geri yükle → rebuild-directory →
 unfreeze`) çalışan bir uygulamayla, gerçek bir kiracı üzerinde denendi.
 
-**Senaryo:** `IKPro_globex`'te tam yedek + kurtarma noktası; sonra bir aday işe
+**Senaryo:** `Ekipzen_globex`'te tam yedek + kurtarma noktası; sonra bir aday işe
 alındı (kiracı kataloğunda personel + kullanıcı, PLATFORM'da dizin kaydı);
 ardından "kaza" olarak tüm personel silindi.
 
@@ -198,7 +198,7 @@ Ayrılmanın vaadi buydu ve çalıştığı görüldü.
 
 ### 2026-08-13 — Faz 3 (5): zamanlanmış görevler kuruldu, SQL yetkisi verildi
 
-Görevler kaydedildi (`IKPro-YedekTatbikati` + `-Log`) ama ilk koşum başarısız
+Görevler kaydedildi (`Ekipzen-YedekTatbikati` + `-Log`) ama ilk koşum başarısız
 oldu. Log dosyası sebebi söyledi: `Login failed for user 'NT AUTHORITY\SYSTEM'`.
 
 **Teşhis yanıltıcı mesajın ardındaydı.** `EXECUTE AS` ile bakıldı: SYSTEM login'i
@@ -237,8 +237,8 @@ Kullanıcı belgedeki kurulum komutunu çalıştırdı ve patladı. Üç ayrı h
    Tüm örnekler SQL Server'ın kendi yedek klasörünün altını kullanacak şekilde
    değiştirildi; başka klasör için `icacls` komutu yazıldı.
 
-Ayrıca belgede **eskimiş örnekler** vardı: `-Database IKProDb` /
-`-Database IKProPlatform` ile iki ayrı çağrı ve iki ayrı zamanlanmış görev
+Ayrıca belgede **eskimiş örnekler** vardı: `-Database EkipzenDb` /
+`-Database EkipzenPlatform` ile iki ayrı çağrı ve iki ayrı zamanlanmış görev
 (`-Db`, `-Platform`). Bu artık yanlış — script hepsini platformdan keşfediyor ve
 tek `register` çağrısı iki görevi (günlük + saatlik) birden kuruyor. Ad vermek
 diğer müşterileri yedeksiz bırakır; örnekler bunu öğretiyordu.
@@ -251,7 +251,7 @@ dokümantasyondaki komut `-WhatIf` ile bire bir denenerek doğrulandı.
 RPO 1 saat kararı verilmişti ama sistemde yalnız elle çalıştırılan tam yedek
 vardı; yani taahhüt kâğıt üstündeydi. `backup-log.ps1` yazıldı.
 
-- **Ortak modül `IKProBackup.psm1`.** Keşif/SQL/log mantığı tek yere alındı ve
+- **Ortak modül `EkipzenBackup.psm1`.** Keşif/SQL/log mantığı tek yere alındı ve
   `backup-restore-drill.ps1` de ona taşındı. Gerekçe: iki script AYNI veritabanı
   kümesinde çalışmak zorunda; ayrı ayrı yazılsalardı zamanla ayrışırlardı ve
   sonuç sessiz olurdu — tam yedeği alınan ama günlüğü alınmayan müşteri, felaket
@@ -266,7 +266,7 @@ vardı; yani taahhüt kâğıt üstündeydi. `backup-log.ps1` yazıldı.
   sessizce 24 saate çıkaran ayarın atlanmasına davetiye olurdu.
 
 **Yol boyunca bir varsayımım yanlış çıktı ve düzeltildi.** Script önce "bu
-veritabanının tam yedeği var mı?" diye `msdb`'ye soruyordu. `IKPro_globex` bu
+veritabanının tam yedeği var mı?" diye `msdb`'ye soruyordu. `Ekipzen_globex` bu
 kontrolü GEÇTİ ama `BACKUP LOG` yine de patladı (Msg 4214): kurtarma modelini
 SIMPLE'a alıp FULL'e döndürmek **log zincirini kırıyor**, oysa `msdb`'deki eski
 tam yedek kaydı yerinde duruyor. Sebebi tahmin etmek yerine duruma tepki verecek
@@ -274,7 +274,7 @@ tam yedek kaydı yerinde duruyor. Sebebi tahmin etmek yerine duruma tepki verece
 yeniden dene. Bu, sebebi ne olursa olsun (yeni kiracı, model dönüşü, geri
 yükleme) çalışır.
 
-**Uçtan uca kanıtlandı:** `IKPro_globex`'e işaret satırı eklendi, script'in
+**Uçtan uca kanıtlandı:** `Ekipzen_globex`'e işaret satırı eklendi, script'in
 ÜRETTİĞİ dosyalardan (TABAN.bak + iki .trn) ayrı bir ada geri yükleme yapıldı ve
 işaret satırı geri geldi. Yani otomasyonun bıraktığı dosyalar gerçekten
 kullanılabilir bir zincir oluşturuyor — elle hazırlanmış dosyalar değil.
@@ -314,7 +314,7 @@ olurdu; belirti ancak felaket anında çıkardı. Harmanlama sorununun birebir a
    paylaşılan katalog EF tarafından oluşturulduğu için provizyon yolundan
    geçmez — bu kontrol onları da kapsar.
 
-Kontrolün gerçekten çalıştığı **kanıtlandı**: `IKPro_globex` geçici olarak
+Kontrolün gerçekten çalıştığı **kanıtlandı**: `Ekipzen_globex` geçici olarak
 SIMPLE'a alındı, tatbikat onu yakalayıp çıkış kodu 1 döndürdü, sonra FULL'e
 geri alındı.
 
@@ -325,11 +325,11 @@ ayrı bir saatlik görev gerekiyor ve yazılmadı. Belgeye açık madde olarak e
 ### 2026-08-13 — Faz 3 (1): yedekleme tüm kiracıları kapsıyor + tatbikat koşturuldu
 
 Faz 2b'nin bıraktığı **üretim öncesi kritik açık** kapandı: yedekleme script'leri
-tek bir `-Database IKProDb` alıyordu ve o katalog artık boş — yani alınan
+tek bir `-Database EkipzenDb` alıyordu ve o katalog artık boş — yani alınan
 yedekler gerçek müşteri verisini içermiyordu.
 
 **`backup-restore-drill.ps1` çoklu veritabanına çevrildi.** Yedeklenecekler
-**platform veritabanından keşfediliyor**: `IKProPlatform` + `IKProDb` + her
+**platform veritabanından keşfediliyor**: `EkipzenPlatform` + `EkipzenDb` + her
 `Tenants.DatabaseName`. `-Database` artık zorunlu değil; verilirse yalnız o
 katalog tatbik edilir (hedefli tatbikat).
 
@@ -350,7 +350,7 @@ katalog tatbik edilir (hedefli tatbikat).
    36/18, demo 36/146, globex 36/42) yedeklendi, ayrı ada geri yüklendi, satır
    sayıları doğrulandı, kopyalar düşürüldü. Çıkış kodu 0.
 2. **Nokta-zaman geri yükleme (`RESTORE … STOPAT`)** — belgede vaat edilen ama
-   hiç sınanmamış olan iddia. `IKPro_demo`'ya işaret satırları eklenip kesme
+   hiç sınanmamış olan iddia. `Ekipzen_demo`'ya işaret satırları eklenip kesme
    noktası belirlendi; geri yüklenen kopyada kesme noktasından ÖNCEKİ kayıt var,
    SONRAKİ yok. Saniye hassasiyetinde geri dönüş çalışıyor.
 
@@ -450,7 +450,7 @@ varsayıyor; ikinci satır sessizce yanlış planı gösterirdi).
 - Purge aboneliği de siliyor. Bu, "geri yükleme aboneliği geri sarmaz" ilkesiyle
   çelişmez: orada kiracı yaşamaya devam eder, burada tamamen yok edilir.
 
-**Test altyapısı:** `IKProApiFactory` artık koşum SONUNDA da süpürüyor — test
+**Test altyapısı:** `EkipzenApiFactory` artık koşum SONUNDA da süpürüyor — test
 host'unun açılışta kurduğu demo kiracıları koleksiyon boyunca yaşamak zorunda ve
 ancak host kapanınca silinebiliyor. Koşu sonrası sunucuda tek bir test kataloğu
 kalmadığı elle doğrulandı. Ayrıca `ProvisionRawAsync` cevabı okuduktan sonra
@@ -519,29 +519,29 @@ provizyon yolundan yeniden kuruldu.
   testlerde değil, uygulamayı açan herkesin karşısında patlıyor.
 - **Demo admin'leri provizyondan geliyor** (şifresiz + davet); seed yalnız
   şifrelerini veriyor (`DemoSifresiVerAsync`), hesabı yeniden yaratmıyor.
-- **Paylaşılan `IKProDb` duruyor ama boş.** Kiracı bağlamı olmayan her şey
+- **Paylaşılan `EkipzenDb` duruyor ama boş.** Kiracı bağlamı olmayan her şey
   (sağlık kontrolü, henüz ayrılmamış kiracılar) oraya bağlanıyor; şeması
   açılışta migrate ediliyor, içinde veri yok.
 - `PlatformDbInitializer.EnsureDefaultTenantAsync` kaldırıldı — varsayılan
   kiracı artık provizyon yolundan doğduğu için ölü koda dönüşmüştü.
 
 **Planın öngörmediği bir tuzak çıktı ve kapatıldı:** demo kiracıların slug'ları
-sabit olduğu için test koşumu da `IKPro_demo` üretiyordu — yani `dotnet test`
+sabit olduğu için test koşumu da `Ekipzen_demo` üretiyordu — yani `dotnet test`
 her çalıştığında geliştiricinin demo ortamını silecekti. Katalog adı üretimi
 statik yardımcıdan **`ITenantDatabaseNamer`** servisine dönüştü; önek
-`Tenancy:DatabasePrefix` ile geliyor ve testler `IKPro_test_` kullanıyor.
+`Tenancy:DatabasePrefix` ile geliyor ve testler `Ekipzen_test_` kullanıyor.
 
 **Kırılan test:** `AuthFlowTests` — demo admin'in baş harfleri `İK` yerine `İY`.
 Sebep: baş harfler artık üretim kuralından (`DeriveInitials`) geliyor, çünkü
 hesabı elle yazılmış bir seed satırı değil gerçek provizyon oluşturuyor.
 Beklenti güncellendi; bu, seed'in ürün kuralını atlamayı bıraktığının kanıtı.
 
-**Elle doğrulama (tüm `IKPro*` düşürülüp uygulama sıfırdan açıldı):**
-- `IKPro_demo` + `IKPro_globex` oluştu, ikisi de `Turkish_CI_AS`.
-- Kullanıcı/personel: demo 3/4, globex 3/2, **paylaşılan `IKProDb` 0/0**.
+**Elle doğrulama (tüm `Ekipzen*` düşürülüp uygulama sıfırdan açıldı):**
+- `Ekipzen_demo` + `Ekipzen_globex` oluştu, ikisi de `Turkish_CI_AS`.
+- Kullanıcı/personel: demo 3/4, globex 3/2, **paylaşılan `EkipzenDb` 0/0**.
 - İki kiracıyla giriş yapıldı, her biri yalnız kendi personelini gördü.
-- Globex'te departman oluşturuldu → satır fiziksel olarak `IKPro_globex`'te;
-  `IKPro_demo` ve `IKProDb`'de yok.
+- Globex'te departman oluşturuldu → satır fiziksel olarak `Ekipzen_globex`'te;
+  `Ekipzen_demo` ve `EkipzenDb`'de yok.
 
 **Doğrulama:** 66 birim + 167 entegrasyon yeşil, `-warnaserror` temiz.
 
@@ -553,7 +553,7 @@ Beklenti güncellendi; bu, seed'in ürün kuralını atlamayı bıraktığının
 davet, (6) `Status = Active`. Yarıda kalırsa kiracı `Provisioning`'de kalır —
 erişilemez ama görünür (`GET /api/tenants/stuck`).
 
-- **Katalog adı:** `IKPro_{slug}`, slug'daki tireler alt çizgiye çevrilerek.
+- **Katalog adı:** `Ekipzen_{slug}`, slug'daki tireler alt çizgiye çevrilerek.
   Çakışma üretmez: slug deseni alt çizgiye izin vermediği için iki farklı slug
   aynı ada indirgenemez.
 - **Var olan katalog REDDEDİLİR.** Yarıda kalmış bir kurulumdan artakalan
@@ -571,7 +571,7 @@ erişilemez ama görünür (`GET /api/tenants/stuck`).
 
 **Test altyapısı — kullanıcı kararı: agresif temizlik (A seçeneği).**
 `TenancyTestBase` artık `IAsyncLifetime`; her testin açtığı katalog test bitince
-düşürülüyor. Fabrika koşum başında `IKPro_test_*` artıklarını da süpürüyor (koşum
+düşürülüyor. Fabrika koşum başında `Ekipzen_test_*` artıklarını da süpürüyor (koşum
 ortasında çöken süreç için; olmasaydı tek çökme sonraki tüm koşumları kırardı).
 Test slug'ları `test-` önekli üretiliyor ki süpürme deseni gerçek bir kiracıyı
 asla silemesin.
@@ -778,7 +778,7 @@ sebebi ayrılmaya bağlanmasın. Üçü de önce kırmızı test, sonra düzeltm
   (unvan/departman/işe giriş + doğum tarihi/cinsiyet/medeni durum/telefon/
   kişisel e-posta/adres/IBAN/banka), izin talepleri + bakiyeleri, puantaj
   kayıtları, uyum belgeleri (metadata), bordro pusulası listesi (metadata).
-  JSON, girintili, `ikpro-verilerim-{tarih}.json` adıyla indirilir (mevcut
+  JSON, girintili, `ekipzen-verilerim-{tarih}.json` adıyla indirilir (mevcut
   bordro pusulası indirme deseniyle aynı `(byte[], fileName)` → `File(...)`).
 - **İzolasyon çift güvence:** tüm alt sorgular `EmployeeId == currentUser.EmployeeId`
   ile daraltılır; ayrıca EF tenant global filtresi devrede. `EmployeeId`'si
@@ -898,7 +898,7 @@ sebebi ayrılmaya bağlanmasın. Üçü de önce kırmızı test, sonra düzeltm
 - **Kritik düzeltme:** `AddIdentityCore` zincirine `.AddDefaultTokenProviders()`
   eklendi — yoksa `GeneratePasswordResetTokenAsync` "no token provider" ile
   patlıyordu (provizyon/hire 500 dönüyordu).
-- **Test altyapısı:** `IKProApiFactory.StorageRoot` dışa açıldı;
+- **Test altyapısı:** `EkipzenApiFactory.StorageRoot` dışa açıldı;
   `TenancyTestBase`e davet yardımcıları eklendi (`ReadInviteTokenAsync` outbox
   JSON'undan `DAVET-KODU:` token'ını çeker, `AcceptInviteAsync`,
   `ProvisionAndActivateAsync`). Provizyon/hire sonrası login yapan testler
@@ -917,7 +917,7 @@ sebebi ayrılmaya bağlanmasın. Üçü de önce kırmızı test, sonra düzeltm
 - Kök `README.md` yeniden yazıldı: monorepo yapısı, kurulum/çalıştırma, demo
   kullanıcılar, modül listesi, dokümantasyon işaretçileri ("üretim değil demo"
   uyarısıyla). Eski mock-dönemi README anlatımı kaldırıldı.
-- Kök `.gitignore`: `backend/src/IKPro.API/App_Data/` (çalışma zamanı
+- Kök `.gitignore`: `backend/src/Ekipzen.API/App_Data/` (çalışma zamanı
   yükleme deposu) ignore edildi.
 - Günlükteki "kökteki index.html" referansları `legacy-frontend/` olarak
   düzeltildi.
@@ -1119,7 +1119,7 @@ sebebi ayrılmaya bağlanmasın. Üçü de önce kırmızı test, sonra düzeltm
   `/api` → `http://localhost:5053` proxy. (`bc11de9`, temizlik `a8c50ab`)
 - **Task 2:** `npm run gen:api` — backend swagger'ından `src/api/schema.d.ts`
   tip üretimi; backend'de şema adı çakışması düzeltildi (`1743fd4`, `37b7048`).
-- **Task 3 (TDD):** `session.ts` (`ikpro-session` localStorage) + `client.ts`
+- **Task 3 (TDD):** `session.ts` (`ekipzen-session` localStorage) + `client.ts`
   fetch wrapper: Bearer, ProblemDetails → ApiError, 401'de tek-uçuş refresh +
   retry, refresh düşerse oturum temizle + `#/login`. (`13e130f`)
 - **Task 4 (TDD):** `AuthContext` + `LoginPage` (login/signup) — gerçek API'ye

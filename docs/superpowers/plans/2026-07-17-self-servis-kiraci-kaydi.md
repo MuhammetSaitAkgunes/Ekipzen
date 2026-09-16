@@ -21,16 +21,16 @@
 
 ## Dosya Yapısı
 
-- **Create:** `backend/src/IKPro.Application/Features/Tenancy/TenantSlug.cs` — şirket adından ASCII slug türetme (saf fonksiyon, unit-test edilebilir).
-- **Create:** `backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs` — kiracı+admin oluşturma ortak yardımcısı (DRY: provizyon ve self-servis paylaşır).
-- **Create:** `backend/src/IKPro.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs` — self-servis kayıt komutu + validator + handler.
-- **Modify:** `backend/src/IKPro.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs` — ortak yardımcıyı kullan (aktif kiracı).
-- **Modify:** `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs` — `AcceptInviteAsync` pasif kiracıyı etkinleştirir.
-- **Modify:** `backend/src/IKPro.API/Controllers/TenancyController.cs` — `POST /api/tenants/signup`.
-- **Modify:** `backend/src/IKPro.API/Program.cs` — `signup` rate-limit politikası.
-- **Modify:** `backend/tests/IKPro.Tests.Integration/IKProApiFactory.cs` — `RateLimiting__SignupPermitPerHour` yüksek.
-- **Create:** `backend/tests/IKPro.Tests.Unit/Tenancy/TenantSlugTests.cs` — slug türetme birim testleri.
-- **Create:** `backend/tests/IKPro.Tests.Integration/Tenancy/SelfServiceSignupTests.cs` — uçtan uca kayıt+doğrulama.
+- **Create:** `backend/src/Ekipzen.Application/Features/Tenancy/TenantSlug.cs` — şirket adından ASCII slug türetme (saf fonksiyon, unit-test edilebilir).
+- **Create:** `backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs` — kiracı+admin oluşturma ortak yardımcısı (DRY: provizyon ve self-servis paylaşır).
+- **Create:** `backend/src/Ekipzen.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs` — self-servis kayıt komutu + validator + handler.
+- **Modify:** `backend/src/Ekipzen.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs` — ortak yardımcıyı kullan (aktif kiracı).
+- **Modify:** `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs` — `AcceptInviteAsync` pasif kiracıyı etkinleştirir.
+- **Modify:** `backend/src/Ekipzen.API/Controllers/TenancyController.cs` — `POST /api/tenants/signup`.
+- **Modify:** `backend/src/Ekipzen.API/Program.cs` — `signup` rate-limit politikası.
+- **Modify:** `backend/tests/Ekipzen.Tests.Integration/EkipzenApiFactory.cs` — `RateLimiting__SignupPermitPerHour` yüksek.
+- **Create:** `backend/tests/Ekipzen.Tests.Unit/Tenancy/TenantSlugTests.cs` — slug türetme birim testleri.
+- **Create:** `backend/tests/Ekipzen.Tests.Integration/Tenancy/SelfServiceSignupTests.cs` — uçtan uca kayıt+doğrulama.
 - **Create:** `frontend/src/auth/CompanySignupPage.tsx` — public "şirketini kaydet" formu + başarı ekranı.
 - **Create:** `frontend/src/auth/CompanySignupPage.test.tsx` — birim testleri.
 - **Modify:** `frontend/src/routes.tsx` — `/register-company` route.
@@ -42,8 +42,8 @@
 ## Task 1: Slug türetme (saf fonksiyon)
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Tenancy/TenantSlug.cs`
-- Test: `backend/tests/IKPro.Tests.Unit/Tenancy/TenantSlugTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/TenantSlug.cs`
+- Test: `backend/tests/Ekipzen.Tests.Unit/Tenancy/TenantSlugTests.cs`
 
 **Interfaces:**
 - Produces: `static string TenantSlug.From(string companyName)` → `[a-z0-9-]+`, ≤64, boşsa `"sirket"`.
@@ -51,19 +51,19 @@
 - [ ] **Step 1: Failing test yaz**
 
 ```csharp
-// backend/tests/IKPro.Tests.Unit/Tenancy/TenantSlugTests.cs
+// backend/tests/Ekipzen.Tests.Unit/Tenancy/TenantSlugTests.cs
 using FluentAssertions;
-using IKPro.Application.Features.Tenancy;
+using Ekipzen.Application.Features.Tenancy;
 using Xunit;
 
-namespace IKPro.Tests.Unit.Tenancy;
+namespace Ekipzen.Tests.Unit.Tenancy;
 
 public class TenantSlugTests
 {
     [Theory]
     [InlineData("Acme Teknoloji A.Ş.", "acme-teknoloji-a")]
     [InlineData("Globex   Bilişim", "globex-bilisim")]
-    [InlineData("İK Pro", "k-pro")]
+    [InlineData("Ekipzen İK", "ekipzen-k")]
     [InlineData("!!!", "sirket")]
     [InlineData("", "sirket")]
     public void From_ProducesSlug(string input, string expected)
@@ -75,21 +75,21 @@ public class TenantSlugTests
 }
 ```
 
-Not: "Bilişim" → "bili-im" değil "bilisim" bekleniyor; Türkçe `ş/ı/İ` gibi harfler için basit transliterasyon (ş→s, ı→i, İ→i, ğ→g, ü→u, ö→o, ç→c) uygulanır, sonra kalan ASCII-dışı karakterler tireye döner. "İK Pro" → transliterasyon "ik pro" beklenir; ancak `İ.ToLowerInvariant()` kültüre bağlı sorunlu olduğundan önce transliterasyon map'i uygulanır → "ik-pro". **Beklenen değeri buna göre yaz:** `[InlineData("İK Pro", "ik-pro")]`. (Yukarıdaki `"k-pro"` yerine `"ik-pro"` kullan.)
+Not: "Bilişim" → "bili-im" değil "bilisim" bekleniyor; Türkçe `ş/ı/İ` gibi harfler için basit transliterasyon (ş→s, ı→i, İ→i, ğ→g, ü→u, ö→o, ç→c) uygulanır, sonra kalan ASCII-dışı karakterler tireye döner. "Ekipzen İK" → transliterasyon "ekipzen ik" beklenir; ancak `İ.ToLowerInvariant()` kültüre bağlı sorunlu olduğundan önce transliterasyon map'i uygulanır → "ekipzen-ik". **Beklenen değeri buna göre yaz:** `[InlineData("Ekipzen İK", "ekipzen-ik")]`. (Yukarıdaki `"ekipzen-k"` yerine `"ekipzen-ik"` kullan.)
 
 - [ ] **Step 2: Testi çalıştır, başarısızlığı gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter TenantSlugTests`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter TenantSlugTests`
 Expected: FAIL (TenantSlug yok / derleme hatası).
 
 - [ ] **Step 3: Minimal implementasyon**
 
 ```csharp
-// backend/src/IKPro.Application/Features/Tenancy/TenantSlug.cs
+// backend/src/Ekipzen.Application/Features/Tenancy/TenantSlug.cs
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace IKPro.Application.Features.Tenancy;
+namespace Ekipzen.Application.Features.Tenancy;
 
 /// <summary>
 /// Şirket adından URL/alt-alan dostu slug türetir: Türkçe harfleri transliterasyonla
@@ -124,14 +124,14 @@ public static class TenantSlug
 
 - [ ] **Step 4: Testi çalıştır, geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter TenantSlugTests`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter TenantSlugTests`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git checkout -b feature/self-service-signup
-git add backend/src/IKPro.Application/Features/Tenancy/TenantSlug.cs backend/tests/IKPro.Tests.Unit/Tenancy/TenantSlugTests.cs
+git add backend/src/Ekipzen.Application/Features/Tenancy/TenantSlug.cs backend/tests/Ekipzen.Tests.Unit/Tenancy/TenantSlugTests.cs
 git commit -m "feat(tenancy): şirket adından slug türetme (self-servis kayıt hazırlık)"
 ```
 
@@ -140,9 +140,9 @@ git commit -m "feat(tenancy): şirket adından slug türetme (self-servis kayıt
 ## Task 2: Ortak onboarding yardımcısı + RegisterTenantCommand
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs`
-- Create: `backend/src/IKPro.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs`
-- Modify: `backend/src/IKPro.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs`
+- Modify: `backend/src/Ekipzen.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`
 
 **Interfaces:**
 - Consumes: `IIdentityService.EmailExistsAsync`, `IIdentityService.CreateTenantAdminAsync(int tenantId, string name, string email, string companyName, CancellationToken)`, `IApplicationDbContext.Tenants`, `TenantSlug.From`.
@@ -151,12 +151,12 @@ git commit -m "feat(tenancy): şirket adından slug türetme (self-servis kayıt
 - [ ] **Step 1: Ortak yardımcıyı yaz**
 
 ```csharp
-// backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs
-using IKPro.Application.Common.Exceptions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Tenancy;
+// backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs
+using Ekipzen.Application.Common.Exceptions;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Tenancy;
 
-namespace IKPro.Application.Features.Tenancy;
+namespace Ekipzen.Application.Features.Tenancy;
 
 /// <summary>
 /// Kiracı + ilk hr-admin oluşturmanın ortak adımları (provizyon ve self-servis paylaşır).
@@ -225,13 +225,13 @@ public async Task<ProvisionTenantResult> Handle(
 - [ ] **Step 3: RegisterTenantCommand yaz**
 
 ```csharp
-// backend/src/IKPro.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs
+// backend/src/Ekipzen.Application/Features/Tenancy/Commands/RegisterTenantCommand.cs
 using FluentValidation;
-using IKPro.Application.Common.Interfaces;
+using Ekipzen.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Features.Tenancy.Commands;
+namespace Ekipzen.Application.Features.Tenancy.Commands;
 
 /// <summary>
 /// Self-servis kayıt: müşteri kendi şirketini ve ilk hr-admin'ini public formdan oluşturur.
@@ -290,13 +290,13 @@ Expected: 0 Hata.
 
 - [ ] **Step 5: Mevcut provizyon testleri hâlâ yeşil**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~Tenancy"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~Tenancy"`
 Expected: PASS (davranış değişmedi).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/IKPro.Application/Features/Tenancy/
+git add backend/src/Ekipzen.Application/Features/Tenancy/
 git commit -m "feat(tenancy): ortak onboarding yardımcısı + RegisterTenantCommand (pasif kiracı)"
 ```
 
@@ -305,7 +305,7 @@ git commit -m "feat(tenancy): ortak onboarding yardımcısı + RegisterTenantCom
 ## Task 3: accept-invite pasif kiracıyı etkinleştirir
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
 
 **Interfaces:**
 - Consumes: `AppDbContext context` (ctor'da mevcut), `ApplicationUser.TenantId`.
@@ -337,7 +337,7 @@ Expected: 0 Hata.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add backend/src/IKPro.Infrastructure/Identity/IdentityService.cs
+git add backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs
 git commit -m "feat(tenancy): davet kabulü pasif kiracıyı etkinleştirir (e-posta doğrulama kapısı)"
 ```
 
@@ -346,10 +346,10 @@ git commit -m "feat(tenancy): davet kabulü pasif kiracıyı etkinleştirir (e-p
 ## Task 4: signup ucu + rate-limit politikası + entegrasyon testleri
 
 **Files:**
-- Modify: `backend/src/IKPro.API/Controllers/TenancyController.cs`
-- Modify: `backend/src/IKPro.API/Program.cs`
-- Modify: `backend/tests/IKPro.Tests.Integration/IKProApiFactory.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Tenancy/SelfServiceSignupTests.cs`
+- Modify: `backend/src/Ekipzen.API/Controllers/TenancyController.cs`
+- Modify: `backend/src/Ekipzen.API/Program.cs`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/EkipzenApiFactory.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Tenancy/SelfServiceSignupTests.cs`
 
 **Interfaces:**
 - Consumes: `RegisterTenantCommand`, `TenancyTestBase.AcceptInviteAsync`, `AuthedClientAsync`.
@@ -358,19 +358,19 @@ git commit -m "feat(tenancy): davet kabulü pasif kiracıyı etkinleştirir (e-p
 - [ ] **Step 1: Failing entegrasyon testi yaz**
 
 ```csharp
-// backend/tests/IKPro.Tests.Integration/Tenancy/SelfServiceSignupTests.cs
+// backend/tests/Ekipzen.Tests.Integration/Tenancy/SelfServiceSignupTests.cs
 using FluentAssertions;
-using IKPro.Application.Features.Departments;
-using IKPro.Infrastructure.Persistence;
+using Ekipzen.Application.Features.Departments;
+using Ekipzen.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace IKPro.Tests.Integration.Tenancy;
+namespace Ekipzen.Tests.Integration.Tenancy;
 
 [Collection(ApiCollection.Name)]
-public sealed class SelfServiceSignupTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public sealed class SelfServiceSignupTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     private Task<HttpResponseMessage> SignupAsync(string company, string email) =>
         Factory.CreateClient().PostAsJsonAsync("/api/tenants/signup", new
@@ -425,7 +425,7 @@ public sealed class SelfServiceSignupTests(IKProApiFactory factory) : TenancyTes
 
 - [ ] **Step 2: Testi çalıştır, başarısızlığı gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~SelfServiceSignup"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~SelfServiceSignup"`
 Expected: FAIL (endpoint 404).
 
 - [ ] **Step 3: signup rate-limit politikası (Program.cs)**
@@ -447,7 +447,7 @@ options.AddPolicy("signup", httpContext =>
 
 - [ ] **Step 4: signup ucu (TenancyController.cs)**
 
-`using IKPro.Application.Features.Tenancy.Commands;` mevcut. `Provision` metodundan sonra ekle:
+`using Ekipzen.Application.Features.Tenancy.Commands;` mevcut. `Provision` metodundan sonra ekle:
 
 ```csharp
 /// <remarks>Self-servis kayıt (public, platform anahtarı yok, 'signup' rate-limit'li).
@@ -464,7 +464,7 @@ public async Task<ActionResult<RegisterTenantResult>> Signup(
 
 - [ ] **Step 5: Test factory signup limitini etkisizleştir**
 
-`IKProApiFactory` ctor'unda diğer env satırlarının yanına:
+`EkipzenApiFactory` ctor'unda diğer env satırlarının yanına:
 
 ```csharp
 Environment.SetEnvironmentVariable("RateLimiting__SignupPermitPerHour", "1000000");
@@ -472,7 +472,7 @@ Environment.SetEnvironmentVariable("RateLimiting__SignupPermitPerHour", "1000000
 
 - [ ] **Step 6: Testleri çalıştır, geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~SelfServiceSignup"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~SelfServiceSignup"`
 Expected: PASS (3 test).
 
 - [ ] **Step 7: Tüm backend paketi yeşil**
@@ -483,7 +483,7 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add backend/src/IKPro.API/ backend/tests/IKPro.Tests.Integration/
+git add backend/src/Ekipzen.API/ backend/tests/Ekipzen.Tests.Integration/
 git commit -m "feat(tenancy): POST /api/tenants/signup + signup rate-limit + entegrasyon testleri"
 ```
 
@@ -604,13 +604,13 @@ export function CompanySignupPage() {
         <div className="auth-brand">
           <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>HR MASTER Suite</span>
           </div>
         </div>
         <div className="auth-copy">
           <span className="status-pill info">Şirket kaydı</span>
-          <h1>Şirketinizi dakikalar içinde İK Pro'ya taşıyın.</h1>
+          <h1>Şirketinizi dakikalar içinde Ekipzen'e taşıyın.</h1>
           <p>Kaydınızı oluşturun; e-postanıza gelen bağlantıyla şifrenizi belirleyip başlayın.</p>
         </div>
       </section>

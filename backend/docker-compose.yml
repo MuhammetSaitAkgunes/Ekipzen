@@ -1,7 +1,7 @@
 services:
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: ikpro-mssql
+    container_name: ekipzen-mssql
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Your_strong_Pass123"
@@ -9,7 +9,7 @@ services:
     ports:
       - "1433:1433"
     volumes:
-      - ikpro-mssql-data:/var/opt/mssql
+      - ekipzen-mssql-data:/var/opt/mssql
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
       interval: 10s
@@ -20,17 +20,17 @@ services:
   api:
     build:
       context: ./
-      dockerfile: src/IKPro.API/Dockerfile
-    container_name: ikpro-api
+      dockerfile: src/Ekipzen.API/Dockerfile
+    container_name: ekipzen-api
     depends_on:
       mssql:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
-      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=IKProDb;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True;Encrypt=False"
-      ConnectionStrings__PlatformConnection: "Server=mssql,1433;Database=IKProPlatform;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True;Encrypt=False"
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=EkipzenDb;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True;Encrypt=False"
+      ConnectionStrings__PlatformConnection: "Server=mssql,1433;Database=EkipzenPlatform;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True;Encrypt=False"
     ports:
       - "8080:8080"
 
 volumes:
-  ikpro-mssql-data:
+  ekipzen-mssql-data:

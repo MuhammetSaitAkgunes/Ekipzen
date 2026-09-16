@@ -1561,7 +1561,7 @@ git commit -m "feat(frontend): uyum risk merkezi detay sayfası"
 
 - [x] **Step 1: Backend + frontend'i başlat**
 
-Terminal 1: `cd backend && dotnet run --project src/IKPro.API --launch-profile http`
+Terminal 1: `cd backend && dotnet run --project src/Ekipzen.API --launch-profile http`
 Terminal 2: `cd frontend && npm run dev` → `http://localhost:5173`
 
 - [x] **Step 2: Duman testi (hr-admin: ik@hrmaster.local / demo123)**

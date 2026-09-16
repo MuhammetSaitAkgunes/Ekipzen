@@ -39,7 +39,7 @@ const renderAuthRoute = (route) => {
 
 const renderRestrictedRoute = (route) => {
   ensureAppShell();
-  setPageChrome({ title: "Yetki Gerekli", eyebrow: "İK Pro", navKey: route.navKey });
+  setPageChrome({ title: "Yetki Gerekli", eyebrow: "Ekipzen", navKey: route.navKey });
   document.getElementById("main-content").innerHTML = `
     <section class="surface empty-state">
       <i aria-hidden="true" class="fa-solid fa-lock"></i>
@@ -86,7 +86,7 @@ const setPageChrome = (route) => {
   const pageTitle = document.getElementById("page-title");
   const pageEyebrow = document.getElementById("page-eyebrow");
   if (pageTitle) pageTitle.innerText = route.title || "Yakında";
-  if (pageEyebrow) pageEyebrow.innerText = route.eyebrow || "İK Pro";
+  if (pageEyebrow) pageEyebrow.innerText = route.eyebrow || "Ekipzen";
 
   document.querySelectorAll(".nav-item").forEach((el) => el.classList.remove("active"));
   const activeItem = document.querySelector(`.nav-item[data-page="${route.navKey || route.key}"]`);
@@ -110,8 +110,8 @@ window.navigateTo = (routeOrPath, evt) => {
 };
 
 const initializeShellPreferences = () => {
-  const savedTheme = localStorage.getItem("ikpro-theme") || "light";
-  const sidebarCollapsed = localStorage.getItem("ikpro-sidebar") === "collapsed";
+  const savedTheme = localStorage.getItem("ekipzen-theme") || "light";
+  const sidebarCollapsed = localStorage.getItem("ekipzen-sidebar") === "collapsed";
 
   applyTheme(savedTheme);
   applySidebarState(sidebarCollapsed);
@@ -122,7 +122,7 @@ const applySidebarState = (collapsed) => {
   if (!app) return;
 
   app.classList.toggle("sidebar-collapsed", collapsed);
-  localStorage.setItem("ikpro-sidebar", collapsed ? "collapsed" : "expanded");
+  localStorage.setItem("ekipzen-sidebar", collapsed ? "collapsed" : "expanded");
 };
 
 window.toggleSidebar = () => {
@@ -133,7 +133,7 @@ window.toggleSidebar = () => {
 const applyTheme = (theme) => {
   const nextTheme = theme === "dark" ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", nextTheme);
-  localStorage.setItem("ikpro-theme", nextTheme);
+  localStorage.setItem("ekipzen-theme", nextTheme);
 
   const icon = document.getElementById("theme-icon");
   if (icon) {

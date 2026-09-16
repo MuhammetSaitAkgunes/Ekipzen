@@ -304,7 +304,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
         <section className="card payroll-slip-preview">
           <div className="card-header-clean"><h4>Bordro Pusulası Önizleme</h4><span className="status-pill info">Denetimli</span></div>
           <div className="slip-paper">
-            <div className="slip-brand"><strong>İK Pro</strong><span>{periodName} Bordro Pusulası</span></div>
+            <div className="slip-brand"><strong>Ekipzen</strong><span>{periodName} Bordro Pusulası</span></div>
             <div className="slip-row"><span>Personel</span><strong>{row.name}</strong></div>
             <div className="slip-row"><span>SGK prim günü</span><strong>{row.workedDays}</strong></div>
             <div className="slip-row"><span>Fazla çalışma</span><strong>{row.overtimeHours ?? 0} saat · {formatPayrollMoney(row.overtimePay)}</strong></div>

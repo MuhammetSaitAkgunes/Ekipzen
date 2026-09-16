@@ -28,7 +28,7 @@ export function LoginPage() {
         <div className="auth-brand">
           <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>HR MASTER Suite</span>
           </div>
         </div>
@@ -66,7 +66,7 @@ export function LoginPage() {
             <i aria-hidden="true" className="fa-solid fa-arrow-right-to-bracket" /> Giriş yap
           </button>
           <p className="auth-alt">
-            Şirketiniz yok mu? Hesabınız İK Pro ekibi tarafından açılır — davet
+            Şirketiniz yok mu? Hesabınız Ekipzen ekibi tarafından açılır — davet
             e-postanızdaki bağlantıyla şifrenizi belirleyin.
           </p>
         </form>

@@ -1,6 +1,6 @@
 # 06 — Multi-Tenancy (Çok Kiracılılık)
 
-İK Pro çok müşterili bir SaaS'tır: birçok şirket (kiracı) aynı uygulamayı
+Ekipzen çok müşterili bir SaaS'tır: birçok şirket (kiracı) aynı uygulamayı
 paylaşır ama **hiçbiri diğerinin verisini göremez.** Bu rehber bu izolasyonun
 nasıl sağlandığını anlatır. (Uyum/KVKK detayı: [`../kvkk-veri-izolasyonu.md`](../kvkk-veri-izolasyonu.md).)
 
@@ -13,8 +13,8 @@ taşır, bağlantı çözücü kiracıdan o adı üretir.
 geri yükleyebilmek için. Ortak veritabanında bir müşterinin "dünkü hâline dönün"
 talebi, ya herkesi geri sarmayı ya da satır satır elle onarımı gerektirirdi.
 
-Ayrılma tamamlandı: geliştirme kurulumunda demo kiracılar `IKPro_demo` ve
-`IKPro_globex` kataloglarında yaşıyor, paylaşılan `IKProDb` **boş**.
+Ayrılma tamamlandı: geliştirme kurulumunda demo kiracılar `Ekipzen_demo` ve
+`Ekipzen_globex` kataloglarında yaşıyor, paylaşılan `EkipzenDb` **boş**.
 
 > **`DatabaseName` yine de boş olabilir** ve bu bir hata değildir — boş ad "henüz
 > paylaşılan veritabanında" demektir. Mekanizma bilinçli olarak korunuyor: ileride
@@ -25,7 +25,7 @@ Ayrılma tamamlandı: geliştirme kurulumunda demo kiracılar `IKPro_demo` ve
 > verse bile filtre veriyi karıştırmaz. İki bağımsız savunma, tek bir kusursuz
 > savunmadan iyidir.
 
-> **Sıfırlarken:** `IKProDb` + `IKProPlatform` düşürmek yetmez; tüm `IKPro_*`
+> **Sıfırlarken:** `EkipzenDb` + `EkipzenPlatform` düşürmek yetmez; tüm `Ekipzen_*`
 > kiracı veritabanlarını da birlikte düşürün. Aksi halde provizyon "katalog zaten
 > var" diye reddeder.
 
@@ -97,7 +97,7 @@ Provizyon **altı adımdır** ve sıra kritiktir:
    `DatabaseName` üretilmiş) + e-posta rezervasyonu. Birlikte olmalılar; ayrı
    olsalardı rezervasyon çakıştığında geriye slug'ı işgal eden sahipsiz bir
    kiracı satırı kalırdı.
-2. `CREATE DATABASE [IKPro_{slug}] COLLATE Turkish_CI_AS`. **Katalog zaten varsa
+2. `CREATE DATABASE [Ekipzen_{slug}] COLLATE Turkish_CI_AS`. **Katalog zaten varsa
    provizyon REDDEDİLİR** — yarıda kalmış bir kurulumdan artakalanı sessizce
    yeniden kullanmak, iki müşterinin verisini aynı yerde toplamak olurdu.
 3. Migration'lar yeni veritabanına uygulanır.

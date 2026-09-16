@@ -26,4 +26,4 @@ appsettings.*.Local.json
 secrets.json
 
 ## Uploaded files (IFileStorage local disk)
-src/IKPro.API/wwwroot/uploads/
+src/Ekipzen.API/wwwroot/uploads/

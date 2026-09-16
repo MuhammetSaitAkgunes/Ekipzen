@@ -188,16 +188,16 @@ Provizyon altı adıma iner (tasarım belgesindeki sıra):
 
 **Yarıda kalırsa** kiracı `Status = Provisioning`'de kalır — erişilemez ama görünür (`GET /api/tenants/stuck` zaten var).
 
-**Veritabanı adı üretimi:** `IKPro_{slug}`. Slug zaten `^[a-z0-9-]+$` doğrulamasından geçiyor, ama tire SQL tanımlayıcısında sorun çıkarabilir — adı üretirken tireyi alt çizgiye çevirin ve sonucu Görev 2'deki desen doğrulamasından geçirin.
+**Veritabanı adı üretimi:** `Ekipzen_{slug}`. Slug zaten `^[a-z0-9-]+$` doğrulamasından geçiyor, ama tire SQL tanımlayıcısında sorun çıkarabilir — adı üretirken tireyi alt çizgiye çevirin ve sonucu Görev 2'deki desen doğrulamasından geçirin.
 
 **Test altyapısı — bu görevin en büyük parçası:**
-- Her provizyon testi artık **gerçek bir veritabanı** kuruyor. `IKProApiFactory` koşum başında `IKPro_test_*` kalıntılarını da düşürmeli (bugün yalnız iki sabit adı düşürüyor).
+- Her provizyon testi artık **gerçek bir veritabanı** kuruyor. `EkipzenApiFactory` koşum başında `Ekipzen_test_*` kalıntılarını da düşürmeli (bugün yalnız iki sabit adı düşürüyor).
 - Testlerin ürettiği veritabanı adları çakışmamalı ve tanınabilir olmalı.
 - Koşum süresi artacak; ölçün ve rapora yazın. Kabul edilebilir bulmuyorsanız durun ve bildirin — şablon veritabanı kopyalama gibi bir optimizasyon ayrı bir iştir.
 
 > **✅ TAMAMLANDI (2026-08-13).**
 >
-> **Temizlik stratejisi (kullanıcı kararı):** her testten sonra agresif temizlik. `TenancyTestBase` artık `IAsyncLifetime` uyguluyor; provizyonlanan her katalog izleniyor ve test bitince düşürülüyor. Fabrika ayrıca koşum başında `IKPro_test_*` desenli artıkları süpürüyor — bu, koşum ORTASINDA çöken bir süreç içindir; olmasaydı tek bir çökme sonraki tüm koşumları "veritabanı zaten var" ile kırardı. Test slug'ları `test-` önekli üretiliyor ki süpürme deseni gerçek bir kiracıyı asla silemesin.
+> **Temizlik stratejisi (kullanıcı kararı):** her testten sonra agresif temizlik. `TenancyTestBase` artık `IAsyncLifetime` uyguluyor; provizyonlanan her katalog izleniyor ve test bitince düşürülüyor. Fabrika ayrıca koşum başında `Ekipzen_test_*` desenli artıkları süpürüyor — bu, koşum ORTASINDA çöken bir süreç içindir; olmasaydı tek bir çökme sonraki tüm koşumları "veritabanı zaten var" ile kırardı. Test slug'ları `test-` önekli üretiliyor ki süpürme deseni gerçek bir kiracıyı asla silemesin.
 >
 > **Süre:** entegrasyon takımı **33 sn → 93 sn** (167 test). Yaklaşık 2,8 kat. Kabul edildi.
 >
@@ -223,18 +223,18 @@ Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki 
 
 **Seed bunun için değişmeli:** `AppDbContextInitializer` bugün demo kiracıları doğrudan yazıyor. Artık provizyon yolunu çağırmalı — böylece kayıt akışı her geliştirme kurulumunda çalıştırılmış olur.
 
-**Doğrulama (elle, çıktıları rapora):** iki DB düşür → uygulama aç → `IKPro_demo` ve `IKPro_globex` veritabanlarının **fiilen oluştuğunu** ve harmanlamalarının `Turkish_CI_AS` olduğunu sqlcmd ile gör → iki demo kiracıyla giriş yap → birinde personel oluştur, diğerinde görünmediğini doğrula.
+**Doğrulama (elle, çıktıları rapora):** iki DB düşür → uygulama aç → `Ekipzen_demo` ve `Ekipzen_globex` veritabanlarının **fiilen oluştuğunu** ve harmanlamalarının `Turkish_CI_AS` olduğunu sqlcmd ile gör → iki demo kiracıyla giriş yap → birinde personel oluştur, diğerinde görünmediğini doğrula.
 
 > **✅ TAMAMLANDI (2026-08-13).**
 >
-> **Elle doğrulama çıktıları** (tüm `IKPro*` veritabanları düşürülüp uygulama sıfırdan açıldı):
-> - `IKPro_demo` ve `IKPro_globex` **oluştu**, ikisi de `Turkish_CI_AS`.
-> - `Tenants`: `demo → IKPro_demo (Active)`, `globex → IKPro_globex (Active)`.
-> - Kullanıcılar: demo katalogunda 3 (ik@/ece/ahmet), globex katalogunda 3 (globex-admin/deniz/cem), **paylaşılan `IKProDb`'de 0**. Personel: 4 / 2 / **0**.
+> **Elle doğrulama çıktıları** (tüm `Ekipzen*` veritabanları düşürülüp uygulama sıfırdan açıldı):
+> - `Ekipzen_demo` ve `Ekipzen_globex` **oluştu**, ikisi de `Turkish_CI_AS`.
+> - `Tenants`: `demo → Ekipzen_demo (Active)`, `globex → Ekipzen_globex (Active)`.
+> - Kullanıcılar: demo katalogunda 3 (ik@/ece/ahmet), globex katalogunda 3 (globex-admin/deniz/cem), **paylaşılan `EkipzenDb`'de 0**. Personel: 4 / 2 / **0**.
 > - İki kiracıyla giriş yapıldı; her biri yalnız kendi personelini gördü.
-> - Globex'te departman oluşturuldu → `IKPro_globex`'te 1 satır, `IKPro_demo` ve `IKProDb`'de 0. API üzerinden de yalnız globex görüyor.
+> - Globex'te departman oluşturuldu → `Ekipzen_globex`'te 1 satır, `Ekipzen_demo` ve `EkipzenDb`'de 0. API üzerinden de yalnız globex görüyor.
 >
-> **Planla sapma — testler kendi katalog önekini kullanıyor.** Plan bunu öngörmüyordu ama şart oldu: demo kiracıların slug'ları sabit (`demo`, `globex`), dolayısıyla test koşumu da `IKPro_demo` üretirdi ve **geliştiricinin çalışan demo ortamını her `dotnet test`'te silerdi**. Katalog adı üretimi statik yardımcıdan `ITenantDatabaseNamer` servisine dönüştü; önek `Tenancy:DatabasePrefix` ile geliyor ve testler `IKPro_test_` kullanıyor.
+> **Planla sapma — testler kendi katalog önekini kullanıyor.** Plan bunu öngörmüyordu ama şart oldu: demo kiracıların slug'ları sabit (`demo`, `globex`), dolayısıyla test koşumu da `Ekipzen_demo` üretirdi ve **geliştiricinin çalışan demo ortamını her `dotnet test`'te silerdi**. Katalog adı üretimi statik yardımcıdan `ITenantDatabaseNamer` servisine dönüştü; önek `Tenancy:DatabasePrefix` ile geliyor ve testler `Ekipzen_test_` kullanıyor.
 >
 > `PlatformDbInitializer.EnsureDefaultTenantAsync` (Görev 1'de eklenmişti) **kaldırıldı**: varsayılan kiracı artık provizyon yolundan doğuyor, o metot ölü koda dönüşmüştü.
 >
@@ -272,7 +272,7 @@ Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki 
 >
 > **Taşımanın bedeli ve karşılığı:** platform context'inde **global kiracı filtresi YOKTUR** — kiracı veritabanında yapısal olarak imkânsız olan "filtreyi unutma" hatası burada mümkün. `GetSettingsQueryHandler` kiracıyı açıkça filtreliyor ve `AbonelikPlatformdaTests` bunu iki kiracıyla sabitliyor (filtre kalksaydı ikisi de aynı planı görürdü).
 >
-> **Test altyapısı:** `IKProApiFactory` artık koşum SONUNDA da süpürüyor — test host'unun açılışta kurduğu demo kiracıları koleksiyon boyunca yaşamak zorunda ve ancak host kapanınca silinebiliyor. Koşu sonrası sunucuda tek bir test kataloğu kalmıyor (elle doğrulandı).
+> **Test altyapısı:** `EkipzenApiFactory` artık koşum SONUNDA da süpürüyor — test host'unun açılışta kurduğu demo kiracıları koleksiyon boyunca yaşamak zorunda ve ancak host kapanınca silinebiliyor. Koşu sonrası sunucuda tek bir test kataloğu kalmıyor (elle doğrulandı).
 >
 > Doğrulama: 66 birim + 177 entegrasyon yeşil, `-warnaserror` temiz.
 
@@ -285,7 +285,7 @@ Gerçek müşteri verisi olmadığı için **taşıma script'i yazılmaz**: iki 
 **Açılış migrate etmez, doğrular:** platform veritabanı açılışta migrate olur (küçük, her zaman gerekli). Kiracı veritabanları **edilmez** — açılış süresi müşteri sayısıyla büyümemeli ve yarıda kalan bir dağıtım fark edilmeli. Şeması geride kalan kiracı 503 döner ve log yüksek sesle söyler; eski şemayla sessizce çalışmak veri bozulmasıdır.
 
 **Dokümantasyon:**
-- `docs/yedekleme-ve-kurtarma.md`: geri yükleme artık gerçek — `RESTORE DATABASE IKPro_acme … STOPAT` komutunu yaz. "Veritabanı kiracı bazına bölünmüyor" maddesini kapat.
+- `docs/yedekleme-ve-kurtarma.md`: geri yükleme artık gerçek — `RESTORE DATABASE Ekipzen_acme … STOPAT` komutunu yaz. "Veritabanı kiracı bazına bölünmüyor" maddesini kapat.
 - `docs/rehberler/07-veritabani-ve-migrationlar.md`: iki context değil artık N+1 veritabanı; migration koşucusu ve üretim adımları.
 - `docs/rehberler/06-multi-tenancy.md`: izolasyon artık fiziksel.
 - Plana "Uygulama sonucu" bölümü.
@@ -320,7 +320,7 @@ tek bir müşteri, diğerlerine dokunulmadan geri yüklenebilir hale geldi.
 | Görev 3 | — | Kütüğe **senkron** `GetDatabaseName` | `ResolveFor`, `AddDbContext` geri çağrısından çağrılıyor; async'e çevrilemez, sync-over-async da istenmedi |
 | Görev 4 | Davet ayrı adım | Ayrılmadı; yerine `resend-invite` ucu | Plandaki sıra riski azaltmıyordu; asıl eksik operatörün kurtarma aracıydı |
 | Görev 4 | — | `ITenantSchemaInitializer` (migration + **rol**) | Boş katalogda rol yoksa `AddToRoleAsync` sessizce düşer, admin yetkisiz kalır |
-| Görev 5 | — | `ITenantDatabaseNamer` (yapılandırılabilir önek) | Demo slug'ları sabit; testler geliştiricinin `IKPro_demo`'sunu silecekti |
+| Görev 5 | — | `ITenantDatabaseNamer` (yapılandırılabilir önek) | Demo slug'ları sabit; testler geliştiricinin `Ekipzen_demo`'sunu silecekti |
 | Görev 6 | Dosyalar en sonda | Dosyalar ÖNCE | `DROP DATABASE` geri alınamaz; eski gerekçe (rollback) düştü, KVKK riski belirleyici oldu |
 
 ### Yol boyunca bulunan gerçek hatalar
@@ -335,8 +335,8 @@ tek bir müşteri, diğerlerine dokunulmadan geri yüklenebilir hale geldi.
 ### Kapatılmayan, bilinen açıklar
 
 - ⚠️ **Yedekleme kiracı kataloglarını kapsamıyor.** `scripts/backup-restore-drill.ps1`
-  ve `register-backup-task.ps1` tek bir `-Database IKProDb` alıyor; o katalog artık
-  boş. Script'ler `IKPro[_]%` desenini keşfedip her kiracı için ayrı yedek almalı.
+  ve `register-backup-task.ps1` tek bir `-Database EkipzenDb` alıyor; o katalog artık
+  boş. Script'ler `Ekipzen[_]%` desenini keşfedip her kiracı için ayrı yedek almalı.
   **Faz 3'ün ilk maddesi budur.**
 - `POST /api/tenants/migrate` bir HTTP ucu; ayrı bir CLI komutu yok. Dağıtım
   script'i `curl -f` ile aynı sonucu alıyor, ama uygulama açılmadan migration

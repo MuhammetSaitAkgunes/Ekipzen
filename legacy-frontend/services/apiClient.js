@@ -1,4 +1,4 @@
-const API_BASE_URL = window.IKPRO_API_BASE_URL || "https://localhost:7001/api";
+const API_BASE_URL = window.EKIPZEN_API_BASE_URL || "https://localhost:7001/api";
 
 const getAuthHeaders = () => {
   const session = getCurrentSession?.();

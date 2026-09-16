@@ -1,8 +1,8 @@
 # 00 — Projeye Genel Bakış
 
-## İK Pro nedir?
+## Ekipzen nedir?
 
-İK Pro, insan kaynakları (İK) operasyonlarını tek yerden yöneten **çok müşterili
+Ekipzen, insan kaynakları (İK) operasyonlarını tek yerden yöneten **çok müşterili
 (multi-tenant) bir SaaS uygulamasıdır**. Her müşteri şirket kendi verisiyle
 izole çalışır; personel, izin, bordro, işe alım, uyum ve risk analizi gibi
 modülleri içerir.
@@ -48,10 +48,10 @@ flowchart LR
 Backend, **Clean Architecture** ile dört katmana ayrılır (detay: [02](02-mimari-clean-architecture.md)):
 
 ```
-IKPro.Domain          → İş varlıkları ve kuralları (bağımlılık yok)
-IKPro.Application     → Kullanım senaryoları (CQRS handler'lar, doğrulama)
-IKPro.Infrastructure → Dış dünya (EF Core, Identity, dosya, e-posta)
-IKPro.API            → HTTP uçları (controller'lar, kimlik doğrulama)
+Ekipzen.Domain          → İş varlıkları ve kuralları (bağımlılık yok)
+Ekipzen.Application     → Kullanım senaryoları (CQRS handler'lar, doğrulama)
+Ekipzen.Infrastructure → Dış dünya (EF Core, Identity, dosya, e-posta)
+Ekipzen.API            → HTTP uçları (controller'lar, kimlik doğrulama)
 ```
 
 Temel kural: **bağımlılık içe doğru akar.** Domain hiçbir şeye bağlı değildir;

@@ -36,7 +36,7 @@ try {
     } finally { Pop-Location }
     Push-Location (Join-Path $repoRoot 'backend')
     try {
-        & dotnet publish src/IKPro.API/IKPro.API.csproj -c Release -r win-x64 --self-contained false -p:UseAppHost=false -o $siteRoot
+        & dotnet publish src/Ekipzen.API/Ekipzen.API.csproj -c Release -r win-x64 --self-contained false -p:UseAppHost=false -o $siteRoot
         if ($LASTEXITCODE -ne 0) { throw 'Backend publish başarısız.' }
     } finally { Pop-Location }
 

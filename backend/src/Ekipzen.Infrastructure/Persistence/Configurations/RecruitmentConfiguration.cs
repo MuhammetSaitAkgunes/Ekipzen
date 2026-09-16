@@ -1,0 +1,109 @@
+using Ekipzen.Domain.Entities.Recruitment;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Ekipzen.Infrastructure.Persistence.Configurations;
+
+public class PositionConfiguration : IEntityTypeConfiguration<Position>
+{
+    public void Configure(EntityTypeBuilder<Position> b)
+    {
+        b.Property(p => p.Title).IsRequired().HasMaxLength(128);
+
+        b.HasOne(p => p.Department)
+            .WithMany()
+            .HasForeignKey(p => p.DepartmentId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
+{
+    public void Configure(EntityTypeBuilder<Candidate> b)
+    {
+        b.Property(c => c.Name).IsRequired().HasMaxLength(200);
+        b.Property(c => c.AppliedRole).IsRequired().HasMaxLength(128);
+        b.Property(c => c.Location).HasMaxLength(128);
+        b.Property(c => c.Summary).HasMaxLength(2000);
+
+        b.HasOne(c => c.Position)
+            .WithMany(p => p.Candidates)
+            .HasForeignKey(c => c.PositionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        b.HasIndex(c => c.Status);
+    }
+}
+
+public class CandidateSkillConfiguration : IEntityTypeConfiguration<CandidateSkill>
+{
+    public void Configure(EntityTypeBuilder<CandidateSkill> b)
+    {
+        b.Property(s => s.Name).IsRequired().HasMaxLength(128);
+
+        b.HasOne(s => s.Candidate)
+            .WithMany(c => c.Skills)
+            .HasForeignKey(s => s.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class CandidateExperienceConfiguration : IEntityTypeConfiguration<CandidateExperience>
+{
+    public void Configure(EntityTypeBuilder<CandidateExperience> b)
+    {
+        b.Property(x => x.Title).IsRequired().HasMaxLength(200);
+        b.Property(x => x.Company).IsRequired().HasMaxLength(200);
+        b.Property(x => x.Period).HasMaxLength(64);
+        b.Property(x => x.Description).HasMaxLength(2000);
+
+        b.HasOne(x => x.Candidate)
+            .WithMany(c => c.Experiences)
+            .HasForeignKey(x => x.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class InterviewNoteConfiguration : IEntityTypeConfiguration<InterviewNote>
+{
+    public void Configure(EntityTypeBuilder<InterviewNote> b)
+    {
+        b.Property(n => n.AuthorUserId).HasMaxLength(450);
+        b.Property(n => n.AuthorName).IsRequired().HasMaxLength(128);
+        b.Property(n => n.NoteType).IsRequired().HasMaxLength(64);
+        b.Property(n => n.Text).IsRequired().HasMaxLength(4000);
+
+        b.HasOne(n => n.Candidate)
+            .WithMany(c => c.Notes)
+            .HasForeignKey(n => n.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class CandidateEvaluationConfiguration : IEntityTypeConfiguration<CandidateEvaluation>
+{
+    public void Configure(EntityTypeBuilder<CandidateEvaluation> b)
+    {
+        b.Property(e => e.Criterion).IsRequired().HasMaxLength(128);
+
+        b.HasOne(e => e.Candidate)
+            .WithMany(c => c.Evaluations)
+            .HasForeignKey(e => e.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class CandidateHistoryConfiguration : IEntityTypeConfiguration<CandidateHistory>
+{
+    public void Configure(EntityTypeBuilder<CandidateHistory> b)
+    {
+        b.Property(h => h.Event).IsRequired().HasMaxLength(500);
+
+        b.HasOne(h => h.Candidate)
+            .WithMany(c => c.History)
+            .HasForeignKey(h => h.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasIndex(h => new { h.CandidateId, h.OccurredAtUtc });
+    }
+}

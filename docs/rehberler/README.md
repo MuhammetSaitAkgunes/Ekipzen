@@ -1,4 +1,4 @@
-# İK Pro — Geliştirici Rehberleri
+# Ekipzen — Geliştirici Rehberleri
 
 Bu klasör, projeye **sıfırdan** başlayan bir geliştiricinin (yeni mezun dahil)
 ortalama üzeri seviyede hakim olması için hazırlanmış rehber setidir. Her dosya
@@ -30,5 +30,5 @@ Aşağıdaki sırayla okumak en verimlisidir; ama her rehber kendi başına da a
 - **Tasarım kararları & planlar:** [`../superpowers/`](../superpowers/)
 - **Kök README (hızlı başlangıç):** [`../../README.md`](../../README.md)
 
-> **Not:** İK Pro bir **demo/MVP**'dir. Bordro ve mevzuat hesapları örnek amaçlıdır;
+> **Not:** Ekipzen bir **demo/MVP**'dir. Bordro ve mevzuat hesapları örnek amaçlıdır;
 > üretim öncesi mali müşavir/hukuk doğrulaması gerekir.

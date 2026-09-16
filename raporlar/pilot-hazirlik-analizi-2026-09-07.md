@@ -1,4 +1,4 @@
-# İK Pro — Pilot hazırlığı ve kod kalitesi raporu
+# Ekipzen — Pilot hazırlığı ve kod kalitesi raporu
 
 Tarih: 7 Eylül 2026
 İncelenen sürüm: main@309c4dee57bb1c68b99b51a8ea74276e44ec879a
@@ -78,7 +78,7 @@ TenantOnboarding, veritabanı ve rolleri oluşturduktan sonra admin davetiyle te
 
 **Kabul:** Sıfır tenant → davet → giriş → personel → izin talebi/onayı → ilk mevzuat taslağı. Demo seed çağrısı olmadan tüm yol tamamlanmalı.
 
-Kanıt: [TenantOnboarding](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Application/Features/Tenancy/TenantOnboarding.cs:89>), [TenantSchemaInitializer](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Infrastructure/Tenancy/TenantSchemaInitializer.cs:23>), [Demo katalogları](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Infrastructure/Persistence/AppDbContextInitializer.cs:396>).
+Kanıt: [TenantOnboarding](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Application/Features/Tenancy/TenantOnboarding.cs:89>), [TenantSchemaInitializer](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Infrastructure/Tenancy/TenantSchemaInitializer.cs:23>), [Demo katalogları](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Infrastructure/Persistence/AppDbContextInitializer.cs:396>).
 
 ### P0-2 — İlk onaylı mevzuat seti yoksa ayar ekranı kilitleniyor
 
@@ -90,7 +90,7 @@ Ayrıca son migration mevcut PayrollSettings kayıtlarını bilinçli olarak Dra
 
 **Kabul:** Boş set, yalnız taslak, gelecekte onaylı set, normal onaylı set ve API hatası senaryoları. Yükseltme sonrası operatör SQL müdahalesi olmadan ayarı tamamlayabilmeli.
 
-Kanıt: [SettingsTab: erken dönüş](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/frontend/src/features/payroll/SettingsTab.tsx:81>), [Onaylı set çözümü](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Application/Features/Payroll/Settings/PayrollSettingsHandlers.cs:14>), [Migration: Draft geçişi](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Infrastructure/Persistence/Migrations/20260907074322_AddStatutoryPayrollEngine.cs:205>).
+Kanıt: [SettingsTab: erken dönüş](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/frontend/src/features/payroll/SettingsTab.tsx:81>), [Onaylı set çözümü](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Application/Features/Payroll/Settings/PayrollSettingsHandlers.cs:14>), [Migration: Draft geçişi](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Infrastructure/Persistence/Migrations/20260907074322_AddStatutoryPayrollEngine.cs:205>).
 
 ### P0-3 — Mevcut dağıtım örneği gerçek müşteri kurulumu için yeterli değil
 
@@ -104,7 +104,7 @@ Compose Development modunda, geliştirme parolalarıyla ve SQL Developer edition
 
 Developer edition gerçek üretim hizmeti için lisanslanmış değildir; pilotun gerçek operasyon kullanımına uygun SQL lisansı seçilmelidir. [Microsoft lisans rehberi](https://www.microsoft.com/licensing/guidance/SQL). Proxy davranışı seçilen topolojiyle doğrulanmalıdır. [Microsoft proxy rehberi](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0).
 
-Kanıt: [Program](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.API/Program.cs:174>), [Compose](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/docker-compose.yml>), [Dosya deposu](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Infrastructure/Storage/LocalFileStorage.cs:25>).
+Kanıt: [Program](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.API/Program.cs:174>), [Compose](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/docker-compose.yml>), [Dosya deposu](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Infrastructure/Storage/LocalFileStorage.cs:25>).
 
 ### P0-4 — Yedek araçları mevcut; gerçek işletim güvencesi henüz kanıtlı değil
 
@@ -124,7 +124,7 @@ Kanıt: [Kurtarma kayıtları](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/�
 
 **Kabul:** Kullanıcı arayüzündeki her açık güvenlik/bildirim vaadi gerçek davranışla eşleşmeli.
 
-Kanıt: [SMS vaadi](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/frontend/src/features/settings/SettingsPage.tsx:277>), [Tercih kaydı](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Application/Features/Settings/SettingsHandlers.cs:126>), [Login akışı](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Infrastructure/Identity/IdentityService.cs:90>).
+Kanıt: [SMS vaadi](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/frontend/src/features/settings/SettingsPage.tsx:277>), [Tercih kaydı](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Application/Features/Settings/SettingsHandlers.cs:126>), [Login akışı](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs:90>).
 
 ### P0-6 — Bordro motoru, puantaj girdisinin doğruluğunu tek başına garanti etmiyor
 
@@ -136,7 +136,7 @@ Bordro motorundaki teyit alanları yararlı, fakat “fazla çalışma kontrol e
 
 **Kabul:** Puantaj → bordro girdi mutabakatı, dönem kilidi ve müşteri çalışma düzenine uygun sınır senaryoları.
 
-Kanıt: [Puantaj hesabı](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Application/Features/Attendance/AttendanceDtos.cs:92>), [Puantaj yazma yolları](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Application/Features/Attendance/Commands/AttendanceEntryCommands.cs:119>), [Bordro teyitleri](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Application/Features/Payroll/Periods/PayrollRowReadiness.cs:44>).
+Kanıt: [Puantaj hesabı](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Application/Features/Attendance/AttendanceDtos.cs:92>), [Puantaj yazma yolları](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Application/Features/Attendance/Commands/AttendanceEntryCommands.cs:119>), [Bordro teyitleri](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Application/Features/Payroll/Periods/PayrollRowReadiness.cs:44>).
 
 ### P0-7 — Finansal pilot için bağımsız kabul ve izin politikası gerekiyor
 
@@ -146,7 +146,7 @@ Bordro standart yurt içi özel sektör 4/a profiliyle sınırlandırılmış. S
 
 **Kabul:** Her farkın açıklanması; açıklanamayan parasal fark kalmaması; matrah/vergi/istisna/prim/net/işveren maliyeti eşleşmesi ve yazılı uzman kabulü. Desteklenmeyen profiller için onay kapısı kapalı kalmalı.
 
-Kanıt: [Kanuni kapsam](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/docs/bordro-kanuni-kapsam-ve-isletim.md>), [İstihdam izin politikası](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/IKPro.Domain/Entities/Organization/EmployeeEmployment.cs:16>).
+Kanıt: [Kanuni kapsam](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/docs/bordro-kanuni-kapsam-ve-isletim.md>), [İstihdam izin politikası](<C:/Users/Lenovo/OneDrive/Masaüstü/İK Pro UI/İK Pro/backend/src/Ekipzen.Domain/Entities/Organization/EmployeeEmployment.cs:16>).
 
 ### P1 — Pilot kapsamında yönetilecek diğer eksikler
 

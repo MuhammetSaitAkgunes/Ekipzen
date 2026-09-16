@@ -1434,7 +1434,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
             <span className="status-pill info">Demo</span>
           </div>
           <div className="slip-paper">
-            <div className="slip-brand"><strong>İK Pro</strong><span>{periodName} Bordro Pusulası</span></div>
+            <div className="slip-brand"><strong>Ekipzen</strong><span>{periodName} Bordro Pusulası</span></div>
             <div className="slip-row"><span>Personel</span><strong>{row.name}</strong></div>
             <div className="slip-row"><span>Çalışılan gün</span><strong>{row.workedDays}</strong></div>
             <div className="slip-row"><span>Fazla mesai</span><strong>{row.overtimeHours ?? 0} saat · {formatPayrollMoney(row.overtimePay)}</strong></div>
@@ -2024,7 +2024,7 @@ git commit -m "feat(frontend): bordro ayarları sekmesi — yıla göre versiyon
 **Files:**
 - Modify: `docs/gelistirme-gunlugu.md`; gerekirse küçük düzeltmeler.
 
-- [x] **Step 1: Backend + frontend'i başlat** (önceki dilimlerle aynı: `dotnet run --project src/IKPro.API --launch-profile http` + `npm run dev`)
+- [x] **Step 1: Backend + frontend'i başlat** (önceki dilimlerle aynı: `dotnet run --project src/Ekipzen.API --launch-profile http` + `npm run dev`)
 
 - [x] **Step 2: Duman testi** (Playwright, scratchpad script'i)
 

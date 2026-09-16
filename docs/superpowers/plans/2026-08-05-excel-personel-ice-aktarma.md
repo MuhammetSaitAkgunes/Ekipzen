@@ -28,17 +28,17 @@ Tasarım: `docs/superpowers/specs/2026-08-05-excel-personel-ice-aktarma-design.m
 | Dosya | Sorumluluk |
 | --- | --- |
 | `backend/Directory.Packages.props` | ClosedXML sürümü (değiştir) |
-| `backend/src/IKPro.Application/IKPro.Application.csproj` | ClosedXML referansı (değiştir) |
+| `backend/src/Ekipzen.Application/Ekipzen.Application.csproj` | ClosedXML referansı (değiştir) |
 | `.../Features/Employees/Import/ImportContracts.cs` | `ImportRow`, DTO'lar, `ValidatedImport` |
 | `.../Features/Employees/Import/EmployeeImportTemplate.cs` | Şablon `.xlsx` üretir |
 | `.../Features/Employees/Import/EmployeeImportParser.cs` | `.xlsx` → `ImportRow[]` |
 | `.../Features/Employees/Import/EmployeeImportValidator.cs` | `ImportRow[]` → geçerli model + sorunlar |
 | `.../Features/Employees/Import/PreviewEmployeeImportCommand.cs` | Önizleme akışı |
 | `.../Features/Employees/Import/ImportEmployeesCommand.cs` | Aktarım akışı (transaction) |
-| `backend/src/IKPro.API/Controllers/EmployeesController.cs` | 3 uç (değiştir) |
-| `backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportValidatorTests.cs` | Doğrulayıcı testleri |
-| `backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportParserTests.cs` | Ayrıştırıcı testleri |
-| `backend/tests/IKPro.Tests.Integration/Personnel/EmployeeImportTests.cs` | Uçtan uca |
+| `backend/src/Ekipzen.API/Controllers/EmployeesController.cs` | 3 uç (değiştir) |
+| `backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportValidatorTests.cs` | Doğrulayıcı testleri |
+| `backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportParserTests.cs` | Ayrıştırıcı testleri |
+| `backend/tests/Ekipzen.Tests.Integration/Personnel/EmployeeImportTests.cs` | Uçtan uca |
 | `frontend/src/features/personnel/ImportModal.tsx` | İçe aktarma modalı |
 | `frontend/src/features/personnel/ImportModal.test.tsx` | Modal testleri |
 | `frontend/src/features/personnel/queries.ts` | 2 mutation (değiştir) |
@@ -50,25 +50,25 @@ Tasarım: `docs/superpowers/specs/2026-08-05-excel-personel-ice-aktarma-design.m
 
 **Files:**
 - Modify: `backend/Directory.Packages.props`
-- Modify: `backend/src/IKPro.Application/IKPro.Application.csproj`
-- Create: `backend/src/IKPro.Application/Features/Employees/Import/EmployeeImportTemplate.cs`
-- Modify: `backend/src/IKPro.API/Controllers/EmployeesController.cs`
-- Create: `backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportTemplateTests.cs`
+- Modify: `backend/src/Ekipzen.Application/Ekipzen.Application.csproj`
+- Create: `backend/src/Ekipzen.Application/Features/Employees/Import/EmployeeImportTemplate.cs`
+- Modify: `backend/src/Ekipzen.API/Controllers/EmployeesController.cs`
+- Create: `backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportTemplateTests.cs`
 
 **Interfaces:**
 - Produces: `EmployeeImportTemplate.SutunBasliklari` (string[]), `EmployeeImportTemplate.Olustur()` → `byte[]`
 
 - [ ] **Step 1: Failing test yaz**
 
-`backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportTemplateTests.cs`:
+`backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportTemplateTests.cs`:
 
 ```csharp
 using ClosedXML.Excel;
 using FluentAssertions;
-using IKPro.Application.Features.Employees.Import;
+using Ekipzen.Application.Features.Employees.Import;
 using Xunit;
 
-namespace IKPro.Tests.Unit.Employees;
+namespace Ekipzen.Tests.Unit.Employees;
 
 public class EmployeeImportTemplateTests
 {
@@ -94,7 +94,7 @@ public class EmployeeImportTemplateTests
 
 - [ ] **Step 2: Testin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~EmployeeImportTemplate"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~EmployeeImportTemplate"`
 Expected: derleme hatası — `EmployeeImportTemplate` bulunamıyor.
 
 - [ ] **Step 3: ClosedXML'i ekle**
@@ -105,7 +105,7 @@ Expected: derleme hatası — `EmployeeImportTemplate` bulunamıyor.
     <PackageVersion Include="ClosedXML" Version="0.104.2" />
 ```
 
-`backend/src/IKPro.Application/IKPro.Application.csproj` içindeki `<ItemGroup>` bloğuna:
+`backend/src/Ekipzen.Application/Ekipzen.Application.csproj` içindeki `<ItemGroup>` bloğuna:
 
 ```xml
     <PackageReference Include="ClosedXML" />
@@ -113,12 +113,12 @@ Expected: derleme hatası — `EmployeeImportTemplate` bulunamıyor.
 
 - [ ] **Step 4: Şablonu yaz**
 
-`backend/src/IKPro.Application/Features/Employees/Import/EmployeeImportTemplate.cs`:
+`backend/src/Ekipzen.Application/Features/Employees/Import/EmployeeImportTemplate.cs`:
 
 ```csharp
 using ClosedXML.Excel;
 
-namespace IKPro.Application.Features.Employees.Import;
+namespace Ekipzen.Application.Features.Employees.Import;
 
 /// <summary>
 /// İçe aktarma şablonu. Başlıklar buradan üretilir ve ayrıştırıcı da buradan
@@ -169,12 +169,12 @@ public static class EmployeeImportTemplate
 
 - [ ] **Step 5: Testin geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~EmployeeImportTemplate"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~EmployeeImportTemplate"`
 Expected: PASS
 
 - [ ] **Step 6: Ucu ekle**
 
-`EmployeesController.cs` içine (mevcut `using` bloğuna `using IKPro.Application.Features.Employees.Import;` ekleyerek):
+`EmployeesController.cs` içine (mevcut `using` bloğuna `using Ekipzen.Application.Features.Employees.Import;` ekleyerek):
 
 ```csharp
     /// <summary>İçe aktarma şablonunu indirir (başlıklar sistemle garantili aynı).</summary>
@@ -184,7 +184,7 @@ Expected: PASS
     public IActionResult DownloadImportTemplate()
         => File(EmployeeImportTemplate.Olustur(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "ikpro-personel-sablonu.xlsx");
+            "ekipzen-personel-sablonu.xlsx");
 ```
 
 - [ ] **Step 7: Derle ve testleri koştur**
@@ -204,9 +204,9 @@ git commit -m "feat(personel): içe aktarma şablonu ucu (ClosedXML)"
 ### Task 2: Ayrıştırıcı
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Employees/Import/ImportContracts.cs`
-- Create: `backend/src/IKPro.Application/Features/Employees/Import/EmployeeImportParser.cs`
-- Create: `backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportParserTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Employees/Import/ImportContracts.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Employees/Import/EmployeeImportParser.cs`
+- Create: `backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportParserTests.cs`
 
 **Interfaces:**
 - Consumes: `EmployeeImportTemplate.SutunBasliklari`, `ZorunluSutunlar`
@@ -218,15 +218,15 @@ git commit -m "feat(personel): içe aktarma şablonu ucu (ClosedXML)"
 
 - [ ] **Step 1: Failing test yaz**
 
-`backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportParserTests.cs`:
+`backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportParserTests.cs`:
 
 ```csharp
 using ClosedXML.Excel;
 using FluentAssertions;
-using IKPro.Application.Features.Employees.Import;
+using Ekipzen.Application.Features.Employees.Import;
 using Xunit;
 
-namespace IKPro.Tests.Unit.Employees;
+namespace Ekipzen.Tests.Unit.Employees;
 
 public class EmployeeImportParserTests
 {
@@ -299,7 +299,7 @@ public class EmployeeImportParserTests
 
 - [ ] **Step 2: Testin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~EmployeeImportParser"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~EmployeeImportParser"`
 Expected: derleme hatası — `EmployeeImportParser` yok.
 
 - [ ] **Step 3: Sözleşmeleri yaz**
@@ -307,7 +307,7 @@ Expected: derleme hatası — `EmployeeImportParser` yok.
 `ImportContracts.cs`:
 
 ```csharp
-namespace IKPro.Application.Features.Employees.Import;
+namespace Ekipzen.Application.Features.Employees.Import;
 
 /// <summary>Ham satır: ayrıştırıcı çıktısı. Değerler yorumlanmamış metindir.</summary>
 public sealed record ImportRow(
@@ -336,7 +336,7 @@ public sealed record ImportResultDto(
 ```csharp
 using ClosedXML.Excel;
 
-namespace IKPro.Application.Features.Employees.Import;
+namespace Ekipzen.Application.Features.Employees.Import;
 
 /// <summary>
 /// .xlsx → ham satırlar. Yalnız OKUR: iş kuralı bilmez, doğrulama yapmaz.
@@ -413,7 +413,7 @@ public static class EmployeeImportParser
 
 - [ ] **Step 5: Testlerin geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~EmployeeImportParser"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~EmployeeImportParser"`
 Expected: 3 test PASS
 
 - [ ] **Step 6: Commit**
@@ -428,8 +428,8 @@ git commit -m "feat(personel): içe aktarma .xlsx ayrıştırıcısı"
 ### Task 3: Doğrulayıcı
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Employees/Import/EmployeeImportValidator.cs`
-- Create: `backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportValidatorTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Employees/Import/EmployeeImportValidator.cs`
+- Create: `backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportValidatorTests.cs`
 
 **Interfaces:**
 - Consumes: `ImportRow`, `ImportRowIssueDto`, `EmployeeUpsertModel`, `EmployeeProfileUpsertModel`
@@ -440,14 +440,14 @@ git commit -m "feat(personel): içe aktarma .xlsx ayrıştırıcısı"
 
 - [ ] **Step 1: Failing test yaz**
 
-`backend/tests/IKPro.Tests.Unit/Employees/EmployeeImportValidatorTests.cs`:
+`backend/tests/Ekipzen.Tests.Unit/Employees/EmployeeImportValidatorTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Features.Employees.Import;
+using Ekipzen.Application.Features.Employees.Import;
 using Xunit;
 
-namespace IKPro.Tests.Unit.Employees;
+namespace Ekipzen.Tests.Unit.Employees;
 
 public class EmployeeImportValidatorTests
 {
@@ -550,7 +550,7 @@ public class EmployeeImportValidatorTests
 
 - [ ] **Step 2: Testin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~EmployeeImportValidator"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~EmployeeImportValidator"`
 Expected: derleme hatası.
 
 - [ ] **Step 3: Doğrulayıcıyı yaz**
@@ -558,11 +558,11 @@ Expected: derleme hatası.
 `EmployeeImportValidator.cs`:
 
 ```csharp
-using IKPro.Application.Features.Employees.Upsert;
+using Ekipzen.Application.Features.Employees.Upsert;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace IKPro.Application.Features.Employees.Import;
+namespace Ekipzen.Application.Features.Employees.Import;
 
 public sealed record ValidatedImport(
     IReadOnlyList<EmployeeUpsertModel> Gecerli,
@@ -700,7 +700,7 @@ public static class EmployeeImportValidator
 
 - [ ] **Step 4: Testlerin geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~EmployeeImportValidator"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~EmployeeImportValidator"`
 Expected: 9 test PASS
 
 - [ ] **Step 5: Commit**
@@ -715,9 +715,9 @@ git commit -m "feat(personel): içe aktarma doğrulayıcısı"
 ### Task 4: Önizleme ucu
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Employees/Import/PreviewEmployeeImportCommand.cs`
-- Modify: `backend/src/IKPro.API/Controllers/EmployeesController.cs`
-- Create: `backend/tests/IKPro.Tests.Integration/Personnel/EmployeeImportTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Employees/Import/PreviewEmployeeImportCommand.cs`
+- Modify: `backend/src/Ekipzen.API/Controllers/EmployeesController.cs`
+- Create: `backend/tests/Ekipzen.Tests.Integration/Personnel/EmployeeImportTests.cs`
 
 **Interfaces:**
 - Consumes: `EmployeeImportParser.Ayristir`, `EmployeeImportValidator.Dogrula`
@@ -725,21 +725,21 @@ git commit -m "feat(personel): içe aktarma doğrulayıcısı"
 
 - [ ] **Step 1: Failing entegrasyon testi yaz**
 
-`backend/tests/IKPro.Tests.Integration/Personnel/EmployeeImportTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Personnel/EmployeeImportTests.cs`:
 
 ```csharp
 using ClosedXML.Excel;
 using FluentAssertions;
-using IKPro.Application.Features.Auth;
-using IKPro.Application.Features.Employees.Import;
+using Ekipzen.Application.Features.Auth;
+using Ekipzen.Application.Features.Employees.Import;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
-namespace IKPro.Tests.Integration.Personnel;
+namespace Ekipzen.Tests.Integration.Personnel;
 
 [Collection(ApiCollection.Name)]
-public sealed class EmployeeImportTests(IKProApiFactory factory)
+public sealed class EmployeeImportTests(EkipzenApiFactory factory)
 {
     private const string DemoPassword = "demo123";
 
@@ -810,7 +810,7 @@ public sealed class EmployeeImportTests(IKProApiFactory factory)
 
 - [ ] **Step 2: Testin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~EmployeeImportTests"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~EmployeeImportTests"`
 Expected: derleme hatası ya da 404.
 
 - [ ] **Step 3: Komutu yaz**
@@ -818,11 +818,11 @@ Expected: derleme hatası ya da 404.
 `PreviewEmployeeImportCommand.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
+using Ekipzen.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace IKPro.Application.Features.Employees.Import;
+namespace Ekipzen.Application.Features.Employees.Import;
 
 public sealed record PreviewEmployeeImportCommand(Stream Dosya) : IRequest<ImportPreviewDto>;
 
@@ -897,7 +897,7 @@ public sealed class PreviewEmployeeImportCommandHandler(IApplicationDbContext co
 
 - [ ] **Step 5: Testlerin geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~EmployeeImportTests"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~EmployeeImportTests"`
 Expected: 2 test PASS
 
 - [ ] **Step 6: Commit**
@@ -912,9 +912,9 @@ git commit -m "feat(personel): içe aktarma önizleme ucu"
 ### Task 5: Aktarım ucu
 
 **Files:**
-- Create: `backend/src/IKPro.Application/Features/Employees/Import/ImportEmployeesCommand.cs`
-- Modify: `backend/src/IKPro.API/Controllers/EmployeesController.cs`
-- Modify: `backend/tests/IKPro.Tests.Integration/Personnel/EmployeeImportTests.cs`
+- Create: `backend/src/Ekipzen.Application/Features/Employees/Import/ImportEmployeesCommand.cs`
+- Modify: `backend/src/Ekipzen.API/Controllers/EmployeesController.cs`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/Personnel/EmployeeImportTests.cs`
 
 **Interfaces:**
 - Consumes: `ImportLookups.YukleAsync`, `EmployeeImportValidator.Dogrula`
@@ -961,7 +961,7 @@ git commit -m "feat(personel): içe aktarma önizleme ucu"
 
 - [ ] **Step 2: Testin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~EmployeeImportTests"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~EmployeeImportTests"`
 Expected: 404 (uç yok).
 
 - [ ] **Step 3: Komutu yaz**
@@ -969,12 +969,12 @@ Expected: 404 (uç yok).
 `ImportEmployeesCommand.cs`:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
-using IKPro.Domain.Entities.Organization;
-using IKPro.Application.Features.Employees.Upsert;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Organization;
+using Ekipzen.Application.Features.Employees.Upsert;
 using MediatR;
 
-namespace IKPro.Application.Features.Employees.Import;
+namespace Ekipzen.Application.Features.Employees.Import;
 
 public sealed record ImportEmployeesCommand(Stream Dosya) : IRequest<ImportResultDto>;
 

@@ -1,0 +1,6 @@
+@Ekipzen.API_HostAddress = http://localhost:5053
+
+GET {{Ekipzen.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

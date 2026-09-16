@@ -1,6 +1,6 @@
 # KVKK & Kiracı Veri İzolasyonu
 
-> **Amaç:** İK Pro çok-kiracılı (multi-tenant) SaaS mimarisinde her müşteri
+> **Amaç:** Ekipzen çok-kiracılı (multi-tenant) SaaS mimarisinde her müşteri
 > şirketinin (kiracının) verisinin nasıl ayrıştırıldığını, erişimin nasıl
 > denetlendiğini ve KVKK yükümlülüklerinin teknik karşılıklarını **tek yerde**
 > belgelemek. Bu doküman hem geliştirici hem de veri sorumlusu/DPO içindir.
@@ -16,7 +16,7 @@
 
 ## 1. İzolasyon modeli — kiracı başına veritabanı + `TenantId` ayraç
 
-İK Pro **kiracı başına ayrı veritabanı** modeli kullanır: her müşteri şirketin
+Ekipzen **kiracı başına ayrı veritabanı** modeli kullanır: her müşteri şirketin
 verisi kendi MSSQL kataloğunda durur (`Tenants.DatabaseName`), bağlantı kiracıdan
 çözülür. Ayrım böylece bir sorgu kuralına değil, **fiziksel sınıra** dayanır.
 
@@ -50,8 +50,8 @@ kılıyor — kademeli taşıma yolu açık kalsın diye.
   otomatik olarak aktif `TenantId` ile damgalanır (uygulama kodu set etmek
   zorunda değildir).
 
-Kaynak: `IKPro.Domain/Common/ITenantScoped.cs`,
-`IKPro.Infrastructure/Persistence/AppDbContext.cs`,
+Kaynak: `Ekipzen.Domain/Common/ITenantScoped.cs`,
+`Ekipzen.Infrastructure/Persistence/AppDbContext.cs`,
 `.../Interceptors/AuditableEntityInterceptor.cs`.
 
 ---
@@ -77,12 +77,12 @@ göremediği için dosyaya da erişemez (404). Bu, blob depolamada fiziksel ayr�
 gerektirmeden mantıksal izolasyon sağlar. (İleride şifreli/kiracı-kapsamlı
 fiziksel depolama bir sertleştirme adımıdır — bkz. Bölüm 7.)
 
-Kaynak: `IKPro.Domain/ReadModels/*`, view/fonksiyon migration'ları
-(`...TenantAwareViews.cs`), `IKPro.Infrastructure/Storage/LocalFileStorage.cs`.
+Kaynak: `Ekipzen.Domain/ReadModels/*`, view/fonksiyon migration'ları
+(`...TenantAwareViews.cs`), `Ekipzen.Infrastructure/Storage/LocalFileStorage.cs`.
 
 ### Kanıt: izolasyon testleri
 
-İzolasyon iddiaları test edilir, varsayılmaz. `IKPro.Tests.Integration/Tenancy/`:
+İzolasyon iddiaları test edilir, varsayılmaz. `Ekipzen.Tests.Integration/Tenancy/`:
 
 - `TenantIsolationTests` — Kiracı A, Kiracı B'nin departman/personel verisini görmez.
 - `TenantViewIsolationTests` — uyum hazırlık view'i kiracı başına ayrışır (global
@@ -122,8 +122,8 @@ politikasına tabidir. Platform anahtarı ve JWT sırrı üretimde **ortam
 değişkeninden** gelir; commit'li dev placeholder'lar prod'da fail-fast ile
 reddedilir.
 
-Kaynak: `IKPro.API/Services/CurrentTenant.cs`,
-`IKPro.API/Controllers/TenancyController.cs`, `IKPro.API/Program.cs`.
+Kaynak: `Ekipzen.API/Services/CurrentTenant.cs`,
+`Ekipzen.API/Controllers/TenancyController.cs`, `Ekipzen.API/Program.cs`.
 
 ---
 
@@ -143,8 +143,8 @@ kullanılmaz:
 Bu, bir kiracının başka bir kiracının kullanıcısı için hesap ele geçirmesini
 önler ve KVKK "uygun güvenlik önlemleri" ilkesine hizmet eder.
 
-Kaynak: `IKPro.Application/Features/Auth/AcceptInvite/`,
-`IKPro.Infrastructure/Identity/IdentityService.cs`, `frontend/src/auth/AcceptInvitePage.tsx`.
+Kaynak: `Ekipzen.Application/Features/Auth/AcceptInvite/`,
+`Ekipzen.Infrastructure/Identity/IdentityService.cs`, `frontend/src/auth/AcceptInvitePage.tsx`.
 
 ---
 
@@ -167,7 +167,7 @@ sorusuna kiracı-kapsamlı yanıt verebilmeyi hedefler.
 |---|---|
 | **Amaçla sınırlılık / erişim denetimi** | Kiracı global filtresi + rol policy'leri + JWT tenant claim. Kiracı ve rol dışına veri gitmez. |
 | **Veri güvenliği (uygun önlemler)** | Şifresiz davet akışı, refresh token rotasyonu, rate limiting, sırların env'den gelmesi, HTTPS (deployment sorumluluğu). |
-| **Veri sorumlusu / veri işleyen ayrımı** | Her müşteri şirketi kendi verisinin **veri sorumlusudur**; İK Pro işletmecisi **veri işleyendir**. Kiracı ayrımı bu sınırın teknik zeminidir. |
+| **Veri sorumlusu / veri işleyen ayrımı** | Her müşteri şirketi kendi verisinin **veri sorumlusudur**; Ekipzen işletmecisi **veri işleyendir**. Kiracı ayrımı bu sınırın teknik zeminidir. |
 | **Hesap verebilirlik / izlenebilirlik** | Kiracı-kapsamlı audit log (Bölüm 5). |
 | **Saklama süresi / silme** | Kiracı pasifleştirme + **otomatik kalıcı silme** (`DELETE /api/tenants/{id}`, confirm-slug) ve doğrulanmamış kiracı temizliği mevcut; anonimleştirme varyantı yol haritasında (Bölüm 7). |
 | **İlgili kişi hakları (erişim, düzeltme, silme, taşınabilirlik)** | Erişim/düzeltme uygulama içinden; **kendi veri dışa aktarımı** (`GET /api/me/data-export`, JSON) ve **kiracı silme** (`DELETE /api/tenants/{id}`) mevcut; anonimleştirme varyantı yol haritasında (Bölüm 7). |

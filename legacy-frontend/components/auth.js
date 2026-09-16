@@ -4,7 +4,7 @@ const AuthScreen = (mode = "login") => `
       <div class="auth-brand">
         <div class="brand-mark"><i aria-hidden="true" class="fa-solid fa-users-gear"></i></div>
         <div>
-          <strong>İK Pro</strong>
+          <strong>Ekipzen</strong>
           <span>HR MASTER Suite</span>
         </div>
       </div>

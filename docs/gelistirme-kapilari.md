@@ -1,4 +1,4 @@
-# İK Pro — Geliştirme ve Satışa Hazırlık Kapıları
+# Ekipzen — Geliştirme ve Satışa Hazırlık Kapıları
 
 **Son güncelleme:** 2026-09-01
 

@@ -46,12 +46,12 @@ indeksi bulunmadığı görüldü ve eklendi (29 tablo + 2 Identity tablosu).
 
 | Dosya | Sorumluluk |
 | --- | --- |
-| `backend/src/IKPro.Application/Common/Interfaces/IFileStorage.cs` | `DeleteTenantSpaceAsync` eklenir (değiştir) |
-| `backend/src/IKPro.Infrastructure/Storage/LocalFileStorage.cs` | Kiracı ön eki + alan silme (değiştir) |
-| `backend/src/IKPro.Infrastructure/DependencyInjection.cs` | Singleton → Scoped (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs` | Dosya silmeyi alan silmeye çevir (değiştir) |
-| `backend/tests/IKPro.Tests.Unit/Storage/LocalFileStorageTests.cs` | Kiracı ön eki testleri (değiştir) |
-| `backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs` | Foto + logo purge testi (değiştir) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/IFileStorage.cs` | `DeleteTenantSpaceAsync` eklenir (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Storage/LocalFileStorage.cs` | Kiracı ön eki + alan silme (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs` | Singleton → Scoped (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs` | Dosya silmeyi alan silmeye çevir (değiştir) |
+| `backend/tests/Ekipzen.Tests.Unit/Storage/LocalFileStorageTests.cs` | Kiracı ön eki testleri (değiştir) |
+| `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs` | Foto + logo purge testi (değiştir) |
 | `scripts/migrate-files-to-tenant-layout.ps1` | Tek seferlik migrasyon (oluştur) |
 | `scripts/backup-restore-drill.ps1` | Kiracı başına arşiv (değiştir) |
 | `docs/yedekleme-ve-kurtarma.md` | Kiracı bazlı yedek bölümü (değiştir) |
@@ -61,10 +61,10 @@ indeksi bulunmadığı görüldü ve eklendi (29 tablo + 2 Identity tablosu).
 ### Task 1: Depo katmanı kiracıya bağlanır
 
 **Files:**
-- Modify: `backend/src/IKPro.Application/Common/Interfaces/IFileStorage.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Storage/LocalFileStorage.cs`
-- Modify: `backend/src/IKPro.Infrastructure/DependencyInjection.cs:94`
-- Modify: `backend/tests/IKPro.Tests.Unit/Storage/LocalFileStorageTests.cs`
+- Modify: `backend/src/Ekipzen.Application/Common/Interfaces/IFileStorage.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Storage/LocalFileStorage.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs:94`
+- Modify: `backend/tests/Ekipzen.Tests.Unit/Storage/LocalFileStorageTests.cs`
 
 **Interfaces:**
 - Consumes: `ICurrentTenant` (`int? TenantId`, `int TenantIdOrThrow()`, `void Impersonate(int)`)
@@ -75,16 +75,16 @@ indeksi bulunmadığı görüldü ve eklendi (29 tablo + 2 Identity tablosu).
 
 - [ ] **Step 1: Failing testleri yaz**
 
-`backend/tests/IKPro.Tests.Unit/Storage/LocalFileStorageTests.cs` dosyasının TAMAMINI şununla değiştir:
+`backend/tests/Ekipzen.Tests.Unit/Storage/LocalFileStorageTests.cs` dosyasının TAMAMINI şununla değiştir:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Infrastructure.Storage;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Infrastructure.Storage;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
-namespace IKPro.Tests.Unit.Storage;
+namespace Ekipzen.Tests.Unit.Storage;
 
 /// <summary>
 /// Depo kiracıya bağlıdır: her işlem {kök}/tenant-{id}/ altında geçer.
@@ -93,7 +93,7 @@ namespace IKPro.Tests.Unit.Storage;
 /// </summary>
 public class LocalFileStorageTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"ikpro-storage-{Guid.NewGuid():N}");
+    private readonly string _root = Path.Combine(Path.GetTempPath(), $"ekipzen-storage-{Guid.NewGuid():N}");
     private readonly TestKiraci _kiraci = new(1);
 
     private sealed class TestKiraci(int? tenantId) : ICurrentTenant
@@ -200,7 +200,7 @@ public class LocalFileStorageTests : IDisposable
 
 - [ ] **Step 2: Testlerin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~LocalFileStorage"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~LocalFileStorage"`
 Expected: derleme hatası — `LocalFileStorage` iki argümanlı yapıcı ve `TenantFolder` / `DeleteTenantSpaceAsync` yok.
 
 - [ ] **Step 3: Arayüze alan silmeyi ekle**
@@ -222,10 +222,10 @@ Expected: derleme hatası — `LocalFileStorage` iki argümanlı yapıcı ve `Te
 `LocalFileStorage.cs` dosyasının TAMAMINI şununla değiştir:
 
 ```csharp
-using IKPro.Application.Common.Interfaces;
+using Ekipzen.Application.Common.Interfaces;
 using Microsoft.Extensions.Configuration;
 
-namespace IKPro.Infrastructure.Storage;
+namespace Ekipzen.Infrastructure.Storage;
 
 /// <summary>
 /// Yerel disk dosya deposu. Kök dizin "Storage:Root" ayarından gelir.
@@ -360,7 +360,7 @@ public sealed class LocalFileStorage : IFileStorage
 
 - [ ] **Step 6: Testlerin geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Unit --filter "FullyQualifiedName~LocalFileStorage"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Unit --filter "FullyQualifiedName~LocalFileStorage"`
 Expected: 6 test PASS
 
 - [ ] **Step 7: Tüm backend testlerini koştur**
@@ -380,8 +380,8 @@ git commit -m "feat(depo): dosyaları kiracı klasörüne böl"
 ### Task 2: Purge tüm dosya türlerini kapsar
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Modify: `backend/tests/IKPro.Tests.Integration/Tenancy/TenantPurgeTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantPurgeTests.cs`
 
 **Interfaces:**
 - Consumes: `IFileStorage.DeleteTenantSpaceAsync(int, CancellationToken)`, `LocalFileStorage.TenantFolder(int)`
@@ -389,7 +389,7 @@ git commit -m "feat(depo): dosyaları kiracı klasörüne böl"
 
 - [ ] **Step 1: Failing test yaz**
 
-`TenantPurgeTests.cs` içine yeni test ekle (sınıfın mevcut yardımcılarını kullanır; `Storage:Root` fabrikada `IKProApiFactory.StorageRoot` olarak açıktır):
+`TenantPurgeTests.cs` içine yeni test ekle (sınıfın mevcut yardımcılarını kullanır; `Storage:Root` fabrikada `EkipzenApiFactory.StorageRoot` olarak açıktır):
 
 ```csharp
     [Fact]
@@ -413,11 +413,11 @@ git commit -m "feat(depo): dosyaları kiracı klasörüne böl"
 
 > **Not:** `ProvisionTenantAsync` ve `PurgeTenantAsync` bu dosyada zaten var; yoksa
 > mevcut purge testindeki provizyon/purge çağrılarını birebir kopyalayarak
-> yerel yardımcı olarak ekle. `using IKPro.Infrastructure.Storage;` gerekir.
+> yerel yardımcı olarak ekle. `using Ekipzen.Infrastructure.Storage;` gerekir.
 
 - [ ] **Step 2: Testin başarısız olduğunu gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~FotografVeLogo"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~FotografVeLogo"`
 Expected: FAIL — dizin hâlâ duruyor (purge yalnız evrak yollarını siliyor).
 
 - [ ] **Step 3: Purge'ü alan silmeye çevir**
@@ -462,7 +462,7 @@ Ardından dosya silme döngüsünü (transaction'dan SONRAKİ blok) şununla de�
 
 - [ ] **Step 4: Testin geçtiğini gör**
 
-Run: `cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~Purge"`
+Run: `cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~Purge"`
 Expected: yeni test dahil tüm purge testleri PASS
 
 - [ ] **Step 5: Tüm backend testlerini koştur**
@@ -523,7 +523,7 @@ WHERE LogoPath IS NOT NULL AND LogoPath <> '';
     sessizce silinmez.
 
 .PARAMETER StoragePath
-    Depo kökü (ör. backend\src\IKPro.API\App_Data\storage).
+    Depo kökü (ör. backend\src\Ekipzen.API\App_Data\storage).
 
 .PARAMETER Database
     Veritabanı adı.
@@ -532,7 +532,7 @@ WHERE LogoPath IS NOT NULL AND LogoPath <> '';
     SQL Server örneği. Varsayılan: localhost
 
 .EXAMPLE
-    pwsh scripts/migrate-files-to-tenant-layout.ps1 -StoragePath .\App_Data\storage -Database IKProDb -WhatIf
+    pwsh scripts/migrate-files-to-tenant-layout.ps1 -StoragePath .\App_Data\storage -Database EkipzenDb -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -612,15 +612,15 @@ exit 0
 
 - [ ] **Step 2: Önce deneme modunda koştur**
 
-Run: `pwsh scripts/migrate-files-to-tenant-layout.ps1 -StoragePath "backend/src/IKPro.API/App_Data/storage" -Database IKProDb -WhatIf`
+Run: `pwsh scripts/migrate-files-to-tenant-layout.ps1 -StoragePath "backend/src/Ekipzen.API/App_Data/storage" -Database EkipzenDb -WhatIf`
 Expected: taşınacak dosyalar listelenir, **hiçbiri taşınmaz**.
 
 - [ ] **Step 3: Gerçekten koştur ve doğrula**
 
-Run: `pwsh scripts/migrate-files-to-tenant-layout.ps1 -StoragePath "backend/src/IKPro.API/App_Data/storage" -Database IKProDb`
+Run: `pwsh scripts/migrate-files-to-tenant-layout.ps1 -StoragePath "backend/src/Ekipzen.API/App_Data/storage" -Database EkipzenDb`
 Expected: dosyalar `tenant-{id}/` altına taşınır; `outbox/` yerinde kalır; sahipsizler raporlanır ama silinmez.
 
-Doğrulama: `find backend/src/IKPro.API/App_Data/storage -type d` → `tenant-1/documents-emp-14` benzeri yapı görünür.
+Doğrulama: `find backend/src/Ekipzen.API/App_Data/storage -type d` → `tenant-1/documents-emp-14` benzeri yapı görünür.
 
 - [ ] **Step 4: Commit**
 
@@ -696,10 +696,10 @@ Ve sonuç loglamasındaki alanı güncelle:
 
 Run:
 ```powershell
-pwsh scripts/backup-restore-drill.ps1 -Database IKProDb `
+pwsh scripts/backup-restore-drill.ps1 -Database EkipzenDb `
   -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup" `
-  -StoragePath "backend/src/IKPro.API/App_Data/storage" `
-  -OffsitePath "$env:TEMP\ikpro-offsite" -LogPath "$env:TEMP\ikpro-yedek-log.jsonl"
+  -StoragePath "backend/src/Ekipzen.API/App_Data/storage" `
+  -OffsitePath "$env:TEMP\ekipzen-offsite" -LogPath "$env:TEMP\ekipzen-yedek-log.jsonl"
 ```
 Expected: çıkış kodu 0; her kiracı için ayrı zip üretilir ve off-site kopyalanıp doğrulanır.
 

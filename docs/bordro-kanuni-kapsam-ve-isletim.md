@@ -6,7 +6,7 @@
 
 ## Güvence yaklaşımı
 
-İK Pro bordro motoru yalnız açıkça desteklediği çalışan ve ödeme profilinde
+Ekipzen bordro motoru yalnız açıkça desteklediği çalışan ve ödeme profilinde
 hesap üretir. Bir alan sınıflandırılmamışsa veya gerekli kanıt/referans yoksa
 satır hesaplanabilir bir ön izleme gösterebilir; ancak **onaylanamaz**. Özel
 statüyü standart çalışan gibi varsayarak sessizce yanlış bordro üretmek yasaktır.

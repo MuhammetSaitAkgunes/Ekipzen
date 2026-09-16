@@ -1,4 +1,4 @@
-# İK Pro — kontrollü pilot hazırlık planı
+# Ekipzen — kontrollü pilot hazırlık planı
 
 Tarih: 8 Eylül 2026. Başlangıç analizi: `raporlar/pilot-hazirlik-analizi-2026-09-07.md`.
 

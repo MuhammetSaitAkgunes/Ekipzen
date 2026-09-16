@@ -49,7 +49,7 @@
     Saatlik günlük yedeği bundan bağımsız, her saat başı çalışır.
 
 .PARAMETER TaskName
-    Günlük görevin adı. Varsayılan: IKPro-YedekTatbikati
+    Günlük görevin adı. Varsayılan: Ekipzen-YedekTatbikati
     Saatlik görev "<TaskName>-Log" adıyla kaydedilir.
 
 .PARAMETER TaskUser
@@ -60,16 +60,16 @@
 
 .EXAMPLE
     # Önce ne yapacağını gör:
-    powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" -WhatIf
+    powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen" -WhatIf
 
 .EXAMPLE
     # Yönetici PowerShell'de kaydet:
-    powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
-        -OffsitePath "\\yedek-sunucu\ikpro" -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl"
+    powershell -File scripts\register-backup-task.ps1 -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen" `
+        -OffsitePath "\\yedek-sunucu\ekipzen" -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen\tatbikat.jsonl"
 
 .EXAMPLE
     # Kaldırmak için:
-    Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati -Confirm:$false
+    Unregister-ScheduledTask -TaskName Ekipzen-YedekTatbikati -Confirm:$false
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -83,7 +83,7 @@ param(
     [string]$StoragePath,
     [string]$AlertWebhookUrl,
     [string]$At = "02:00",
-    [string]$TaskName = "IKPro-YedekTatbikati",
+    [string]$TaskName = "Ekipzen-YedekTatbikati",
 
     # Görevin çalışacağı Windows hesabı. Varsayılan SYSTEM (şifre saklamayı
     # gerektirmez). HANGİSİ SEÇİLİRSE SEÇİLSİN, o hesabın SQL Server'da sysadmin

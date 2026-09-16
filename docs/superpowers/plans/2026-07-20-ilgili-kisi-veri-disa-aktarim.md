@@ -19,9 +19,9 @@
 
 ## Dosya Yapısı
 
-- **Create:** `backend/src/IKPro.Application/Features/Auth/DataExport/GetMyDataExportQuery.cs` — DTO'lar + query + handler.
-- **Modify:** `backend/src/IKPro.API/Controllers/MeController.cs` — `GET /api/me/data-export`.
-- **Create:** `backend/tests/IKPro.Tests.Integration/Auth/MyDataExportTests.cs`
+- **Create:** `backend/src/Ekipzen.Application/Features/Auth/DataExport/GetMyDataExportQuery.cs` — DTO'lar + query + handler.
+- **Modify:** `backend/src/Ekipzen.API/Controllers/MeController.cs` — `GET /api/me/data-export`.
+- **Create:** `backend/tests/Ekipzen.Tests.Integration/Auth/MyDataExportTests.cs`
 - **Modify:** `frontend/src/layout/AppShell.tsx` — "Verilerimi indir" ikon butonu.
 - **Modify:** `docs/kvkk-veri-izolasyonu.md`, `docs/gelistirme-gunlugu.md`.
 
@@ -35,21 +35,21 @@
 - [ ] **Step 1: Failing entegrasyon testi**
 
 ```csharp
-// backend/tests/IKPro.Tests.Integration/Auth/MyDataExportTests.cs
+// backend/tests/Ekipzen.Tests.Integration/Auth/MyDataExportTests.cs
 using FluentAssertions;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace IKPro.Tests.Integration.Auth;
+namespace Ekipzen.Tests.Integration.Auth;
 
 /// <summary>
 /// Self-servis veri dışa aktarımı (KVKK taşınabilirlik): oturum açmış kullanıcı kendi
 /// verisini JSON olarak indirir. Yalnız kendi verisi; başka çalışanınki sızmaz.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public sealed class MyDataExportTests(IKProApiFactory factory)
+public sealed class MyDataExportTests(EkipzenApiFactory factory)
 {
     private const string DemoPassword = "demo123";
 
@@ -58,7 +58,7 @@ public sealed class MyDataExportTests(IKProApiFactory factory)
         var anonymous = factory.CreateClient();
         var response = await anonymous.PostAsJsonAsync("/api/auth/login", new { email, password = DemoPassword });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var auth = (await response.Content.ReadFromJsonAsync<IKPro.Application.Features.Auth.AuthResponse>())!;
+        var auth = (await response.Content.ReadFromJsonAsync<Ekipzen.Application.Features.Auth.AuthResponse>())!;
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
         return client;
@@ -101,13 +101,13 @@ Not: `ik@hrmaster.local` seed'de gerçekten EmployeeId'siz mi kontrol et (`AppDb
 - [ ] **Step 3: Query + handler**
 
 ```csharp
-// backend/src/IKPro.Application/Features/Auth/DataExport/GetMyDataExportQuery.cs
-using IKPro.Application.Common.Interfaces;
+// backend/src/Ekipzen.Application/Features/Auth/DataExport/GetMyDataExportQuery.cs
+using Ekipzen.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace IKPro.Application.Features.Auth.DataExport;
+namespace Ekipzen.Application.Features.Auth.DataExport;
 
 public sealed record AccountInfo(string UserId, string Name, string Email, IReadOnlyList<string> Roles);
 public sealed record EmployeeInfo(
@@ -208,7 +208,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
             DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
-        var fileName = $"ikpro-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";
+        var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";
         return (json, fileName);
     }
 }
@@ -218,7 +218,7 @@ Not: `PayrollEmployee.Period`/`Status` alan adlarını `PayrollDtos.cs`/entity'd
 
 - [ ] **Step 4: Controller ucu**
 
-`MeController.cs`'e ekle (`using IKPro.Application.Features.Auth.DataExport;`):
+`MeController.cs`'e ekle (`using Ekipzen.Application.Features.Auth.DataExport;`):
 
 ```csharp
 [HttpGet("data-export")]
@@ -254,7 +254,7 @@ const handleDataExport = async () => {
     const { blob, fileName } = await apiDownload("/me/data-export");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = fileName ?? "ikpro-verilerim.json";
+    link.download = fileName ?? "ekipzen-verilerim.json";
     document.body.appendChild(link);
     link.click();
     link.remove();

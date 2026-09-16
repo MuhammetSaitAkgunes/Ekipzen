@@ -7,7 +7,7 @@ Tarih: 8 Eylül 2026. Durum: yerel yazılım/paket doğrulaması tamamlandı; Gi
 - Production açılışı; demo seed, örnek/zayıf sır, geniş host/CORS, yanlış davet origin'i, güvensiz SQL bağlantısı, eksik SMTP ve geçici veri yollarıyla çalışmayı reddeder. Ayar hatalarında sır değerleri yazılmaz.
 - IIS in-process/x64 hedefi; aynı origin React + API, HTTPS yönlendirmesi, HSTS, CSP ve API `no-store` başlıkları. Bilinmeyen host reddedilir; keyfî forwarded başlıkları güvenilir kabul edilmez.
 - Kalıcı evrak ve anahtar dizinleri yayın dizininden ayrıdır. Data Protection anahtarları özel anahtarlı RSA PFX ile şifrelenir; release dizini değişse de çözülebilir. Loglar dış dizinde günlük/10 MB eşiğiyle döner; 14 dosya tutulur.
-- Harici `IKPRO_CONFIG_FILE` yapılandırması ve bağlantı kurmayan `--verify-production=true` kontrolü. Hatalı açılış artık sıfır olmayan çıkış kodu verir.
+- Harici `EKIPZEN_CONFIG_FILE` yapılandırması ve bağlantı kurmayan `--verify-production=true` kontrolü. Hatalı açılış artık sıfır olmayan çıkış kodu verir.
 - Üretimde en az 12 karakter/büyük harf/rakam şifre politikası. Demo ön doldurma ve demo rol değiştirme yalnız geliştirmede kalır. Sabit sahte giriş skorları kaldırıldı.
 - İşlevsiz SMS 2FA ve haftalık rapor seçenekleri UI'da kullanılamıyor olarak gösterilir, API etkinleştirme girişimini reddeder. Eski `true` kaydı etkin özellik gibi gösterilmez.
 - Yeni, mevcut paketi ezmeyen Windows paket betiği; dosya SHA-256 manifesti; sır içermeyen örnek yapılandırma; salt okunur sunucu envanteri ve işletim kılavuzu. CI Node 24 ile üretim build'i de çalıştıracak şekilde güncellendi.
@@ -18,9 +18,9 @@ ASP.NET Core rehberi doğrultusunda açılış, yapılandırma, Data Protection 
 
 | Kontrol | Sonuç |
 | --- | --- |
-| `dotnet test IKPro.sln --no-restore -c Release` (`backend`) | 91 birim + 240 entegrasyon; 0 başarısız/atlanan |
-| Son host reddi testi eklendikten sonra `dotnet build IKPro.sln --no-restore -c Release -warnaserror` | 0 hata, 0 uyarı |
-| `dotnet test tests/IKPro.Tests.Integration/IKPro.Tests.Integration.csproj --no-build -c Release --filter FullyQualifiedName~ProductionHostingTests` | 34/34; tam koşumdaki 33 test tekrarlandı, son 1 test ayrıca geçti |
+| `dotnet test Ekipzen.sln --no-restore -c Release` (`backend`) | 91 birim + 240 entegrasyon; 0 başarısız/atlanan |
+| Son host reddi testi eklendikten sonra `dotnet build Ekipzen.sln --no-restore -c Release -warnaserror` | 0 hata, 0 uyarı |
+| `dotnet test tests/Ekipzen.Tests.Integration/Ekipzen.Tests.Integration.csproj --no-build -c Release --filter FullyQualifiedName~ProductionHostingTests` | 34/34; tam koşumdaki 33 test tekrarlandı, son 1 test ayrıca geçti |
 | `npm run test -- --run` (`frontend`) | 45 dosyada 169/169 |
 | `npm run lint` ve `npm run build` | Başarılı |
 | İki Windows betiğinin PowerShell AST denetimi | Sözdizimi hatası yok |
@@ -80,17 +80,17 @@ Fast-forward ek merge commit'i üretmez. Hedef değişmişse onay yeni commitler
 
 1. `.github/workflows/ci.yml`
 2. `.gitignore`
-3. `backend/src/IKPro.API/Hosting/PilotHosting.cs`
-4. `backend/src/IKPro.API/Hosting/ProductionConfiguration.cs`
-5. `backend/src/IKPro.API/IKPro.API.csproj`
-6. `backend/src/IKPro.API/Program.cs`
-7. `backend/src/IKPro.API/appsettings.Development.json`
-8. `backend/src/IKPro.API/appsettings.Production.json`
-9. `backend/src/IKPro.API/appsettings.json`
-10. `backend/src/IKPro.Application/Features/Settings/SettingsDtos.cs`
-11. `backend/src/IKPro.Application/Features/Settings/SettingsHandlers.cs`
-12. `backend/tests/IKPro.Tests.Integration/Hosting/ProductionHostingTests.cs`
-13. `backend/tests/IKPro.Tests.Integration/Settings/SettingsTests.cs`
+3. `backend/src/Ekipzen.API/Hosting/PilotHosting.cs`
+4. `backend/src/Ekipzen.API/Hosting/ProductionConfiguration.cs`
+5. `backend/src/Ekipzen.API/Ekipzen.API.csproj`
+6. `backend/src/Ekipzen.API/Program.cs`
+7. `backend/src/Ekipzen.API/appsettings.Development.json`
+8. `backend/src/Ekipzen.API/appsettings.Production.json`
+9. `backend/src/Ekipzen.API/appsettings.json`
+10. `backend/src/Ekipzen.Application/Features/Settings/SettingsDtos.cs`
+11. `backend/src/Ekipzen.Application/Features/Settings/SettingsHandlers.cs`
+12. `backend/tests/Ekipzen.Tests.Integration/Hosting/ProductionHostingTests.cs`
+13. `backend/tests/Ekipzen.Tests.Integration/Settings/SettingsTests.cs`
 14. `deployment/windows/configuration.example.json`
 15. `docs/pilot-hazirlik-plani.md`
 16. `docs/pilot-p2-dogrulama.md`

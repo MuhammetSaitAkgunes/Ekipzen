@@ -10,7 +10,7 @@ Yüklenen dosyalar kiracıya göre bölümlenmiyor. Bu üç somut soruna yol aç
 1. **Kiracı bazlı yedek alınamıyor.** Bir müşterinin dosyalarını ayrı yedekleyip
    ayrı geri yüklemek mümkün değil; KVKK gereği yedekten seçici imha da öyle.
 2. **Purge eksik.** `TenantPurger` yalnız `EmployeeDocuments.FilePath` listesini
-   siliyor ([TenantPurger.cs:25-28](../../../backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs));
+   siliyor ([TenantPurger.cs:25-28](../../../backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs));
    çalışan **fotoğrafları** ve **şirket logosu** kiracı silindikten sonra diskte
    kalıyor. Kişisel veri, "sil" işleminden sağ çıkıyor.
 3. **İleride ayrı veritabanına bölme zorlaşıyor.** "Şu kiracının tüm dosyaları"

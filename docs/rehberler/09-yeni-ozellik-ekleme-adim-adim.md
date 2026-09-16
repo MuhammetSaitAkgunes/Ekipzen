@@ -16,10 +16,10 @@ git checkout -b feature/duyurular
 
 ## Adım 1 — Domain: Varlık
 
-`backend/src/IKPro.Domain/Entities/Announcements/Announcement.cs`:
+`backend/src/Ekipzen.Domain/Entities/Announcements/Announcement.cs`:
 
 ```csharp
-namespace IKPro.Domain.Entities.Announcements;
+namespace Ekipzen.Domain.Entities.Announcements;
 
 // AuditableEntity → BaseEntity → ITenantScoped: TenantId ve global filtre OTOMATİK gelir.
 public class Announcement : AuditableEntity
@@ -45,13 +45,13 @@ Migration üret ve uygula:
 
 ```bash
 cd backend
-dotnet ef migrations add AddAnnouncements --project src/IKPro.Infrastructure --startup-project src/IKPro.API
-dotnet ef database update --project src/IKPro.Infrastructure --startup-project src/IKPro.API
+dotnet ef migrations add AddAnnouncements --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.API
+dotnet ef database update --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.API
 ```
 
 ## Adım 3 — Application: Sorgu (okuma)
 
-`backend/src/IKPro.Application/Features/Announcements/GetAnnouncementsQuery.cs`:
+`backend/src/Ekipzen.Application/Features/Announcements/GetAnnouncementsQuery.cs`:
 
 ```csharp
 public sealed record AnnouncementDto(int Id, string Title, string Body, DateTime PublishedAtUtc);
@@ -109,7 +109,7 @@ public sealed class CreateAnnouncementCommandHandler(IApplicationDbContext conte
 
 ## Adım 5 — API: Controller
 
-`backend/src/IKPro.API/Controllers/AnnouncementsController.cs`:
+`backend/src/Ekipzen.API/Controllers/AnnouncementsController.cs`:
 
 ```csharp
 [ApiController]
@@ -130,11 +130,11 @@ public sealed class AnnouncementsController(ISender sender) : ControllerBase
 
 ## Adım 6 — Entegrasyon Testi (önce yazılmalıydı!)
 
-`backend/tests/IKPro.Tests.Integration/Announcements/AnnouncementsTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Announcements/AnnouncementsTests.cs`:
 
 ```csharp
 [Collection(ApiCollection.Name)]
-public sealed class AnnouncementsTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public sealed class AnnouncementsTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     [Fact]
     public async Task Create_ThenList_ReturnsOwnAnnouncement()

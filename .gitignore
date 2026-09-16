@@ -1,5 +1,5 @@
 # Backend çalışma zamanı dosya deposu (logo/evrak yüklemeleri)
-backend/src/IKPro.API/App_Data/
+backend/src/Ekipzen.API/App_Data/
 
 # Yerel yayın paketleri ve sır dosyaları
 artifacts/

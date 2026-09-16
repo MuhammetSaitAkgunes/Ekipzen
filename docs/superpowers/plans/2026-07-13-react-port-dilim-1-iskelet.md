@@ -13,10 +13,10 @@
 - React sürümü **18.3.x** (spec kararı); Vite şablonu 19 kurarsa 18'e sabitle.
 - Mevcut CSS dosyaları **değiştirilmeden** kopyalanır; component'ler **aynı class adları ve DOM yapısını** üretir. Türkçe metinler kaynaktan birebir alınır.
 - URL şeması hash tabanlı kalır: `#/dashboard`, `#/login` … (eski uygulamayla parite).
-- localStorage anahtarları: tema `ikpro-theme`, sidebar `ikpro-sidebar` (eskiyle aynı); oturum **`ikpro-session`** (yeni — eski `ikpro-demo-session` mock'a aitti, taşınmaz).
+- localStorage anahtarları: tema `ekipzen-theme`, sidebar `ekipzen-sidebar` (eskiyle aynı); oturum **`ekipzen-session`** (yeni — eski `ekipzen-demo-session` mock'a aitti, taşınmaz).
 - API erişimi Vite proxy üzerinden: istekler `/api/...` → `http://localhost:5053` (backend http profili). Testlerde `fetch` stub'lanır, gerçek ağ yok.
 - Backend'i çalıştırma komutu (tip üretimi ve duman testi için):
-  `cd backend && dotnet run --project src/IKPro.API --launch-profile http`
+  `cd backend && dotnet run --project src/Ekipzen.API --launch-profile http`
 - Rol dizeleri backend ile birebir: `hr-admin` | `manager` | `employee`.
 - Eski frontend dosyalarına (kökteki `components/`, `styles/` …) **dokunulmaz**.
 - Her görev sonunda `cd frontend && npm test -- --run` yeşil olmalı.
@@ -61,7 +61,7 @@ Beklenen: 11 dosya (main, auth, layout, actions, personnel, recruitment, attenda
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>İK Pro - Kurumsal İK Yönetimi</title>
+    <title>Ekipzen - Kurumsal İK Yönetimi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -141,7 +141,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
 ```tsx
 export default function App() {
-  return <h1>İK Pro</h1>;
+  return <h1>Ekipzen</h1>;
 }
 ```
 
@@ -153,7 +153,7 @@ import App from "./App";
 
 test("uygulama başlığı render edilir", () => {
   render(<App />);
-  expect(screen.getByText("İK Pro")).toBeInTheDocument();
+  expect(screen.getByText("Ekipzen")).toBeInTheDocument();
 });
 ```
 
@@ -191,7 +191,7 @@ git commit -m "feat(frontend): Vite+React+TS iskeleti, CSS taşıma, Vitest alty
 
 - [x] **Step 2: Backend'i başlat (ayrı terminal)**
 
-Run: `cd backend && dotnet run --project src/IKPro.API --launch-profile http`
+Run: `cd backend && dotnet run --project src/Ekipzen.API --launch-profile http`
 Beklenen: `Now listening on: http://localhost:5053`.
 
 - [x] **Step 3: Tipleri üret ve doğrula**
@@ -218,7 +218,7 @@ git commit -m "feat(frontend): swagger'dan openapi-typescript tip üretimi (gen:
 **Interfaces:**
 - Consumes: `components["schemas"]["AuthResponse"]`, `["UserDto"]` (Task 2).
 - Produces:
-  - `session.ts`: `type Session = { token: string; refreshToken: string; user: UserDto }`, `getSession(): Session | null`, `setSession(s: Session): void`, `clearSession(): void`, `SESSION_KEY = "ikpro-session"`.
+  - `session.ts`: `type Session = { token: string; refreshToken: string; user: UserDto }`, `getSession(): Session | null`, `setSession(s: Session): void`, `clearSession(): void`, `SESSION_KEY = "ekipzen-session"`.
   - `client.ts`: `class ApiError extends Error { status: number; problem?: ProblemDetails }`, `apiFetch<T>(path: string, init?: RequestInit): Promise<T>` (görece yol `/api` öneki alır, Bearer ekler, 204→null, 401'de tek seferlik refresh+retry, refresh düşerse `clearSession()` + `window.location.hash = "/login"`).
 
 - [x] **Step 1: `session.ts` yaz**
@@ -229,7 +229,7 @@ import type { components } from "./schema";
 export type UserDto = components["schemas"]["UserDto"];
 export type Session = { token: string; refreshToken: string; user: UserDto };
 
-export const SESSION_KEY = "ikpro-session";
+export const SESSION_KEY = "ekipzen-session";
 
 export const getSession = (): Session | null => {
   try {
@@ -580,7 +580,7 @@ export function LoginPage({ mode = "login" }: { mode?: "login" | "signup" }) {
         <div className="auth-brand">
           <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>HR MASTER Suite</span>
           </div>
         </div>
@@ -754,22 +754,22 @@ const MGMT: Role[] = ["hr-admin", "manager"];
 
 // routes.js ile birebir (sıra dahil).
 export const appRoutes: AppRoute[] = [
-  { key: "dashboard", path: "/dashboard", title: "Risk Merkezi", eyebrow: "İK Pro", navKey: "dashboard", roles: MGMT },
-  { key: "overview", path: "/overview", title: "Genel Durum", eyebrow: "İK Pro", navKey: "overview", roles: ALL },
-  { key: "actions", path: "/actions", title: "Aksiyonlar", eyebrow: "İK Pro", navKey: "actions", roles: ALL },
-  { key: "personnel", path: "/personnel", title: "Personel Yönetimi", eyebrow: "İK Pro", navKey: "personnel", roles: MGMT },
-  { key: "recruitment", path: "/recruitment", title: "İşe Alım", eyebrow: "İK Pro", navKey: "recruitment", roles: ["hr-admin"] },
-  { key: "attendance", path: "/attendance", title: "Mesai & Puantaj", eyebrow: "İK Pro", navKey: "attendance", roles: MGMT },
-  { key: "leaves", path: "/leaves", title: "İzinlerim", eyebrow: "İK Pro", navKey: "leaves", roles: ALL },
-  { key: "payroll", path: "/payroll", title: "Bordro", eyebrow: "İK Pro", navKey: "payroll", roles: ["hr-admin", "employee"] },
-  { key: "payroll-calculator", path: "/payroll/calculator", title: "Bordro", eyebrow: "İK Pro", navKey: "payroll", roles: ["hr-admin"] },
-  { key: "payroll-settings", path: "/payroll/settings", title: "Bordro", eyebrow: "İK Pro", navKey: "payroll", roles: ["hr-admin"] },
-  { key: "manager", path: "/manager", title: "Yönetici Konsolu", eyebrow: "İK Pro", navKey: "manager", roles: MGMT },
-  { key: "settings", path: "/settings", title: "Ayarlar", eyebrow: "İK Pro", navKey: "settings", roles: ["hr-admin"] },
+  { key: "dashboard", path: "/dashboard", title: "Risk Merkezi", eyebrow: "Ekipzen", navKey: "dashboard", roles: MGMT },
+  { key: "overview", path: "/overview", title: "Genel Durum", eyebrow: "Ekipzen", navKey: "overview", roles: ALL },
+  { key: "actions", path: "/actions", title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: ALL },
+  { key: "personnel", path: "/personnel", title: "Personel Yönetimi", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
+  { key: "recruitment", path: "/recruitment", title: "İşe Alım", eyebrow: "Ekipzen", navKey: "recruitment", roles: ["hr-admin"] },
+  { key: "attendance", path: "/attendance", title: "Mesai & Puantaj", eyebrow: "Ekipzen", navKey: "attendance", roles: MGMT },
+  { key: "leaves", path: "/leaves", title: "İzinlerim", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
+  { key: "payroll", path: "/payroll", title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin", "employee"] },
+  { key: "payroll-calculator", path: "/payroll/calculator", title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
+  { key: "payroll-settings", path: "/payroll/settings", title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
+  { key: "manager", path: "/manager", title: "Yönetici Konsolu", eyebrow: "Ekipzen", navKey: "manager", roles: MGMT },
+  { key: "settings", path: "/settings", title: "Ayarlar", eyebrow: "Ekipzen", navKey: "settings", roles: ["hr-admin"] },
   { key: "attrition-risk", path: "/risk/attrition", title: "Ayrılma Riski Detayı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
   { key: "burnout-risk", path: "/risk/burnout", title: "Tükenmişlik Sinyali", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
   { key: "manager-load", path: "/risk/manager-load", title: "Yönetici Yükü", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
-  { key: "action-center", path: "/risk/action-center", title: "Aksiyonlar", eyebrow: "İK Pro", navKey: "actions", roles: MGMT },
+  { key: "action-center", path: "/risk/action-center", title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: MGMT },
   { key: "employee-voice", path: "/risk/employee-voice", title: "Çalışan Nabzı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
   { key: "compliance-risk", path: "/risk/compliance", title: "Uyum Risk Merkezi", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
 ];
@@ -924,7 +924,7 @@ git commit -m "feat(frontend): hash router, rol matrisi ve guard'lar (routes.js 
 **Interfaces:**
 - Consumes: `useAuth`, `apiFetch`, `appRoutes/navGroups/navIcons/roleHomeFor`.
 - Produces:
-  - `AppShell`: eski `Layout()` DOM paritesi — `.app-container > aside.sidebar + header.header + main.main-content` içinde `<Outlet />`. Tema/sidebar tercihi localStorage (`ikpro-theme`, `ikpro-sidebar`) + `data-theme` attribute; rozet `GET /api/actions/badge` (TanStack Query, `{ openCount: number }`); rol değiştirici demo kimlikle **gerçek login** yapar; sayfa başlığı/eyebrow aktif rotadan.
+  - `AppShell`: eski `Layout()` DOM paritesi — `.app-container > aside.sidebar + header.header + main.main-content` içinde `<Outlet />`. Tema/sidebar tercihi localStorage (`ekipzen-theme`, `ekipzen-sidebar`) + `data-theme` attribute; rozet `GET /api/actions/badge` (TanStack Query, `{ openCount: number }`); rol değiştirici demo kimlikle **gerçek login** yapar; sayfa başlığı/eyebrow aktif rotadan.
   - `ToastProvider` + `useToast(): { showToast(message, type?) }` — eski `.toast-region/.toast` markup'ı; sonraki dilimlerin tümü kullanır.
   - `GlobalSearch`: bu dilimde yalnız **sayfa** sonuçları (rol-erişilebilir rota başlıkları); `/api/search` dilim 7'de eklenecek. Ctrl+K ve `/` kısayolu, ok tuşları + Enter, Escape kapatır.
 
@@ -1147,15 +1147,15 @@ export function AppShell() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [theme, setTheme] = useState(() => localStorage.getItem("ikpro-theme") || "light");
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ikpro-sidebar") === "collapsed");
+  const [theme, setTheme] = useState(() => localStorage.getItem("ekipzen-theme") || "light");
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ekipzen-sidebar") === "collapsed");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("ikpro-theme", theme);
+    localStorage.setItem("ekipzen-theme", theme);
   }, [theme]);
   useEffect(() => {
-    localStorage.setItem("ikpro-sidebar", collapsed ? "collapsed" : "expanded");
+    localStorage.setItem("ekipzen-sidebar", collapsed ? "collapsed" : "expanded");
   }, [collapsed]);
 
   const badge = useQuery({
@@ -1184,7 +1184,7 @@ export function AppShell() {
         <div className="brand">
           <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>HR MASTER Suite</span>
           </div>
         </div>
@@ -1228,7 +1228,7 @@ export function AppShell() {
           </button>
         </div>
         <div className="header-heading">
-          <span id="page-eyebrow">{current?.eyebrow ?? "İK Pro"}</span>
+          <span id="page-eyebrow">{current?.eyebrow ?? "Ekipzen"}</span>
           <div className="header-title" id="page-title">{current?.title ?? "Yakında"}</div>
         </div>
         <button className="header-action-button" onClick={() => navigate("/actions")} title="Aksiyon Merkezi" aria-label={`Aksiyon Merkezi: ${actionCount} açık aksiyon`}>
@@ -1323,7 +1323,7 @@ git commit -m "feat(frontend): AppShell — sidebar/header/tema/rozet/arama/toas
 
 - [x] **Step 1: Backend + frontend'i başlat**
 
-Terminal 1: `cd backend && dotnet run --project src/IKPro.API --launch-profile http`
+Terminal 1: `cd backend && dotnet run --project src/Ekipzen.API --launch-profile http`
 Terminal 2: `cd frontend && npm run dev` → `http://localhost:5173`
 
 - [x] **Step 2: Üç rolle giriş duman testi**

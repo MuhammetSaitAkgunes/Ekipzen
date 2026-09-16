@@ -57,13 +57,13 @@ export function AcceptInvitePage() {
         <div className="auth-brand">
           <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
           <div>
-            <strong>İK Pro</strong>
+            <strong>Ekipzen</strong>
             <span>HR MASTER Suite</span>
           </div>
         </div>
         <div className="auth-copy">
           <span className="status-pill info">Hesap etkinleştirme</span>
-          <h1>Şifrenizi belirleyin ve İK Pro hesabınızı etkinleştirin.</h1>
+          <h1>Şifrenizi belirleyin ve Ekipzen hesabınızı etkinleştirin.</h1>
           <p>Bu bağlantı size özeldir; şifrenizi belirledikten sonra otomatik giriş yapılır.</p>
         </div>
       </section>

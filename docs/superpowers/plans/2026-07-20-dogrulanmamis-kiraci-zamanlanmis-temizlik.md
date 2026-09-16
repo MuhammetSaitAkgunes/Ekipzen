@@ -16,11 +16,11 @@
 
 ## Dosya Yapısı
 
-- **Create:** `backend/src/IKPro.API/Services/UnverifiedTenantCleanupOptions.cs`
-- **Create:** `backend/src/IKPro.API/Services/UnverifiedTenantCleanupService.cs`
-- **Modify:** `backend/src/IKPro.API/Program.cs` — options bind + `AddHostedService`.
-- **Create:** `backend/tests/IKPro.Tests.Integration/Tenancy/ScheduledCleanupTests.cs`
-- **Modify:** `backend/src/IKPro.API/appsettings.json` — örnek (kapalı) blok.
+- **Create:** `backend/src/Ekipzen.API/Services/UnverifiedTenantCleanupOptions.cs`
+- **Create:** `backend/src/Ekipzen.API/Services/UnverifiedTenantCleanupService.cs`
+- **Modify:** `backend/src/Ekipzen.API/Program.cs` — options bind + `AddHostedService`.
+- **Create:** `backend/tests/Ekipzen.Tests.Integration/Tenancy/ScheduledCleanupTests.cs`
+- **Modify:** `backend/src/Ekipzen.API/appsettings.json` — örnek (kapalı) blok.
 - **Modify:** docs.
 
 ## Task 1: Options + Service (TDD)

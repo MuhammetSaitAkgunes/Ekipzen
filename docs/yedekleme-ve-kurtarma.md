@@ -1,6 +1,6 @@
 # Yedekleme ve Kurtarma Runbook'u
 
-> **Neden bu belge en kritik olanı:** İK Pro'daki diğer her hata geri alınabilir.
+> **Neden bu belge en kritik olanı:** Ekipzen'deki diğer her hata geri alınabilir.
 > Veri kaybı alınamaz. Bir müşterinin özlük dosyaları, bordro geçmişi ve izin
 > kayıtları kaybolursa hizmet devam edemez ve KVKK açısından da ihlal doğar.
 
@@ -101,7 +101,7 @@ ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];
 > hizmet hesabıyla** çalıştırıp sysadmin'i yalnız ona verin:
 >
 > ```powershell
-> ... register-backup-task.ps1 -TaskUser "ALANADI\ikpro-yedek" ...
+> ... register-backup-task.ps1 -TaskUser "ALANADI\ekipzen-yedek" ...
 > ```
 >
 > Bu hesap için Görev Zamanlayıcı şifre soracaktır.
@@ -111,7 +111,7 @@ ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];
 > bugün çalışır. Üretimde olmaz: SYSTEM olarak koşan görev kullanıcı profiline
 > ve OneDrive'a bağımlı hale gelir — dosya "yalnız bulutta" işaretlenirse
 > (Files On-Demand) görev sessizce başarısız olur, kullanıcı profili silinirse
-> yedekleme durur. Script'leri `C:\IKPro\scripts` gibi profil dışı bir yola
+> yedekleme durur. Script'leri `C:\Ekipzen\scripts` gibi profil dışı bir yola
 > kopyalayın ve görevleri oradan kaydedin.
 
 ### Script'leri çalıştırmadan önce — üç tuzak
@@ -148,7 +148,7 @@ SELECT CAST(SERVERPROPERTY('InstanceDefaultBackupPath') AS nvarchar(400));
 Başka bir klasör (ör. ayrı bir disk) kullanacaksanız izni açıkça verin:
 
 ```
-icacls "D:\Yedek\IKPro" /grant "NT Service\MSSQLSERVER:(OI)(CI)F"
+icacls "D:\Yedek\Ekipzen" /grant "NT Service\MSSQLSERVER:(OI)(CI)F"
 ```
 
 **4. Kayıt için YÖNETİCİ hakkı şart, ve `-WhatIf` KAYIT YAPMAZ.** Görev SYSTEM
@@ -174,7 +174,7 @@ Script yönetici olmadan çalıştırılırsa bunu açıkça söyler ve hiçbir 
 | --- | --- | --- |
 | `backup-restore-drill.ps1` | Tam yedek + geri yükleme tatbikatı + satır doğrulaması, tüm veritabanları için | Günlük (02:00) |
 | `backup-log.ps1` | İşlem günlüğü yedeği + saklama temizliği, tüm veritabanları için | **Saatlik** |
-| `IKProBackup.psm1` | Ortak keşif/SQL/log mantığı | — |
+| `EkipzenBackup.psm1` | Ortak keşif/SQL/log mantığı | — |
 | `register-backup-task.ps1` | Yukarıdaki iki görevi Görev Zamanlayıcı'ya kaydeder | Bir kez, yönetici olarak |
 
 > **Keşif mantığı neden ortak modülde:** iki script AYNI veritabanı kümesi
@@ -191,13 +191,13 @@ Script yönetici olmadan çalıştırılırsa bunu açıkça söyler ve hiçbir 
 > veritabanının yedekten geri yüklenmiş olması.
 
 > **Kaç veritabanı?** İki sabit + kiracı sayısı kadar:
-> - `IKProPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar.
+> - `EkipzenPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar.
 >   Küçüktür ama **onsuz hiç kimse giriş yapamaz**, üstelik hangi kiracının hangi
 >   katalogda olduğunu yalnız o bilir. Yedeklenmezse diğer bütün yedekler
 >   sahipsiz kalır.
-> - `IKPro_{slug}` — **her kiracı için bir tane.** Yedek planı bunları
+> - `Ekipzen_{slug}` — **her kiracı için bir tane.** Yedek planı bunları
 >   otomatik keşfetmeli (sabit bir liste tutulursa yeni müşteri yedeksiz kalır).
-> - `IKProDb` — paylaşılan katalog. Bugün boştur; henüz ayrılmamış kiracılar için
+> - `EkipzenDb` — paylaşılan katalog. Bugün boştur; henüz ayrılmamış kiracılar için
 >   duruyor. Boş olsa da plana dahil edilmesi zararsızdır.
 >
 > **Platform ile kiracı yedekleri BİRBİRİNE BAĞLIDIR.** Bir kiracıyı eski bir
@@ -223,7 +223,7 @@ tatbikat içindir ve **diğer müşterileri yedeksiz bırakır**.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\backup-restore-drill.ps1 `
-  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro"
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen"
 ```
 
 > **Tuzak — yedek klasörü izni:** `BackupPath`, sizin değil **SQL Server servis
@@ -305,7 +305,7 @@ no-op) — operatör yeniden denerse güvenlidir.
 
 ### TEK KİRACIYI geri yükleme (artık gerçek)
 
-Her müşteri kendi kataloğunda (`IKPro_{slug}`) olduğu için, bir müşteriyi
+Her müşteri kendi kataloğunda (`Ekipzen_{slug}`) olduğu için, bir müşteriyi
 **diğerlerine hiç dokunmadan** ve saniye hassasiyetinde geri döndürebilirsiniz.
 Ayrılmanın asıl sebebi buydu.
 
@@ -320,11 +320,11 @@ curl -X POST https://<api-host>/api/tenants/<tenantId>/freeze   -H "X-Platform-K
 --    kapatmaz; SQL Server özel erişim alamaz ve geri yükleme şu hatayla düşer:
 --       "Exclusive access could not be obtained because the database is in use."
 --    Bu adım tatbikatta bulundu — prosedürde eksikti.
-ALTER DATABASE [IKPro_acme] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+ALTER DATABASE [Ekipzen_acme] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 -- 3) Kuyruk log yedeğini al: son yedekten ŞU ANA kadarki işlemleri kurtarır.
 --    Bu adım atlanırsa son yedekten sonraki her şey kaybolur.
-BACKUP LOG [IKPro_acme] TO DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
+BACKUP LOG [Ekipzen_acme] TO DISK = 'C:\SQLYedek\Ekipzen_acme_kuyruk.trn'
     WITH NORECOVERY;
 
 -- 4) ZİNCİRİ msdb'DEN OKUYUN, dosya adı tahmin etmeyin. Hangi tam yedek ve
@@ -334,28 +334,28 @@ SELECT CONVERT(varchar(19), b.backup_finish_date, 120) AS bitis,
        m.physical_device_name
 FROM msdb.dbo.backupset b
 JOIN msdb.dbo.backupmediafamily m ON m.media_set_id = b.media_set_id
-WHERE b.database_name = 'IKPro_acme'
+WHERE b.database_name = 'Ekipzen_acme'
 ORDER BY b.backup_finish_date;
 
 -- 5) Tam yedek + ARADAKİ TÜM log'lar sırayla. NORECOVERY, zincir bitene kadar
 --    veritabanını kullanıma AÇMAZ; son adımda RECOVERY ile açılır.
-RESTORE DATABASE [IKPro_acme]
-    FROM DISK = 'C:\SQLYedek\IKPro_acme_FULL.bak'
+RESTORE DATABASE [Ekipzen_acme]
+    FROM DISK = 'C:\SQLYedek\Ekipzen_acme_FULL.bak'
     WITH NORECOVERY, REPLACE;
 
-RESTORE LOG [IKPro_acme]
-    FROM DISK = 'C:\SQLYedek\IKPro_acme_20260813-110002.trn'
+RESTORE LOG [Ekipzen_acme]
+    FROM DISK = 'C:\SQLYedek\Ekipzen_acme_20260813-110002.trn'
     WITH NORECOVERY;
 
 -- Hedef ana kadar rol-ileri. STOPAT'ı yanlış yazmak sessizce fazla/eksik veri
 -- getirir — müşteriyle birlikte kararlaştırın ve buraya not düşün.
-RESTORE LOG [IKPro_acme]
-    FROM DISK = 'C:\SQLYedek\IKPro_acme_kuyruk.trn'
+RESTORE LOG [Ekipzen_acme]
+    FROM DISK = 'C:\SQLYedek\Ekipzen_acme_kuyruk.trn'
     WITH RECOVERY, STOPAT = '2026-08-13T09:45:00';
 
 -- 6) Tekrar çok kullanıcıya aç. Geri yükleme bunu KENDİ YAPMAZ; unutulursa
 --    uygulama bağlanamaz ve kiracı çözüldüğü hâlde erişilemez kalır.
-ALTER DATABASE [IKPro_acme] SET MULTI_USER;
+ALTER DATABASE [Ekipzen_acme] SET MULTI_USER;
 ```
 
 > **Tatbikatta çıkan iki tuzak — ikisi de sessiz:**
@@ -365,7 +365,7 @@ ALTER DATABASE [IKPro_acme] SET MULTI_USER;
 > yedeğiniz artık tam yedeğe oturmaz ve geri yükleme `Msg 4305 — the log ...
 > begins at LSN ..., which is too recent` ile düşer. İki çözüm: kurtarma boyunca
 > görevi durdurun
-> (`Disable-ScheduledTask -TaskName IKPro-YedekTatbikati-Log`, sonunda
+> (`Disable-ScheduledTask -TaskName Ekipzen-YedekTatbikati-Log`, sonunda
 > `Enable-ScheduledTask`), **ya da** araya giren log'ları da yukarıdaki `msdb`
 > sorgusundan görüp sıraya ekleyin. İkincisi daha güvenlidir — hiçbir işlem
 > atlanmaz.
@@ -429,10 +429,10 @@ Tek komut; veritabanı adı verilmez, hepsi keşfedilir:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\backup-restore-drill.ps1 `
-  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
-  -StoragePath "C:\IKPro\App_Data\storage" `
-  -OffsitePath "\\yedek-sunucu\ikpro" `
-  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl" `
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen" `
+  -StoragePath "C:\Ekipzen\App_Data\storage" `
+  -OffsitePath "\\yedek-sunucu\ekipzen" `
+  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen\tatbikat.jsonl" `
   -AlertWebhookUrl "https://hooks.slack.com/services/..."
 ```
 
@@ -452,31 +452,31 @@ onunla gerçek olur.
 ```powershell
 # 1) Önce ne yapacağını gör (sistemi değiştirmez):
 powershell -ExecutionPolicy Bypass -File scripts\register-backup-task.ps1 `
-  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
-  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl" -WhatIf
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen" `
+  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen\tatbikat.jsonl" -WhatIf
 
 # 2) YÖNETİCİ PowerShell'de kaydet (-WhatIf'i kaldırın):
 powershell -ExecutionPolicy Bypass -File scripts\register-backup-task.ps1 `
-  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro" `
-  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro\tatbikat.jsonl" `
-  -StoragePath "C:\IKPro\App_Data\storage" `
-  -OffsitePath "\\yedek-sunucu\ikpro"
+  -BackupPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen" `
+  -LogPath "C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen\tatbikat.jsonl" `
+  -StoragePath "C:\Ekipzen\App_Data\storage" `
+  -OffsitePath "\\yedek-sunucu\ekipzen"
 ```
 
 Görevleri hemen tetikleyip doğrulayın — **ikisi de 0 dönmelidir:**
 
 ```powershell
-Start-ScheduledTask -TaskName IKPro-YedekTatbikati
-Get-ScheduledTaskInfo -TaskName IKPro-YedekTatbikati | Select LastRunTime, LastTaskResult
+Start-ScheduledTask -TaskName Ekipzen-YedekTatbikati
+Get-ScheduledTaskInfo -TaskName Ekipzen-YedekTatbikati | Select LastRunTime, LastTaskResult
 
-Start-ScheduledTask -TaskName IKPro-YedekTatbikati-Log
-Get-ScheduledTaskInfo -TaskName IKPro-YedekTatbikati-Log | Select LastRunTime, LastTaskResult
+Start-ScheduledTask -TaskName Ekipzen-YedekTatbikati-Log
+Get-ScheduledTaskInfo -TaskName Ekipzen-YedekTatbikati-Log | Select LastRunTime, LastTaskResult
 ```
 
 `LastTaskResult` **0** = başarılı. Görevler SYSTEM hesabıyla kaydedilir, çünkü SQL
 Server yedek dizinine yazma izni kullanıcı hesabında genelde yoktur.
 
-**Görev adları:** günlük görev `IKPro-YedekTatbikati`, saatlik görev
+**Görev adları:** günlük görev `Ekipzen-YedekTatbikati`, saatlik görev
 `<aynı ad>-Log`. Tek bir `register` çağrısı ikisini birden kurar; ayrı ayrı
 kaydetmeye çalışmayın — script `-Force` kullandığı için aynı adla ikinci bir
 çağrı birinciyi sessizce siler.
@@ -484,8 +484,8 @@ kaydetmeye çalışmayın — script `-Force` kullandığı için aynı adla iki
 Kaldırmak için her iki görevi de silin:
 
 ```powershell
-Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati -Confirm:$false
-Unregister-ScheduledTask -TaskName IKPro-YedekTatbikati-Log -Confirm:$false
+Unregister-ScheduledTask -TaskName Ekipzen-YedekTatbikati -Confirm:$false
+Unregister-ScheduledTask -TaskName Ekipzen-YedekTatbikati-Log -Confirm:$false
 ```
 
 > **Not:** Zamanlanmış görev bu depoda **kaydedilmedi** — sistemde kalıcı
@@ -506,16 +506,16 @@ powershell -File scripts\backup-restore-drill.ps1 -BackupPath <yedek-klasörü> 
 
 | Veritabanı | Tablo | Satır | Sonuç |
 | --- | --- | --- | --- |
-| `IKProPlatform` | 5 | 22 | ✅ |
-| `IKProDb` (paylaşılan) | 36 | 18 | ✅ |
-| `IKPro_demo` | 36 | 146 | ✅ |
-| `IKPro_globex` | 36 | 42 | ✅ |
+| `EkipzenPlatform` | 5 | 22 | ✅ |
+| `EkipzenDb` (paylaşılan) | 36 | 18 | ✅ |
+| `Ekipzen_demo` | 36 | 146 | ✅ |
+| `Ekipzen_globex` | 36 | 42 | ✅ |
 
 Çıkış kodu **0**; 4 veritabanının tamamı yedeklendi, ayrı bir ada geri yüklendi,
 satır sayıları kaynakla karşılaştırıldı ve tatbikat kopyaları düşürüldü. Toplam
 süre ~4 sn (demo ölçeği).
 
-> `IKProDb`'nin 36 tablosu var ama yalnız 18 satırı: katalog boş, şeması güncel.
+> `EkipzenDb`'nin 36 tablosu var ama yalnız 18 satırı: katalog boş, şeması güncel.
 > Beklenen durum — kiracı bağlamı olmayan işler oraya bağlanıyor.
 
 ### 2) Nokta-zaman geri yükleme (`RESTORE … STOPAT`) — asıl kanıt
@@ -523,7 +523,7 @@ süre ~4 sn (demo ölçeği).
 Yukarıdaki tatbikat "yedek geri yüklenebiliyor" der; bu belgede vaat edilen ise
 **"tek müşteriyi istediğiniz saniyeye döndürebilirsiniz"**. O iddia ayrıca sınandı:
 
-1. `IKPro_demo` FULL yedeği alındı.
+1. `Ekipzen_demo` FULL yedeği alındı.
 2. `TATBIKAT-A` departmanı eklendi → `02:26:07`
 3. **kesme noktası** → `02:26:10`
 4. `TATBIKAT-B` departmanı eklendi → `02:26:13`
@@ -533,7 +533,7 @@ Yukarıdaki tatbikat "yedek geri yüklenebiliyor" der; bu belgede vaat edilen is
 **Sonuç:**
 
 ```
-CANLI  IKPro_demo      : TATBIKAT-A, TATBIKAT-B   (6 departman)
+CANLI  Ekipzen_demo      : TATBIKAT-A, TATBIKAT-B   (6 departman)
 GERİ YÜKLENEN (STOPAT) : TATBIKAT-A               (5 departman)
 ```
 
@@ -541,7 +541,7 @@ Kesme noktasından **önceki** kayıt geldi, **sonraki** gelmedi. Saniye
 hassasiyetinde geri dönüş çalışıyor.
 
 **Tatbikatın gerçek prosedürden tek farkı:** geri yükleme, canlı katalogun
-üzerine değil ayrı bir ada (`IKPro_demo_PitrDrill`) yapıldı. Gerçek kurtarmada
+üzerine değil ayrı bir ada (`Ekipzen_demo_PitrDrill`) yapıldı. Gerçek kurtarmada
 hedef canlı katalogdur ve öncesinde `freeze`, sonrasında `rebuild-directory` +
 `unfreeze` adımları gelir (yukarıdaki prosedüre bakın). Tatbikat kopyası ve
 işaret satırları sonrasında temizlendi.
@@ -552,7 +552,7 @@ işaret satırları sonrasında temizlendi.
 yazan **tam prosedürü** çalışan bir uygulamayla denedi:
 `freeze → geri yükle → rebuild-directory → unfreeze`.
 
-**Senaryo.** `IKPro_globex` kiracısında: tam yedek alındı ve kurtarma noktası
+**Senaryo.** `Ekipzen_globex` kiracısında: tam yedek alındı ve kurtarma noktası
 işaretlendi (10:58:25). Sonra bir aday işe alındı — bu, kiracı kataloğunda
 personel + kullanıcı, PLATFORM'da ise dizin kaydı yarattı. Ardından "kaza" olarak
 tüm personel silindi.
@@ -623,11 +623,11 @@ e-postayla giriş denemesi artık doğru şekilde **401** dönüyor.
 - ⬜ **Log dosyası kimse tarafından izlenmiyor** — webhook kurulana kadar
   `tatbikat.jsonl` dosyasına düzenli bakılmalı.
 - ✅ **Kiracı bazına bölme TAMAMLANDI (2026-08-13).** Her kiracının verisi kendi
-  kataloğunda (`IKPro_{slug}`); tek müşteri diğerlerine dokunulmadan geri
+  kataloğunda (`Ekipzen_{slug}`); tek müşteri diğerlerine dokunulmadan geri
   yüklenebiliyor.
 - ✅ **Yedek planı artık TÜM katalogları kapsıyor (2026-08-13).**
   `backup-restore-drill.ps1` yedeklenecekleri **platform veritabanından
-  keşfediyor**: `IKProPlatform` + `IKProDb` + her `Tenants.DatabaseName`.
+  keşfediyor**: `EkipzenPlatform` + `EkipzenDb` + her `Tenants.DatabaseName`.
   `-Database` artık zorunlu değil; verilirse yalnız o katalog tatbik edilir
   (hedefli tatbikat). Platformda kayıtlı olup sunucuda bulunmayan bir katalog
   tatbikatı **durdurur** — sessizce atlamak "yedeği hiç yokmuş" sürprizine

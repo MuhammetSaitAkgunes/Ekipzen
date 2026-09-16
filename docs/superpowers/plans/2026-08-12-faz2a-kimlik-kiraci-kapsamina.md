@@ -25,7 +25,7 @@ Refresh ayrı bir düğüm: elinde yalnız rastgele bir dize var, dizin yardım 
 - Mevcut testler geçmeye devam etmeli. **Faz başlangıcı: 51 birim + 149 entegrasyon = 200.**
 - Derleme uyarısız (`-warnaserror`). `await` içermeyen `async` test metodu CS1998 verir.
 - Türkçe kod yorumları ve test adları; yorumlar "ne" değil "neden" anlatır.
-- Testler gerçek SQL Server'a bağlanır (localhost, Windows auth). Derlemeden önce `taskkill //F //IM IKPro.API.exe`.
+- Testler gerçek SQL Server'a bağlanır (localhost, Windows auth). Derlemeden önce `taskkill //F //IM Ekipzen.API.exe`.
 - Her görev ayrı commit.
 - **Kapsam dışı:** `CREATE DATABASE`, `Tenants.DatabaseName`, çözücünün katalog üretmesi, `Subscriptions` taşınması, purge'ün `DROP DATABASE` yapması — hepsi Faz 2b.
 
@@ -39,14 +39,14 @@ Refresh token'lar platform veritabanına taşındığı için **bir müşteriyi 
 
 | Dosya | Sorumluluk |
 | --- | --- |
-| `backend/src/IKPro.Infrastructure/Identity/RefreshToken.cs` | `User` navigasyonu kalkar (çapraz-DB) |
-| `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs` | `RefreshTokens` DbSet + eşleme (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/AppDbContext.cs` | `RefreshTokens` çıkar (değiştir) |
-| `backend/src/IKPro.Application/Common/Interfaces/IPlatformDbContext.cs` | `RefreshTokens` eklenir (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/Configurations/RefreshTokenConfiguration.cs` | FK kalkar; eşleme platforma taşınır (değiştir) |
-| `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs` | Tüm kullanıcı işlemleri kiracı kapsamında (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs` | Refresh silme platforma taşınır (değiştir) |
-| `backend/tests/IKPro.Tests.Integration/Auth/KimlikKiraciKapsamiTests.cs` | Yeni testler (oluştur) |
+| `backend/src/Ekipzen.Infrastructure/Identity/RefreshToken.cs` | `User` navigasyonu kalkar (çapraz-DB) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs` | `RefreshTokens` DbSet + eşleme (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/AppDbContext.cs` | `RefreshTokens` çıkar (değiştir) |
+| `backend/src/Ekipzen.Application/Common/Interfaces/IPlatformDbContext.cs` | `RefreshTokens` eklenir (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/Configurations/RefreshTokenConfiguration.cs` | FK kalkar; eşleme platforma taşınır (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs` | Tüm kullanıcı işlemleri kiracı kapsamında (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs` | Refresh silme platforma taşınır (değiştir) |
+| `backend/tests/Ekipzen.Tests.Integration/Auth/KimlikKiraciKapsamiTests.cs` | Yeni testler (oluştur) |
 | `docs/yedekleme-ve-kurtarma.md` | Oturumların geri sarılmadığı notu (değiştir) |
 
 ---
@@ -56,13 +56,13 @@ Refresh token'lar platform veritabanına taşındığı için **bir müşteriyi 
 Elinde yalnız token dizesi olan sunucu hangi kiracı veritabanına bakacağını bilemez. Platformdaki satır `TenantId` taşıdığı için yönlendirmeyi o verir.
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Identity/RefreshToken.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/PlatformDbContext.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/AppDbContext.cs`
-- Modify: `backend/src/IKPro.Application/Common/Interfaces/IPlatformDbContext.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/Configurations/RefreshTokenConfiguration.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/RefreshToken.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/PlatformDbContext.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/AppDbContext.cs`
+- Modify: `backend/src/Ekipzen.Application/Common/Interfaces/IPlatformDbContext.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/Configurations/RefreshTokenConfiguration.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
 
 **Interfaces:**
 - Produces: `IPlatformDbContext.RefreshTokens` — `DbSet<RefreshToken>`
@@ -70,20 +70,20 @@ Elinde yalnız token dizesi olan sunucu hangi kiracı veritabanına bakacağın�
 
 - [ ] **Step 1: Failing testi yaz**
 
-`backend/tests/IKPro.Tests.Integration/Auth/KimlikKiraciKapsamiTests.cs`:
+`backend/tests/Ekipzen.Tests.Integration/Auth/KimlikKiraciKapsamiTests.cs`:
 
 ```csharp
 using FluentAssertions;
-using IKPro.Application.Common.Interfaces;
-using IKPro.Application.Features.Auth;
-using IKPro.Tests.Integration.Tenancy;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Auth;
+using Ekipzen.Tests.Integration.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace IKPro.Tests.Integration.Auth;
+namespace Ekipzen.Tests.Integration.Auth;
 
 /// <summary>
 /// Kimlik katmanı, kiracı veritabanları ayrıldığında (Faz 2b) çalışacak şekilde
@@ -91,7 +91,7 @@ namespace IKPro.Tests.Integration.Auth;
 /// davranış değişikliğini değil.
 /// </summary>
 [Collection(ApiCollection.Name)]
-public class KimlikKiraciKapsamiTests(IKProApiFactory factory) : TenancyTestBase(factory)
+public class KimlikKiraciKapsamiTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     /// <summary>
     /// Refresh token PLATFORM veritabanında durmalı: elinde yalnız token dizesi
@@ -166,7 +166,7 @@ public class KimlikKiraciKapsamiTests(IKProApiFactory factory) : TenancyTestBase
 - [ ] **Step 2: Testleri koş, ilkinin kırıldığını doğrula**
 
 ```bash
-cd backend && dotnet test tests/IKPro.Tests.Integration --filter "FullyQualifiedName~KimlikKiraciKapsami"
+cd backend && dotnet test tests/Ekipzen.Tests.Integration --filter "FullyQualifiedName~KimlikKiraciKapsami"
 ```
 
 Beklenen: `RefreshToken_PlatformVeritabaninaYazilir` **kırmızı** (derleme hatası — `IPlatformDbContext.RefreshTokens` yok); diğer ikisi mevcut davranışı doğruladığı için yeşil olmalı.
@@ -229,8 +229,8 @@ Kullanıcı bulunamazsa (token var ama kullanıcı yok — geri yükleme sonras�
 
 ```bash
 cd backend
-IKPRO_PLATFORM_CONNECTION="Server=localhost;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add RefreshTokensToPlatform --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
-IKPRO_CONNECTION="Server=localhost;Database=IKProDb;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add DropRefreshTokensFromAppDb --context AppDbContext --project src/IKPro.Infrastructure --startup-project src/IKPro.Api
+EKIPZEN_PLATFORM_CONNECTION="Server=localhost;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add RefreshTokensToPlatform --context PlatformDbContext --output-dir Persistence/Migrations/Platform --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
+EKIPZEN_CONNECTION="Server=localhost;Database=EkipzenDb;Trusted_Connection=True;TrustServerCertificate=True;Encrypt=False" dotnet ef migrations add DropRefreshTokensFromAppDb --context AppDbContext --project src/Ekipzen.Infrastructure --startup-project src/Ekipzen.Api
 ```
 
 Uygulama veritabanı migration'ının başına açıklama ekle: tablo düşürülüyor, satırlar kaybolur, **oturumlar geçersizleşir ve kullanıcılar bir kez yeniden giriş yapar** — gerçek müşteri verisi olmadığı için kabul edilmiştir.
@@ -253,8 +253,8 @@ Beklenen: 200 + eklediğin testler, hepsi PASS.
 `IdentityService`'in `UserManager`/`SignInManager` bağımlılıkları ambient kapsamdan gelir; kiracı DB'leri ayrılınca yanlış katalogda arama demektir. Her işlem, kiracıya sabitlenmiş kapsamdan çözülen `UserManager` ile çalışmalı.
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Identity/IdentityService.cs`
-- Modify: `backend/tests/IKPro.Tests.Integration/Auth/KimlikKiraciKapsamiTests.cs`
+- Modify: `backend/src/Ekipzen.Infrastructure/Identity/IdentityService.cs`
+- Modify: `backend/tests/Ekipzen.Tests.Integration/Auth/KimlikKiraciKapsamiTests.cs`
 
 **Interfaces:**
 - Consumes: `ITenantScopeFactory.Create(int tenantId) → ITenantScope` (Faz 1b), `ITenantDirectory.FindTenantIdAsync` (Faz 1a)

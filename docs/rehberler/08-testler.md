@@ -7,8 +7,8 @@ türlerini, nasıl çalıştırıldığını ve nasıl yazıldığını anlatır
 
 | Tür | Nerede | Ne test eder | Hız |
 | --- | --- | --- | --- |
-| **Birim (backend)** | `backend/tests/IKPro.Tests.Unit` | Saf mantık (bordro hesabı, slug türetme) — DB yok | Çok hızlı |
-| **Entegrasyon (backend)** | `backend/tests/IKPro.Tests.Integration` | Gerçek HTTP + gerçek DB üzerinden uçtan uca uç davranışı | Orta |
+| **Birim (backend)** | `backend/tests/Ekipzen.Tests.Unit` | Saf mantık (bordro hesabı, slug türetme) — DB yok | Çok hızlı |
+| **Entegrasyon (backend)** | `backend/tests/Ekipzen.Tests.Integration` | Gerçek HTTP + gerçek DB üzerinden uçtan uca uç davranışı | Orta |
 | **Birim (frontend)** | `frontend/src/**/*.test.tsx` | Bileşen davranışı (Vitest + React Testing Library) | Hızlı |
 
 ## Çalıştırma
@@ -27,23 +27,23 @@ cd frontend && npm test -- --run
 npx vitest run src/auth/LoginPage.test.tsx
 ```
 
-> Backend entegrasyon testleri **çalışan bir MSSQL** ister; `IKProDb_Test` ve
-> `IKProPlatform_Test`'i her koşuda sıfırlar.
+> Backend entegrasyon testleri **çalışan bir MSSQL** ister; `EkipzenDb_Test` ve
+> `EkipzenPlatform_Test`'i her koşuda sıfırlar.
 >
 > **Kiracı katalogları da gerçektir.** Provizyon yapan her test bir veritabanı
-> oluşturur (`IKPro_test_*`) ve testin sonunda düşürür. Bu yüzden entegrasyon
+> oluşturur (`Ekipzen_test_*`) ve testin sonunda düşürür. Bu yüzden entegrasyon
 > takımı ~33 sn'den **~93 sn**'ye çıktı — bilinçli bir tercih: alternatif (koşum
 > sonunda toplu temizlik) daha hızlıydı ama koşum ortasında bir çökme sunucuda
 > artık veritabanı bırakırdı.
 >
-> Önek testlere özeldir (`Tenancy:DatabasePrefix` = `IKPro_test_`). Olmasaydı
-> testler, geliştiricinin çalışan demo ortamındaki `IKPro_demo` veritabanını
+> Önek testlere özeldir (`Tenancy:DatabasePrefix` = `Ekipzen_test_`). Olmasaydı
+> testler, geliştiricinin çalışan demo ortamındaki `Ekipzen_demo` veritabanını
 > düşürüp yeniden kurardı — yani "testleri çalıştırmak" demo ortamını silmek
 > anlamına gelirdi.
 
 ## Entegrasyon Testi Altyapısı
 
-- **`IKProApiFactory`** (`WebApplicationFactory<Program>`): API'yi bellek-içi ayağa
+- **`EkipzenApiFactory`** (`WebApplicationFactory<Program>`): API'yi bellek-içi ayağa
   kaldırır, test DB'sini sıfırlar, rate-limit'i etkisizleştirir, dosya deposunu izole eder.
 - **`[Collection("api")]`**: Tüm entegrasyon test sınıfları aynı fabrikayı paylaşır
   ve sıralı koşar (paylaşılan DB'de yarış olmasın).

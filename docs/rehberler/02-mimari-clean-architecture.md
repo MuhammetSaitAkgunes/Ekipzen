@@ -7,10 +7,10 @@ kuralı ve bir HTTP isteğinin baştan sona yolculuğunu açıklar.
 
 ```mermaid
 flowchart TD
-    API["IKPro.API<br/>(Controller'lar, JWT, middleware)"]
-    App["IKPro.Application<br/>(CQRS handler'lar, doğrulama, DTO)"]
-    Infra["IKPro.Infrastructure<br/>(EF Core, Identity, dosya, e-posta)"]
-    Domain["IKPro.Domain<br/>(Varlıklar, iş kuralları, enum'lar)"]
+    API["Ekipzen.API<br/>(Controller'lar, JWT, middleware)"]
+    App["Ekipzen.Application<br/>(CQRS handler'lar, doğrulama, DTO)"]
+    Infra["Ekipzen.Infrastructure<br/>(EF Core, Identity, dosya, e-posta)"]
+    Domain["Ekipzen.Domain<br/>(Varlıklar, iş kuralları, enum'lar)"]
 
     API --> App
     API --> Infra
@@ -88,16 +88,16 @@ public sealed class ProvisionTenantCommandHandler : IRequestHandler<ProvisionTen
 ```
 
 Bu üçlü kalıbı projede her yerde görürsün (bkz. gerçek örnek:
-`backend/src/IKPro.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`).
+`backend/src/Ekipzen.Application/Features/Tenancy/Commands/ProvisionTenantCommand.cs`).
 
 ## Nereye Ne Koyulur?
 
 | Eklemek istediğin | Katman | Örnek klasör |
 | --- | --- | --- |
-| Yeni bir tablo/varlık | Domain | `IKPro.Domain/Entities/...` |
-| Yeni bir iş işlemi (uç) | Application | `IKPro.Application/Features/<Modül>/...` |
-| Yeni bir dış entegrasyon | Infrastructure | `IKPro.Infrastructure/...` |
-| Yeni bir HTTP ucu | API | `IKPro.API/Controllers/...` |
+| Yeni bir tablo/varlık | Domain | `Ekipzen.Domain/Entities/...` |
+| Yeni bir iş işlemi (uç) | Application | `Ekipzen.Application/Features/<Modül>/...` |
+| Yeni bir dış entegrasyon | Infrastructure | `Ekipzen.Infrastructure/...` |
+| Yeni bir HTTP ucu | API | `Ekipzen.API/Controllers/...` |
 
 ## Sonraki Adım
 

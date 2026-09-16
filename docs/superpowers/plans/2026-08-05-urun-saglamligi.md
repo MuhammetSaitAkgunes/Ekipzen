@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** İK Pro'nun gerçek kullanımda veri kaybetmeden, sessizce başarısız olmadan ve yavaşlamadan ayakta kalmasını sağlayacak dört somut iyileştirmeyi uygulamak.
+**Goal:** Ekipzen'in gerçek kullanımda veri kaybetmeden, sessizce başarısız olmadan ve yavaşlamadan ayakta kalmasını sağlayacak dört somut iyileştirmeyi uygulamak.
 
 **Architecture:** Dört bağımsız iş: (1) uyarı hijyeni + CI'da uyarıları hata sayma, (2) istemci sorgu politikası, (3) rota bazlı kod bölme, (4) yedekleme + geri yükleme tatbikatı. Hiçbiri diğerine bağlı değil; her biri tek başına test edilip commit'lenebilir.
 
@@ -31,7 +31,7 @@
 döndüğünün görülmesi. Koşulmamış kurtarma scripti, kurtarma garantisi vermez.
 
 ```powershell
-pwsh scripts/backup-restore-drill.ps1 -Database IKProDb -BackupPath $env:TEMP\ikpro-yedek
+pwsh scripts/backup-restore-drill.ps1 -Database EkipzenDb -BackupPath $env:TEMP\ekipzen-yedek
 ```
 
 ---
@@ -59,8 +59,8 @@ Sağlamlık ekseninde sıralama (satılabilirlikten farklı):
 | Dosya | Sorumluluk |
 | --- | --- |
 | `backend/Directory.Build.props` | Derleme çapında uyarı politikası (değiştir) |
-| `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs` | EF1002 gerekçeli bastırma (değiştir) |
-| `backend/src/IKPro.API/Controllers/*.cs` | Bozuk XML yorumları (değiştir) |
+| `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs` | EF1002 gerekçeli bastırma (değiştir) |
+| `backend/src/Ekipzen.API/Controllers/*.cs` | Bozuk XML yorumları (değiştir) |
 | `.github/workflows/ci.yml` | Uyarı = hata adımı (değiştir) |
 | `frontend/src/queryClient.ts` | Sorgu varsayılan politikası (oluştur) |
 | `frontend/src/queryClient.test.ts` | Politika testi (oluştur) |
@@ -74,8 +74,8 @@ Sağlamlık ekseninde sıralama (satılabilirlikten farklı):
 ### Task 1: Uyarı hijyeni ve CI'da uyarı = hata
 
 **Files:**
-- Modify: `backend/src/IKPro.Infrastructure/Persistence/TenantPurger.cs`
-- Modify: `backend/src/IKPro.API/Controllers/*.cs` (CS1570 geçen dosyalar)
+- Modify: `backend/src/Ekipzen.Infrastructure/Persistence/TenantPurger.cs`
+- Modify: `backend/src/Ekipzen.API/Controllers/*.cs` (CS1570 geçen dosyalar)
 - Modify: `.github/workflows/ci.yml`
 
 **Interfaces:**
@@ -319,7 +319,7 @@ git commit -m "perf(frontend): rota bazlı kod bölme"
 
 - [ ] **Step 2: Tatbikatı gerçekten koştur**
 
-Run: `pwsh scripts/backup-restore-drill.ps1 -Database IKProDb -BackupPath $env:TEMP\ikpro-backup`
+Run: `pwsh scripts/backup-restore-drill.ps1 -Database EkipzenDb -BackupPath $env:TEMP\ekipzen-backup`
 Expected: çıkış kodu 0; "tatbikat başarılı" ve karşılaştırılan tablo satır sayıları yazılır.
 
 - [ ] **Step 3: Koruma kuralını doğrula**

@@ -1,4 +1,4 @@
-# İK Pro — Frontend'in React'e Dönüşümü (Tasarım)
+# Ekipzen — Frontend'in React'e Dönüşümü (Tasarım)
 
 > Durum: Onaylandı · Tarih: 2026-07-13
 > Karar sahibi onayları: veri kapsamı, stack, stil, depo düzeni, veri katmanı — hepsi

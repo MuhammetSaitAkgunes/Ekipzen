@@ -1758,7 +1758,7 @@ git commit -m "feat(frontend): yönetici konsolu — gerçek KPI/onay paneli, de
 **Files:**
 - Modify: `docs/gelistirme-gunlugu.md`; gerekirse küçük düzeltmeler.
 
-- [x] **Step 1: Backend + frontend'i başlat** (`cd backend && dotnet run --project src/IKPro.API --launch-profile http` + `cd frontend && npm run dev`)
+- [x] **Step 1: Backend + frontend'i başlat** (`cd backend && dotnet run --project src/Ekipzen.API --launch-profile http` + `cd frontend && npm run dev`)
 
 - [x] **Step 2: Duman testi** (Playwright, scratchpad script'i; giriş `demo123`; **tab tıklamalarında `exact: true`** — dilim 6'daki `has-text` alt dizgi tuzağını hatırla)
 

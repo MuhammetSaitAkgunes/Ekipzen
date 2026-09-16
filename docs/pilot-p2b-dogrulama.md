@@ -13,7 +13,7 @@
 
 ### GitHub CI bulgusu — kesin kanıt ve çıkarım ayrımı
 
-`09c2b34` için [CI koşumu 34197395396](https://github.com/MuhammetSaitAkgunes/IKPro/actions/runs/34197395396) başarısızdı: frontend geçti, backend derlendi; 91 birim test geçti, 241 entegrasyon testinden 1'i hata verdi. `Abonelik_KiracininKendiKatalogundaDEGIL_Platformda` testinin `TenancyTestBase.DisposeAsync` temizliğinde SQL, kataloğun kullanımda olduğunu bildirdi.
+`09c2b34` için [CI koşumu 34197395396](https://github.com/MuhammetSaitAkgunes/Ekipzen/actions/runs/34197395396) başarısızdı: frontend geçti, backend derlendi; 91 birim test geçti, 241 entegrasyon testinden 1'i hata verdi. `Abonelik_KiracininKendiKatalogundaDEGIL_Platformda` testinin `TenancyTestBase.DisposeAsync` temizliğinde SQL, kataloğun kullanımda olduğunu bildirdi.
 
 Testler katalogları tek tek silerken platformda kalan kayıtları zamanlanmış okuyucuların tarayabildiği koddan doğrulandı. Yeni test, düzeltme öncesinde retry zamanlayıcısının açık olduğunu yakalayıp beklenen şekilde başarısız oldu; izolasyondan sonra geçti. **CI logları kataloğu tutan oturumu kesin tanımlamıyor; aynı SQL hatası yerelde yeniden üretilemedi.** Bu paket saptanan eşzamanlı erişim riskini test ortamından kaldırır. GitHub'da yeni başarılı koşum ancak onaylı push sonrasında kanıtlanabilir; yerel başarı eski CI sonucunu değiştirmez.
 
@@ -25,8 +25,8 @@ Komutlar ilgili `backend` veya `frontend` dizininde çalıştırıldı.
 | --- | --- |
 | İzolasyon testinin düzeltme öncesi koşumu | Beklenen 1 başarısızlık: zamanlayıcı açık |
 | İzolasyon + AbonelikPlatformda + Recruitment hedefli koşum | 10/10 geçti |
-| `dotnet build IKPro.sln --no-restore -c Release -warnaserror` | 0 hata, 0 uyarı |
-| `dotnet test IKPro.sln --no-build -c Release` | 91 birim + 242 entegrasyon; 0 başarısız/atlanan |
+| `dotnet build Ekipzen.sln --no-restore -c Release -warnaserror` | 0 hata, 0 uyarı |
+| `dotnet test Ekipzen.sln --no-build -c Release` | 91 birim + 242 entegrasyon; 0 başarısız/atlanan |
 | `npm ci --legacy-peer-deps` | Kilit dosyasından temiz kurulum başarılı |
 | `npm audit --audit-level=moderate` | 0 bulgu |
 | `npm run test -- --run` | 45 dosyada 169/169 geçti |
@@ -72,8 +72,8 @@ Fast-forward yeni merge commit'i üretmez. Onay başka commit/ref/tag/remote'a g
 1. `.github/workflows/ci.yml`
 2. `frontend/package.json`
 3. `frontend/package-lock.json`
-4. `backend/tests/IKPro.Tests.Integration/IKProApiFactory.cs`
-5. `backend/tests/IKPro.Tests.Integration/Hosting/TestHostIsolationTests.cs`
+4. `backend/tests/Ekipzen.Tests.Integration/EkipzenApiFactory.cs`
+5. `backend/tests/Ekipzen.Tests.Integration/Hosting/TestHostIsolationTests.cs`
 6. `docs/pilot-hazirlik-plani.md`
 7. `docs/windows-pilot-yayin.md`
 8. `docs/turhost-pilot-onkontrol.md`

@@ -18,8 +18,8 @@ Pilot profili: yaklaşık 10 personel, Windows / SQL Server; Pazartesi–Cuma 09
 
 | Kontrol | Sonuç |
 | --- | --- |
-| `dotnet build backend/IKPro.sln --no-restore -v minimal` | Başarılı; 0 hata, 0 uyarı |
-| `dotnet test backend/IKPro.sln --no-restore -v minimal` | 91 birim + 207 entegrasyon; 0 başarısız, 0 atlanan |
+| `dotnet build backend/Ekipzen.sln --no-restore -v minimal` | Başarılı; 0 hata, 0 uyarı |
+| `dotnet test backend/Ekipzen.sln --no-restore -v minimal` | 91 birim + 207 entegrasyon; 0 başarısız, 0 atlanan |
 | `npm run test -- --run` (frontend) | 45 dosyada 165 test; tamamı geçti |
 | `npm run lint` (frontend) | Başarılı |
 | `npm run build` (frontend) | TypeScript + Vite üretim derlemesi başarılı |
@@ -62,11 +62,11 @@ Fast-forward merge ek merge commit'i üretmez. Hedef değişmişse bu onay yeni 
 1. `raporlar/pilot-hazirlik-analizi-2026-09-07.md`
 2. `docs/pilot-hazirlik-plani.md`
 3. `docs/pilot-p1-dogrulama.md`
-4. `backend/src/IKPro.API/Controllers/SetupController.cs`
-5. `backend/src/IKPro.Application/Features/Setup/TenantBaseline2026.cs`
-6. `backend/src/IKPro.Application/Features/Setup/TenantSetupHandlers.cs`
-7. `backend/src/IKPro.Infrastructure/Persistence/AppDbContextInitializer.cs`
-8. `backend/tests/IKPro.Tests.Integration/Tenancy/TenantSetupTests.cs`
+4. `backend/src/Ekipzen.API/Controllers/SetupController.cs`
+5. `backend/src/Ekipzen.Application/Features/Setup/TenantBaseline2026.cs`
+6. `backend/src/Ekipzen.Application/Features/Setup/TenantSetupHandlers.cs`
+7. `backend/src/Ekipzen.Infrastructure/Persistence/AppDbContextInitializer.cs`
+8. `backend/tests/Ekipzen.Tests.Integration/Tenancy/TenantSetupTests.cs`
 9. `frontend/src/api/schema.d.ts`
 10. `frontend/src/features/payroll/queries.ts`
 11. `frontend/src/features/payroll/SettingsTab.tsx`

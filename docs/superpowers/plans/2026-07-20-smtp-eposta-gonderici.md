@@ -20,13 +20,13 @@
 ## Dosya Yapısı
 
 - **Modify:** `backend/Directory.Packages.props` — MailKit sürümü.
-- **Modify:** `backend/src/IKPro.Infrastructure/IKPro.Infrastructure.csproj` — MailKit referansı.
-- **Create:** `backend/src/IKPro.Infrastructure/Email/SmtpOptions.cs` — options + doğrulama.
-- **Create:** `backend/src/IKPro.Infrastructure/Email/MailKitSmtpEmailSender.cs` — implementasyon.
-- **Modify:** `backend/src/IKPro.Infrastructure/DependencyInjection.cs` — mode'a göre seçim + fail-fast.
-- **Create:** `backend/tests/IKPro.Tests.Unit/Email/SmtpOptionsTests.cs` — doğrulama birim testleri.
-- **Create:** `backend/tests/IKPro.Tests.Integration/Email/EmailSenderSelectionTests.cs` — DI seçim testi.
-- **Modify:** `backend/src/IKPro.API/appsettings.json` — örnek (boş/outbox) blok.
+- **Modify:** `backend/src/Ekipzen.Infrastructure/Ekipzen.Infrastructure.csproj` — MailKit referansı.
+- **Create:** `backend/src/Ekipzen.Infrastructure/Email/SmtpOptions.cs` — options + doğrulama.
+- **Create:** `backend/src/Ekipzen.Infrastructure/Email/MailKitSmtpEmailSender.cs` — implementasyon.
+- **Modify:** `backend/src/Ekipzen.Infrastructure/DependencyInjection.cs` — mode'a göre seçim + fail-fast.
+- **Create:** `backend/tests/Ekipzen.Tests.Unit/Email/SmtpOptionsTests.cs` — doğrulama birim testleri.
+- **Create:** `backend/tests/Ekipzen.Tests.Integration/Email/EmailSenderSelectionTests.cs` — DI seçim testi.
+- **Modify:** `backend/src/Ekipzen.API/appsettings.json` — örnek (boş/outbox) blok.
 - **Modify:** `docs/kvkk-veri-izolasyonu.md` Bölüm 7 + `docs/gelistirme-gunlugu.md`.
 
 ---
@@ -35,7 +35,7 @@
 
 - [ ] **Step 1: Failing birim test** — `SmtpOptionsTests`: `Validate()` Host eksikse ve From eksikse `InvalidOperationException`; tam yapılandırmada sorunsuz; Port varsayılanı 587, StartTls varsayılanı true.
 - [ ] **Step 2:** Testi çalıştır → FAIL.
-- [ ] **Step 3:** `SmtpOptions` yaz (`Host`, `Port=587`, `User`, `Password`, `From`, `FromName="İK Pro"`, `UseStartTls=true`, `Validate()`).
+- [ ] **Step 3:** `SmtpOptions` yaz (`Host`, `Port=587`, `User`, `Password`, `From`, `FromName="Ekipzen"`, `UseStartTls=true`, `Validate()`).
 - [ ] **Step 4:** Test PASS. **Step 5:** Commit.
 
 ## Task 2: MailKitSmtpEmailSender + DI seçimi

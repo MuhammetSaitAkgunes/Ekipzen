@@ -1,10 +1,10 @@
-# İK Pro — Backend Geliştirme Planı
+# Ekipzen — Backend Geliştirme Planı
 
 > Durum: Onaylandı · Tarih: 2026-07-11 · Hedef: .NET 9 + EF Core + MSSQL backend
 
 ## Context (Neden bu çalışma?)
 
-`İK Pro`, 3 rollü (hr-admin / manager / employee), ~11 modüllü Türkçe bir İK SaaS
+`Ekipzen`, 3 rollü (hr-admin / manager / employee), ~11 modüllü Türkçe bir İK SaaS
 **frontend'idir** (vanilla JS, bundler yok). Tüm veri şu an mock: `services/mockData.js`,
 component içi literaller ve `localStorage`. `services/apiClient.js` içinde zaten
 hedeflenen bir .NET sözleşmesi var (`https://localhost:7001/api`, Bearer token) ama
@@ -32,17 +32,17 @@ olarak kullanılır (dönmesi gereken veri şekilleri, rol matrisi, brüt→net 
 ## Mimari (Clean Architecture — ayrı projeler)
 
 ```
-IKPro.sln
+Ekipzen.sln
  ├─ src/
- │   ├─ IKPro.Domain          → entity, enum, value object, domain event (bağımlılıksız)
- │   ├─ IKPro.Application      → CQRS handler, DTO, validator, servis arayüzleri
+ │   ├─ Ekipzen.Domain          → entity, enum, value object, domain event (bağımlılıksız)
+ │   ├─ Ekipzen.Application      → CQRS handler, DTO, validator, servis arayüzleri
  │   │                           (IPayrollEngine, IFileStorage, IEmailSender, repo/UoW)
- │   ├─ IKPro.Infrastructure   → EF DbContext + config + migration, Identity, JWT,
+ │   ├─ Ekipzen.Infrastructure   → EF DbContext + config + migration, Identity, JWT,
  │   │                           dosya depolama, PDF, e-posta, repo impl, SQL view/SP/trigger
- │   └─ IKPro.API              → controller, middleware, DI, Swagger, Program.cs
+ │   └─ Ekipzen.API              → controller, middleware, DI, Swagger, Program.cs
  └─ tests/
-     ├─ IKPro.Tests.Unit        → özellikle bordro motoru parite testleri
-     └─ IKPro.Tests.Integration → uçtan uca API testleri (WebApplicationFactory)
+     ├─ Ekipzen.Tests.Unit        → özellikle bordro motoru parite testleri
+     └─ Ekipzen.Tests.Integration → uçtan uca API testleri (WebApplicationFactory)
 ```
 
 Bağımlılık yönü: API → Infrastructure → Application → Domain. Domain hiçbir şeye bağımlı değil.
@@ -151,7 +151,7 @@ Role: `hr-admin|manager|employee` · Employee status: `active|passive` · Leave 
 ## Doğrulama (nasıl test edilir)
 
 1. `docker-compose up -d` → MSSQL ayağa kalkar; `dotnet ef database update` migration uygular.
-2. `dotnet build` temiz derlenir; `dotnet run --project src/IKPro.API` → Swagger `/swagger` açılır.
+2. `dotnet build` temiz derlenir; `dotnet run --project src/Ekipzen.API` → Swagger `/swagger` açılır.
 3. Auth akışı: `/api/auth/login` ile JWT alınır, Swagger "Authorize" ile korunan uç denenir.
 4. Her faz sonunda ilgili uçlar Swagger'dan manuel + entegrasyon testleriyle doğrulanır.
 5. **Bordro paritesi:** `components/payroll.js` içindeki bilinen örnek girdiler için

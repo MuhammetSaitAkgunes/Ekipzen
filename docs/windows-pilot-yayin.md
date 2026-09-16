@@ -35,16 +35,16 @@ Script temiz çalışma ağacı ister; `npm ci`, frontend build ve Release/win-x
 Örnek yerleşim; gerçek disk/hedef sistem yöneticisi tarafından doğrulanır:
 
 ```text
-D:\IKPro\releases\pilot-p2-001\site   uygulama dosyaları, salt okunur
-D:\IKPro\data\storage                tenant evrak/logo dosyaları
-D:\IKPro\data\keys                   şifreli Data Protection anahtarları
-D:\IKPro\data\logs                   dönen uygulama logları
-D:\IKPro\secrets\                    harici JSON yapılandırma ve PFX
+D:\Ekipzen\releases\pilot-p2-001\site   uygulama dosyaları, salt okunur
+D:\Ekipzen\data\storage                tenant evrak/logo dosyaları
+D:\Ekipzen\data\keys                   şifreli Data Protection anahtarları
+D:\Ekipzen\data\logs                   dönen uygulama logları
+D:\Ekipzen\secrets\                    harici JSON yapılandırma ve PFX
 ```
 
 App-pool hesabına yalnız yayın klasöründe okuma/çalıştırma; storage, keys ve logs dizinlerinde gereken yazma; sır dosyalarında yalnız okuma verilir. Yönetici/SYSTEM dışında geniş kullanıcı gruplarına erişim verilmez. Dizinler uygulama açılmadan önce oluşturulmalı; junction/symlink ve inherited ACL'ler incelenmelidir. Açılış kapısının yol kontrolü, Windows ACL denetiminin yerine geçmez.
 
-`deployment/windows/configuration.example.json` dosyasını yayın kökünün **dışına**, örneğin `D:\IKPro\secrets\ikpro.production.local.json` konumuna kopyalayıp gerçek değerlerle doldurun. `IKPRO_CONFIG_FILE` app-pool ortam değişkeni bu mutlak yolu gösterir. Uygulama bu dosyayı okur; environment/CLI override önceliği korunur. Sırları komut satırı argümanına veya yayın `web.config` dosyasına koymayın. Pilot için ACL-korumalı harici JSON kullanılabilir; bu, şifreli bir secret vault olduğu anlamına gelmez.
+`deployment/windows/configuration.example.json` dosyasını yayın kökünün **dışına**, örneğin `D:\Ekipzen\secrets\ekipzen.production.local.json` konumuna kopyalayıp gerçek değerlerle doldurun. `EKIPZEN_CONFIG_FILE` app-pool ortam değişkeni bu mutlak yolu gösterir. Uygulama bu dosyayı okur; environment/CLI override önceliği korunur. Sırları komut satırı argümanına veya yayın `web.config` dosyasına koymayın. Pilot için ACL-korumalı harici JSON kullanılabilir; bu, şifreli bir secret vault olduğu anlamına gelmez.
 
 Zorunlu kontroller:
 
@@ -59,7 +59,7 @@ Zorunlu kontroller:
 
 Özel anahtarlı, geçerli süreli RSA PFX sistem yöneticisi tarafından sağlanır. Bu sertifika TLS sertifikasından bağımsız tutulabilir. PFX ve parolası `DataProtection:CertificatePath` / `CertificatePassword` ile verilir; PFX, JSON sır dosyası ve kalıcı anahtar dizini yayın paketine eklenmez.
 
-Anahtarlar `DataProtection:KeysPath` içinde sertifikayla şifrelenir. Sabit `SetApplicationName("IKPro")` sayesinde release dizini değişikliği uygulama kimliğini bozmaz. Başka makineye geri dönüşte **anahtar dosyaları + ilgili PFX + parola** birlikte gerekir. Sertifika döndürme/eskisiyle anahtar çözme ve expiry alarmı ayrıca planlanmalı; çalışan sertifika rastgele değiştirilmemeli. Bu pakette otomatik sertifika rotasyonu yoktur. [Microsoft Data Protection yapılandırması](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview?view=aspnetcore-9.0).
+Anahtarlar `DataProtection:KeysPath` içinde sertifikayla şifrelenir. Sabit `SetApplicationName("Ekipzen")` sayesinde release dizini değişikliği uygulama kimliğini bozmaz. Başka makineye geri dönüşte **anahtar dosyaları + ilgili PFX + parola** birlikte gerekir. Sertifika döndürme/eskisiyle anahtar çözme ve expiry alarmı ayrıca planlanmalı; çalışan sertifika rastgele değiştirilmemeli. Bu pakette otomatik sertifika rotasyonu yoktur. [Microsoft Data Protection yapılandırması](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview?view=aspnetcore-9.0).
 
 Üretim uygulama logu `Logging:FilePath` konumuna yazılır; günlük ve 10 MB eşiğinde döndürülür, 14 dosya saklanır. Bunlar bordro audit kayıtlarının yerine geçmez. IIS request logları ve uygulama loglarının ACL/retention/alarm ayarları hedef sunucuda doğrulanmalı. İstek gövdesi veya token loglama açılmamalı. ANCM `stdoutLogEnabled` varsayılan kapalıdır; yalnız kısa süreli, kontrollü açılış teşhisinde ayrıca ele alınır.
 
@@ -70,8 +70,8 @@ Paketin `site` dizininde ve gerçek uygulama hesabının erişim bağlamıyla:
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
 $env:DOTNET_ENVIRONMENT = 'Production'
-$env:IKPRO_CONFIG_FILE = 'D:\IKPro\secrets\ikpro.production.local.json'
-dotnet IKPro.API.dll --verify-production=true
+$env:EKIPZEN_CONFIG_FILE = 'D:\Ekipzen\secrets\ekipzen.production.local.json'
+dotnet Ekipzen.API.dll --verify-production=true
 ```
 
 Başarısız doğrulama sıfır olmayan çıkış kodu üretir. Bu komut ayarları, kalıcı dizinlerin varlığını ve PFX'in okunabilirliğini kontrol eder; **SQL/SMTP/IIS'e bağlanmaz, şema oluşturmaz/migrate etmez**. Dizinlere gerçek yazma yetkisi ve hizmet bağlantısı ayrıca test edilir. Komutun başarılı olması e-posta teslimi, veritabanı uygunluğu veya TLS uçtan uca doğrulaması değildir.
@@ -81,7 +81,7 @@ Başarısız doğrulama sıfır olmayan çıkış kodu üretir. Bu komut ayarlar
 1. İlk olarak mevcut uygulama/dizin ve veritabanı hedefleri, yedekler, geri dönüş adımı ve test yayın alanı belirlenir. Mevcut veritabanının üzerine otomatik işlem yapılmaz.
 2. Gerekli platform/paylaşılan/tenant şemaları kontrollü yönetim adımıyla hazırlanır. Production açılışı demo seed veya otomatik migration çalıştırmaz. `/health` bağlantı kontrolü, bütün tenant şemalarının uygun olduğunu tek başına kanıtlamaz.
 3. IIS'te ayrı x64 app-pool, No Managed Code, yalnız gereken anonymous HTTP girişi ve uygulama içi JWT kimlik doğrulama düzeni hazırlanır. Site kökü yalnız `site` klasörüdür. HTTPS 443 binding ve açık hostname kullanılır.
-4. `IKPRO_CONFIG_FILE` sadece ilgili app-pool için tanımlanır. İki environment adı da Production olmalı; global makine ayarları başka uygulamaları etkileyecek şekilde değiştirilmez.
+4. `EKIPZEN_CONFIG_FILE` sadece ilgili app-pool için tanımlanır. İki environment adı da Production olmalı; global makine ayarları başka uygulamaları etkileyecek şekilde değiştirilmez.
 5. HTTP→HTTPS, HSTS, güvenlik başlıkları, `/` frontend, `/api` yetki sınırları, bilinmeyen API için 404 ve farklı host/origin reddi doğrulanır. Pilot topolojisi doğrudan IIS in-process; ek proxy/load balancer için ayrıca güvenilen proxy tasarımı gerekir. Her gelen `X-Forwarded-*` başlığına güvenilmez.
 6. SMTP ile gerçek yönetici daveti teslim alınır, bağlantı doğru HTTPS hostunu açar, şifre belirlenir ve giriş yapılır. Sonra evrak yükleme/indirme, servis restart ve tekrar giriş denenir.
 7. Önceki release'e dönüş ve ayrı ortamda veri/evrak/anahtar geri yükleme kanıtlanır. Uygulama dosyası rollback'i veritabanı migration'ını kendiliğinden geri almaz.

@@ -54,7 +54,7 @@ Hayır. İki katman korur: policy (rol) + sorgu kapsamı (`ICurrentUser.Employee
 | --- | --- |
 | Backend açılışta migration/DB hatası | SQL Server çalışıyor mu? `ConnectionStrings__DefaultConnection` doğru mu? |
 | `dotnet ef` bulunamadı | `dotnet tool install --global dotnet-ef` |
-| Entegrasyon testi "SqlException" | Test DB'sine (`IKProDb_Test`) erişim yok; SQL Server açık olmalı. |
+| Entegrasyon testi "SqlException" | Test DB'sine (`EkipzenDb_Test`) erişim yok; SQL Server açık olmalı. |
 | Frontend 401 döngüsü | Refresh token süresi dolmuş; çıkış yapıp yeniden gir. |
 | Davet/SMTP e-postası gelmiyor (dev) | `Email:Mode=outbox` — e-posta diske yazılır: `App_Data/storage/outbox`. |
 | Kiracı testinde slug hatası | Slug yalnız `[a-z0-9-]`; Türkçe/aksanlı harfler türetilirken düşürülür/çevrilir. |

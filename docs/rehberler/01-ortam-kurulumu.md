@@ -19,22 +19,22 @@ node --version     # v20+ görmelisin
 
 ## 1) Veritabanı
 
-Backend varsayılan olarak şu bağlantıyı kullanır (`backend/src/IKPro.API/appsettings.json`):
+Backend varsayılan olarak şu bağlantıyı kullanır (`backend/src/Ekipzen.API/appsettings.json`):
 
 ```
-Server=localhost,1433;Database=IKProDb;User Id=sa;Password=Your_strong_Pass123;...
+Server=localhost,1433;Database=EkipzenDb;User Id=sa;Password=Your_strong_Pass123;...
 ```
 
 Kendi SQL Server'ına göre bu bağlantıyı ortam değişkeniyle ezebilirsin (önerilen):
 
 ```bash
 # Windows PowerShell
-$env:ConnectionStrings__DefaultConnection = "Server=(localdb)\MSSQLLocalDB;Database=IKProDb;Trusted_Connection=True;TrustServerCertificate=True"
-$env:ConnectionStrings__PlatformConnection = "Server=(localdb)\MSSQLLocalDB;Database=IKProPlatform;Trusted_Connection=True;TrustServerCertificate=True"
+$env:ConnectionStrings__DefaultConnection = "Server=(localdb)\MSSQLLocalDB;Database=EkipzenDb;Trusted_Connection=True;TrustServerCertificate=True"
+$env:ConnectionStrings__PlatformConnection = "Server=(localdb)\MSSQLLocalDB;Database=EkipzenPlatform;Trusted_Connection=True;TrustServerCertificate=True"
 ```
 
 > **Çok önemli:** Uygulama **iki ayrı veritabanı** kullanır — `DefaultConnection`
-> (`IKProDb`, kiracı verisi) ve `PlatformConnection` (`IKProPlatform`, kiracı kimliği:
+> (`EkipzenDb`, kiracı verisi) ve `PlatformConnection` (`EkipzenPlatform`, kiracı kimliği:
 > `Tenants`, `TenantDirectoryEntries`; bkz. [06](06-multi-tenancy.md)). Yalnız
 > `DefaultConnection`'ı ezip `PlatformConnection`'ı unutursan uygulama verisi senin
 > sunucuna, kiracı kimliği ise `appsettings.Development.json`'daki varsayılan sunucuya
@@ -49,7 +49,7 @@ $env:ConnectionStrings__PlatformConnection = "Server=(localdb)\MSSQLLocalDB;Data
 
 ```bash
 cd backend
-dotnet run --project src/IKPro.API --launch-profile http
+dotnet run --project src/Ekipzen.API --launch-profile http
 ```
 
 - API adresi: **http://localhost:5053**
@@ -101,7 +101,7 @@ cd frontend && npm test -- --run
 | Backend açılışta DB hatası | SQL Server çalışmıyor ya da bağlantı dizesi yanlış. `ConnectionStrings__DefaultConnection`'ı kontrol et. |
 | Frontend "Network Error" | Backend çalışmıyor. Önce `:5053`'ü aç. |
 | `npm run dev` tip hataları | Backend Swagger'ından tipler eski olabilir: backend çalışırken `npm run gen:api` çalıştır. |
-| Entegrasyon testleri düşüyor | Testler `IKProDb_Test` veritabanını her koşuda sıfırlar; SQL Server erişilebilir olmalı. |
+| Entegrasyon testleri düşüyor | Testler `EkipzenDb_Test` veritabanını her koşuda sıfırlar; SQL Server erişilebilir olmalı. |
 | Port zaten kullanımda | Önceki `dotnet run`/`npm run dev` süreci hâlâ açık olabilir; kapat. |
 
 ## Sonraki Adım

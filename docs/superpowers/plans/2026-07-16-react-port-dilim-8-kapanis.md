@@ -69,7 +69,7 @@ git commit -m "chore: eski mock frontend legacy-frontend/ altına taşındı (pa
 
 ```gitignore
 # Backend çalışma zamanı dosya deposu (logo/evrak yüklemeleri)
-backend/src/IKPro.API/App_Data/
+backend/src/Ekipzen.API/App_Data/
 ```
 
 - [x] **Step 2: Doğrula** — `git status --short` çıktısında `App_Data` artık görünmez.
@@ -88,7 +88,7 @@ git commit -m "chore: backend App_Data çalışma zamanı deposu ignore edildi"
 **Files:**
 - Modify: `README.md` (eski içerik mock-demo dönemine ait; "Backend Not Included" vb. artık yanlış)
 
-- [x] **Step 1: Yeni `README.md` yaz** — bölümler: proje tanımı (3 rollü İK SaaS demo: hr-admin/manager/employee), depo yapısı (`backend/` .NET 9 Clean Architecture + EF Core + MSSQL; `frontend/` React 18 + Vite + TanStack Query; `legacy-frontend/` parite referansı; `docs/` günlük/spec/planlar; `raporlar/` backend faz planı), kurulum ve çalıştırma (backend `dotnet run --project src/IKPro.API --launch-profile http` → :5053, frontend `npm install && npm run dev` → :5173 `/api` proxy'li, testler `npm test -- --run` + `dotnet test`), demo kullanıcılar tablosu (`ik@hrmaster.local` / `ece.arslan@hrmaster.local` / `ahmet.yilmaz@hrmaster.local`, hepsi `demo123`), modül listesi (Risk Merkezi, Genel Durum, Aksiyonlar, Personel, İşe Alım, Mesai & Puantaj, İzinler, Bordro, Uyum, Yönetici Konsolu, Ayarlar, global arama), dokümantasyon işaretçileri (günlük + tasarım dokümanı + backend plan), "Üretim değil demo" uyarısı (bordro/mevzuat müşavir doğrulaması notu).
+- [x] **Step 1: Yeni `README.md` yaz** — bölümler: proje tanımı (3 rollü İK SaaS demo: hr-admin/manager/employee), depo yapısı (`backend/` .NET 9 Clean Architecture + EF Core + MSSQL; `frontend/` React 18 + Vite + TanStack Query; `legacy-frontend/` parite referansı; `docs/` günlük/spec/planlar; `raporlar/` backend faz planı), kurulum ve çalıştırma (backend `dotnet run --project src/Ekipzen.API --launch-profile http` → :5053, frontend `npm install && npm run dev` → :5173 `/api` proxy'li, testler `npm test -- --run` + `dotnet test`), demo kullanıcılar tablosu (`ik@hrmaster.local` / `ece.arslan@hrmaster.local` / `ahmet.yilmaz@hrmaster.local`, hepsi `demo123`), modül listesi (Risk Merkezi, Genel Durum, Aksiyonlar, Personel, İşe Alım, Mesai & Puantaj, İzinler, Bordro, Uyum, Yönetici Konsolu, Ayarlar, global arama), dokümantasyon işaretçileri (günlük + tasarım dokümanı + backend plan), "Üretim değil demo" uyarısı (bordro/mevzuat müşavir doğrulaması notu).
 
 Not: rozet/başlık görselleri sadeleştirilir; içerik Türkçe kalır. Eski README'nin ayrıntılı mock anlatımı silinir (legacy-frontend/README.md zaten işaret ediyor).
 

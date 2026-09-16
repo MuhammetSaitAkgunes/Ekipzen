@@ -33,7 +33,7 @@ const parsePayrollNumber = (value, fallback = 0) => {
 
 const getPayrollDefaultSettings = () => {
   try {
-    const saved = JSON.parse(localStorage.getItem("ikpro-payroll-settings") || "{}");
+    const saved = JSON.parse(localStorage.getItem("ekipzen-payroll-settings") || "{}");
     return { ...payrollDefaultSettings, ...saved };
   } catch {
     return { ...payrollDefaultSettings };
@@ -818,7 +818,7 @@ const renderPayrollDetail = (row, parameters) => `
           <span class="status-pill info">Demo</span>
         </div>
         <div class="slip-paper">
-          <div class="slip-brand"><strong>İK Pro</strong><span>${parameters.period} Bordro Pusulası</span></div>
+          <div class="slip-brand"><strong>Ekipzen</strong><span>${parameters.period} Bordro Pusulası</span></div>
           <div class="slip-row"><span>Personel</span><strong>${row.name}</strong></div>
           <div class="slip-row"><span>Çalışılan gün</span><strong>${row.workedDays}</strong></div>
           <div class="slip-row"><span>Fazla mesai</span><strong>${row.overtimeHours || 0} saat · ${formatPayrollMoney(row.overtimePay)}</strong></div>
@@ -892,7 +892,7 @@ window.savePayrollDefaultSettings = () => {
       parsePayrollNumber(document.getElementById(`setting-${key}`)?.value, payrollDefaultSettings[key]),
     ])
   );
-  localStorage.setItem("ikpro-payroll-settings", JSON.stringify(settings));
+  localStorage.setItem("ekipzen-payroll-settings", JSON.stringify(settings));
 
   const feedback = document.querySelector(".payroll-settings-feedback");
   if (feedback) feedback.textContent = "Ayarlar kaydedildi. Dönem bordrosu ve tekil hesaplama bu varsayılanları kullanacak.";
@@ -900,7 +900,7 @@ window.savePayrollDefaultSettings = () => {
 };
 
 window.resetPayrollDefaultSettings = () => {
-  localStorage.removeItem("ikpro-payroll-settings");
+  localStorage.removeItem("ekipzen-payroll-settings");
   showToast("Bordro ayarları varsayılana döndürüldü.", "info");
   window.navigateTo("payroll-settings");
 };

@@ -1,21 +1,21 @@
 ﻿<#
 .SYNOPSIS
-    İK Pro veritabanları için yedek alma + geri yükleme tatbikatı.
+    Ekipzen veritabanları için yedek alma + geri yükleme tatbikatı.
 
 .DESCRIPTION
     Yedeğin VAR OLMASI yeterli değildir; geri yüklenebildiği kanıtlanmalıdır.
     Script her veritabanı için tam yedek alır, yedeği AYRI bir ada geri yükler,
     tablo satır sayılarını kaynakla karşılaştırır ve tatbikat kopyasını düşürür.
 
-    KİRACI BAŞINA VERİTABANI: İK Pro'da artık tek bir veritabanı yoktur. Her
+    KİRACI BAŞINA VERİTABANI: Ekipzen'de artık tek bir veritabanı yoktur. Her
     müşterinin verisi kendi kataloğundadır. Yedeklenecekler PLATFORM
     VERİTABANINDAN keşfedilir:
 
-      1. IKProPlatform  - kiracı kimliği, yönlendirme dizini, abonelikler.
+      1. EkipzenPlatform  - kiracı kimliği, yönlendirme dizini, abonelikler.
                           Onsuz diğer yedekler SAHİPSİZ kalır: hangi kataloğun
                           hangi müşteriye ait olduğunu yalnız o bilir.
-      2. IKProDb        - paylaşılan katalog (bugün boş, tesisat gereği duruyor).
-      3. IKPro_{slug}   - her müşteri için bir tane, Tenants tablosundan okunur.
+      2. EkipzenDb        - paylaşılan katalog (bugün boş, tesisat gereği duruyor).
+      3. Ekipzen_{slug}   - her müşteri için bir tane, Tenants tablosundan okunur.
 
     Keşif kaynağı neden platform tablosu, sunucudaki ad deseni değil: desen,
     silinmiş bir müşteriden kalan artık katalogu da yedekler ve gerçek müşteri
@@ -30,10 +30,10 @@
     tatbikat için.
 
 .PARAMETER PlatformDatabase
-    Kiracı listesinin okunacağı platform veritabanı. Varsayılan: IKProPlatform
+    Kiracı listesinin okunacağı platform veritabanı. Varsayılan: EkipzenPlatform
 
 .PARAMETER SharedDatabase
-    Paylaşılan katalog. Varsayılan: IKProDb
+    Paylaşılan katalog. Varsayılan: EkipzenDb
 
 .PARAMETER BackupPath
     Yedek dosyalarının yazılacağı klasör. SQL Server servis hesabının yazma izni
@@ -47,11 +47,11 @@
 
 .EXAMPLE
     # Tüm veritabanları (platform + paylaşılan + her müşteri):
-    powershell -File scripts\backup-restore-drill.ps1 -BackupPath C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro
+    powershell -File scripts\backup-restore-drill.ps1 -BackupPath C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen
 
 .EXAMPLE
     # Yalnız tek bir müşteri:
-    powershell -File scripts\backup-restore-drill.ps1 -Database IKPro_acme -BackupPath C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\IKPro
+    powershell -File scripts\backup-restore-drill.ps1 -Database Ekipzen_acme -BackupPath C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Backup\Ekipzen
 
 .OUTPUTS
     Çıkış kodu 0 = TÜM veritabanlarının tatbikatı başarılı. 1 = en az biri
@@ -63,8 +63,8 @@ param(
     # Bos birakilirsa yedeklenecekler platformdan KESFEDILIR.
     [string]$Database,
     [Parameter(Mandatory = $true)][string]$BackupPath,
-    [string]$PlatformDatabase = "IKProPlatform",
-    [string]$SharedDatabase = "IKProDb",
+    [string]$PlatformDatabase = "EkipzenPlatform",
+    [string]$SharedDatabase = "EkipzenDb",
     [string]$ServerInstance = "localhost",
     [switch]$KeepRestoredCopy,
 
@@ -89,7 +89,7 @@ $ErrorActionPreference = "Stop"
 # Ortak keşif/SQL/log mantığı: log yedeği script'iyle AYNI kümede çalışmak
 # zorunda. İki yerde ayrı ayrı durursa zamanla ayrışır ve sonuç sessiz olur —
 # tam yedeği alınan ama günlüğü alınmayan müşteri felaket anına kadar fark edilmez.
-Import-Module (Join-Path $PSScriptRoot "IKProBackup.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "EkipzenBackup.psm1") -Force
 
 $script:startedAt = Get-Date
 $script:storageArchives = @()
@@ -98,14 +98,14 @@ $script:offsiteCopies = @()
 function Write-DrillResult {
     param([bool]$Success, [string]$Message, [hashtable]$Details = @{}, [string]$ForDatabase = "")
 
-    Write-IKProResult -Islem "tatbikat" -Success $Success -Message $Message -Details $Details `
+    Write-EkipzenResult -Islem "tatbikat" -Success $Success -Message $Message -Details $Details `
         -ServerInstance $ServerInstance -ForDatabase $ForDatabase `
         -LogPath $LogPath -AlertWebhookUrl $AlertWebhookUrl -StartedAt $script:startedAt
 }
 
 function Invoke-Sql {
     param([string]$Query, [string]$OnDatabase = "master", [string]$Separator = "|")
-    return Invoke-IKProSql -ServerInstance $ServerInstance -Query $Query `
+    return Invoke-EkipzenSql -ServerInstance $ServerInstance -Query $Query `
         -OnDatabase $OnDatabase -Separator $Separator
 }
 
@@ -168,7 +168,7 @@ $script:storageArchives = @()
     # saniye hassasiyetinde geri dönüş, o veritabanı için GEÇERSİZDİR. Bu, hiçbir
     # belirti vermeden felaket anına kadar gizli kalır — tatbikatın işi tam olarak
     # böyle sessiz yalanları ortaya çıkarmaktır.
-    $model = Get-IKProRecoveryModel -ServerInstance $ServerInstance -Database $Database
+    $model = Get-EkipzenRecoveryModel -ServerInstance $ServerInstance -Database $Database
     if ($model -ne "FULL") {
         $mesaj = "Kurtarma modeli $model — log yedeği alınamaz, RPO taahhüdü (1 saat) bu " +
                  "veritabanı için geçersiz. Düzeltme: ALTER DATABASE [$Database] SET RECOVERY FULL;"
@@ -329,7 +329,7 @@ try {
     if (-not (Test-Path $BackupPath)) { New-Item -ItemType Directory -Path $BackupPath -Force | Out-Null }
 
     $hedefler = @(if ($Database) { $Database } else {
-        Get-IKProBackupTargets -ServerInstance $ServerInstance `
+        Get-EkipzenBackupTargets -ServerInstance $ServerInstance `
             -PlatformDatabase $PlatformDatabase -SharedDatabase $SharedDatabase
     })
 

@@ -7,22 +7,22 @@ Bu rehber, dört backend katmanının içinde ne olduğunu gerçek dosyalarla an
 ```
 backend/
 ├─ src/
-│  ├─ IKPro.Domain/           # Varlıklar, enum'lar, saf iş kuralları
+│  ├─ Ekipzen.Domain/           # Varlıklar, enum'lar, saf iş kuralları
 │  │  ├─ Entities/            # Employee, LeaveRequest, Tenant, ...
 │  │  ├─ Common/              # BaseEntity, AuditableEntity, ITenantScoped
 │  │  ├─ ReadModels/          # SQL view karşılıkları (keyless)
 │  │  └─ Services/            # PayrollEngine gibi saf hesap servisleri
-│  ├─ IKPro.Application/      # Kullanım senaryoları
+│  ├─ Ekipzen.Application/      # Kullanım senaryoları
 │  │  ├─ Features/<Modül>/    # Commands/Queries + Validator + Handler + DTO
 │  │  └─ Common/
 │  │     ├─ Interfaces/       # IApplicationDbContext, IEmailSender, ICurrentUser ...
 │  │     ├─ Behaviors/        # ValidationBehavior (MediatR pipeline)
 │  │     └─ Exceptions/       # NotFoundException, ConflictException ...
-│  ├─ IKPro.Infrastructure/   # Dış dünya uygulamaları
+│  ├─ Ekipzen.Infrastructure/   # Dış dünya uygulamaları
 │  │  ├─ Persistence/         # AppDbContext, migration'lar, interceptor'lar
 │  │  ├─ Identity/            # ApplicationUser, JwtTokenService, IdentityService
 │  │  ├─ Email/, Storage/, Pdf/
-│  └─ IKPro.API/              # HTTP katmanı
+│  └─ Ekipzen.API/              # HTTP katmanı
 │     ├─ Controllers/         # İnce controller'lar
 │     ├─ Services/            # CurrentUser, CurrentTenant (HttpContext'ten)
 │     └─ Program.cs           # Uygulama başlangıcı, middleware sırası
@@ -51,7 +51,7 @@ Recruitment, Tenancy, ...). Bir uç genellikle **komut/sorgu + validator + handl
 - `ICurrentTenant` — aktif kiracı (`TenantId`, `Impersonate`).
 - `IEmailSender`, `IFileStorage`, `IIdentityService`, `ITenantPurger`.
 
-**Doğrulama pipeline'ı:** `AddApplication()` (bkz. `IKPro.Application/DependencyInjection.cs`)
+**Doğrulama pipeline'ı:** `AddApplication()` (bkz. `Ekipzen.Application/DependencyInjection.cs`)
 tüm FluentValidation validator'larını kaydeder ve `ValidationBehavior<,>`'i MediatR
 pipeline'ına ekler. Böylece her komut, handler'a girmeden **otomatik** doğrulanır —
 handler içinde elle doğrulama yazmaya gerek yoktur.
@@ -71,7 +71,7 @@ Application'daki arayüzlerin gerçek uygulamaları burada:
   provizyon yolunun işidir (bkz. [06](06-multi-tenancy.md)).
 - **`Email/` `Storage/` `Pdf/`** — SMTP/outbox e-posta, yerel dosya deposu, QuestPDF bordro pusulası.
 
-`IKPro.Infrastructure/DependencyInjection.cs` (`AddInfrastructure`) tüm bunları DI'a
+`Ekipzen.Infrastructure/DependencyInjection.cs` (`AddInfrastructure`) tüm bunları DI'a
 kaydeder; e-posta göndericisi `Email:Mode`'a göre seçilir (outbox vs SMTP).
 
 ## API Katmanı

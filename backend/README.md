@@ -1,4 +1,4 @@
-# İK Pro Backend
+# Ekipzen Backend
 
 Türkçe İK SaaS frontend'ini (`../`) besleyen **.NET 9 + EF Core 9 + MSSQL** backend'i.
 Clean Architecture ile, 13 fazda (Faz 0–12) geliştirildi; tüm veri şekilleri ve iş
@@ -8,16 +8,16 @@ kuralları frontend'in kanonik kaynaklarından birebir alındı (`services/mockD
 ## Mimari
 
 ```
-IKPro.sln
+Ekipzen.sln
  ├─ src/
- │   ├─ IKPro.Domain          → entity, enum, read model, PayrollEngine (bağımlılıksız)
- │   ├─ IKPro.Application     → CQRS handler (MediatR), DTO, FluentValidation, servis arayüzleri
- │   ├─ IKPro.Infrastructure  → EF Core DbContext + migration + SQL view/trigger/function,
+ │   ├─ Ekipzen.Domain          → entity, enum, read model, PayrollEngine (bağımlılıksız)
+ │   ├─ Ekipzen.Application     → CQRS handler (MediatR), DTO, FluentValidation, servis arayüzleri
+ │   ├─ Ekipzen.Infrastructure  → EF Core DbContext + migration + SQL view/trigger/function,
  │   │                          Identity + JWT, dosya deposu, QuestPDF, e-posta outbox, seed
- │   └─ IKPro.API             → controller, middleware, DI, Swagger
+ │   └─ Ekipzen.API             → controller, middleware, DI, Swagger
  └─ tests/
-     ├─ IKPro.Tests.Unit         → bordro motoru parite testleri (JS çıktılarıyla birebir)
-     └─ IKPro.Tests.Integration  → uçtan uca API testleri (WebApplicationFactory + gerçek MSSQL)
+     ├─ Ekipzen.Tests.Unit         → bordro motoru parite testleri (JS çıktılarıyla birebir)
+     └─ Ekipzen.Tests.Integration  → uçtan uca API testleri (WebApplicationFactory + gerçek MSSQL)
 ```
 
 Bağımlılık yönü: `API → Infrastructure → Application → Domain`.
@@ -36,14 +36,14 @@ Gereksinim: .NET SDK 9 (`global.json` ile sabit) + erişilebilir bir MSSQL insta
 
 ```bash
 dotnet build                                  # temiz derleme
-dotnet run --project src/IKPro.API           # https://localhost:7001/swagger
+dotnet run --project src/Ekipzen.API           # https://localhost:7001/swagger
 ```
 
 - Development ortamında migration + demo seed **otomatik** uygulanır (`Program.cs`).
 - **İki bağlantı dizesi, N veritabanı.** `ConnectionStrings:PlatformConnection`
-  (`IKProPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar) ve
-  `ConnectionStrings:DefaultConnection` (`IKProDb` — **paylaşılan** katalog).
-  Her kiracının verisi ise kendi kataloğundadır (`IKPro_{slug}`); adresi
+  (`EkipzenPlatform` — kiracı kimliği, yönlendirme dizini, refresh token'lar) ve
+  `ConnectionStrings:DefaultConnection` (`EkipzenDb` — **paylaşılan** katalog).
+  Her kiracının verisi ise kendi kataloğundadır (`Ekipzen_{slug}`); adresi
   `DefaultConnection`'dan yalnız katalog adı değiştirilerek türetilir, yani
   sunucu/kimlik ayarı tek yerde durur. Önek `Tenancy:DatabasePrefix` ile
   değiştirilebilir (entegrasyon testleri bunu kullanır).
@@ -52,8 +52,8 @@ dotnet run --project src/IKPro.API           # https://localhost:7001/swagger
   `ConnectionStrings__PlatformConnection`.
   **Tuzak:** yalnız birini ezersen diğeri sessizce varsayılan sunucuya bağlanmaya devam
   eder — hata vermeden tutarsız bir kuruluma düşersin, ikisini birlikte ayarla.
-- **Sıfırdan başlarken** `IKProDb` + `IKProPlatform` düşürmek YETMEZ; tüm
-  `IKPro_*` kiracı veritabanlarını da birlikte düşür. Aksi halde provizyon
+- **Sıfırdan başlarken** `EkipzenDb` + `EkipzenPlatform` düşürmek YETMEZ; tüm
+  `Ekipzen_*` kiracı veritabanlarını da birlikte düşür. Aksi halde provizyon
   "katalog zaten var" diye reddeder (yarıda kalmış kurulumun artığını sessizce
   yeniden kullanmamak için konulmuş bilinçli koruma).
 - Dosya deposu kökü: `Storage:Root` (varsayılan `App_Data/storage`); e-posta outbox'ı
@@ -77,7 +77,7 @@ dotnet test                                          # birim + entegrasyon
 dotnet test --collect:"XPlat Code Coverage"          # kapsam ölçümü (coverlet)
 ```
 
-- Entegrasyon testleri gerçek MSSQL'e karşı koşar: `IKProDb_Test` veritabanı her koşuda
+- Entegrasyon testleri gerçek MSSQL'e karşı koşar: `EkipzenDb_Test` veritabanı her koşuda
   sıfırdan kurulur (migration + seed). Bağlantı, test fabrikasında ortam değişkeniyle verilir.
 - **Bordro paritesi kritik kabul kriteridir:** `PayrollEngine` çıktıları,
   `components/payroll.js` motorunun gerçek JS çıktılarıyla xUnit'te birebir eşleştirilir.

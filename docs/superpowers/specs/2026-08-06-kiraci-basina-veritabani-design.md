@@ -50,7 +50,7 @@ kiracı seçimi eklenmesi.
 
 ### İki katman
 
-**`IKProPlatform`** — tek adet. `PlatformDbContext`.
+**`EkipzenPlatform`** — tek adet. `PlatformDbContext`.
 
 | Tablo / sütun | İçerik | Ne zaman |
 | --- | --- | --- |
@@ -63,7 +63,7 @@ kiracı seçimi eklenmesi.
 etmez; kullanılmayan bir sütunu erken eklemek yerine ihtiyaç doğduğu fazda
 eklenir.
 
-**`IKPro_{slug}`** — müşteri başına bir adet. Bugünkü `AppDbContext`, değişmeden.
+**`Ekipzen_{slug}`** — müşteri başına bir adet. Bugünkü `AppDbContext`, değişmeden.
 
 30 İK tablosu (`TenantId` sütunlarıyla), Identity (`Users`, `Roles`,
 `UserRoles`, `RefreshTokens`…), okuma modeli view'ları, audit trigger'ları, ve
@@ -101,7 +101,7 @@ bugün tek `Users` tablosunun sağladığı garanti, aynı güçle korunur.
 
 ### Veritabanı adı saklanır, hesaplanmaz
 
-`Tenants.DatabaseName` provizyonda bir kez üretilir (`IKPro_acme`) ve bir daha
+`Tenants.DatabaseName` provizyonda bir kez üretilir (`Ekipzen_acme`) ve bir daha
 değişmez.
 
 Alternatifi tehlikeli: ad slug'dan her seferinde hesaplansaydı, slug değiştiği
@@ -329,7 +329,7 @@ migration ≈ koşuma 1–2 dakika ekler. Backend job'ı 93 saniyeden ~3 dakikay
 Şablon veritabanı kopyalayarak hızlandırma mümkündür ama **şimdi yapılmaz** —
 gerçekten sorun olursa yapılır.
 
-Fabrika, koşu başında `IKPro_test_*` kalıntılarını da düşürmelidir. Bugün tek
+Fabrika, koşu başında `Ekipzen_test_*` kalıntılarını da düşürmelidir. Bugün tek
 test veritabanını düşürüyor; biriken kalıntılar bir süre sonra koşuları
 açıklanamaz şekilde bozar.
 
@@ -400,4 +400,4 @@ Faz 2, sonra Faz 3.
 | Yarıda kalan provizyon | `Provisioning` durumu görünür; yeniden dene / geri al komutları |
 | Yedek dosya sayısının patlaması | Saklama ve temizlik işi baştan planlanır |
 | Migration'ın bazı kiracılarda başarısız olması | Koşucu tek tek raporlar, sıfırdan farklı kodla çıkar; açılış doğrular ve 503 verir |
-| Test veritabanı kalıntıları | Fabrika koşu başında `IKPro_test_*` düşürür |
+| Test veritabanı kalıntıları | Fabrika koşu başında `Ekipzen_test_*` düşürür |

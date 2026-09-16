@@ -1,4 +1,4 @@
-# İK Pro
+# Ekipzen
 
 3 rollü (hr-admin / manager / employee) Türkçe bir İK SaaS **demosu** — gerçek
 backend'e bağlı React arayüzü. Eski mock prototip, React portunun piksel-parite
@@ -24,7 +24,7 @@ referansı olarak `legacy-frontend/` altında korunur.
 ```bash
 # 1) Backend — http://localhost:5053 (Swagger: /swagger)
 cd backend
-dotnet run --project src/IKPro.API --launch-profile http
+dotnet run --project src/Ekipzen.API --launch-profile http
 
 # 2) Frontend — http://localhost:5173 (/api → :5053 proxy'lidir)
 cd frontend
