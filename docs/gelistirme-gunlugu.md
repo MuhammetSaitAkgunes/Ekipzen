@@ -24,7 +24,7 @@
   açılmayacak.
 
 - **2026-08-28 — Faz 2b tamamlandı ve senkronlandı:** Dal
-  `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ikpro/main`
+  `claude/faz2b-ayrilma` yerel `main`e merge edildi ve GitHub `ekipzen/main`
   `d58181c` commitine push edildi. E-1 kritik erişim açığı kapalıdır.
   **FAZ 2b TAMAMLANDI (Görev 0–7).** Her kiracı kendi veritabanında
   (`Ekipzen_demo`, `Ekipzen_globex`); paylaşılan `EkipzenDb` boş ama duruyor. Purge

@@ -33,7 +33,7 @@ Komutlar ilgili `backend` veya `frontend` dizininde çalıştırıldı.
 | `npm run lint`, `npm run build` | Başarılı; TypeScript + üretim Vite derlemesi dahil |
 | Üretim JS çıktısında bilinen demo parola/e-posta/rol kontrolü işaretçileri | Eşleşme yok; kapsamlı sır taraması iddiası değil |
 | `git diff --check` | Hata yok |
-| `git fetch ikpro`, taban kontrolü | `main` ve `ikpro/main`: `09c2b3491ea8fd6dd68e87b45ab4b89074a04482` |
+| `git fetch ekipzen`, taban kontrolü | `main` ve `ekipzen/main`: `09c2b3491ea8fd6dd68e87b45ab4b89074a04482` |
 
 Toplam **502 farklı test** geçti: 91 + 242 + 169. Hedefli 10 test bu sayıya ikinci kez eklenmedi. jsdom'un önceki koşumlarda da görülen iki “navigation to another Document” bildirimi sürüyor; bunlar gerçek tarayıcı testi değildir. Yeni NuGet taraması veya IIS/hosting testi yapılmış gibi raporlanmıyor.
 
@@ -49,7 +49,7 @@ Hosting hesabına müdahale, migration, gerçek müşteri verisi aktarımı, e-p
 
 ## Tek onaya sunulan senkronizasyon kapsamı
 
-- Remote yalnız `ikpro`: `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
+- Remote yalnız `ekipzen`: `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
 - Kaynak: `refs/heads/codex/pilot2b-ci-dependency-readiness`.
 - Hedef: yerel ve uzak `refs/heads/main`; beklenen taban `09c2b3491ea8fd6dd68e87b45ab4b89074a04482`.
 - Commit 1: `42e7cccb51225586d4aabd58de2f081ec38b0de3` — `fix(deps): resolve frontend advisories and enforce audit gate`.
@@ -59,10 +59,10 @@ Hosting hesabına müdahale, migration, gerçek müşteri verisi aktarımı, e-p
 Kaynak ve hedef SHA'ları yeniden doğrulanarak, tek açık onay aşağıdaki işlemleri kapsayabilir:
 
 ```text
-git push -u ikpro codex/pilot2b-ci-dependency-readiness:codex/pilot2b-ci-dependency-readiness
+git push -u ekipzen codex/pilot2b-ci-dependency-readiness:codex/pilot2b-ci-dependency-readiness
 git switch main
 git merge --ff-only codex/pilot2b-ci-dependency-readiness
-git push ikpro main:main
+git push ekipzen main:main
 ```
 
 Fast-forward yeni merge commit'i üretmez. Onay başka commit/ref/tag/remote'a genişletilmez; hedef değişmişse durulur. Force-push, geçmişi yeniden yazma, sunucu yayını veya migration dahil değildir.

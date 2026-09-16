@@ -31,7 +31,7 @@ Toplam yaklaşık 9–15 mühendislik günü; takvim taahhüdü değildir. Sunuc
 - Taslak değişiklikleri kaydedilmeden eski kayıt onaylanamaz; inceleme notu olmadan onay butonu açılmaz. Sunucu tarafındaki sürüm ve yetki kontrolleri korunur.
 - Kapsam uyarısı: mevcut takvim şablonu yalnız 2026 tam gün tatilleridir. Yarım günler ve işyeri politikası P3 çıkış şartıdır. “Başlangıç kayıtları mevcut” ifadesi mevzuat veya pilot uygunluğu anlamına gelmez.
 
-P1 yerel testleri geçti (91 birim + 207 entegrasyon + 165 frontend). `518ab53` commit’i ile `main` ve `ikpro/main` eşitlendi. Gerçek müşteri sunucusuna yayın veya gerçek personel aktarımı yapılmadı.
+P1 yerel testleri geçti (91 birim + 207 entegrasyon + 165 frontend). `518ab53` commit’i ile `main` ve `ekipzen/main` eşitlendi. Gerçek müşteri sunucusuna yayın veya gerçek personel aktarımı yapılmadı.
 
 ## P2 — Turhost Windows Profesyonel üzerinde işletim
 

@@ -30,7 +30,7 @@ ASP.NET Core rehberi doğrultusunda açılış, yapılandırma, Data Protection 
 | Yayın DLL ön kontrolü | Eksik ayarla exit 1; dış test JSON'u/geçici test PFX'i ile exit 0; SQL/SMTP/IIS bağlantısı veya migration yok |
 | Aynı release adıyla ikinci paket denemesi | Reddedildi; önceki manifest hash'i değişmedi |
 | `git diff --check` | Hata yok |
-| `git fetch ikpro`, `main...ikpro/main` | Kontrol sırasında 0 ileri / 0 geri; ikisi de `518ab53` |
+| `git fetch ekipzen`, `main...ekipzen/main` | Kontrol sırasında 0 ileri / 0 geri; ikisi de `518ab53` |
 
 Toplam **501 farklı test senaryosu doğrulandı**: 91 birim + 241 entegrasyon + 169 frontend. Bu, 501 testin tek komutta koştuğu anlamına gelmez; yukarıdaki tam koşum ve son hedefli koşum birlikte bu sayıyı verir. P1'deki 463 senaryoya göre 38 yeni senaryo var. jsdom'un iki “navigation to another Document” bildirimi önceki koşumdaki gibi sürüyor; test başarısızlığı değil, gerçek tarayıcı kanıtı da değil.
 
@@ -57,9 +57,9 @@ Toplam **501 farklı test senaryosu doğrulandı**: 91 birim + 241 entegrasyon +
 
 ## Onaya sunulan Git kapsamı
 
-- Remote: yalnız `ikpro` — `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
+- Remote: yalnız `ekipzen` — `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
 - Kaynak ref: `refs/heads/codex/pilot2-production-hosting`.
-- Hedef ref: yerel ve uzak `refs/heads/main` (`ikpro/main`).
+- Hedef ref: yerel ve uzak `refs/heads/main` (`ekipzen/main`).
 - Hedef mevcut tabanı: `518ab5368c62379872d102a29ba5942d48fb6236`.
 - Commit 1: `f9504d6be5ceaef90457be802114a991aae20e32` — `feat(hosting): enforce production startup and remove demo controls`.
 - Commit 2: `e70e46e886670456dcb89bde3d2cfd1804149085` — `ops(pilot): add Windows package and deployment preflight guide`.
@@ -68,10 +68,10 @@ Toplam **501 farklı test senaryosu doğrulandı**: 91 birim + 241 entegrasyon +
 Kaynak SHA ve hedef tabanı tekrar doğrulandıktan sonra, tek açık kullanıcı onayı aşağıdaki işlemleri kapsayabilir:
 
 ```text
-git push -u ikpro codex/pilot2-production-hosting:codex/pilot2-production-hosting
+git push -u ekipzen codex/pilot2-production-hosting:codex/pilot2-production-hosting
 git switch main
 git merge --ff-only codex/pilot2-production-hosting
-git push ikpro main:main
+git push ekipzen main:main
 ```
 
 Fast-forward ek merge commit'i üretmez. Hedef değişmişse onay yeni commitlere genişletilmez. Başka branch/tag/remote, force-push, history rewrite, sunucu yayını veya migration bu kapsama dahil değildir.

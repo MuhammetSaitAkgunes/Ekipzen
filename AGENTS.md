@@ -1,6 +1,6 @@
 # Repository Workflow
 
-- Keep local work in small, reviewable commits and regularly compare it with the `ikpro` GitHub remote.
+- Keep local work in small, reviewable commits and regularly compare it with the `ekipzen` GitHub remote.
 - After a development batch is complete and verified, request one explicit approval for the
   reported synchronization batch. That single approval may cover the named feature-branch
   push, merge into the named target branch, and target-branch push.
@@ -17,9 +17,8 @@
 - Project key: `ekipzen` — always pass `project="ekipzen"`.
 - The product is named **Ekipzen** in code, UI and docs (formerly **İK Pro**; renamed by
   explicit user decision). The Project Memory key `ekipzen` matches the product name.
-- The Git remote is still named `ikpro` and points to the GitHub repository `IKPro`; the
-  canonical checkout folder on disk still contains `İK Pro`. These are external identities
-  and were intentionally not renamed.
+- The Git remote is named `ekipzen`. The GitHub repository itself is renamed by the user;
+  update the remote URL when that happens.
 
 ## Local-task fast path
 
@@ -108,7 +107,7 @@ accurate `source_files` so staleness can be detected.
 - Project Memory active state and its fingerprint baseline represent the canonical checkout
   registered in `project_registry`.
 - Project key: `ekipzen`
-- Registered canonical checkout: `C:\Users\Lenovo\OneDrive\Masaüstü\İK Pro UI\İK Pro`
+- Registered canonical checkout: `C:\Users\Lenovo\OneDrive\Masaüstü\Ekipzen UI\Ekipzen`
 - Never move the registry to a temporary Claude/Codex worktree path.
 
 ### Worktree-aware reads

@@ -36,7 +36,7 @@
 - [x] **Step 1: Vite projesini oluştur ve sürümleri sabitle**
 
 ```bash
-cd "C:\Users\Lenovo\OneDrive\Masaüstü\İK Pro UI\İK Pro"
+cd "C:\Users\Lenovo\OneDrive\Masaüstü\Ekipzen UI\Ekipzen"
 npm create vite@latest frontend -- --template react-ts
 cd frontend
 npm install react@18.3.1 react-dom@18.3.1
@@ -167,7 +167,7 @@ Run: `npm run build` → Beklenen: hatasız `dist/` çıktısı.
 `package.json` `scripts` içine: `"test": "vitest"`.
 
 ```bash
-cd "C:\Users\Lenovo\OneDrive\Masaüstü\İK Pro UI\İK Pro"
+cd "C:\Users\Lenovo\OneDrive\Masaüstü\Ekipzen UI\Ekipzen"
 git add frontend/
 git commit -m "feat(frontend): Vite+React+TS iskeleti, CSS taşıma, Vitest altyapısı"
 ```

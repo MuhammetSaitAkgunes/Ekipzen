@@ -25,7 +25,7 @@ Pilot profili: yaklaşık 10 personel, Windows / SQL Server; Pazartesi–Cuma 09
 | `npm run build` (frontend) | TypeScript + Vite üretim derlemesi başarılı |
 | `npm run gen:api` (frontend) | Yerel Swagger sözleşmesinden şema üretildi |
 | `git diff --check` | Hata yok |
-| `git fetch ikpro --prune` ve `main...ikpro/main` | Kontrol sırasında 0 ileri / 0 geri |
+| `git fetch ekipzen --prune` ve `main...ekipzen/main` | Kontrol sırasında 0 ileri / 0 geri |
 
 Toplam **463 başarılı test**, önceki 447 teste göre **16 yeni test**. Yeni entegrasyon senaryosu gerçek provizyon/davet kabulü → boş şirket → açık kurulum → uzman notu olmadan onayın reddi → test amaçlı notla taslak kaydı/onayı → API'den 10 personel → ilk taslak bordro akışını kapsar. Bu not gerçek uzman onayı değildir; test yalnız test kataloglarında koşar. Başlangıçta veri olmaması, özel kayıtların korunması, tekrar/eşzamanlı kurulum, tenant izolasyonu ve rol/kimlik koruması ayrıca doğrulandı.
 
@@ -40,19 +40,19 @@ Toplam **463 başarılı test**, önceki 447 teste göre **16 yeni test**. Yeni 
 
 ## Onaya sunulan Git kapsamı
 
-- Uzak depo: yalnız `ikpro` — `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
+- Uzak depo: yalnız `ekipzen` — `https://github.com/MuhammetSaitAkgunes/IKPro.git`.
 - Kaynak: `refs/heads/codex/pilot1-customer-bootstrap`.
-- Hedef: `refs/heads/main`; uzak hedef `refs/heads/main` (`ikpro/main`).
+- Hedef: `refs/heads/main`; uzak hedef `refs/heads/main` (`ekipzen/main`).
 - Başlangıç/hedef mevcut tabanı: `309c4dee57bb1c68b99b51a8ea74276e44ec879a`.
 - Commitler: `docs(pilot): define accounting-office readiness gates` ve `feat(setup): bootstrap pilot tenants with reviewed payroll drafts`. Kesin iki commit kimliği son onay mesajında bildirilir; onay yalnız bu iki commit içindir.
 
 Onaylanan kaynak SHA ve hedef tabanı tekrar doğrulandıktan sonra uygulanabilecek işlemler:
 
 ```text
-git push -u ikpro codex/pilot1-customer-bootstrap:codex/pilot1-customer-bootstrap
+git push -u ekipzen codex/pilot1-customer-bootstrap:codex/pilot1-customer-bootstrap
 git switch main
 git merge --ff-only codex/pilot1-customer-bootstrap
-git push ikpro main:main
+git push ekipzen main:main
 ```
 
 Fast-forward merge ek merge commit'i üretmez. Hedef değişmişse bu onay yeni commit/merge kapsamına genişletilmez; tekrar değerlendirilir. Başka branch, tag, remote, force-push, history rewrite, deployment veya migration yetkisi içermez.
