@@ -66,3 +66,14 @@ test("çok fazla istek ve beklenmeyen hata genel mesajla gösterilir", async () 
   await userEvent.click(screen.getByRole("button", { name: "Demo talebini gönder" }));
   expect(await screen.findByText(/Çok fazla talep gönderildi/)).toBeInTheDocument();
 });
+
+test("bilinen forma eşlenmeyen sunucu hata anahtarı genel mesajla gösterilir", async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(
+    JSON.stringify({ title: "Doğrulama hatası.", status: 400, errors: { "$.fullName": ["Beklenmeyen JSON."], command: ["Geçersiz istek."] } }),
+    { status: 400, headers: { "Content-Type": "application/json" } },
+  ));
+  renderPage(<DemoRequestForm />);
+  await fillValid();
+  await userEvent.click(screen.getByRole("button", { name: "Demo talebini gönder" }));
+  expect(await screen.findByText("Talebiniz şu anda gönderilemedi. Lütfen tekrar deneyin ya da bize e-postayla ulaşın.")).toBeInTheDocument();
+});

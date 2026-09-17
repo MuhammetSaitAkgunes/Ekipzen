@@ -48,13 +48,20 @@ export async function submitDemoRequest(r: DemoRequest): Promise<void> {
   });
 }
 
+// Formda gerçekten alanı olan anahtarlar. Sunucu "$.fullName" (JSON ayrıştırma hatası) ya
+// da "command" (model düzeyi hata) gibi forma eşlenmeyen anahtarlar döndürebilir; bunlar
+// hiçbir alanda gösterilemeyeceği için filtrelenir, aksi halde form sessizce hiçbir şey
+// göstermez (bkz. final-fix-findings M11).
+const KNOWN_FIELDS = new Set<string>(["fullName", "email", "company", "companySize", "phone", "message", "kvkkConsent", "website"]);
+
 /** ValidationProblemDetails anahtarları PascalCase gelir (FullName) → form alanına çevrilir. */
 export function serverFieldErrors(error: unknown): DemoRequestErrors {
   if (!(error instanceof ApiError) || !error.problem?.errors) return {};
   const result: DemoRequestErrors = {};
   for (const [key, messages] of Object.entries(error.problem.errors)) {
-    const field = (key.charAt(0).toLowerCase() + key.slice(1)) as keyof DemoRequest;
-    if (messages[0]) result[field] = messages[0];
+    const field = key.charAt(0).toLowerCase() + key.slice(1);
+    if (!KNOWN_FIELDS.has(field)) continue;
+    if (messages[0]) result[field as keyof DemoRequest] = messages[0];
   }
   return result;
 }
