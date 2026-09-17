@@ -224,6 +224,7 @@ try
 
     app.MapControllers();
     app.MapHealthChecks("/health");
+    PilotHosting.MapSpaFallback(app);
 
     app.Run();
 }

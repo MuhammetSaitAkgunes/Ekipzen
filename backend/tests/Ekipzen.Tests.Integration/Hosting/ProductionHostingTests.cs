@@ -168,6 +168,24 @@ public sealed class ProductionHostingTests : IDisposable
     }
 
     [Fact]
+    public async Task SpaFallback_ServesShellForPageRoutes_ButNotForApiOrFiles()
+    {
+        await using var app = await StartAsync();
+        var client = app.GetTestClient();
+        client.BaseAddress = new Uri("https://pilot.example.test");
+
+        var page = await client.GetAsync("/ozellikler");
+        page.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await page.Content.ReadAsStringAsync()).Should().Contain("Pilot test shell");
+        page.Content.Headers.ContentType!.MediaType.Should().Be("text/html");
+        page.Headers.CacheControl!.NoCache.Should().BeTrue();
+
+        (await client.GetStringAsync("/app/dashboard")).Should().Contain("Pilot test shell");
+        (await client.GetAsync("/api/not-an-endpoint")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.GetAsync("/assets/missing.js")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task WrongCertificatePassword_PreventsStartup()
     {
         config["DataProtection:CertificatePassword"] = "wrong-password";
@@ -207,6 +225,7 @@ public sealed class ProductionHostingTests : IDisposable
         var app = builder.Build();
         PilotHosting.UseWebSecurity(app);
         app.MapGet("/api/probe", () => "ok");
+        PilotHosting.MapSpaFallback(app);
         await app.StartAsync();
         return app;
     }

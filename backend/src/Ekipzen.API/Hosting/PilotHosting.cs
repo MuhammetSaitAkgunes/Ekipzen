@@ -103,4 +103,27 @@ public static class PilotHosting
         app.UseCors(CorsPolicy);
         // IIS in-process şema/IP'yi doğrudan sağlar. Keyfî X-Forwarded-* başlıklarına güvenilmez.
     }
+
+    /// <summary>
+    /// Temiz URL'li SPA fallback'i: sayfa yolları (/ozellikler, /app/...) index.html ile
+    /// yanıtlanır. API/sağlık uçları ve uzantılı dosya istekleri HTML'e düşmez;
+    /// eksik bir uç ya da varlık 404 olarak kalır.
+    /// </summary>
+    public static void MapSpaFallback(WebApplication app)
+    {
+        app.MapFallback(async context =>
+        {
+            var path = context.Request.Path;
+            var index = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/health")
+                || Path.HasExtension(path.Value) || !index.Exists)
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+            context.Response.ContentType = "text/html; charset=utf-8";
+            context.Response.Headers.CacheControl = "no-cache";
+            await context.Response.SendFileAsync(index);
+        });
+    }
 }

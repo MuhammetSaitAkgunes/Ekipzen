@@ -465,7 +465,7 @@ public sealed class IdentityService(
         string name, string email, string companyName, string token, CancellationToken cancellationToken)
     {
         var appUrl = (configuration["App:BaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
-        var link = $"{appUrl}/#/accept-invite?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+        var link = $"{appUrl}/davet?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
         var body =
             $"Merhaba {name},\n\n{companyName} için Ekipzen hesabınız oluşturuldu. " +
             $"Şifrenizi belirleyip hesabınızı etkinleştirmek için:\n{link}\n\n" +
