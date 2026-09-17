@@ -1,11 +1,19 @@
 import { Suspense, lazy, type ComponentType } from "react";
-import { Navigate, type RouteObject } from "react-router-dom";
+import { Navigate, useLocation, type RouteObject } from "react-router-dom";
 import { PageLoading } from "./features/shared/PageState";
 import { LoginPage } from "./auth/LoginPage";
 import { AcceptInvitePage } from "./auth/AcceptInvitePage";
 import { PublicOnly, RequireAuth, RouteGate } from "./auth/guards";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { AppShell } from "./layout/AppShell";
+import { useAuth } from "./auth/AuthContext";
+import { MarketingLayout } from "./marketing/MarketingLayout";
+import { HomePage } from "./marketing/pages/HomePage";
+import { NotFoundPage } from "./marketing/pages/NotFoundPage";
+import { LEGACY_APP_ROOT_PATHS, mapLegacyPath } from "./legacyHash";
+import { APP_BASE, INVITE_PATH, LOGIN_PATH, appPath, roleHomeFor } from "./paths";
+
+export { APP_BASE, INVITE_PATH, LOGIN_PATH, appPath, roleHomeFor } from "./paths";
 const ActionsPage = lazy(() => import("./features/actions/ActionsPage").then((m) => ({ default: m.ActionsPage })));
 const OverviewPage = lazy(() => import("./features/overview/OverviewPage").then((m) => ({ default: m.OverviewPage })));
 const RiskCenterPage = lazy(() => import("./features/dashboard/RiskCenterPage").then((m) => ({ default: m.RiskCenterPage })));
@@ -40,28 +48,25 @@ const MGMT: Role[] = ["hr-admin", "manager"];
 
 // routes.js ile birebir (sıra dahil).
 export const appRoutes: AppRoute[] = [
-  { key: "dashboard", path: "/dashboard", title: "Risk Merkezi", eyebrow: "Ekipzen", navKey: "dashboard", roles: MGMT },
-  { key: "overview", path: "/overview", title: "Genel Durum", eyebrow: "Ekipzen", navKey: "overview", roles: ALL },
-  { key: "actions", path: "/actions", title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: ALL },
-  { key: "personnel", path: "/personnel", title: "Personel Yönetimi", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
-  { key: "recruitment", path: "/recruitment", title: "İşe Alım", eyebrow: "Ekipzen", navKey: "recruitment", roles: ["hr-admin"] },
-  { key: "attendance", path: "/attendance", title: "Mesai & Puantaj", eyebrow: "Ekipzen", navKey: "attendance", roles: MGMT },
-  { key: "leaves", path: "/leaves", title: "İzinlerim", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
-  { key: "payroll", path: "/payroll", title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin", "employee"] },
-  { key: "payroll-calculator", path: "/payroll/calculator", title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
-  { key: "payroll-settings", path: "/payroll/settings", title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
-  { key: "manager", path: "/manager", title: "Yönetici Konsolu", eyebrow: "Ekipzen", navKey: "manager", roles: MGMT },
-  { key: "settings", path: "/settings", title: "Ayarlar", eyebrow: "Ekipzen", navKey: "settings", roles: ["hr-admin"] },
-  { key: "attrition-risk", path: "/risk/attrition", title: "Ayrılma Riski Detayı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
-  { key: "burnout-risk", path: "/risk/burnout", title: "Tükenmişlik Sinyali", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
-  { key: "manager-load", path: "/risk/manager-load", title: "Yönetici Yükü", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
-  { key: "action-center", path: "/risk/action-center", title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: MGMT },
-  { key: "employee-voice", path: "/risk/employee-voice", title: "Çalışan Nabzı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
-  { key: "compliance-risk", path: "/risk/compliance", title: "Uyum Risk Merkezi", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
+  { key: "dashboard", path: appPath("/dashboard"), title: "Risk Merkezi", eyebrow: "Ekipzen", navKey: "dashboard", roles: MGMT },
+  { key: "overview", path: appPath("/overview"), title: "Genel Durum", eyebrow: "Ekipzen", navKey: "overview", roles: ALL },
+  { key: "actions", path: appPath("/actions"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: ALL },
+  { key: "personnel", path: appPath("/personnel"), title: "Personel Yönetimi", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
+  { key: "recruitment", path: appPath("/recruitment"), title: "İşe Alım", eyebrow: "Ekipzen", navKey: "recruitment", roles: ["hr-admin"] },
+  { key: "attendance", path: appPath("/attendance"), title: "Mesai & Puantaj", eyebrow: "Ekipzen", navKey: "attendance", roles: MGMT },
+  { key: "leaves", path: appPath("/leaves"), title: "İzinlerim", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
+  { key: "payroll", path: appPath("/payroll"), title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin", "employee"] },
+  { key: "payroll-calculator", path: appPath("/payroll/calculator"), title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
+  { key: "payroll-settings", path: appPath("/payroll/settings"), title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
+  { key: "manager", path: appPath("/manager"), title: "Yönetici Konsolu", eyebrow: "Ekipzen", navKey: "manager", roles: MGMT },
+  { key: "settings", path: appPath("/settings"), title: "Ayarlar", eyebrow: "Ekipzen", navKey: "settings", roles: ["hr-admin"] },
+  { key: "attrition-risk", path: appPath("/risk/attrition"), title: "Ayrılma Riski Detayı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
+  { key: "burnout-risk", path: appPath("/risk/burnout"), title: "Tükenmişlik Sinyali", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
+  { key: "manager-load", path: appPath("/risk/manager-load"), title: "Yönetici Yükü", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
+  { key: "action-center", path: appPath("/risk/action-center"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: MGMT },
+  { key: "employee-voice", path: appPath("/risk/employee-voice"), title: "Çalışan Nabzı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
+  { key: "compliance-risk", path: appPath("/risk/compliance"), title: "Uyum Risk Merkezi", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
 ];
-
-export const roleHomeFor = (role: string | null | undefined): string =>
-  role === "employee" ? "/overview" : "/dashboard";
 
 // layout.js ile birebir.
 export const navIcons: Record<string, string> = {
@@ -114,20 +119,41 @@ function GatedPage({ route }: { route: AppRoute }) {
   );
 }
 
+// Eski yol → yeni yol; sorgu dizesi korunur (davet linklerindeki email/token).
+function LegacyRedirect() {
+  const location = useLocation();
+  return <Navigate to={`${mapLegacyPath(location.pathname)}${location.search}`} replace />;
+}
+
+function AppHomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={roleHomeFor(user?.role)} replace />;
+}
+
 export function buildRouteObjects(): RouteObject[] {
   return [
-    { path: "/login", element: <PublicOnly><LoginPage /></PublicOnly> },
-    { path: "/accept-invite", element: <PublicOnly><AcceptInvitePage /></PublicOnly> },
+    {
+      element: <MarketingLayout />,
+      children: [
+        { path: "/", element: <HomePage /> },
+        { path: "*", element: <NotFoundPage /> },
+      ],
+    },
+    { path: LOGIN_PATH, element: <PublicOnly><LoginPage /></PublicOnly> },
+    { path: INVITE_PATH, element: <PublicOnly><AcceptInvitePage /></PublicOnly> },
+    { path: "/login", element: <LegacyRedirect /> },
+    { path: "/accept-invite", element: <LegacyRedirect /> },
     // Self-servis kayıt sayfalarının İKİSİ DE kaldırıldı. Şirket hesabı yalnız
     // operatör tarafından, platform anahtarıyla açılır (bkz. TenancyController
-    // xmldoc): kiracı başına veritabanına geçildiğinde kayıt bir satır değil bir
-    // VERİTABANI oluşturur; bunu anonim bir uçtan tetiklenebilir bırakmak kaynak
-    // tüketme açığıdır. Eski yer imleri ve paylaşılmış linkler girişe düşer.
-    { path: "/signup", element: <Navigate to="/login" replace /> },
-    { path: "/register-company", element: <Navigate to="/login" replace /> },
+    // xmldoc). Eski yer imleri ve paylaşılmış linkler demo talebine düşer.
+    { path: "/signup", element: <Navigate to="/iletisim" replace /> },
+    { path: "/register-company", element: <Navigate to="/iletisim" replace /> },
+    ...LEGACY_APP_ROOT_PATHS.map((root) => ({ path: `${root}/*`, element: <LegacyRedirect /> })),
     {
+      path: APP_BASE,
       element: <RequireAuth />,
       children: [
+        { index: true, element: <AppHomeRedirect /> },
         {
           element: <AppShell />,
           children: appRoutes.map((route) => ({
@@ -135,8 +161,8 @@ export function buildRouteObjects(): RouteObject[] {
             element: <GatedPage route={route} />,
           })),
         },
+        { path: "*", element: <AppHomeRedirect /> },
       ],
     },
-    { path: "*", element: <PublicOnly><LoginPage /></PublicOnly> },
   ];
 }

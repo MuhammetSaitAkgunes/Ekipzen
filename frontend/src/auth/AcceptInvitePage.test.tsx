@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllGlobals());
 const renderInvite = (query: string) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={[`/accept-invite${query}`]}>
+      <MemoryRouter initialEntries={[`/davet${query}`]}>
         <AuthProvider>
           <AcceptInvitePage />
         </AuthProvider>

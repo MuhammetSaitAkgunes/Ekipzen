@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
+import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { formatToday } from "../dashboard/format";
@@ -67,7 +68,7 @@ export function OverviewPage() {
           <div className="kpi-content">
             <span className="kpi-label">Onay Bekleyen</span>
             <h3 className="kpi-value">{data.pendingApprovals ?? 0}</h3>
-            <Link className="kpi-link" to="/manager">Talepleri incele</Link>
+            <Link className="kpi-link" to={appPath("/manager")}>Talepleri incele</Link>
           </div>
         </div>
         <div className="kpi-card">

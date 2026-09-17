@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { appRoutes } from "../../routes";
+import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { formatToday, getRiskLabel, getRiskLevel, priorityLabel, topPriorityActions } from "./format";
 import { RiskTrendChart } from "./RiskTrendChart";
@@ -8,7 +9,7 @@ import {
 } from "./queries";
 
 const pathForRouteKey = (key?: string | null): string =>
-  appRoutes.find((r) => r.key === key)?.path ?? "/actions";
+  appRoutes.find((r) => r.key === key)?.path ?? appPath("/actions");
 
 export function RiskCenterPage() {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ export function RiskCenterPage() {
       </div>
 
       <div className="kpi-grid intelligence-kpis">
-        <button className={`kpi-card risk-kpi ${getRiskLevel(riskScore)} metric-card-button`} onClick={() => navigate("/actions")}>
+        <button className={`kpi-card risk-kpi ${getRiskLevel(riskScore)} metric-card-button`} onClick={() => navigate(appPath("/actions"))}>
           <div className="kpi-icon bg-red-light"><i aria-hidden="true" className="fa-solid fa-shield-heart" /></div>
           <div className="kpi-content">
             <span className="kpi-label">İK Risk Skoru</span>
@@ -58,7 +59,7 @@ export function RiskCenterPage() {
             <span className="kpi-sub">{getRiskLabel(riskScore)} · 3 ana risk sürücüsü</span>
           </div>
         </button>
-        <button className="kpi-card risk-kpi medium metric-card-button" onClick={() => navigate("/risk/manager-load")}>
+        <button className="kpi-card risk-kpi medium metric-card-button" onClick={() => navigate(appPath("/risk/manager-load"))}>
           <div className="kpi-icon bg-orange-light"><i aria-hidden="true" className="fa-solid fa-user-group" /></div>
           <div className="kpi-content">
             <span className="kpi-label">Yönetici Yük Endeksi</span>
@@ -66,7 +67,7 @@ export function RiskCenterPage() {
             <span className="kpi-sub">{load.pendingApprovals ?? 0} onay, {load.openActions ?? 0} açık aksiyon, yoğun ekip</span>
           </div>
         </button>
-        <button className="kpi-card risk-kpi high metric-card-button" onClick={() => navigate("/risk/attrition")}>
+        <button className="kpi-card risk-kpi high metric-card-button" onClick={() => navigate(appPath("/risk/attrition"))}>
           <div className="kpi-icon bg-purple-light"><i aria-hidden="true" className="fa-solid fa-person-walking-arrow-right" /></div>
           <div className="kpi-content">
             <span className="kpi-label">Ayrılma Riski Radarı</span>
@@ -74,7 +75,7 @@ export function RiskCenterPage() {
             <span className="kpi-sub">Yüksek riskli çalışan segmenti</span>
           </div>
         </button>
-        <button className="kpi-card risk-kpi medium metric-card-button" onClick={() => navigate("/actions")}>
+        <button className="kpi-card risk-kpi medium metric-card-button" onClick={() => navigate(appPath("/actions"))}>
           <div className="kpi-icon bg-blue-light"><i aria-hidden="true" className="fa-solid fa-bolt" /></div>
           <div className="kpi-content">
             <span className="kpi-label">Bugünkü Kritik Aksiyon</span>
@@ -126,7 +127,7 @@ export function RiskCenterPage() {
                 <h4>Yetenek ve Kapasite</h4>
                 <p className="text-muted">İşe alım, beceri, kritik rol ve kültür sinyalleri.</p>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => navigate("/recruitment")}>
+              <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/recruitment"))}>
                 <i aria-hidden="true" className="fa-solid fa-arrow-up-right-from-square" /> İşe alıma git
               </button>
             </div>
@@ -153,16 +154,16 @@ export function RiskCenterPage() {
                 <p className="text-muted">Çalışan nabzı, sessiz memnuniyetsizlik ve evrak uyum risklerini birlikte izleyin.</p>
               </div>
               <div className="toolbar-actions">
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate("/risk/employee-voice")}>
+                <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/risk/employee-voice"))}>
                   <i aria-hidden="true" className="fa-solid fa-wave-square" /> Nabız detayı
                 </button>
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate("/risk/compliance")}>
+                <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/risk/compliance"))}>
                   <i aria-hidden="true" className="fa-solid fa-file-shield" /> Uyum detayı
                 </button>
               </div>
             </div>
             <div className="signal-grid">
-              <button className="signal-item high metric-card-button" onClick={() => navigate("/risk/employee-voice")}>
+              <button className="signal-item high metric-card-button" onClick={() => navigate(appPath("/risk/employee-voice"))}>
                 <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-heart-pulse" /></div>
                 <div>
                   <span>Çalışan Nabız Skoru</span>
@@ -170,7 +171,7 @@ export function RiskCenterPage() {
                   <p>{voice.sentimentTrend}</p>
                 </div>
               </button>
-              <button className="signal-item medium metric-card-button" onClick={() => navigate("/risk/employee-voice")}>
+              <button className="signal-item medium metric-card-button" onClick={() => navigate(appPath("/risk/employee-voice"))}>
                 <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-comments" /></div>
                 <div>
                   <span>eNPS / Bağlılık</span>
@@ -178,7 +179,7 @@ export function RiskCenterPage() {
                   <p>{voice.decliningTeams ?? 0} ekipte sessiz memnuniyetsizlik sinyali var.</p>
                 </div>
               </button>
-              <button className="signal-item medium metric-card-button" onClick={() => navigate("/risk/compliance")}>
+              <button className="signal-item medium metric-card-button" onClick={() => navigate(appPath("/risk/compliance"))}>
                 <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-folder-check" /></div>
                 <div>
                   <span>Evrak Uyum Skoru</span>
@@ -186,7 +187,7 @@ export function RiskCenterPage() {
                   <p>{compliance.missingDocuments ?? 0} eksik evrak, {compliance.upcomingDocuments ?? 0} yaklaşan son tarih.</p>
                 </div>
               </button>
-              <button className="signal-item medium metric-card-button" onClick={() => navigate("/risk/compliance")}>
+              <button className="signal-item medium metric-card-button" onClick={() => navigate(appPath("/risk/compliance"))}>
                 <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-clipboard-check" /></div>
                 <div>
                   <span>Denetime Hazırlık</span>
@@ -204,7 +205,7 @@ export function RiskCenterPage() {
               <h4>En Acil Aksiyonlar</h4>
               <p className="text-muted">Önceliği en yüksek 3 müdahale.</p>
             </div>
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate("/actions")}>
+            <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/actions"))}>
               Tümünü aç ({actions.length})
             </button>
           </div>

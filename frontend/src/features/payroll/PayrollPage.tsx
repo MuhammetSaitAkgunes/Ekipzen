@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
+import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -11,9 +12,9 @@ import { SettingsTab } from "./SettingsTab";
 import { useCreatePayrollPeriod, usePayrollPeriods, useSubmitPayrollPeriod } from "./queries";
 
 const TABS = [
-  { tab: "period", path: "/payroll", icon: "fa-table-list", label: "Dönem Bordrosu" },
-  { tab: "calculator", path: "/payroll/calculator", icon: "fa-calculator", label: "Tekil Hesaplama" },
-  { tab: "settings", path: "/payroll/settings", icon: "fa-sliders", label: "Bordro Ayarları" },
+  { tab: "period", path: appPath("/payroll"), icon: "fa-table-list", label: "Dönem Bordrosu" },
+  { tab: "calculator", path: appPath("/payroll/calculator"), icon: "fa-calculator", label: "Tekil Hesaplama" },
+  { tab: "settings", path: appPath("/payroll/settings"), icon: "fa-sliders", label: "Bordro Ayarları" },
 ] as const;
 
 export function PayrollPage({ tab }: { tab: "period" | "calculator" | "settings" }) {
@@ -86,7 +87,7 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
               </button>
             </>
           )}
-          <button className="btn btn-secondary" onClick={() => navigate("/payroll/calculator")}>
+          <button className="btn btn-secondary" onClick={() => navigate(appPath("/payroll/calculator"))}>
             <i aria-hidden="true" className="fa-solid fa-calculator" /> Tekil hesapla
           </button>
           <button className="btn btn-primary" onClick={handleSubmitPeriod} disabled={submitPeriod.isPending}>

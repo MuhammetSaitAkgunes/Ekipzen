@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { roleHomeFor, type AppRoute, type Role } from "../routes";
+import { type AppRoute, type Role } from "../routes";
+import { LOGIN_PATH, roleHomeFor } from "../paths";
 
 export function RequireAuth() {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={LOGIN_PATH} replace />;
   return <Outlet />;
 }
 

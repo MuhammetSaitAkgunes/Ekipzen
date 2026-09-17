@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiDownload, apiFetch } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { appRoutes, navGroups, navIcons, roleHomeFor, type AppRoute } from "../routes";
+import { appRoutes, navGroups, navIcons, type AppRoute } from "../routes";
+import { LOGIN_PATH, appPath, roleHomeFor } from "../paths";
 import { GlobalSearch } from "./GlobalSearch";
 
 export function AppShell() {
@@ -44,7 +45,7 @@ export function AppShell() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate(LOGIN_PATH);
   };
 
   // KVKK taşınabilirlik: kullanıcı kendi verisini tek tıkla JSON olarak indirir.
@@ -116,7 +117,7 @@ export function AppShell() {
           <span id="page-eyebrow">{current?.eyebrow ?? "Ekipzen"}</span>
           <div className="header-title" id="page-title">{current?.title ?? "Yakında"}</div>
         </div>
-        <button className="header-action-button" onClick={() => navigate("/actions")} title="Aksiyon Merkezi" aria-label={`Aksiyon Merkezi: ${actionCount} açık aksiyon`}>
+        <button className="header-action-button" onClick={() => navigate(appPath("/actions"))} title="Aksiyon Merkezi" aria-label={`Aksiyon Merkezi: ${actionCount} açık aksiyon`}>
           <i aria-hidden="true" className="fa-solid fa-list-check" />
           <span>{actionCount}</span>
         </button>

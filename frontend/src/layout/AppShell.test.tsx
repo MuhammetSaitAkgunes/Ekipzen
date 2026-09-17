@@ -39,14 +39,14 @@ beforeEach(() => localStorage.clear());
 afterEach(() => vi.unstubAllEnvs());
 
 test("hr-admin tüm menü gruplarını görür, başlık rotadan gelir", async () => {
-  renderShellAt("/dashboard", "hr-admin", "İK Yöneticisi");
+  renderShellAt("/app/dashboard", "hr-admin", "İK Yöneticisi");
   expect(await screen.findByText("Risk Merkezi", { selector: ".header-title" })).toBeInTheDocument();
   expect(screen.getByText("Ayarlar")).toBeInTheDocument();
   expect(await screen.findByText("5", { selector: ".header-action-button span" })).toBeInTheDocument();
 });
 
 test("employee menüsünde yalnız yetkili modüller görünür", () => {
-  renderShellAt("/overview", "employee", "Ahmet Yılmaz");
+  renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
   expect(screen.queryByText("Ayarlar")).not.toBeInTheDocument();
   expect(screen.queryByText("Personel Yönetimi")).not.toBeInTheDocument();
   expect(screen.getByText("İzinlerim")).toBeInTheDocument();
@@ -54,7 +54,7 @@ test("employee menüsünde yalnız yetkili modüller görünür", () => {
 
 test("üretimde demo rol geçişi sunulmaz, gerçek oturum korunur", () => {
   vi.stubEnv("DEV", false);
-  renderShellAt("/overview", "employee", "Pilot Kullanıcı");
+  renderShellAt("/app/overview", "employee", "Pilot Kullanıcı");
   expect(screen.queryByRole("combobox", { name: "Demo rol değiştir" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Çıkış yap" })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem(SESSION_KEY)!).user.name).toBe("Pilot Kullanıcı");
@@ -62,6 +62,6 @@ test("üretimde demo rol geçişi sunulmaz, gerçek oturum korunur", () => {
 
 test("geliştirmede demo rol geçişi korunur", () => {
   vi.stubEnv("DEV", true);
-  renderShellAt("/overview", "employee", "Ahmet Yılmaz");
+  renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
   expect(screen.getByRole("combobox", { name: "Demo rol değiştir" })).toHaveValue("employee");
 });

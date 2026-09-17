@@ -40,7 +40,7 @@ afterEach(() => vi.unstubAllGlobals());
 test("oturum 401 ile düşünce login ekranı gösterilir, sonsuz 'Yükleniyor'da kalınmaz", async () => {
   localStorage.setItem(SESSION_KEY, staleSession);
 
-  renderShellAt("/dashboard");
+  renderShellAt("/app/dashboard");
 
   // Oturum düştüğü an kullanıcı login ekranına inmeli.
   await waitFor(() =>

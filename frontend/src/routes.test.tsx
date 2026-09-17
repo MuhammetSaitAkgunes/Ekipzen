@@ -41,7 +41,7 @@ const renderShellAt = (path: string) => {
 beforeEach(() => localStorage.clear());
 
 test("oturum yokken korumalı rota login'e yönlenir", () => {
-  renderAt("/dashboard");
+  renderAt("/app/dashboard");
   // Not: "Giriş yap" hem sekme butonunda hem submit butonunda geçiyor (App.test.tsx'teki
   // getAllByText paritesiyle aynı gerekçe) — bu yüzden getAllByRole kullanılıyor.
   expect(screen.getAllByRole("button", { name: /Giriş yap/ }).length).toBeGreaterThan(0);
@@ -49,13 +49,36 @@ test("oturum yokken korumalı rota login'e yönlenir", () => {
 
 test("employee, dashboard'da 'Yetki Gerekli' ekranı görür (redirect yok)", () => {
   localStorage.setItem(SESSION_KEY, sessionFor("employee", "Ahmet Yılmaz"));
-  renderShellAt("/dashboard");
+  renderShellAt("/app/dashboard");
   expect(screen.getByText("Bu alan için yetki gerekli")).toBeInTheDocument();
 });
 
 test("hr-admin, settings'te gerçek Sistem Ayarları sayfasını görür", () => {
   localStorage.setItem(SESSION_KEY, sessionFor("hr-admin", "İK Yöneticisi"));
-  renderShellAt("/settings");
+  renderShellAt("/app/settings");
   // Dilim 7: settings placeholder'ı gerçek sayfayla değişti; sayfa önce yükleniyor durumundadır.
   expect(screen.queryByText("Bu alan hazırlanıyor")).not.toBeInTheDocument();
+});
+
+test("kök yol oturumsuz ziyaretçiye landing gösterir", async () => {
+  renderAt("/");
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ekibinizi tek yerden");
+  expect(screen.getAllByRole("link", { name: "Giriş yap" })[0]).toHaveAttribute("href", "/giris");
+});
+
+test("eski /login yolu yeni giriş ekranına yönlenir", async () => {
+  renderAt("/login");
+  expect(await screen.findByRole("button", { name: /Giriş yap/ })).toBeInTheDocument();
+});
+
+test("oturumlu kullanıcı eski /dashboard yolundan /app/dashboard kabuğuna gider", async () => {
+  // Employee, dashboard'da kilit ekranını görür — mevcut testteki kanıtlanmış senaryo.
+  localStorage.setItem(SESSION_KEY, sessionFor("employee", "Ahmet Yılmaz"));
+  renderShellAt("/dashboard");
+  expect(await screen.findByText("Bu alan için yetki gerekli")).toBeInTheDocument();
+});
+
+test("bilinmeyen yol 404 sayfası gösterir", async () => {
+  renderAt("/olmayan-sayfa");
+  expect(await screen.findByRole("heading", { name: "Sayfa bulunamadı" })).toBeInTheDocument();
 });
