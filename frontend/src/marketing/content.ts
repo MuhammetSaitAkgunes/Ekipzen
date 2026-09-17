@@ -73,9 +73,9 @@ export const steps = [
 ];
 
 export const securityPillars = [
-  { icon: "fa-database", title: "İzole veri", text: "Her şirketin verisi kendi veritabanında tutulur; müşteriler arasında paylaşılan tablo yoktur." },
+  { icon: "fa-database", title: "İzole veri", text: "İK verileriniz şirketinize ait ayrı bir veritabanında tutulur; başka müşterilerin İK verileriyle aynı tabloda bulunmaz." },
   { icon: "fa-user-lock", title: "Rol bazlı erişim", text: "İK yöneticisi, yönetici ve çalışan rolleri yalnız yetkili oldukları verileri görür; kontrol sunucu tarafında da uygulanır." },
-  { icon: "fa-lock", title: "Şifreli iletişim", text: "Trafik HTTPS ile şifrelenir; HSTS ve sıkı içerik güvenliği politikası uygulanır." },
+  { icon: "fa-lock", title: "Şifreli iletişim", text: "Trafik HTTPS ile şifrelenir; HSTS ve içerik güvenliği politikası (CSP) uygulanır." },
   { icon: "fa-key", title: "Güçlü kimlik doğrulama", text: "Kısa ömürlü oturum anahtarları, güçlü parola kuralları ve giriş denemelerine karşı sınırlama." },
   { icon: "fa-clock-rotate-left", title: "Denetim izi", text: "Kayıtlardaki değişiklikler kim ve ne zaman bilgisiyle izlenir." },
   { icon: "fa-file-export", title: "Veri taşınabilirliği", text: "Her kullanıcı kendi kişisel verisini tek tıkla dışa aktarabilir." },
@@ -84,7 +84,7 @@ export const securityPillars = [
 export const faqs = [
   { q: "Ekipzen hangi şirketler için uygun?", a: "Personel, izin, puantaj ve bordro süreçlerini tek yerde toplamak isteyen küçük ve orta ölçekli şirketler için tasarlandı." },
   { q: "Kendim kaydolabilir miyim?", a: "Hayır. Güvenlik gereği her şirket hesabı ekibimiz tarafından ayrı bir ortamda kurulur. Demo talebi bıraktığınızda sizinle iletişime geçiyoruz." },
-  { q: "Verilerim nerede ve nasıl saklanıyor?", a: "Her şirketin verisi kendi izole veritabanında tutulur. Erişim rol bazlıdır ve tüm trafik şifrelidir." },
+  { q: "Verilerim nerede ve nasıl saklanıyor?", a: "İK verileriniz şirketinize ait ayrı bir veritabanında tutulur; başka müşterilerin İK verileriyle aynı tabloda bulunmaz. Erişim rol bazlıdır ve tüm trafik şifrelidir." },
   { q: "Mevcut personel listemi aktarabilir miyim?", a: "Evet. Personel kayıtlarınızı Excel dosyasından toplu olarak içe aktarabilirsiniz." },
   { q: "Çalışanlar sisteme nasıl dahil oluyor?", a: "Her çalışan kendine özel bir davet bağlantısıyla şifresini belirler ve yalnız rolünün izin verdiği ekranları görür." },
 ];
