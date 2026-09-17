@@ -153,7 +153,7 @@
 
 .ez-section--flush { padding-top: 0; }
 .ez-anchor { scroll-margin-top: 88px; }
-.ez-muted-note { font-size: var(--fs-14); color: var(--ez-text-4); }
+.ez-muted-note { font-size: var(--fs-14); color: var(--ez-text-3); }
 .ez-page-loading { min-height: 60vh; }
 
 .ez-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1rem; }

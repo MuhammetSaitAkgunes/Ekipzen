@@ -9,10 +9,10 @@
   --slate-0: #ffffff; --slate-25: #fbfcfe; --slate-50: #f8fafc; --slate-100: #f1f5f9;
   --slate-200: #e2e8f0; --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-500: #64748b;
   --slate-600: #475569; --slate-700: #334155; --slate-800: #1e293b; --slate-900: #0f172a; --slate-950: #020617;
-  --emerald-50: #ecfdf5; --emerald-400: #34d399; --emerald-600: #059669; --emerald-700: #047857; --emerald-950: #022c22;
-  --amber-50: #fffbeb; --amber-400: #fbbf24; --amber-600: #d97706; --amber-700: #b45309; --amber-950: #451a03;
-  --rose-50: #fff1f2; --rose-400: #fb7185; --rose-600: #e11d48; --rose-700: #be123c; --rose-950: #4c0519;
-  --sky-50: #f0f9ff; --sky-400: #38bdf8; --sky-600: #0284c7; --sky-700: #0369a1; --sky-950: #082f49;
+  --emerald-50: #ecfdf5; --emerald-400: #34d399; --emerald-600: #059669; --emerald-700: #047857; --emerald-800: #065f46; --emerald-950: #022c22;
+  --amber-50: #fffbeb; --amber-400: #fbbf24; --amber-600: #d97706; --amber-700: #b45309; --amber-800: #92400e; --amber-950: #451a03;
+  --rose-50: #fff1f2; --rose-400: #fb7185; --rose-600: #e11d48; --rose-700: #be123c; --rose-800: #9f1239; --rose-950: #4c0519;
+  --sky-50: #f0f9ff; --sky-400: #38bdf8; --sky-600: #0284c7; --sky-700: #0369a1; --sky-800: #075985; --sky-950: #082f49;
 
   --ez-font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
   --ez-font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
@@ -49,10 +49,10 @@
   --ez-on-primary: var(--slate-0);
   --ez-accent: var(--amber-600);
   --ez-accent-soft: var(--amber-50);
-  --ez-success: var(--emerald-600); --ez-success-strong: var(--emerald-700); --ez-success-soft: var(--emerald-50);
-  --ez-warning: var(--amber-600); --ez-warning-strong: var(--amber-700); --ez-warning-soft: var(--amber-50);
-  --ez-danger: var(--rose-600); --ez-danger-strong: var(--rose-700); --ez-danger-soft: var(--rose-50);
-  --ez-info: var(--sky-600); --ez-info-strong: var(--sky-700); --ez-info-soft: var(--sky-50);
+  --ez-success: var(--emerald-700); --ez-success-strong: var(--emerald-800); --ez-success-soft: var(--emerald-50);
+  --ez-warning: var(--amber-700); --ez-warning-strong: var(--amber-800); --ez-warning-soft: var(--amber-50);
+  --ez-danger: var(--rose-700); --ez-danger-strong: var(--rose-800); --ez-danger-soft: var(--rose-50);
+  --ez-info: var(--sky-700); --ez-info-strong: var(--sky-800); --ez-info-soft: var(--sky-50);
   --ez-focus-ring: 0 0 0 3px rgb(67 56 202 / 0.28);
   --ez-shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
   --ez-shadow-sm: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
