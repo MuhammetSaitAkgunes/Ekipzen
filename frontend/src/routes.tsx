@@ -37,6 +37,7 @@ const PricingPage = lazy(() => import("./marketing/pages/PricingPage").then((m) 
 const AboutPage = lazy(() => import("./marketing/pages/AboutPage").then((m) => ({ default: m.AboutPage })));
 const SecurityPage = lazy(() => import("./marketing/pages/SecurityPage").then((m) => ({ default: m.SecurityPage })));
 const KvkkPage = lazy(() => import("./marketing/pages/KvkkPage").then((m) => ({ default: m.KvkkPage })));
+const ContactPage = lazy(() => import("./marketing/pages/ContactPage").then((m) => ({ default: m.ContactPage })));
 
 const marketingPage = (Page: ComponentType) => (
   <Suspense fallback={<div className="ez-page-loading" aria-busy="true" />}><Page /></Suspense>
@@ -151,6 +152,7 @@ export function buildRouteObjects(): RouteObject[] {
         { path: "/hakkimizda", element: marketingPage(AboutPage) },
         { path: "/guvenlik", element: marketingPage(SecurityPage) },
         { path: "/kvkk-aydinlatma", element: marketingPage(KvkkPage) },
+        { path: "/iletisim", element: marketingPage(ContactPage) },
         { path: "*", element: <NotFoundPage /> },
       ],
     },

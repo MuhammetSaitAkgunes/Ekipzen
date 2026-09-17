@@ -181,3 +181,21 @@
 .ez-prose h2 { font-size: var(--fs-24) !important; margin-top: 1rem; }
 .ez-prose a { color: var(--ez-primary); font-weight: 600; }
 .ez-prose a:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); border-radius: var(--r-sm); }
+
+.ez-contact { background: radial-gradient(50rem 24rem at 0% 0%, var(--indigo-50), transparent 70%), var(--ez-surface); }
+.ez-contact__grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+.ez-contact__intro { display: grid; gap: 1.25rem; }
+.ez-contact__card { margin-top: 0.5rem; padding: 1.25rem; border-radius: var(--r-lg); background: var(--ez-bg); display: grid; gap: 0.5rem; }
+.ez-contact__card h2 { font-size: var(--fs-16) !important; }
+.ez-contact__card a, .ez-link { color: var(--ez-primary); font-weight: 600; }
+.ez-contact__form { padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: var(--ez-shadow-lg); }
+@media (max-width: 900px) { .ez-contact__grid { grid-template-columns: 1fr; } }
+
+.ez-form { display: grid; gap: 1.25rem; }
+.ez-form__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1.25rem; }
+.ez-form__note { font-size: var(--fs-12); color: var(--ez-text-3); }
+.ez-form__error { padding: 0.75rem 1rem; border-radius: var(--r-md); background: var(--ez-danger-soft); color: var(--ez-danger-strong); font-weight: 500; }
+.ez-form .ez-check a { color: var(--ez-primary); font-weight: 600; }
+.ez-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.ez-form-success { display: grid; gap: 1rem; justify-items: start; padding-block: 2rem; }
+.ez-form-success .ez-icon { background: var(--ez-success-soft); color: var(--ez-success); }
