@@ -3998,6 +3998,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/demo-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Demo talebini platform sahibine e-postayla iletir. Hesap açmaz. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SubmitDemoRequestCommand"];
+                    "text/json": components["schemas"]["SubmitDemoRequestCommand"];
+                    "application/*+json": components["schemas"]["SubmitDemoRequestCommand"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/candidates": {
         parameters: {
             query?: never;
@@ -7051,6 +7113,16 @@ export interface components {
             status?: components["schemas"]["TenantStatus"];
             /** Format: date-time */
             createdAtUtc?: string;
+        };
+        SubmitDemoRequestCommand: {
+            fullName?: string | null;
+            email?: string | null;
+            company?: string | null;
+            companySize?: string | null;
+            phone?: string | null;
+            message?: string | null;
+            kvkkConsent?: boolean;
+            website?: string | null;
         };
         SubscriptionDto: {
             plan?: string | null;

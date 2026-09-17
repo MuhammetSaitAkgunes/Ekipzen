@@ -48,6 +48,7 @@ try
     // Rate limiting: kimlik/provizyon uçlarında brute-force/kötüye kullanımı sınırlar.
     // Limit yapılandırmadan gelir; testler yüksek bir değerle bunu etkisiz kılar.
     var authPermitPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPermitPerMinute", 30);
+    var publicFormPermitPerHour = builder.Configuration.GetValue("RateLimiting:PublicFormPermitPerHour", 5);
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -61,11 +62,27 @@ try
                     QueueLimit = 0,
                 }));
 
+        // Tanıtım sitesi formları: anonim, e-posta üretir → IP başına saatlik sınır.
+        options.AddPolicy("public-form", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = publicFormPermitPerHour,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                }));
+
         // "signup" politikası KALDIRILDI: tek kullanıcısı olan self-servis kayıt ucu
         // kaldırıldı. Kiracı açan tek uç (POST /api/tenants) platform anahtarı istediği
         // için anonim kötüye kullanıma açık değil; onu "auth" politikası kapsar.
         // RateLimiting:SignupPermitPerHour ayarı artık okunmuyor.
     });
+
+    // Landing sayfasındaki demo talep formunun bildirim adresi. Application katmanında
+    // yapılandırma soyutlaması olmadığı için singleton olarak burada kaydedilir.
+    builder.Services.AddSingleton(new Ekipzen.Application.Features.DemoRequests.DemoRequestSettings(
+        builder.Configuration["DemoRequests:NotifyEmail"] ?? ""));
 
     // İstek bağlamındaki kullanıcı (audit + yetki kapsamı).
     builder.Services.AddHttpContextAccessor();

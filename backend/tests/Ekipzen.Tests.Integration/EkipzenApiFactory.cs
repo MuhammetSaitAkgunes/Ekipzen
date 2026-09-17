@@ -29,6 +29,9 @@ public sealed class EkipzenApiFactory : WebApplicationFactory<Program>
     /// <summary>Testlerde kiracı provizyon ucunu çağırmak için platform anahtarı.</summary>
     public const string PlatformKey = "test-platform-key";
 
+    /// <summary>Demo talebi bildirim testlerinde kullanılan sabit alıcı adresi.</summary>
+    public const string DemoNotifyEmail = "demo-talepleri@ekipzen.test";
+
     /// <summary>Davet e-postalarının (outbox) yazıldığı kök — davet token'ını okumak için.</summary>
     public string StorageRoot { get; }
 
@@ -78,6 +81,8 @@ public sealed class EkipzenApiFactory : WebApplicationFactory<Program>
         // Testler çok sayıda login/provizyon yapar → rate limit'i etkisiz kıl.
         // ("signup" politikası, self-servis kayıt ucuyla birlikte kaldırıldı.)
         Environment.SetEnvironmentVariable("RateLimiting__AuthPermitPerMinute", "1000000");
+        Environment.SetEnvironmentVariable("RateLimiting__PublicFormPermitPerHour", "1000000");
+        Environment.SetEnvironmentVariable("DemoRequests__NotifyEmail", DemoNotifyEmail);
         Environment.SetEnvironmentVariable("Storage__Root", StorageRoot);
         // Kiracı katalogları testlere ÖZEL önekle doğar. Bu olmadan test koşumu,
         // geliştiricinin makinesindeki gerçek Ekipzen_demo / Ekipzen_globex

@@ -40,6 +40,8 @@ public static class ProductionConfiguration
         if (config.GetValue("Smtp:Port", 0) is < 1 or > 65535) errors.Add("Smtp:Port geçersiz.");
         if (!string.IsNullOrWhiteSpace(config["Smtp:User"]) && string.IsNullOrWhiteSpace(config["Smtp:Password"]))
             errors.Add("Smtp:User tanımlıysa Smtp:Password zorunludur.");
+        if (!System.Net.Mail.MailAddress.TryCreate(config["DemoRequests:NotifyEmail"], out _))
+            errors.Add("DemoRequests:NotifyEmail geçerli bir e-posta adresi olmalıdır.");
 
         CheckDataDirectory("Storage:Root");
         CheckDataDirectory("DataProtection:KeysPath");

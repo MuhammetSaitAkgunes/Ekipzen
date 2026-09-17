@@ -41,6 +41,7 @@ public sealed class ProductionHostingTests : IDisposable
             ["ConnectionStrings:DefaultConnection"] = "Server=sql.example.test;Database=Ekipzen;Integrated Security=True;Encrypt=True;TrustServerCertificate=False",
             ["ConnectionStrings:PlatformConnection"] = "Server=sql.example.test;Database=Platform;Integrated Security=True;Encrypt=True;TrustServerCertificate=False",
             ["Email:Mode"] = "smtp", ["Smtp:Host"] = "smtp.example.test", ["Smtp:From"] = "ekipzen@example.test", ["Smtp:Port"] = "587",
+            ["DemoRequests:NotifyEmail"] = "satis@example.test",
             ["Storage:Root"] = Path.Combine(root, "storage"), ["DataProtection:KeysPath"] = Path.Combine(root, "keys"),
             ["DataProtection:CertificatePath"] = certificatePath, ["DataProtection:CertificatePassword"] = "test-only-password",
             ["Logging:FilePath"] = Path.Combine(root, "logs", "ekipzen-.log"),
@@ -66,6 +67,8 @@ public sealed class ProductionHostingTests : IDisposable
     [InlineData("App:BaseUrl", "http://localhost:5173")]
     [InlineData("App:BaseUrl", "https://unknown.example.test")]
     [InlineData("Smtp:Host", "")]
+    [InlineData("DemoRequests:NotifyEmail", "")]
+    [InlineData("DemoRequests:NotifyEmail", "not-an-email")]
     [InlineData("Storage:Root", "App_Data/storage")]
     [InlineData("DataProtection:KeysPath", "keys")]
     [InlineData("DataProtection:CertificatePassword", "")]
