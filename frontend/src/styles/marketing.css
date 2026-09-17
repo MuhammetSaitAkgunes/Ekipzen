@@ -168,7 +168,7 @@
 .ez-plan__audience { color: var(--ez-text-3); min-height: 3.3em; }
 .ez-plan__price { font-size: var(--fs-24); font-weight: 800; color: var(--ez-text); }
 
-.ez-table-wrap { overflow-x: auto; border: 1px solid var(--ez-border); border-radius: var(--r-lg); background: var(--ez-surface); }
+.ez-table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--ez-border); border-radius: var(--r-lg); background: var(--ez-surface); }
 .ez-compare { width: 100%; min-width: 640px; border-collapse: collapse; font-size: var(--fs-14); }
 .ez-compare th, .ez-compare td { padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--ez-border); text-align: center; }
 .ez-compare th[scope="row"], .ez-compare thead th:first-child { text-align: left; font-weight: 500; color: var(--ez-text-2); }

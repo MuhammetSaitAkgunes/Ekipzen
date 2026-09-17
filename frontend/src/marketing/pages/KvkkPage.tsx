@@ -29,6 +29,12 @@ export function KvkkPage() {
         <p>Verileriniz, talebinizi size iletmek için kullanılan e-posta hizmet sağlayıcısı dışında üçüncü kişilerle paylaşılmaz.</p>
         <h2>Toplama yöntemi</h2>
         <p>Verileriniz, web sitesindeki form aracılığıyla elektronik ortamda toplanır.</p>
+        <h2>Saklama süresi</h2>
+        <p>
+          Demo talebinizi içeren veriler web sitesinde ayrıca saklanmaz; talebiniz e-posta ile iletilir. Bu e-posta,
+          talebinizin sonuçlandırılması ve yasal yükümlülüklerin yerine getirilmesi için gerekli süre boyunca
+          saklanır, ardından silinir.
+        </p>
         <h2>İlgili kişi olarak haklarınız</h2>
         <p>
           KVKK m.11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltilmesini veya

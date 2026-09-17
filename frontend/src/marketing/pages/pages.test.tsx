@@ -44,8 +44,9 @@ test("Hakkımızda: değerler listelenir, uydurma kişi ya da sayı yok", () => 
   expect(screen.queryByText(/kurucu|CEO|\d+\+ müşteri/i)).toBeNull();
 });
 
-test("KVKK: veri sorumlusu ve haklar bölümleri", () => {
+test("KVKK: veri sorumlusu, saklama süresi ve haklar bölümleri", () => {
   renderPage(<KvkkPage />);
   expect(screen.getByRole("heading", { level: 1, name: "KVKK aydınlatma metni" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Saklama süresi" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "İlgili kişi olarak haklarınız" })).toBeInTheDocument();
 });
