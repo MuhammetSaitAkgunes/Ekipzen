@@ -207,6 +207,20 @@ public sealed class ProductionHostingTests : IDisposable
         (await client.GetAsync("/assets/missing.js")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task SpaFallback_OnlyAnswersGetAndHead_OtherMethodsGet404()
+    {
+        await using var app = await StartAsync();
+        var client = app.GetTestClient();
+        client.BaseAddress = new Uri("https://pilot.example.test");
+
+        var post = await client.PostAsync("/ozellikler", new StringContent(""));
+        post.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var head = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/ozellikler"));
+        head.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     [Theory]
     [InlineData("/")]
     [InlineData("/index.html")]

@@ -125,6 +125,11 @@ public static class PilotHosting
         {
             var path = context.Request.Path;
             var index = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+            if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
             if (path.StartsWithSegments("/api") || path.StartsWithSegments("/health")
                 || Path.HasExtension(path.Value) || !index.Exists)
             {

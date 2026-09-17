@@ -1,7 +1,18 @@
+import { useEffect } from "react";
 import { ButtonLink, usePageMeta } from "../../ui";
 
 export function NotFoundPage() {
   usePageMeta("Sayfa bulunamadı");
+  useEffect(() => {
+    // 404 arama motorlarınca indekslenmemeli; sayfadan ayrılınca etiket kaldırılır.
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.appendChild(meta);
+    return () => {
+      meta.remove();
+    };
+  }, []);
   return (
     <section className="ez-section">
       <div className="ez-container ez-narrow">
