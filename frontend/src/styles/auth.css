@@ -13,9 +13,9 @@
   min-height: 100vh;
   padding: 44px;
   background:
-    radial-gradient(1200px 600px at 85% -10%, var(--ez-primary), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgb(212 168 83 / 0.1), transparent 55%),
-    linear-gradient(160deg, var(--ez-nav-bg) 0%, #0a2422 55%, #081d1b 100%);
+    radial-gradient(1200px 600px at 85% -10%, color-mix(in srgb, var(--ez-primary) 16%, transparent), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, color-mix(in srgb, var(--ez-accent) 10%, transparent), transparent 55%),
+    linear-gradient(160deg, var(--ez-nav-bg) 0%, var(--indigo-950) 55%, var(--slate-950) 100%);
   color: #fff;
   display: flex;
   flex-direction: column;
