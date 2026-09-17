@@ -102,4 +102,19 @@ public sealed class DemoRequestTests(EkipzenApiFactory factory)
         method.GetCustomAttribute<EnableRateLimitingAttribute>()!.PolicyName.Should().Be("public-form");
         typeof(PublicController).GetCustomAttribute<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>().Should().NotBeNull();
     }
+
+    [Fact]
+    public void Uc_IstekBoyutuSinirli()
+    {
+        // TestServer, RequestSizeLimitAttribute'ı Kestrel/IIS gibi gerçek bir sunucu kadar
+        // uçtan uca zorlamaz (bkz. AsiriBuyukGovde_Reddedilir denemesi: TestServer'da aşırı
+        // büyük gövde yine de 204 ile kabul edilir); bu yüzden öznitelik varlığı reflection
+        // ile doğrulanır — mevcut hız sınırlama testiyle aynı desen.
+        var method = typeof(PublicController).GetMethod(nameof(PublicController.SubmitDemoRequest))!;
+        var attribute = method.GetCustomAttribute<Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute>()
+            ?? typeof(PublicController).GetCustomAttribute<Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute>();
+        attribute.Should().NotBeNull();
+        var metadata = (Microsoft.AspNetCore.Http.Metadata.IRequestSizeLimitMetadata)attribute!;
+        metadata.MaxRequestBodySize.Should().NotBeNull().And.BeLessOrEqualTo(16_000);
+    }
 }

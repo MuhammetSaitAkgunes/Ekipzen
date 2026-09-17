@@ -18,6 +18,7 @@ public sealed class PublicController(ISender sender) : ControllerBase
     /// <remarks>Demo talebini platform sahibine e-postayla iletir. Hesap açmaz.</remarks>
     [HttpPost("demo-requests")]
     [EnableRateLimiting("public-form")]
+    [RequestSizeLimit(16_000)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
