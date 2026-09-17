@@ -52,6 +52,25 @@ public sealed class ProductionHostingTests : IDisposable
     public void ExplicitProductionConfiguration_PassesWithoutConnectingToExternalServices()
         => ProductionConfiguration.GetErrors(new ConfigurationBuilder().AddInMemoryCollection(config).Build(), Site).Should().BeEmpty();
 
+    [Fact]
+    public void DeploymentExampleConfiguration_DoesNotMissDemoRequestsNotifyEmail()
+    {
+        // Örnek dosyada yer tutucu sırlar var; yalnız DemoRequests:NotifyEmail eksikliğini denetler.
+        var exampleJson = Path.Combine(RepoRoot(), "deployment", "windows", "configuration.example.json");
+        File.Exists(exampleJson).Should().BeTrue($"örnek dosya bulunamadı: {exampleJson}");
+        var config = new ConfigurationBuilder().AddJsonFile(exampleJson).Build();
+        var errors = ProductionConfiguration.GetErrors(config, Site);
+        errors.Should().NotContain(e => e.Contains("DemoRequests:NotifyEmail"));
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "deployment")))
+            dir = dir.Parent;
+        return dir?.FullName ?? throw new DirectoryNotFoundException("Repo kökü bulunamadı (deployment/ üzerinden aranıyor).");
+    }
+
     [Theory]
     [InlineData("Jwt:Secret", "short")]
     [InlineData("Jwt:Secret", "a-long-do-not-use-in-prod-secret-placeholder")]

@@ -12,6 +12,7 @@
     "Host": "smtp.example.com", "Port": 587, "User": "REPLACE", "Password": "REPLACE",
     "From": "ekipzen@example.com", "FromName": "Ekipzen", "UseStartTls": true
   },
+  "DemoRequests": { "NotifyEmail": "satis@example.com" },
   "Storage": { "Root": "D:\\Ekipzen\\data\\storage" },
   "DataProtection": {
     "KeysPath": "D:\\Ekipzen\\data\\keys",

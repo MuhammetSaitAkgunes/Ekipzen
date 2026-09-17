@@ -53,6 +53,7 @@ Zorunlu kontroller:
 - Aynı-origin pilotta `Cors:AllowedOrigins` boş bırakılır. Başka origin ancak açık ihtiyaç varsa tam HTTPS origin olarak eklenir; CORS kimlik doğrulama değildir.
 - SQL için `Encrypt=True`, `TrustServerCertificate=False`, `sa` dışı kimlik ve ayrı platform/uygulama katalogları. Sunucu adı TLS sertifikasıyla eşleşmeli. Bağlantı kurulamadığında TLS doğrulaması kapatılarak ilerlenmez.
 - `Email:Mode=smtp`, geçerli sunucu/gönderen/port. Outbox üretimde kabul edilmez. SMTP TLS modu mevcut MailKit uygulamasınca StartTLS veya bağlantıda TLS olarak kullanılır.
+- `DemoRequests:NotifyEmail`: geçerli bir e-posta adresi; landing sayfasındaki demo talebi bildirimleri buraya gider.
 - Storage/keys ve log yolu yayın klasöründen ayrı, mutlak olmalı. Bu dizinler gerçek sunucuda yedeklemeye dahil edilir.
 
 ## 4. Data Protection ve loglar
