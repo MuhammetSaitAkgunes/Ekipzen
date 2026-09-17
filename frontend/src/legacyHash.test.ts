@@ -21,3 +21,9 @@ test("hash olmayan ya da çapa olan değerler dokunulmadan kalır", () => {
   expect(legacyHashTarget("")).toBeNull();
   expect(legacyHashTarget("#moduller")).toBeNull();
 });
+
+test("protokol-göreli veya ters eğik çizgili hash hedefleri reddedilir (açık yönlendirme)", () => {
+  expect(legacyHashTarget("#//evil.example")).toBeNull();
+  expect(legacyHashTarget("#/\\evil.example")).toBeNull();
+  expect(legacyHashTarget("#/\\/evil.example")).toBeNull();
+});

@@ -8,7 +8,13 @@ import { legacyHashTarget } from "./legacyHash";
 
 // Hash router döneminden kalan bağlantılar (ör. /#/accept-invite?…) router kurulmadan çevrilir.
 const legacyTarget = legacyHashTarget(window.location.hash);
-if (legacyTarget) window.history.replaceState(null, "", legacyTarget);
+if (legacyTarget) {
+  try {
+    window.history.replaceState(null, "", legacyTarget);
+  } catch {
+    // Beklenmeyen/işlenemeyen bir hash biçimi modül yüklenmesini bloklamamalı.
+  }
+}
 
 const router = createBrowserRouter(buildRouteObjects());
 const queryClient = createQueryClient();
