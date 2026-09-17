@@ -20,7 +20,9 @@ Select.displayName = "Select";
 export function Checkbox({ children, className, ...rest }: InputHTMLAttributes<HTMLInputElement> & { children: ReactNode }) {
   return (
     <label className={join("ez-check", className)}>
-      <input type="checkbox" className="ez-check__box" {...rest} />
+      {/* type en son yayılır: {...rest} içinde (kazara ya da başka bir yerden) bir
+          `type` gelirse bile bu her zaman checkbox olarak kalmalıdır. */}
+      <input className="ez-check__box" {...rest} type="checkbox" />
       <span className="ez-check__label">{children}</span>
     </label>
   );
