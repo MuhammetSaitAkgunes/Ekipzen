@@ -145,10 +145,14 @@ kabuğunda (`layout/AppShell.tsx`) daraltılmış sidebar hâlâ `.sidebar-colla
 linklerinin ve tarayıcı yer imlerinin kırılmamasını sağlar.
 
 **Landing içeriği** `frontend/src/marketing/content.ts` dosyasından
-düzenlenir (nav linkleri, bölüm metinleri, fiyatlandırma paketleri, KVKK
-metni gibi); sayfa bileşenleri (`marketing/sections.tsx`,
-`MarketingLayout.tsx`) bu veriyi render eder — metin değişikliği için
-component kodunu değiştirmeye gerek yoktur.
+düzenlenir (nav linkleri, modül/fiyatlandırma/güvenlik listeleri, SSS gibi
+yapılandırılmış veriler); sayfa bileşenleri (`marketing/sections.tsx`,
+`MarketingLayout.tsx`) bu veriyi render eder. Ancak her metin burada değildir:
+sayfa hero başlıkları/açıklamaları ilgili sayfa bileşeninde satır içi yazılıdır
+(ör. `marketing/pages/HomePage.tsx`, `FeaturesPage.tsx`) ve KVKK aydınlatma
+metni ayrı bir sayfa olarak `marketing/pages/KvkkPage.tsx` içindedir —
+`content.ts`'te değil. Bu metinlerin değişikliği ilgili sayfa component'inin
+düzenlenmesini gerektirir.
 
 **Demo talebi akışı:** `/iletisim` sayfasındaki form `POST
 /api/public/demo-requests`'e gönderilir (kimlik doğrulama gerektirmez, kayıt
@@ -163,7 +167,10 @@ MapSpaFallback` (`backend/src/Ekipzen.API/Hosting/PilotHosting.cs`) `/api` ve
 `/ozellikler` gibi temiz landing yollarının ve `/app/dashboard` gibi SPA
 yollarının doğrudan URL ile açılabilmesini sağlar. `frontend/public/`
 altındaki `favicon.svg`, `robots.txt` ve `sitemap.xml` build sırasında
-`frontend/dist/` köküne kopyalanır.
+`frontend/dist/` köküne kopyalanır. `robots.txt`'teki Sitemap satırı ve
+`sitemap.xml`'deki `<loc>` adresleri `https://ekipzen.com` alan adını sabit
+metin olarak içerir; bu, üretim yapılandırmasındaki `App:BaseUrl` ile eşleşmek
+zorundadır — alan adı değişirse bu iki statik dosya da elle güncellenmelidir.
 
 ## Sonraki Adım
 
