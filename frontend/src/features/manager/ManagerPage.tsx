@@ -116,13 +116,13 @@ export function ManagerPage() {
                 datasets: [{
                   label: "Toplam izin günü",
                   data: DEMO_TREND,
-                  borderColor: chartToken("--primary", "#0f766e"),
+                  borderColor: chartToken("--primary", "#4338ca"),
                   borderWidth: 2.5,
-                  backgroundColor: "rgba(15, 118, 110, 0.12)",
+                  backgroundColor: "rgba(67, 56, 202, 0.12)",
                   fill: true,
                   tension: 0.35,
                   pointBackgroundColor: chartToken("--surface", "#ffffff"),
-                  pointBorderColor: chartToken("--primary", "#0f766e"),
+                  pointBorderColor: chartToken("--primary", "#4338ca"),
                   pointRadius: 4,
                 }],
               }}
@@ -131,7 +131,7 @@ export function ManagerPage() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
                 scales: {
-                  y: { grid: { color: chartToken("--line-soft", "#e9efef") }, beginAtZero: true },
+                  y: { grid: { color: chartToken("--line-soft", "#f1f5f9") }, beginAtZero: true },
                   x: { grid: { display: false } },
                 },
               }}

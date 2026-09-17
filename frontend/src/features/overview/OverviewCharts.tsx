@@ -5,8 +5,9 @@ import type { components } from "../../api/schema";
 type DepartmentCountDto = components["schemas"]["DepartmentCountDto"];
 type RecruitmentFunnelSliceDto = components["schemas"]["RecruitmentFunnelSliceDto"];
 
-// Eski overviewDeptChart palet sırası birebir.
-const DEPT_COLORS = ["#0f766e", "#0e7490", "#b98a2f", "#157f3d", "#5b7c99"];
+// Kimlik renk sırası: indigo, sky, amber, emerald, slate (chartToken modül yüklenirken
+// çalışmadığı için sabit hex kullanılır; değerler tokens.css ramp'leriyle birebir).
+const DEPT_COLORS = ["#4338ca", "#0284c7", "#d97706", "#059669", "#64748b"];
 
 export function DeptDistributionChart({ distribution }: { distribution: DepartmentCountDto[] }) {
   return (
@@ -42,7 +43,7 @@ export function RecruitmentFunnelChart({ funnel }: { funnel: RecruitmentFunnelSl
             {
               label: "Aday",
               data: [funnel.total ?? 0, funnel.new ?? 0, funnel.interview ?? 0, funnel.offer ?? 0, funnel.hired ?? 0],
-              backgroundColor: chartToken("--primary", "#0f766e"),
+              backgroundColor: chartToken("--primary", "#4338ca"),
               borderRadius: 5,
             },
           ],
@@ -51,7 +52,7 @@ export function RecruitmentFunnelChart({ funnel }: { funnel: RecruitmentFunnelSl
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, grid: { color: chartToken("--line-soft", "#e9efef") } },
+            y: { beginAtZero: true, grid: { color: chartToken("--line-soft", "#f1f5f9") } },
             x: { grid: { display: false } },
           },
           plugins: { legend: { display: false } },
