@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Ekipzen.API.Hosting;
@@ -99,7 +101,15 @@ public static class PilotHosting
         });
         app.UseHttpsRedirection();
         app.UseDefaultFiles();
-        app.UseStaticFiles();
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            OnPrepareResponse = ctx =>
+            {
+                // index.html for "/" and "/index.html" must never be heuristically cached by
+                // intermediaries; it is how updated deploys reach clients.
+                if (ctx.File.Name == "index.html") ctx.Context.Response.Headers.CacheControl = "no-cache";
+            },
+        });
         app.UseCors(CorsPolicy);
         // IIS in-process şema/IP'yi doğrudan sağlar. Keyfî X-Forwarded-* başlıklarına güvenilmez.
     }

@@ -207,6 +207,21 @@ public sealed class ProductionHostingTests : IDisposable
         (await client.GetAsync("/assets/missing.js")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/index.html")]
+    public async Task RootIndexHtml_IsNotHeuristicallyCacheable(string path)
+    {
+        // UseDefaultFiles + UseStaticFiles serve "/" and "/index.html" directly (not through
+        // MapFallback), so they need their own explicit Cache-Control to avoid stale shells.
+        await using var app = await StartAsync();
+        var client = app.GetTestClient();
+        client.BaseAddress = new Uri("https://pilot.example.test");
+        var response = await client.GetAsync(path);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Headers.CacheControl!.NoCache.Should().BeTrue();
+    }
+
     [Fact]
     public async Task WrongCertificatePassword_PreventsStartup()
     {
