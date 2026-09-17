@@ -87,3 +87,16 @@ test("/fiyatlandirma lazy rotası kayıtlıdır ve sayfayı render eder", async 
   renderAt("/fiyatlandirma");
   expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("İhtiyacınız kadar, sürprizsiz");
 });
+
+test("oturumlu kullanıcı /app adresinde rol ana sayfasına gider", async () => {
+  localStorage.setItem(SESSION_KEY, sessionFor("hr-admin", "İK Yöneticisi"));
+  renderShellAt("/app");
+  expect(await screen.findByText("Risk Merkezi", { selector: ".header-title" })).toBeInTheDocument();
+});
+
+test("oturumlu kullanıcı /app/olmayan adresinde de rol ana sayfasına gider (marketing 404 değil)", async () => {
+  localStorage.setItem(SESSION_KEY, sessionFor("hr-admin", "İK Yöneticisi"));
+  renderShellAt("/app/olmayan");
+  expect(await screen.findByText("Risk Merkezi", { selector: ".header-title" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Sayfa bulunamadı" })).not.toBeInTheDocument();
+});
