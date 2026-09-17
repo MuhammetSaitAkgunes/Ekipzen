@@ -64,3 +64,9 @@ test("şifreler eşleşmezse istek atılmaz", async () => {
   expect(await screen.findByText("Şifreler eşleşmiyor.")).toBeInTheDocument();
   expect(vi.mocked(fetch)).not.toHaveBeenCalled();
 });
+
+test("davet ekranı yeni düzende başlık gösterir", () => {
+  renderInvite("?email=yeni%40acme.local&token=abc");
+  expect(screen.getByRole("heading", { level: 1, name: "Hesabınızı etkinleştirin" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Yeni şifre")).toHaveAttribute("id", "invite-password");
+});

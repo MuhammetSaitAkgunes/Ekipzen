@@ -63,11 +63,12 @@ test("başarısız girişte hata mesajı görünür, oturum yazılmaz", async ()
   expect(getSession()).toBeNull();
 });
 
-test("kayıt sekmesi yok — POST /api/auth/register kiracı sızıntısı yüzünden kaldırıldı", () => {
+test("kayıt sekmesi yok; hesabı olmayan demo talebine yönlendirilir", () => {
   renderLogin();
-  expect(document.getElementById("auth-login")).toHaveClass("auth-form", "active");
+  expect(document.getElementById("auth-login")).toHaveClass("ez-auth__form");
   expect(document.getElementById("auth-signup")).toBeNull();
-  expect(document.querySelector(".auth-tabs")).toBeNull();
+  expect(screen.getByRole("link", { name: "Demo isteyin" })).toHaveAttribute("href", "/iletisim");
+  expect(screen.getByRole("link", { name: /Ana sayfaya dön/ })).toHaveAttribute("href", "/");
 });
 
 test("üretimde demo kimliği ve yanıltıcı sabit skorlar gösterilmez", () => {
@@ -78,4 +79,19 @@ test("üretimde demo kimliği ve yanıltıcı sabit skorlar gösterilmez", () =>
   expect(screen.queryByText("Demo erişim")).not.toBeInTheDocument();
   expect(screen.queryByText("82")).not.toBeInTheDocument();
   expect(screen.getByText("Şirket hesabı")).toBeInTheDocument();
+});
+
+test("giriş ekranı sayfa başlığını ve erişilebilir başlığı ayarlar", () => {
+  renderLogin();
+  expect(screen.getByRole("heading", { level: 1, name: "Hesabınıza giriş yapın" })).toBeInTheDocument();
+  expect(document.title).toBe("Giriş yap · Ekipzen");
+});
+
+test("gönderim sırasında buton devre dışı kalır", async () => {
+  let resolve!: (r: Response) => void;
+  vi.mocked(fetch).mockReturnValueOnce(new Promise<Response>((r) => { resolve = r; }));
+  renderLogin();
+  await userEvent.click(screen.getByRole("button", { name: /Giriş yap/ }));
+  expect(screen.getByRole("button", { name: /Giriş yapılıyor/ })).toBeDisabled();
+  resolve(new Response(JSON.stringify(authBody), { status: 200, headers: { "Content-Type": "application/json" } }));
 });

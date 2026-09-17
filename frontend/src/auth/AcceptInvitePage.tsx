@@ -2,14 +2,17 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch, ApiError } from "../api/client";
 import { useAuth } from "./AuthContext";
-import { roleHomeFor } from "../routes";
+import { roleHomeFor } from "../paths";
+import { Badge, Button, Field, Input, usePageMeta } from "../ui";
+import { AuthLayout } from "./AuthLayout";
 
 /**
- * Davet bağlantısı hedefi (/#/accept-invite?email=...&token=...). Provizyonlanan
+ * Davet bağlantısı hedefi (/davet?email=...&token=...). Provizyonlanan
  * hr-admin ve işe alınan personel şifresiz oluşturulur; bu ekran davet token'ıyla
  * ilk şifreyi belirler, ardından otomatik giriş yapıp rol ana sayfasına götürür.
  */
 export function AcceptInvitePage() {
+  usePageMeta("Hesap etkinleştirme");
   const [params] = useSearchParams();
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -52,64 +55,32 @@ export function AcceptInvitePage() {
   };
 
   return (
-    <main className="auth-shell">
-      <section className="auth-visual">
-        <div className="auth-brand">
-          <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
-          <div>
-            <strong>Ekipzen</strong>
-            <span>HR MASTER Suite</span>
-          </div>
-        </div>
-        <div className="auth-copy">
-          <span className="status-pill info">Hesap etkinleştirme</span>
-          <h1>Şifrenizi belirleyin ve Ekipzen hesabınızı etkinleştirin.</h1>
-          <p>Bu bağlantı size özeldir; şifrenizi belirledikten sonra otomatik giriş yapılır.</p>
-        </div>
-      </section>
-
-      <section className="auth-panel">
-        <form className="auth-form active" onSubmit={submit}>
-          <h2>Hesabınızı etkinleştirin</h2>
-          {missingLink ? (
-            <p className="form-error" role="alert">
-              Davet bağlantısı geçersiz veya eksik. Lütfen e-postanızdaki bağlantıyı yeniden açın.
-            </p>
-          ) : (
-            <>
-              <p>{email} için bir şifre belirleyin.</p>
-              {!import.meta.env.DEV && <p>En az 12 karakter, büyük harf ve rakam kullanın.</p>}
-              <div className="input-group">
-                <label htmlFor="invite-password">Yeni şifre</label>
-                <input
-                  id="invite-password"
-                  className="input-control"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="input-group">
-                <label htmlFor="invite-confirm">Şifre (tekrar)</label>
-                <input
-                  id="invite-confirm"
-                  className="input-control"
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                />
-              </div>
-              {error && <p className="form-error" role="alert">{error}</p>}
-              <button type="submit" className="btn btn-primary auth-submit" disabled={busy}>
-                <i aria-hidden="true" className="fa-solid fa-circle-check" />{" "}
-                {busy ? "Etkinleştiriliyor…" : "Şifreyi belirle ve giriş yap"}
-              </button>
-            </>
-          )}
-        </form>
-      </section>
-    </main>
+    <AuthLayout
+      title="Hesabınızı etkinleştirin"
+      subtitle={missingLink ? "Davet bağlantınızı kontrol edin." : <>{email} için bir şifre belirleyin.</>}
+      badge={<Badge tone="primary">Hesap etkinleştirme</Badge>}
+    >
+      <form className="ez-auth__form" onSubmit={submit}>
+        {missingLink ? (
+          <p className="ez-auth__error" role="alert">
+            Davet bağlantısı geçersiz veya eksik. Lütfen e-postanızdaki bağlantıyı yeniden açın.
+          </p>
+        ) : (
+          <>
+            {!import.meta.env.DEV && <p className="ez-auth__hint">En az 12 karakter, büyük harf ve rakam kullanın.</p>}
+            <Field label="Yeni şifre" id="invite-password">
+              <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </Field>
+            <Field label="Şifre (tekrar)" id="invite-confirm">
+              <Input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            </Field>
+            {error && <p className="ez-auth__error" role="alert">{error}</p>}
+            <Button type="submit" size="lg" block disabled={busy}>
+              {busy ? "Etkinleştiriliyor…" : "Şifreyi belirle ve giriş yap"}
+            </Button>
+          </>
+        )}
+      </form>
+    </AuthLayout>
   );
 }
