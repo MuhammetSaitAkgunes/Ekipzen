@@ -145,8 +145,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 22px;
-  background: #0c2b29;
-  border-color: #0c2b29;
+  background: var(--ez-nav-bg);
+  border-color: var(--ez-nav-bg);
   color: #fff;
 }
 
@@ -157,13 +157,13 @@
 }
 
 .plan-banner p {
-  color: #a9c2be;
+  color: var(--ez-nav-text);
   margin-top: 6px;
 }
 
 .badge-pro {
   background: var(--accent);
-  color: #10231f;
+  color: var(--ez-nav-bg);
   margin-bottom: 10px;
 }
 
@@ -174,7 +174,7 @@
 }
 
 .pb-price small {
-  color: #a9c2be;
+  color: var(--ez-nav-text);
   font-size: 0.9rem;
   margin-left: 2px;
 }

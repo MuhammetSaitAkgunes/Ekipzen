@@ -19,12 +19,12 @@
 
 .sidebar {
   grid-area: sidebar;
-  background: #0c2b29;
-  color: #cfe0dd;
+  background: var(--ez-nav-bg);
+  color: var(--ez-nav-text);
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
-  border-right: 1px solid rgb(255 255 255 / 0.06);
+  border-right: 1px solid var(--ez-nav-border);
   overflow-y: auto;
 }
 
@@ -43,8 +43,8 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background: #2fbfae;
-  color: #04201d;
+  background: var(--ez-nav-accent);
+  color: var(--ez-nav-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,7 +63,7 @@
 }
 
 .brand span {
-  color: #7fa39e;
+  color: var(--ez-nav-muted);
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -91,7 +91,7 @@
 }
 
 .nav-group-label {
-  color: #6d928d;
+  color: var(--ez-nav-muted);
   font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -111,7 +111,7 @@
   gap: 12px;
   padding: 0 12px;
   border-radius: var(--radius-md);
-  color: #a9c2be;
+  color: var(--ez-nav-text);
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
@@ -128,7 +128,7 @@
 .nav-item i {
   width: 20px;
   text-align: center;
-  color: #6d928d;
+  color: var(--ez-nav-muted);
   font-size: 0.92rem;
   transition: color 0.15s ease;
 }
@@ -139,11 +139,11 @@
 }
 
 .nav-item:hover i {
-  color: #7ad9cb;
+  color: var(--ez-nav-accent);
 }
 
 .nav-item.active {
-  background: rgb(47 191 174 / 0.14);
+  background: var(--ez-nav-active-bg);
   color: #fff;
   font-weight: 600;
 }
@@ -156,7 +156,7 @@
   bottom: 8px;
   width: 3px;
   border-radius: 999px;
-  background: #2fbfae;
+  background: var(--ez-nav-accent);
 }
 
 .sidebar-collapsed .nav-item.active::before {
@@ -164,11 +164,11 @@
 }
 
 .nav-item.active i {
-  color: #2fbfae;
+  color: var(--ez-nav-accent);
 }
 
 .nav-item:focus-visible {
-  box-shadow: 0 0 0 3px rgb(47 191 174 / 0.4);
+  box-shadow: 0 0 0 3px rgb(129 140 248 / 0.4);
 }
 
 .sidebar-insight {
@@ -183,7 +183,7 @@
 .sidebar-insight span,
 .sidebar-insight small {
   display: block;
-  color: #7fa39e;
+  color: var(--ez-nav-muted);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;

@@ -1,84 +1,41 @@
 /* ============================================================
-   Ekipzen — Kurumsal tasarım sistemi
-   Tipografi: IBM Plex Sans (arayüz) + IBM Plex Mono (veri)
-   Palet: petrol/evergreen kurumsal kimlik
+   Ekipzen — uygulama stilleri
+   Renk/tipografi token'ları tokens.css'te. Aşağıdaki adlar geriye
+   uyum alias'larıdır; yeni kod doğrudan --ez-* kullanır.
    ============================================================ */
 
 :root {
-  --primary: #0f766e;
-  --primary-strong: #0b5a54;
-  --primary-soft: #e3f1ef;
-  --primary-contrast: #ffffff;
-  --accent: #b98a2f;
-  --accent-soft: #f6ecd6;
-  --ink: #14262b;
-  --text: #3a4b50;
-  --muted: #64757c;
-  --subtle: #93a3a8;
-  --line: #dbe3e4;
-  --line-strong: #c3cfd0;
-  --line-soft: #e9efef;
-  --surface: #ffffff;
-  --surface-soft: #f4f7f7;
-  --body: #eef2f2;
-  --success: #157f3d;
-  --success-strong: #0f5c2d;
-  --success-soft: #e0f3e6;
-  --warning: #b45309;
-  --warning-strong: #8a4207;
-  --warning-soft: #fcefdb;
-  --danger: #d92d20;
-  --danger-strong: #a52217;
-  --danger-soft: #fde8e6;
-  --info: #0e7490;
-  --info-strong: #0b5c73;
-  --info-soft: #e0f1f6;
-  --focus-ring: 0 0 0 3px rgb(15 118 110 / 0.22);
-  --shadow-sm: 0 1px 2px rgb(20 38 43 / 0.05);
-  --shadow-md: 0 6px 18px rgb(20 38 43 / 0.08);
-  --shadow-lg: 0 20px 48px rgb(20 38 43 / 0.16);
+  --primary: var(--ez-primary);
+  --primary-strong: var(--ez-primary-hover);
+  --primary-soft: var(--ez-primary-soft);
+  --primary-contrast: var(--ez-on-primary);
+  --accent: var(--ez-accent);
+  --accent-soft: var(--ez-accent-soft);
+  --ink: var(--ez-text);
+  --text: var(--ez-text-2);
+  --muted: var(--ez-text-3);
+  --subtle: var(--ez-text-4);
+  --line: var(--ez-border);
+  --line-strong: var(--ez-border-strong);
+  --line-soft: var(--ez-border-soft);
+  --surface: var(--ez-surface);
+  --surface-soft: var(--ez-surface-2);
+  --body: var(--ez-bg);
+  --success: var(--ez-success); --success-strong: var(--ez-success-strong); --success-soft: var(--ez-success-soft);
+  --warning: var(--ez-warning); --warning-strong: var(--ez-warning-strong); --warning-soft: var(--ez-warning-soft);
+  --danger: var(--ez-danger); --danger-strong: var(--ez-danger-strong); --danger-soft: var(--ez-danger-soft);
+  --info: var(--ez-info); --info-strong: var(--ez-info-strong); --info-soft: var(--ez-info-soft);
+  --focus-ring: var(--ez-focus-ring);
+  --shadow-sm: var(--ez-shadow-sm);
+  --shadow-md: var(--ez-shadow-md);
+  --shadow-lg: var(--ez-shadow-lg);
   --sidebar-width: 264px;
   --header-height: 72px;
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --font-ui: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
-  --font-data: "IBM Plex Mono", "Consolas", monospace;
-}
-
-:root[data-theme="dark"] {
-  --primary: #2fbfae;
-  --primary-strong: #52d3c3;
-  --primary-soft: #123331;
-  --primary-contrast: #04201d;
-  --accent: #d4a853;
-  --accent-soft: #33290f;
-  --ink: #eef5f4;
-  --text: #bfd0ce;
-  --muted: #8aa3a0;
-  --subtle: #5f7876;
-  --line: #24403d;
-  --line-strong: #33524e;
-  --line-soft: #1c3230;
-  --surface: #11201f;
-  --surface-soft: #172a28;
-  --body: #0b1514;
-  --success: #4ade80;
-  --success-strong: #86efac;
-  --success-soft: #0c2f1a;
-  --warning: #fbbf24;
-  --warning-strong: #fcd34d;
-  --warning-soft: #33250a;
-  --danger: #f87171;
-  --danger-strong: #fca5a5;
-  --danger-soft: #3a1512;
-  --info: #38bdf8;
-  --info-strong: #7dd3fc;
-  --info-soft: #0c2836;
-  --focus-ring: 0 0 0 3px rgb(47 191 174 / 0.3);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 8px 22px rgb(0 0 0 / 0.32);
-  --shadow-lg: 0 24px 56px rgb(0 0 0 / 0.45);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --font-ui: var(--ez-font-sans);
+  --font-data: var(--ez-font-mono);
 }
 
 * {
@@ -88,7 +45,7 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 body {
@@ -96,6 +53,10 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Uygulama kabuğu kendi içinde kayar; landing sayfası pencereyle kayar. */
+body:has(.app-container) {
   overflow: hidden;
 }
 
@@ -352,7 +313,7 @@ p {
 
 .btn-danger {
   background: var(--danger);
-  color: #fff;
+  color: var(--ez-on-primary);
   border-color: var(--danger);
 }
 
@@ -737,14 +698,14 @@ textarea.input-control,
   gap: 16px;
   margin: 16px 0;
   padding: 16px 20px;
-  border: 1px solid #f2c46d;
+  border: 1px solid var(--amber-400);
   border-radius: 12px;
-  background: #fff9eb;
+  background: var(--ez-warning-soft);
 }
 
 .provisioning-banner.is-failed {
-  border-color: #ef9a9a;
-  background: #fff1f1;
+  border-color: var(--rose-400);
+  background: var(--ez-danger-soft);
 }
 
 .provisioning-banner p {

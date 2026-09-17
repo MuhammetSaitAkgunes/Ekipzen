@@ -1,0 +1,100 @@
+/* ============================================================
+   Ekipzen — tasarım token'ları (kimlik: derin indigo + slate)
+   Katmanlar: ramp (öneksiz) → amaç (--ez-*) → eski alias'lar (main.css)
+   ============================================================ */
+:root {
+  --indigo-50: #eef2ff; --indigo-100: #e0e7ff; --indigo-200: #c7d2fe; --indigo-300: #a5b4fc;
+  --indigo-400: #818cf8; --indigo-500: #6366f1; --indigo-600: #4f46e5; --indigo-700: #4338ca;
+  --indigo-800: #3730a3; --indigo-900: #312e81; --indigo-950: #1e1b4b;
+  --slate-0: #ffffff; --slate-25: #fbfcfe; --slate-50: #f8fafc; --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0; --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-500: #64748b;
+  --slate-600: #475569; --slate-700: #334155; --slate-800: #1e293b; --slate-900: #0f172a; --slate-950: #020617;
+  --emerald-50: #ecfdf5; --emerald-400: #34d399; --emerald-600: #059669; --emerald-700: #047857; --emerald-950: #022c22;
+  --amber-50: #fffbeb; --amber-400: #fbbf24; --amber-600: #d97706; --amber-700: #b45309; --amber-950: #451a03;
+  --rose-50: #fff1f2; --rose-400: #fb7185; --rose-600: #e11d48; --rose-700: #be123c; --rose-950: #4c0519;
+  --sky-50: #f0f9ff; --sky-400: #38bdf8; --sky-600: #0284c7; --sky-700: #0369a1; --sky-950: #082f49;
+
+  --ez-font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --ez-font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  --fs-12: 0.75rem; --fs-14: 0.875rem; --fs-16: 1rem; --fs-18: 1.125rem; --fs-20: 1.25rem;
+  --fs-24: 1.5rem; --fs-30: 1.875rem; --fs-36: 2.25rem; --fs-48: 3rem; --fs-60: 3.75rem;
+
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+  --dur-fast: 120ms; --dur-base: 200ms; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --ez-nav-bg: var(--slate-900);
+  --ez-nav-text: var(--slate-300);
+  --ez-nav-muted: var(--slate-500);
+  --ez-nav-accent: var(--indigo-400);
+  --ez-nav-active-bg: rgb(129 140 248 / 0.16);
+  --ez-nav-border: rgb(255 255 255 / 0.06);
+}
+
+/* Açık tema amaç token'ları. .ez-light, koyu tema açıkken de alt ağaca açık temayı zorlar. */
+:root,
+.ez-light {
+  --ez-bg: var(--slate-50);
+  --ez-surface: var(--slate-0);
+  --ez-surface-2: var(--slate-100);
+  --ez-text: var(--slate-900);
+  --ez-text-2: var(--slate-700);
+  --ez-text-3: var(--slate-500);
+  --ez-text-4: var(--slate-400);
+  --ez-border: var(--slate-200);
+  --ez-border-strong: var(--slate-300);
+  --ez-border-soft: var(--slate-100);
+  --ez-primary: var(--indigo-700);
+  --ez-primary-hover: var(--indigo-800);
+  --ez-primary-soft: var(--indigo-50);
+  --ez-on-primary: var(--slate-0);
+  --ez-accent: var(--amber-600);
+  --ez-accent-soft: var(--amber-50);
+  --ez-success: var(--emerald-600); --ez-success-strong: var(--emerald-700); --ez-success-soft: var(--emerald-50);
+  --ez-warning: var(--amber-600); --ez-warning-strong: var(--amber-700); --ez-warning-soft: var(--amber-50);
+  --ez-danger: var(--rose-600); --ez-danger-strong: var(--rose-700); --ez-danger-soft: var(--rose-50);
+  --ez-info: var(--sky-600); --ez-info-strong: var(--sky-700); --ez-info-soft: var(--sky-50);
+  --ez-focus-ring: 0 0 0 3px rgb(67 56 202 / 0.28);
+  --ez-shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --ez-shadow-sm: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
+  --ez-shadow-md: 0 8px 24px rgb(15 23 42 / 0.08), 0 2px 6px rgb(15 23 42 / 0.04);
+  --ez-shadow-lg: 0 24px 56px rgb(15 23 42 / 0.14), 0 4px 12px rgb(15 23 42 / 0.06);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --ez-bg: #0b1120;
+  --ez-surface: #111a2e;
+  --ez-surface-2: #16213a;
+  --ez-text: var(--slate-50);
+  --ez-text-2: var(--slate-300);
+  --ez-text-3: var(--slate-400);
+  --ez-text-4: var(--slate-500);
+  --ez-border: #1f2a44;
+  --ez-border-strong: #2c3a5a;
+  --ez-border-soft: #172036;
+  --ez-primary: var(--indigo-400);
+  --ez-primary-hover: var(--indigo-300);
+  --ez-primary-soft: var(--indigo-950);
+  --ez-on-primary: #0b1120;
+  --ez-accent: var(--amber-400);
+  --ez-accent-soft: var(--amber-950);
+  --ez-success: var(--emerald-400); --ez-success-strong: var(--emerald-400); --ez-success-soft: var(--emerald-950);
+  --ez-warning: var(--amber-400); --ez-warning-strong: var(--amber-400); --ez-warning-soft: var(--amber-950);
+  --ez-danger: var(--rose-400); --ez-danger-strong: var(--rose-400); --ez-danger-soft: var(--rose-950);
+  --ez-info: var(--sky-400); --ez-info-strong: var(--sky-400); --ez-info-soft: var(--sky-950);
+  --ez-focus-ring: 0 0 0 3px rgb(129 140 248 / 0.35);
+  --ez-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --ez-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.35);
+  --ez-shadow-md: 0 8px 24px rgb(0 0 0 / 0.4);
+  --ez-shadow-lg: 0 24px 56px rgb(0 0 0 / 0.5);
+  --ez-nav-bg: #070b16;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
