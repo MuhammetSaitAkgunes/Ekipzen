@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -64,4 +64,11 @@ test("geliştirmede demo rol geçişi korunur", () => {
   vi.stubEnv("DEV", true);
   renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
   expect(screen.getByRole("combobox", { name: "Demo rol değiştir" })).toHaveValue("employee");
+});
+
+test("kabuk yeni Ekipzen logosunu ve kiracı adını gösterir", async () => {
+  renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
+  const sidebar = document.querySelector("aside.sidebar") as HTMLElement;
+  expect(within(sidebar).getByRole("img", { name: "Ekipzen" })).toBeInTheDocument();
+  expect(sidebar.querySelector(".fa-users-gear")).toBeNull();
 });

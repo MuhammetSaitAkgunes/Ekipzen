@@ -39,18 +39,6 @@
   padding: 6px 8px 20px;
 }
 
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: var(--ez-nav-accent);
-  color: var(--ez-nav-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-}
-
 .brand strong,
 .brand span {
   display: block;
@@ -76,7 +64,7 @@
   padding-inline: 0;
 }
 
-.sidebar-collapsed .brand div:not(.brand-mark),
+.sidebar-collapsed .brand div:not(.ez-logo),
 .sidebar-collapsed .nav-item span,
 .sidebar-collapsed .nav-group-label,
 .sidebar-collapsed .sidebar-insight {
@@ -462,7 +450,7 @@
     grid-template-columns: 74px minmax(0, 1fr);
   }
 
-  .brand div:not(.brand-mark),
+  .brand div:not(.ez-logo),
   .nav-item span,
   .nav-group-label,
   .sidebar-insight {

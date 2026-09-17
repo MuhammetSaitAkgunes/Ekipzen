@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { appRoutes, navGroups, navIcons, type AppRoute } from "../routes";
 import { LOGIN_PATH, appPath, roleHomeFor } from "../paths";
 import { GlobalSearch } from "./GlobalSearch";
+import { Logo } from "../ui";
 
 export function AppShell() {
   const { user, login, logout } = useAuth();
@@ -68,10 +69,10 @@ export function AppShell() {
     <div className={`app-container ${collapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark"><i aria-hidden="true" className="fa-solid fa-users-gear" /></div>
+          <Logo variant="mark" tone="light" />
           <div>
             <strong>Ekipzen</strong>
-            <span>{user?.tenantName || "HR MASTER Suite"}</span>
+            <span>{user?.tenantName || "İK platformu"}</span>
           </div>
         </div>
         <ul className="nav-links">

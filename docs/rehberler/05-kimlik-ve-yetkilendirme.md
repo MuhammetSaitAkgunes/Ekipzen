@@ -100,7 +100,7 @@ Yeni kullanıcılar **paylaşılan geçici şifre almaz.** Bunun yerine:
 ```mermaid
 flowchart LR
     A["Kullanıcı ŞİFRESİZ oluşturulur"] --> B["Davet e-postası + token gönderilir"]
-    B --> C["Kullanıcı /accept-invite ile şifre belirler"]
+    B --> C["Kullanıcı /davet ile şifre belirler"]
     C --> D["Hesap etkin, giriş yapabilir"]
 ```
 
@@ -118,7 +118,9 @@ Bu akış iki yerde tetiklenir:
   "veritabanı henüz kurulmadı" demektir ve onu açmak kullanıcıyı var olmayan bir
   kataloğa sokar. Durum geçişleri provizyon yolunun işidir
   (`KiraciDurumMakinesiTests`).
-- Frontend sayfası: `/#/accept-invite?email=...&token=...` (`AcceptInvitePage.tsx`).
+- Frontend sayfası: `/davet?email=...&token=...` (`AcceptInvitePage.tsx`). Eski
+  `/#/accept-invite?...` e-posta linkleri `legacyHash.ts` tarafından bu yola
+  çevrilir.
 
 Davet e-postaları `Email:Mode` ayarına göre gider: `outbox` (dev — dosyaya yazar)
 veya `smtp` (üretim — MailKit). Detay: [06](06-multi-tenancy.md) ve KVKK dokümanı.
