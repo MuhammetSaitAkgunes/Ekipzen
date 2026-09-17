@@ -32,6 +32,16 @@ const PayrollCalculatorPage = lazy(() => import("./features/payroll/PayrollPage"
 const PayrollSettingsPage = lazy(() => import("./features/payroll/PayrollPage").then((m) => ({ default: m.PayrollSettingsPage })));
 const ManagerPage = lazy(() => import("./features/manager/ManagerPage").then((m) => ({ default: m.ManagerPage })));
 
+const FeaturesPage = lazy(() => import("./marketing/pages/FeaturesPage").then((m) => ({ default: m.FeaturesPage })));
+const PricingPage = lazy(() => import("./marketing/pages/PricingPage").then((m) => ({ default: m.PricingPage })));
+const AboutPage = lazy(() => import("./marketing/pages/AboutPage").then((m) => ({ default: m.AboutPage })));
+const SecurityPage = lazy(() => import("./marketing/pages/SecurityPage").then((m) => ({ default: m.SecurityPage })));
+const KvkkPage = lazy(() => import("./marketing/pages/KvkkPage").then((m) => ({ default: m.KvkkPage })));
+
+const marketingPage = (Page: ComponentType) => (
+  <Suspense fallback={<div className="ez-page-loading" aria-busy="true" />}><Page /></Suspense>
+);
+
 export type Role = "hr-admin" | "manager" | "employee";
 
 export type AppRoute = {
@@ -136,6 +146,11 @@ export function buildRouteObjects(): RouteObject[] {
       element: <MarketingLayout />,
       children: [
         { path: "/", element: <HomePage /> },
+        { path: "/ozellikler", element: marketingPage(FeaturesPage) },
+        { path: "/fiyatlandirma", element: marketingPage(PricingPage) },
+        { path: "/hakkimizda", element: marketingPage(AboutPage) },
+        { path: "/guvenlik", element: marketingPage(SecurityPage) },
+        { path: "/kvkk-aydinlatma", element: marketingPage(KvkkPage) },
         { path: "*", element: <NotFoundPage /> },
       ],
     },

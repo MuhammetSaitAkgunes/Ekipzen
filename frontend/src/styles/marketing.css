@@ -150,3 +150,34 @@
 .ez-footer a:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(129 140 248 / 0.5); border-radius: var(--r-sm); }
 .ez-footer__bottom { margin-top: 2.5rem; padding-block: 1.5rem; border-top: 1px solid rgb(255 255 255 / 0.08); font-size: var(--fs-14); }
 @media (max-width: 760px) { .ez-footer__grid { grid-template-columns: 1fr 1fr; } .ez-footer__brand { grid-column: 1 / -1; } }
+
+.ez-section--flush { padding-top: 0; }
+.ez-anchor { scroll-margin-top: 88px; }
+.ez-muted-note { font-size: var(--fs-14); color: var(--ez-text-4); }
+.ez-page-loading { min-height: 60vh; }
+
+.ez-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+.ez-chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 1rem; border-radius: var(--r-full); border: 1px solid var(--ez-border); background: var(--ez-surface); color: var(--ez-text-2); font-weight: 600; font-size: var(--fs-14); text-decoration: none; }
+.ez-chip:hover { border-color: var(--indigo-200); color: var(--ez-primary); }
+.ez-chip:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); }
+
+.ez-plans { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; align-items: stretch; }
+.ez-plan { display: grid; align-content: start; gap: 1rem; padding: 2rem; border-radius: var(--r-xl); border: 1px solid var(--ez-border); background: var(--ez-surface); box-shadow: var(--ez-shadow-xs); }
+.ez-plan--featured { border: 2px solid var(--ez-primary); box-shadow: var(--ez-shadow-lg); }
+.ez-plan .ez-badge { justify-self: start; }
+.ez-plan__audience { color: var(--ez-text-3); min-height: 3.3em; }
+.ez-plan__price { font-size: var(--fs-24); font-weight: 800; color: var(--ez-text); }
+
+.ez-table-wrap { overflow-x: auto; border: 1px solid var(--ez-border); border-radius: var(--r-lg); background: var(--ez-surface); }
+.ez-compare { width: 100%; min-width: 640px; border-collapse: collapse; font-size: var(--fs-14); }
+.ez-compare th, .ez-compare td { padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--ez-border); text-align: center; }
+.ez-compare th[scope="row"], .ez-compare thead th:first-child { text-align: left; font-weight: 500; color: var(--ez-text-2); }
+.ez-compare thead th { font-weight: 700; color: var(--ez-text); background: var(--ez-bg); }
+.ez-compare tr:last-child > * { border-bottom: 0; }
+.ez-yes { color: var(--ez-success); }
+.ez-no { color: var(--ez-text-4); }
+
+.ez-prose { display: grid; gap: 1rem; }
+.ez-prose h2 { font-size: var(--fs-24) !important; margin-top: 1rem; }
+.ez-prose a { color: var(--ez-primary); font-weight: 600; }
+.ez-prose a:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); border-radius: var(--r-sm); }

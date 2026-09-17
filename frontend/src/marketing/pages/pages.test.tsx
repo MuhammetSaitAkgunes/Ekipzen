@@ -1,0 +1,51 @@
+import { screen, within } from "@testing-library/react";
+import { expect, test } from "vitest";
+import { renderPage } from "../../test/renderPage";
+import { modules, plans } from "../content";
+import { AboutPage } from "./AboutPage";
+import { FeaturesPage } from "./FeaturesPage";
+import { KvkkPage } from "./KvkkPage";
+import { PricingPage } from "./PricingPage";
+import { SecurityPage } from "./SecurityPage";
+
+test("Özellikler: her modül anchor id'li bir bölümdür", () => {
+  renderPage(<FeaturesPage />);
+  expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+  for (const m of modules) {
+    const section = document.getElementById(m.id);
+    expect(section, m.id).not.toBeNull();
+    expect(within(section!).getByRole("heading", { level: 2, name: m.title })).toBeInTheDocument();
+  }
+  expect(screen.getByRole("heading", { name: "Her rol kendi ekranını görür" })).toBeInTheDocument();
+  expect(document.title).toBe("Özellikler · Ekipzen");
+});
+
+test("Fiyatlandırma: üç paket, rakam yok, teklif CTA'sı ve karşılaştırma tablosu", () => {
+  renderPage(<PricingPage />);
+  for (const p of plans) {
+    expect(screen.getByRole("heading", { level: 2, name: p.name })).toBeInTheDocument();
+  }
+  expect(screen.getAllByRole("link", { name: /teklif alın/i })).toHaveLength(plans.length);
+  expect(screen.queryByText(/₺|TL\/ay|\$/)).toBeNull();
+  const table = screen.getByRole("table", { name: "Paket karşılaştırması" });
+  expect(within(table).getAllByRole("columnheader")).toHaveLength(4);
+});
+
+test("Güvenlik: altı güvence ve KVKK bölümü", () => {
+  renderPage(<SecurityPage />);
+  expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(6);
+  expect(screen.getByRole("heading", { name: "KVKK ve kişisel veriler" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "KVKK aydınlatma metni" })).toHaveAttribute("href", "/kvkk-aydinlatma");
+});
+
+test("Hakkımızda: değerler listelenir, uydurma kişi ya da sayı yok", () => {
+  renderPage(<AboutPage />);
+  expect(screen.getByRole("heading", { name: "Değerlerimiz" })).toBeInTheDocument();
+  expect(screen.queryByText(/kurucu|CEO|\d+\+ müşteri/i)).toBeNull();
+});
+
+test("KVKK: veri sorumlusu ve haklar bölümleri", () => {
+  renderPage(<KvkkPage />);
+  expect(screen.getByRole("heading", { level: 1, name: "KVKK aydınlatma metni" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "İlgili kişi olarak haklarınız" })).toBeInTheDocument();
+});

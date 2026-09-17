@@ -82,3 +82,8 @@ test("bilinmeyen yol 404 sayfası gösterir", async () => {
   renderAt("/olmayan-sayfa");
   expect(await screen.findByRole("heading", { name: "Sayfa bulunamadı" })).toBeInTheDocument();
 });
+
+test("/fiyatlandirma lazy rotası kayıtlıdır ve sayfayı render eder", async () => {
+  renderAt("/fiyatlandirma");
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("İhtiyacınız kadar, sürprizsiz");
+});
