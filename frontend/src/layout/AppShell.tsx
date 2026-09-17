@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { appRoutes, navGroups, navIcons, type AppRoute } from "../routes";
 import { LOGIN_PATH, appPath, roleHomeFor } from "../paths";
 import { GlobalSearch } from "./GlobalSearch";
-import { Logo } from "../ui";
+import { Logo, usePageMeta } from "../ui";
 
 export function AppShell() {
   const { user, login, logout } = useAuth();
@@ -14,6 +14,8 @@ export function AppShell() {
   const location = useLocation();
   const [theme, setTheme] = useState(() => localStorage.getItem("ekipzen-theme") || "light");
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ekipzen-sidebar") === "collapsed");
+  const current: AppRoute | undefined = appRoutes.find((r) => r.path === location.pathname);
+  usePageMeta(current?.title ?? "Ekipzen");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -29,7 +31,6 @@ export function AppShell() {
   });
   const actionCount = badge.data?.openCount ?? 0;
 
-  const current: AppRoute | undefined = appRoutes.find((r) => r.path === location.pathname);
   const role = (user?.role ?? "employee") as AppRoute["roles"][number];
   const accessibleNav = appRoutes.filter((r) => r.navKey === r.key && r.roles.includes(role));
 

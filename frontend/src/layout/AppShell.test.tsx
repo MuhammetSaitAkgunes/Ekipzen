@@ -72,3 +72,9 @@ test("kabuk yeni Ekipzen logosunu ve kiracı adını gösterir", async () => {
   expect(within(sidebar).getByRole("img", { name: "Ekipzen" })).toBeInTheDocument();
   expect(sidebar.querySelector(".fa-users-gear")).toBeNull();
 });
+
+test("sekme başlığı rotaya göre güncellenir", async () => {
+  renderShellAt("/app/dashboard", "hr-admin", "İK Yöneticisi");
+  await screen.findByText("Risk Merkezi", { selector: ".header-title" });
+  expect(document.title).toBe("Risk Merkezi · Ekipzen");
+});
