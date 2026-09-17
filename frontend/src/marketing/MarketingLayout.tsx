@@ -1,23 +1,88 @@
-import { Link, Outlet, ScrollRestoration } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { LOGIN_PATH, roleHomeFor } from "../paths";
 import { ButtonLink, Logo } from "../ui";
-import { LOGIN_PATH } from "../paths";
+import { modules, navItems, siteInfo } from "./content";
 
 export function MarketingLayout() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => setMenuOpen(false), [location.pathname]);
+
+  const primaryAction = user
+    ? <ButtonLink to={roleHomeFor(user.role)} variant="ghost">Uygulamaya git</ButtonLink>
+    : <ButtonLink to={LOGIN_PATH} variant="ghost">Giriş yap</ButtonLink>;
+
   return (
     <div className="ez-site ez-light">
       <a className="ez-skip" href="#icerik">İçeriğe geç</a>
-      <header className="ez-header">
+      <header className={`ez-header${menuOpen ? " is-open" : ""}`}>
         <div className="ez-container ez-header__inner">
           <Link to="/" className="ez-header__brand" aria-label="Ekipzen ana sayfa"><Logo /></Link>
-          <div className="ez-header__cta">
-            <ButtonLink to={LOGIN_PATH} variant="ghost">Giriş yap</ButtonLink>
-            <ButtonLink to="/iletisim">Demo iste</ButtonLink>
-          </div>
+          <nav id="ana-menu" className="ez-header__nav" aria-label="Ana menü">
+            <ul>
+              {navItems.map((item) => (
+                <li key={item.to}><NavLink to={item.to} className="ez-header__link">{item.label}</NavLink></li>
+              ))}
+            </ul>
+            <div className="ez-header__cta">
+              {primaryAction}
+              <ButtonLink to="/iletisim">Demo iste</ButtonLink>
+            </div>
+          </nav>
+          <button
+            type="button"
+            className="ez-header__toggle"
+            aria-expanded={menuOpen}
+            aria-controls="ana-menu"
+            aria-label={menuOpen ? "Menüyü kapat" : "Menüyü aç"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <i aria-hidden="true" className={`fa-solid ${menuOpen ? "fa-xmark" : "fa-bars"}`} />
+          </button>
         </div>
       </header>
+
       <main id="icerik" tabIndex={-1}>
         <Outlet />
       </main>
+
+      <footer className="ez-footer">
+        <div className="ez-container ez-footer__grid">
+          <div className="ez-footer__brand">
+            <Logo tone="light" />
+            <p>Personel, izin, puantaj, bordro ve işe alım süreçleriniz için güvenli İK platformu.</p>
+          </div>
+          <div>
+            <h2 className="ez-footer__title">Ürün</h2>
+            <ul>
+              {modules.slice(0, 4).map((m) => <li key={m.id}><Link to={`/ozellikler#${m.id}`}>{m.title}</Link></li>)}
+              <li><Link to="/fiyatlandirma">Fiyatlandırma</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="ez-footer__title">Şirket</h2>
+            <ul>
+              <li><Link to="/hakkimizda">Hakkımızda</Link></li>
+              <li><Link to="/guvenlik">Güvenlik</Link></li>
+              <li><Link to="/iletisim">İletişim</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="ez-footer__title">Yasal</h2>
+            <ul>
+              <li><Link to="/kvkk-aydinlatma">KVKK aydınlatma metni</Link></li>
+              <li><a href={`mailto:${siteInfo.email}`}>{siteInfo.email}</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="ez-container ez-footer__bottom">
+          <p>© {new Date().getFullYear()} {siteInfo.legalName}. Tüm hakları saklıdır.</p>
+        </div>
+      </footer>
       <ScrollRestoration />
     </div>
   );

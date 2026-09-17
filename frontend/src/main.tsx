@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles/tokens.css";
 import "./styles/main.css";
 import "./styles/ui.css";
+import "./styles/marketing.css";
 import "./styles/auth.css";
 import "./styles/layout.css";
 import "./styles/actions.css";
