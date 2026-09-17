@@ -16,6 +16,10 @@ test("index.html favicon, açıklama ve OG etiketlerini içerir", () => {
 test("robots.txt uygulama yollarını dizinden çıkarır ve sitemap'i gösterir", () => {
   const robots = read("public/robots.txt");
   expect(robots).toContain("Disallow: /app/");
+  // Sondaki "/" olmadan tam "/app" yolu da ayrıca dışlanmalı; bazı tarayıcılar
+  // "Disallow: /app/" kuralını yalnız o önekle başlayan yollara uygular ve
+  // sondaki eğik çizgisiz "/app" adresini kapsamayabilir.
+  expect(robots).toMatch(/^Disallow: \/app$/m);
   expect(robots).toContain("Disallow: /davet");
   expect(robots).toMatch(/Sitemap: https:\/\/.+\/sitemap\.xml/);
 });
