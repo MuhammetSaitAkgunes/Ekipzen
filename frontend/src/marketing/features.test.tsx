@@ -27,3 +27,16 @@ test("veri akışı şeması erişilebilir adla render edilir ve görünür olun
   act(() => triggerIntersections(true));
   expect(wrapper).toHaveClass("is-drawn");
 });
+
+test("özellikler sayfasında her modül bloğu büyük ürün ekranını gösterir ve yerleşim sırayla yön değiştirir", async () => {
+  const { renderPage } = await import("../test/renderPage");
+  const { FeaturesPage } = await import("./pages/FeaturesPage");
+  renderPage(<FeaturesPage />);
+  modules.forEach((m, i) => {
+    const block = document.getElementById(m.id)!;
+    expect(block.querySelector(`.ez-module-visual .ez-app[data-active="${m.id}"]`), m.id).not.toBeNull();
+    if (i % 2 === 1) expect(block).toHaveClass("ez-feature-block--flip");
+    else expect(block).not.toHaveClass("ez-feature-block--flip");
+  });
+  expect(document.querySelector(".ez-page-hero")).toHaveClass("ez-page-hero--cyan");
+});

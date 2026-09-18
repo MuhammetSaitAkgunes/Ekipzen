@@ -8,11 +8,11 @@ import { StickyModuleNav } from "../StickyModuleNav";
 import { DataFlowDiagram } from "../DataFlowDiagram";
 import { Reveal, onSpotlightMove, useInView, useScrollToHash } from "../motion";
 
-function ModuleBlock({ m, onActive }: { m: MarketingModule; onActive: (id: string) => void }) {
+function ModuleBlock({ m, index, onActive }: { m: MarketingModule; index: number; onActive: (id: string) => void }) {
   const { ref, inView } = useInView<HTMLElement>({ threshold: 0, rootMargin: "-30% 0px -50% 0px" });
   useEffect(() => { if (inView) onActive(m.id); }, [inView, m.id, onActive]);
   return (
-    <section ref={ref} id={m.id} className="ez-feature-block ez-anchor" aria-labelledby={`${m.id}-baslik`}>
+    <section ref={ref} id={m.id} className={`ez-feature-block ez-anchor${index % 2 === 1 ? " ez-feature-block--flip" : ""}`} aria-labelledby={`${m.id}-baslik`}>
       <Reveal className="ez-feature-block__copy">
         <div className="ez-feature-block__head"><ModuleIcon icon={m.icon} /><StatusBadge status={m.status} /></div>
         <h2 id={`${m.id}-baslik`}>{m.title}</h2>
@@ -20,7 +20,7 @@ function ModuleBlock({ m, onActive }: { m: MarketingModule; onActive: (id: strin
         <ul className="ez-check-list">{m.points.map((p) => <li key={p}>{p}</li>)}</ul>
         <p className="ez-muted-note">Kimler için: {m.roles}</p>
       </Reveal>
-      <Reveal delay={120} className="ez-feature-block__visual ez-spotlight" onPointerMove={onSpotlightMove}>
+      <Reveal delay={120} className="ez-feature-block__visual">
         <ModuleVisual id={m.id} />
       </Reveal>
     </section>
@@ -35,13 +35,14 @@ export function FeaturesPage() {
   return (
     <>
       <PageHero
+        glow="cyan"
         eyebrow="Özellikler"
         title="İK süreçlerinin tamamı için tek bir çalışma alanı"
         lead="Modüller aynı personel kaydı üzerinde çalışır; bir kez girilen bilgi tüm süreçlerde tutarlı biçimde kullanılır."
       >
         <nav aria-label="Modüller" className="ez-chips">
           {modules.map((m) => (
-            <a key={m.id} href={`#${m.id}`} className="ez-chip" title={STATUS_META[m.status].label}>
+            <a key={m.id} href={`#${m.id}`} className="ez-chip ez-glass" title={STATUS_META[m.status].label}>
               <span className={`ez-dot ez-dot--${m.status}`} aria-hidden="true" />{m.title}
               <span className="ez-sr-only"> ({STATUS_META[m.status].label})</span>
             </a>
@@ -54,11 +55,11 @@ export function FeaturesPage() {
           <StickyModuleNav items={modules.map((m) => ({ id: m.id, title: m.title, status: m.status }))} activeId={activeId} />
         </aside>
         <div className="ez-features-layout__blocks">
-          {modules.map((m) => <ModuleBlock key={m.id} m={m} onActive={onActive} />)}
+          {modules.map((m, i) => <ModuleBlock key={m.id} m={m} index={i} onActive={onActive} />)}
         </div>
       </div>
 
-      <section className="ez-section ez-section--muted" aria-labelledby="akis-baslik">
+      <section className="ez-section ez-section--muted ez-glow ez-flow-band" aria-labelledby="akis-baslik">
         <div className="ez-container ez-split">
           <Reveal>
             <p className="ez-eyebrow">Bağlantılı veri</p>

@@ -145,3 +145,12 @@
 .ez-glimpse__pipe { display: flex; gap: 6px; }
 .ez-glimpse__pipe span { flex: 1; display: grid; gap: 2px; padding: 6px 8px; border-radius: 8px; background: rgb(192 38 211 / 0.14); border: 1px solid rgb(192 38 211 / 0.25); color: var(--ez-text-3); font-size: 11px; }
 .ez-glimpse__pipe b { color: #fff; font-size: var(--fs-16); }
+
+/* Ekran, bulunduğu alan daraldığında kenar menüsünü bırakır. */
+.ez-hero-screen__stage, .ez-module-visual__stage, .ez-auth-screen__stage { container-type: inline-size; }
+@container (max-width: 600px) {
+  .ez-app__side { display: none; }
+  .ez-app__body { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .ez-app__search { display: none; }
+  .ez-app__split { grid-template-columns: minmax(0, 1fr); }
+}
