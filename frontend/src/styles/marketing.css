@@ -311,6 +311,7 @@
 .ez-layers__short { font-size: var(--fs-12); color: var(--ez-text-3); }
 .ez-layers__panel { padding: 0 1rem 1rem calc(1rem + 36px + 0.75rem); color: var(--ez-text-2); animation: ez-panel-in 320ms var(--ease-out); }
 .ez-categories { margin-top: 0.5rem; }
+.ez-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ez-transparency { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
 .ez-transparency__col { display: grid; align-content: start; gap: 1rem; padding: 1.75rem; border-radius: var(--r-xl); border: 1px solid var(--ez-border); background: var(--ez-surface); }
 .ez-transparency__col--progress { background: var(--ez-bg); border-style: dashed; }
@@ -323,4 +324,5 @@
   .ez-layers__item { margin-inline: 0; }
   .ez-layers__short { display: none; }
   .ez-layers__panel { padding-left: 1rem; }
+  .ez-categories { grid-template-columns: 1fr; }
 }
