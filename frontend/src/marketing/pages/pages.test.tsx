@@ -49,9 +49,14 @@ test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {
   expect(screen.getByRole("link", { name: "KVKK aydınlatma metni" })).toHaveAttribute("href", "/kvkk-aydinlatma");
 });
 
-test("Hakkımızda: değerler listelenir, uydurma kişi ya da sayı yok", () => {
+test("Hakkımızda: manifesto, ilkeler, süreç, olgunluk, yol haritası ve taahhütler; uydurma kişi ya da sayı yok", () => {
   renderPage(<AboutPage />);
-  expect(screen.getByRole("heading", { name: "Değerlerimiz" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("İK yazılımını, İK ekiplerinin günlük gerçekliğinden başlayarak geliştiriyoruz.");
+  for (const name of ["Neden varız", "İlkelerimiz", "Ürünü nasıl geliştiriyoruz", "Ekipzen bugün", "Yol haritası", "Taahhütlerimiz"]) {
+    expect(screen.getByRole("region", { name })).toBeInTheDocument();
+  }
+  expect(document.getElementById("yol-haritasi")).toHaveAccessibleName("Yol haritası");
+  expect(screen.getByText("Hazır olanla geliştirileni ayırırız.")).toBeInTheDocument();
   expect(screen.queryByText(/kurucu|CEO|\d+\+ müşteri/i)).toBeNull();
 });
 

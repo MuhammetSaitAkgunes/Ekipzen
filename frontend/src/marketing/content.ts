@@ -130,12 +130,6 @@ export const roleViews = [
   { title: "Çalışan", text: "Kendisiyle ilgili İK işlemlerini doğrudan uygulama üzerinden yürütür.", points: ["İzin talebi ve bakiye", "Bordro pusulası", "Kişisel verilerin dışa aktarımı"] },
 ];
 
-export const values = [
-  { title: "Güven", text: "İK verisi, bir şirketin en hassas verileri arasındadır. Mimariyi veri ayrımı ve en az yetki ilkesi üzerine kurduk." },
-  { title: "Sadelik", text: "Her ekranın belirli bir işi tamamlamaya hizmet etmesini, gereksiz adımların ayıklanmasını önemsiyoruz." },
-  { title: "Mevzuata uyum", text: "Bordro ve kişisel verilerin korunmasına ilişkin gereklilikleri sonradan eklenen bir katman olarak değil, ürünün temelinde ele alıyoruz." },
-];
-
 export type RoadmapStage = "now" | "next" | "planned";
 
 export const ROADMAP_STAGES: { id: RoadmapStage; title: string; subtitle: string }[] = [
