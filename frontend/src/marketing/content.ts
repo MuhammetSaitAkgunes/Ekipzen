@@ -78,12 +78,6 @@ export const trustPoints = [
   { icon: "fa-file-invoice", label: "Güncel bordro mevzuatı" },
 ];
 
-export const steps = [
-  { title: "Demo talep edin", text: "Formu doldurun; ekibimiz süreçlerinizi ve ihtiyaçlarınızı konuşmak için sizinle iletişime geçer." },
-  { title: "Hesabınız kurulur", text: "Şirketiniz için ayrı bir çalışma ortamı hazırlanır ve İK yöneticinize davet gönderilir." },
-  { title: "Ekibinizi dahil edin", text: "Personel kayıtlarını içe aktarın, rolleri tanımlayın ve süreçleri Ekipzen üzerinden yürütmeye başlayın." },
-];
-
 export const securityPillars = [
   { icon: "fa-database", title: "Ayrı veritabanı", text: "İK verileriniz şirketinize ait ayrı bir veritabanında tutulur; başka müşterilerin İK verileriyle aynı tabloda bulunmaz." },
   { icon: "fa-user-lock", title: "Rol bazlı erişim", text: "İK yöneticisi, yönetici ve çalışan yalnız rolünün gerektirdiği verilere erişir; yetki kontrolü sunucu tarafında da uygulanır." },

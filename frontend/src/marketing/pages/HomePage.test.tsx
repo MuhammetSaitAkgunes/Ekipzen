@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { renderPage } from "../../test/renderPage";
 import { HomePage } from "./HomePage";
-import { modules } from "../content";
+import { modules, roadmap } from "../content";
 
 test("hero vaadi, iki CTA ve sayfa başlığı", () => {
   renderPage(<HomePage />);
@@ -12,20 +12,37 @@ test("hero vaadi, iki CTA ve sayfa başlığı", () => {
   expect(document.title).toBe("Ekipzen");
 });
 
-test("altı modül kartı özellik sayfasına bağlanır", () => {
+test("canlı vitrin ve çalışan yolculuğu bölümleri vardır", () => {
+  renderPage(<HomePage />);
+  const showcase = screen.getByRole("region", { name: "Modülleri çalışırken görün" });
+  expect(within(showcase).getAllByRole("tab")).toHaveLength(6);
+  expect(screen.getByRole("region", { name: "Bir çalışanın kaydı, işe alımdan bordroya" })).toBeInTheDocument();
+});
+
+test("altı modül kartı durum etiketiyle özellik sayfasına bağlanır", () => {
   renderPage(<HomePage />);
   const section = screen.getByRole("region", { name: "Birbirine bağlı altı modül" });
-  expect(modules).toHaveLength(6);
   for (const m of modules) {
-    expect(within(section).getByRole("link", { name: new RegExp(m.title) })).toHaveAttribute("href", `/ozellikler#${m.id}`);
+    const link = within(section).getByRole("link", { name: new RegExp(m.title) });
+    expect(link).toHaveAttribute("href", `/ozellikler#${m.id}`);
+    expect(link.querySelector(".ez-status")).toHaveAttribute("data-status", m.status);
   }
 });
 
-test("SSS, nasıl çalışır ve güvenlik bölümleri görünür", () => {
+test("gelişim şeridi yol haritasının ilk maddelerini ve tamamına bağlantıyı gösterir", () => {
   renderPage(<HomePage />);
-  expect(screen.getByRole("region", { name: "Sık sorulan sorular" })).toBeInTheDocument();
-  expect(screen.getByRole("region", { name: "Kullanıma geçiş üç adımda tamamlanır" })).toBeInTheDocument();
+  const strip = screen.getByRole("region", { name: "Ekipzen gelişmeye devam ediyor" });
+  for (const stage of ["Şimdi", "Sıradaki", "Planlanan"]) expect(within(strip).getByText(stage)).toBeInTheDocument();
+  expect(within(strip).getByText(roadmap[0].title)).toBeInTheDocument();
+  expect(within(strip).getByRole("link", { name: "Yol haritasının tamamı" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
+});
+
+test("güvenlik ve SSS bölümleri görünür; eski bölümler kaldırılmıştır", () => {
+  renderPage(<HomePage />);
   expect(screen.getByRole("region", { name: "Her şirketin verisi kendi veritabanında tutulur" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Sık sorulan sorular" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Kullanıma geçiş üç adımda tamamlanır" })).toBeNull();
+  expect(document.querySelector(".ez-hero-visual__stack")).toBeNull();
 });
 
 test("sahte müşteri yorumu ya da logo şeridi yoktur", () => {
