@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import {
   securityPillars, faqs,
-  STATUS_META, SHOWCASE_ORDER, ROADMAP_NOTE, ROADMAP_STAGES, commitments, devProcess, journeySteps, modules, principles,
-  roadmap, securityCategories, securityLayers, transparency,
+  STATUS_META, SHOWCASE_ORDER, ROADMAP_NOTE, ROADMAP_STAGES, commitments, comparisonRows, devProcess, journeySteps, modules, plans, principles,
+  roadmap, roleViews, securityCategories, securityLayers, transparency,
 } from "./content";
 
 // Platform katalogu Tenants/Directory/RefreshTokens gibi paylaşılan tablolar barındırır;
@@ -56,6 +56,33 @@ test("her modülün geçerli bir durumu ve spec'teki dağılımı vardır", () =
   expect(STATUS_META.active.label).toBe("Kullanımda");
   expect(STATUS_META.pilot.label).toBe("Pilotta");
   expect(STATUS_META.building.label).toBe("Geliştiriliyor");
+});
+
+// I2: fiyatlandırma ve rol metinleri pilot/geliştiriliyor modülleri sıradan paket özelliği gibi
+// sunmamalı — "Her modülün durumu sitede ... açıkça belirtilir" taahhüdüyle çelişir.
+test("pilotta ya da geliştiriliyor durumundaki modüller paket özelliklerinde durum etiketiyle işaretlenir", () => {
+  const nonActivePattern = /Risk Merkezi|Bordro|puantaj/i;
+  for (const plan of plans) {
+    for (const f of plan.features) {
+      if (nonActivePattern.test(f.label)) expect(f.status, `${plan.id}: ${f.label}`).toBeDefined();
+    }
+  }
+});
+
+test("pilotta ya da geliştiriliyor durumundaki modüller karşılaştırma tablosunda durum etiketiyle işaretlenir", () => {
+  const nonActivePattern = /Risk Merkezi|Bordro|puantaj/i;
+  for (const row of comparisonRows) {
+    if (nonActivePattern.test(row.label)) expect(row.status, row.label).toBeDefined();
+  }
+});
+
+test("risk sinyallerinden bahseden rol metinleri Risk Merkezi'nin geliştirilmekte olduğunu açıkça belirtir", () => {
+  for (const r of roleViews) {
+    const text = [r.text, ...r.points].join(" ");
+    if (/risk/i.test(text)) {
+      expect(text).toMatch(/geliştiriliyor|Risk Merkezi'nin genel kullanıma/);
+    }
+  }
 });
 
 test("geliştirilen modül kullanımda ya da tahmin yapıyormuş gibi anlatılmaz", () => {

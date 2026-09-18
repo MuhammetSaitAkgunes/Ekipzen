@@ -3,6 +3,7 @@ import { ButtonLink, Badge, usePageMeta } from "../../ui";
 import { comparisonRows, plans, pricingFaqs } from "../content";
 import { CtaBand, FaqList, PageHero } from "../sections";
 import { Reveal, onSpotlightMove } from "../motion";
+import { StatusBadge } from "../StatusBadge";
 
 const cell = (value: boolean | string) =>
   typeof value === "string" ? value : value
@@ -31,7 +32,11 @@ export function PricingPage() {
                   <ButtonLink to={`/iletisim?paket=${p.id}`} variant={p.highlighted ? "primary" : "secondary"} block aria-label={`${p.name} paketi için teklif alın`}>
                     Teklif alın
                   </ButtonLink>
-                  <ul className="ez-check-list">{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
+                  <ul className="ez-check-list">
+                    {p.features.map((f) => (
+                      <li key={f.label}>{f.label}{f.status && <StatusBadge status={f.status} />}</li>
+                    ))}
+                  </ul>
                 </div>
               </Reveal>
             ))}
@@ -54,13 +59,14 @@ export function PricingPage() {
               <tbody>
                 {comparisonRows.map((row) => (
                   <tr key={row.label}>
-                    <th scope="row">{row.label}</th>
+                    <th scope="row">{row.label}{row.status && <StatusBadge status={row.status} />}</th>
                     {row.values.map((v, i) => <td key={plans[i].id}>{cell(v)}</td>)}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="ez-muted-note">Pilotta ve Geliştiriliyor durumundaki modüller, pilot kapsamında ya da genel kullanıma açıldıklarında paketinize dahil edilir.</p>
         </div>
       </section>
 

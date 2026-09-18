@@ -95,25 +95,34 @@ export const faqs = [
   { q: "Çalışanlar sisteme nasıl dahil oluyor?", a: "Her çalışan kendisine gönderilen davet bağlantısıyla şifresini belirler ve yalnız rolünün izin verdiği ekranlara erişir." },
 ];
 
-export type Plan = { id: string; name: string; audience: string; highlighted?: boolean; features: string[] };
+export type Plan = { id: string; name: string; audience: string; highlighted?: boolean; features: { label: string; status?: ModuleStatus }[] };
 
 export const plans: Plan[] = [
   { id: "baslangic", name: "Başlangıç", audience: "Personel ve izin süreçlerini dijital ortama taşıyan ekipler için",
-    features: ["Personel yönetimi", "İzin yönetimi", "Çalışan self-servis ekranları", "E-posta desteği"] },
+    features: [
+      { label: "Personel yönetimi" }, { label: "İzin yönetimi" },
+      { label: "Çalışan self-servis ekranları" }, { label: "E-posta desteği" },
+    ] },
   { id: "buyuyen", name: "Büyüyen", audience: "Puantaj ve bordroyu aynı sistemde yürütmek isteyen şirketler için", highlighted: true,
-    features: ["Başlangıç paketinin tüm kapsamı", "Mesai ve puantaj", "Bordro", "İşe alım", "Öncelikli destek"] },
+    features: [
+      { label: "Başlangıç paketinin tüm kapsamı" }, { label: "Mesai ve puantaj", status: "pilot" },
+      { label: "Bordro", status: "pilot" }, { label: "İşe alım" }, { label: "Öncelikli destek" },
+    ] },
   { id: "kurumsal", name: "Kurumsal", audience: "Risk analitiği ve kuruma özel gereksinimleri olan organizasyonlar için",
-    features: ["Büyüyen paketinin tüm kapsamı", "Risk Merkezi", "Yönetici konsolu", "Kurulum ve veri aktarımında destek"] },
+    features: [
+      { label: "Büyüyen paketinin tüm kapsamı" }, { label: "Risk Merkezi", status: "building" },
+      { label: "Yönetici konsolu" }, { label: "Kurulum ve veri aktarımında destek" },
+    ] },
 ];
 
-export const comparisonRows: { label: string; values: [boolean | string, boolean | string, boolean | string] }[] = [
+export const comparisonRows: { label: string; status?: ModuleStatus; values: [boolean | string, boolean | string, boolean | string] }[] = [
   { label: "Personel ve belge yönetimi", values: [true, true, true] },
   { label: "İzin talebi ve onayı", values: [true, true, true] },
   { label: "Çalışan self-servis ekranları", values: [true, true, true] },
-  { label: "Mesai ve puantaj", values: [false, true, true] },
-  { label: "Bordro hesaplama", values: [false, true, true] },
+  { label: "Mesai ve puantaj", status: "pilot", values: [false, true, true] },
+  { label: "Bordro hesaplama", status: "pilot", values: [false, true, true] },
   { label: "İşe alım", values: [false, true, true] },
-  { label: "Risk Merkezi", values: [false, false, true] },
+  { label: "Risk Merkezi", status: "building", values: [false, false, true] },
   { label: "Yönetici konsolu", values: [false, false, true] },
   { label: "Destek", values: ["E-posta", "Öncelikli", "Atanmış ekip"] },
 ];
@@ -125,8 +134,8 @@ export const pricingFaqs = [
 ];
 
 export const roleViews = [
-  { title: "İK yöneticisi", text: "Şirket genelindeki İK süreçlerini ve risk sinyallerini yönetir.", points: ["Risk Merkezi ve aksiyonlar", "Personel, bordro ve işe alım", "Şirket ayarları"] },
-  { title: "Yönetici", text: "Ekibinin durumunu izler, onay bekleyen talepleri sonuçlandırır.", points: ["Ekip izin ve mesai onayları", "Yönetici konsolu", "Ekibe ait risk sinyalleri"] },
+  { title: "İK yöneticisi", text: "Şirket genelindeki İK süreçlerini yönetir; risk sinyalleri Risk Merkezi'nin genel kullanıma açılmasıyla eklenecektir.", points: ["Risk Merkezi (geliştiriliyor)", "Personel, bordro ve işe alım", "Şirket ayarları"] },
+  { title: "Yönetici", text: "Ekibinin durumunu izler, onay bekleyen talepleri sonuçlandırır.", points: ["Ekip izin ve mesai onayları", "Yönetici konsolu", "Ekibe ait risk sinyalleri (geliştiriliyor)"] },
   { title: "Çalışan", text: "Kendisiyle ilgili İK işlemlerini doğrudan uygulama üzerinden yürütür.", points: ["İzin talebi ve bakiye", "Bordro pusulası", "Kişisel verilerin dışa aktarımı"] },
 ];
 
