@@ -31,12 +31,6 @@ export type MarketingModule = { id: string; icon: string; title: string; summary
 
 export const modules: MarketingModule[] = [
   {
-    id: "risk-merkezi", icon: "fa-shield-heart", title: "Risk Merkezi", status: "building",
-    summary: "Devamsızlık, fazla mesai, kullanılmayan izin ve çalışan nabzı verilerinden departman düzeyinde risk sinyalleri üretmeye yönelik modül.",
-    points: ["Departman bazında risk skoru ve dönemsel eğilim", "Yönetici yükü ve çalışan nabzı görünümü", "Sinyale bağlı aksiyon önerileri"],
-    roles: "İK yöneticileri ve yöneticiler",
-  },
-  {
     id: "personel", icon: "fa-user-tie", title: "Personel Yönetimi", status: "active",
     summary: "Özlük bilgileri, belgeler ve organizasyon yapısı tek bir kayıt düzeninde tutulur.",
     points: ["Personel kartı ve belge arşivi", "Excel dosyasından toplu içe aktarma", "İşten ayrılış süreci ve kayıt geçmişi"],
@@ -66,6 +60,12 @@ export const modules: MarketingModule[] = [
     points: ["Aşama bazlı aday takibi", "Mülakat ve teklif durumları", "İşe alınan adayın davetle sisteme dahil edilmesi"],
     roles: "İK ekipleri",
   },
+  {
+    id: "risk-merkezi", icon: "fa-shield-heart", title: "Risk Merkezi", status: "building",
+    summary: "Devamsızlık, fazla mesai, kullanılmayan izin ve çalışan nabzı verilerinden departman düzeyinde risk sinyalleri üretmeye yönelik modül.",
+    points: ["Departman bazında risk skoru ve dönemsel eğilim", "Yönetici yükü ve çalışan nabzı görünümü", "Sinyale bağlı aksiyon önerileri"],
+    roles: "İK yöneticileri ve yöneticiler",
+  },
 ];
 
 /** Ana sayfa vitrininde sekme sırası. */
@@ -75,7 +75,7 @@ export const trustPoints = [
   { icon: "fa-scale-balanced", label: "KVKK gereklilikleri gözetilerek tasarlandı" },
   { icon: "fa-database", label: "Şirkete özel veritabanı" },
   { icon: "fa-user-lock", label: "Rol bazlı yetkilendirme" },
-  { icon: "fa-file-invoice", label: "Güncel bordro mevzuatı" },
+  { icon: "fa-file-invoice", label: "Bordro mevzuatı esas alınarak geliştirildi" },
 ];
 
 export const securityPillars = [

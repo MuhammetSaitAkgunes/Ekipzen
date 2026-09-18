@@ -31,7 +31,7 @@ test("tanıtım metinleri üslup kurallarına uyar", () => {
   const files = [
     ...readdirSync(join(src, "marketing")).filter((f) => /\.tsx?$/.test(f) && !f.includes(".test.")).map((f) => join(src, "marketing", f)),
     ...readdirSync(join(src, "marketing", "pages")).filter((f) => f.endsWith(".tsx") && !f.includes(".test.")).map((f) => join(src, "marketing", "pages", f)),
-    ...readdirSync(join(src, "marketing", "motion")).filter((f) => f.endsWith(".ts") || (f.endsWith(".tsx") && !f.includes(".test."))).map((f) => join(src, "marketing", "motion", f)),
+    ...readdirSync(join(src, "marketing", "motion")).filter((f) => (f.endsWith(".ts") || f.endsWith(".tsx")) && !f.includes(".test.")).map((f) => join(src, "marketing", "motion", f)),
     join(src, "auth", "AuthLayout.tsx"),
     join(src, "auth", "LoginPage.tsx"),
     join(src, "..", "index.html"),

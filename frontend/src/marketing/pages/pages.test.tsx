@@ -1,8 +1,10 @@
-import { act, screen, within } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import { expect, test, vi } from "vitest";
 import { renderPage } from "../../test/renderPage";
 import { triggerIntersections } from "../../test/intersectionObserver";
-import { modules, plans } from "../content";
+import { STATUS_META, modules, plans } from "../content";
 import { AboutPage } from "./AboutPage";
 import { FeaturesPage } from "./FeaturesPage";
 import { KvkkPage } from "./KvkkPage";
@@ -24,6 +26,33 @@ test("Özellikler: her modül anchor id'li bir bölümdür; yapışkan menü gö
   expect(screen.getByRole("heading", { name: "İK yöneticisi, yönetici ve çalışan için ayrı çalışma alanları" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Tüm modüller aynı personel kaydına bağlıdır" })).toBeInTheDocument();
   expect(document.title).toBe("Özellikler · Ekipzen");
+});
+
+// M1: hero'daki modül çipleri durumu yalnız nokta rengiyle taşıyordu (renk körlüğünde/renksiz
+// okuyucularda kaybolur). Artık ekran okuyucu için metin ve fare için title ipucu da taşır.
+test("Özellikler: hero modül çipleri durumu yalnız renkle değil, erişilebilir metin ve title ile de taşır", () => {
+  renderPage(<FeaturesPage />);
+  const chipsNav = screen.getByRole("navigation", { name: "Modüller" });
+  for (const m of modules) {
+    const link = within(chipsNav).getByRole("link", { name: new RegExp(`${m.title}.*${STATUS_META[m.status].label}`) });
+    expect(link).toHaveAttribute("title", STATUS_META[m.status].label);
+  }
+});
+
+// M2: MarketingLayout ve FeaturesPage her ikisi de useScrollToHash() çağırıyordu; aynı hash için
+// scrollIntoView iki kez tetikleniyordu. Layout artık çağırmıyor; FeaturesPage kendi anchor'larını
+// kendi yönetir (bkz. MarketingLayout.test.tsx'ten kaldırılan test).
+test("Özellikler: adreste hash varsa ilgili modül bölümüne kaydırır", async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/ozellikler#bordro"]}>
+        <FeaturesPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
 });
 
 test("Fiyatlandırma: üç paket, rakam yok, teklif CTA'sı ve karşılaştırma tablosu", () => {

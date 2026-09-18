@@ -4,7 +4,6 @@ import { useAuth } from "../auth/AuthContext";
 import { LOGIN_PATH, roleHomeFor } from "../paths";
 import { ButtonLink, Logo } from "../ui";
 import { modules, navItems, siteInfo } from "./content";
-import { useScrollToHash } from "./motion";
 
 export function MarketingLayout() {
   const { user } = useAuth();
@@ -12,7 +11,6 @@ export function MarketingLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
-  useScrollToHash();
 
   const primaryAction = user
     ? <ButtonLink to={roleHomeFor(user.role)} variant="ghost">Uygulamaya git</ButtonLink>

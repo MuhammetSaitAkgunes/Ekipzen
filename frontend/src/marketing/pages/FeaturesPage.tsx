@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ButtonLink, usePageMeta } from "../../ui";
-import { modules, roleViews, type MarketingModule } from "../content";
+import { STATUS_META, modules, roleViews, type MarketingModule } from "../content";
 import { CtaBand, ModuleIcon, PageHero } from "../sections";
 import { ModuleVisual } from "../visuals";
 import { StatusBadge } from "../StatusBadge";
@@ -41,7 +41,10 @@ export function FeaturesPage() {
       >
         <nav aria-label="Modüller" className="ez-chips">
           {modules.map((m) => (
-            <a key={m.id} href={`#${m.id}`} className="ez-chip"><span className={`ez-dot ez-dot--${m.status}`} aria-hidden="true" />{m.title}</a>
+            <a key={m.id} href={`#${m.id}`} className="ez-chip" title={STATUS_META[m.status].label}>
+              <span className={`ez-dot ez-dot--${m.status}`} aria-hidden="true" />{m.title}
+              <span className="ez-sr-only"> ({STATUS_META[m.status].label})</span>
+            </a>
           ))}
         </nav>
       </PageHero>
