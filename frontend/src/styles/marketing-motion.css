@@ -36,6 +36,7 @@
 .ez-showcase__progress { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: color-mix(in srgb, var(--ez-on-primary) 70%, transparent); transform-origin: left; animation: ez-progress linear forwards; }
 @keyframes ez-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .ez-showcase__panel { border: 1px solid var(--ez-border); border-radius: var(--r-xl); background: var(--ez-surface); box-shadow: var(--ez-shadow-md); padding: clamp(1.25rem, 3vw, 2rem); }
+.ez-showcase__panel:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); }
 .ez-showcase__content { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(1.5rem, 4vw, 3rem); align-items: center; animation: ez-panel-in 420ms var(--ease-out); }
 .ez-showcase__copy { display: grid; gap: 0.75rem; justify-items: start; }
 .ez-showcase__copy p { color: var(--ez-text-3); }

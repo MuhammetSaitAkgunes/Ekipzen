@@ -70,7 +70,7 @@ export function ProductShowcase({ intervalMs = 6000 }: { intervalMs?: number }) 
           </button>
         ))}
       </div>
-      <div role="tabpanel" id="showcase-panel" aria-labelledby={`showcase-tab-${current.id}`} className="ez-showcase__panel ez-spotlight">
+      <div role="tabpanel" id="showcase-panel" aria-labelledby={`showcase-tab-${current.id}`} tabIndex={0} className="ez-showcase__panel ez-spotlight">
         <div key={current.id} className="ez-showcase__content">
           <div className="ez-showcase__copy">
             <StatusBadge status={current.status} />

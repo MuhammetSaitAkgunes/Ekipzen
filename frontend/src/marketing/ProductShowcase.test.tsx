@@ -18,6 +18,7 @@ test("sekme listesi ARIA ile bağlıdır; ilk modül seçilidir", () => {
   expect(tabs[1]).toHaveAttribute("tabindex", "-1");
   const panel = screen.getByRole("tabpanel");
   expect(panel).toHaveAttribute("aria-labelledby", "showcase-tab-personel");
+  expect(panel).toHaveAttribute("tabindex", "0");
   expect(panel).toHaveTextContent("Kullanımda");
 });
 
