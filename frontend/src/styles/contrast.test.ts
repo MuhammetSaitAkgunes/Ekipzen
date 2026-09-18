@@ -125,3 +125,34 @@ test(".ez-layers__short ve .ez-journey__fields dt/dd yeterli kontrastlı token k
   // --ez-surface-2 zemininde --ez-text-3 ≈ 4.34:1 kalıyordu; --ez-text-2 AA sağlar.
   expect(ddRule).toContain("var(--ez-text-2)");
 });
+
+// Gece teması (.ez-night) — tanıtım sitesi ve giriş ekranı.
+const NIGHT = {
+  "--ez-text": "#f1f5f9",
+  "--ez-text-2": "#cbd5e1",
+  "--ez-text-3": "#94a3b8",
+  "--ez-night-1": "#070b18",
+  "--ez-night-2": "#0b1122",
+  "--ez-night-3": "#0e1530",
+  "--ez-surface": "#111a30", // cam yüzeyin koyu zemine karışmış yaklaşık tonu
+  "--ez-primary": "#a5b4fc",
+  "--ez-success": "#6ee7b7",
+  "--ez-warning": "#fcd34d",
+  "--ez-danger": "#fda4af",
+  "--ez-info": "#7dd3fc",
+} as const;
+
+test("night.css gece token'larını bu testteki literal'lerle tanımlar", () => {
+  const css = readFileSync(join(__dirname, "night.css"), "utf8").toLowerCase();
+  expect(css).toContain(".ez-night");
+  for (const [name, hex] of Object.entries(NIGHT)) expect(css, name).toContain(`${name}: ${hex}`);
+});
+
+test.each([
+  ["--ez-text"], ["--ez-text-2"], ["--ez-text-3"], ["--ez-primary"],
+  ["--ez-success"], ["--ez-warning"], ["--ez-danger"], ["--ez-info"],
+] as const)("gece temasında %s tüm zemin tonlarında AA (>=4.5) sağlar", (fg) => {
+  for (const bg of ["--ez-night-1", "--ez-night-2", "--ez-night-3", "--ez-surface"] as const) {
+    expect(contrastRatio(NIGHT[fg], NIGHT[bg]), `${fg} / ${bg}`).toBeGreaterThanOrEqual(4.5);
+  }
+});
