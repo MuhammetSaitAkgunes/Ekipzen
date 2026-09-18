@@ -6,10 +6,12 @@ import { modules, roadmap } from "../content";
 
 test("hero vaadi, iki CTA ve sayfa başlığı", () => {
   renderPage(<HomePage />);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("İK süreçleriniz tek bir kayıt düzeninde");
+  const h1 = screen.getByRole("heading", { level: 1 });
+  expect(h1).toHaveTextContent("İK süreçleriniz tek bir kayıt düzeninde");
   expect(screen.getAllByRole("link", { name: "Demo talep edin" })[0]).toHaveAttribute("href", "/iletisim");
   expect(screen.getByRole("link", { name: "Modülleri inceleyin" })).toHaveAttribute("href", "/ozellikler");
   expect(document.title).toBe("Ekipzen");
+  expect(h1.closest(".ez-hero__copy")).not.toHaveClass("ez-reveal");
 });
 
 test("canlı vitrin ve çalışan yolculuğu bölümleri vardır", () => {

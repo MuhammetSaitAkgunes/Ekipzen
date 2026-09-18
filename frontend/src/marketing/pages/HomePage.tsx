@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ButtonLink, usePageMeta } from "../../ui";
-import { ROADMAP_STAGES, faqs, modules, roadmap, securityPillars, trustPoints } from "../content";
+import { ROADMAP_STAGES, SHOWCASE_ORDER, faqs, modules, roadmap, securityPillars, trustPoints } from "../content";
 import { CtaBand, FaqList, ModuleIcon } from "../sections";
 import { HeroVisual } from "../visuals";
 import { ProductShowcase } from "../ProductShowcase";
@@ -8,13 +8,15 @@ import { EmployeeJourney } from "../EmployeeJourney";
 import { StatusBadge } from "../StatusBadge";
 import { Reveal, onSpotlightMove } from "../motion";
 
+const bentoModules = SHOWCASE_ORDER.map((id) => modules.find((m) => m.id === id)!);
+
 export function HomePage() {
   usePageMeta("Ekipzen", "Özlük, izin, puantaj, bordro ve işe alım süreçlerinizi tek bir kayıt düzeninde yürütün. Ekipzen, İK ekipleri için tasarlanmış insan kaynakları yönetim platformudur.");
   return (
     <>
       <section className="ez-hero ez-aurora">
         <div className="ez-container ez-hero__grid">
-          <Reveal className="ez-hero__copy">
+          <div className="ez-hero__copy ez-hero-enter">
             <p className="ez-eyebrow">İnsan kaynakları yönetimi</p>
             <h1>İK süreçleriniz tek bir kayıt düzeninde</h1>
             <p className="ez-lead">
@@ -30,8 +32,8 @@ export function HomePage() {
                 <li key={t.label}><i aria-hidden="true" className={`fa-solid ${t.icon}`} />{t.label}</li>
               ))}
             </ul>
-          </Reveal>
-          <Reveal delay={150}><HeroVisual /></Reveal>
+          </div>
+          <div className="ez-hero-enter ez-hero-enter--late"><HeroVisual /></div>
         </div>
       </section>
 
@@ -65,7 +67,7 @@ export function HomePage() {
             <p className="ez-lead">Tüm modüller aynı personel kaydı üzerinde çalışır. Her modülün durumu açıkça belirtilir.</p>
           </Reveal>
           <ul className="ez-bento">
-            {modules.map((m, i) => (
+            {bentoModules.map((m, i) => (
               <Reveal as="li" key={m.id} delay={i * 70} className={`ez-bento__item ez-bento__item--${m.id}`}>
                 <Link to={`/ozellikler#${m.id}`} className="ez-feature-card ez-spotlight" onPointerMove={onSpotlightMove}>
                   <div className="ez-feature-card__top"><ModuleIcon icon={m.icon} /><StatusBadge status={m.status} /></div>
