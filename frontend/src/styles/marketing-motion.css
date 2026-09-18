@@ -82,4 +82,5 @@
   .ez-hero-enter { animation: none; }
   .ez-flow__line { transition: none; stroke-dashoffset: 0; }
   .ez-flow__core-ring { animation: none; }
+  .ez-core::before, .ez-core::after, .ez-layers__panel { animation: none; }
 }

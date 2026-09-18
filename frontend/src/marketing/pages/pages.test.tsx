@@ -37,9 +37,14 @@ test("Fiyatlandırma: üç paket, rakam yok, teklif CTA'sı ve karşılaştırma
   expect(within(table).getAllByRole("columnheader")).toHaveLength(4);
 });
 
-test("Güvenlik: altı güvence ve KVKK bölümü", () => {
+test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {
   renderPage(<SecurityPage />);
-  expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(6);
+  expect(screen.getByRole("region", { name: "Katman katman güvenlik" })).toBeInTheDocument();
+  const categories = screen.getByRole("region", { name: "Kontroller kategoriye göre" });
+  expect(within(categories).getAllByRole("heading", { level: 3 })).toHaveLength(4);
+  const transparencyRegion = screen.getByRole("region", { name: "Bugün sağlananlar ve üzerinde çalıştıklarımız" });
+  expect(within(transparencyRegion).getByText("Çok faktörlü kimlik doğrulama")).toBeInTheDocument();
+  expect(within(transparencyRegion).getAllByText("Geliştiriliyor")).toHaveLength(2);
   expect(screen.getByRole("heading", { name: "KVKK ve kişisel veriler" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "KVKK aydınlatma metni" })).toHaveAttribute("href", "/kvkk-aydinlatma");
 });
