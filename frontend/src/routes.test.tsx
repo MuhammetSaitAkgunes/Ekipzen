@@ -62,7 +62,7 @@ test("hr-admin, settings'te gerçek Sistem Ayarları sayfasını görür", () =>
 
 test("kök yol oturumsuz ziyaretçiye landing gösterir", async () => {
   renderAt("/");
-  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ekibinizi tek yerden");
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("İK süreçleriniz tek bir kayıt düzeninde");
   expect(screen.getAllByRole("link", { name: "Giriş yap" })[0]).toHaveAttribute("href", "/giris");
 });
 
@@ -85,7 +85,7 @@ test("bilinmeyen yol 404 sayfası gösterir", async () => {
 
 test("/fiyatlandirma lazy rotası kayıtlıdır ve sayfayı render eder", async () => {
   renderAt("/fiyatlandirma");
-  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("İhtiyacınız kadar, sürprizsiz");
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Şirketinizin ihtiyacına göre belirlenen paketler");
 });
 
 test("oturumlu kullanıcı /app adresinde rol ana sayfasına gider", async () => {

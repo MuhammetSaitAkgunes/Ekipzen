@@ -18,7 +18,7 @@ export function NotFoundPage() {
       <div className="ez-container ez-narrow">
         <p className="ez-eyebrow">404</p>
         <h1>Sayfa bulunamadı</h1>
-        <p className="ez-lead">Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir.</p>
+        <p className="ez-lead">Aradığınız sayfa kaldırılmış ya da adresi değişmiş olabilir.</p>
         <div className="ez-actions">
           <ButtonLink to="/">Ana sayfaya dön</ButtonLink>
           <ButtonLink to="/iletisim" variant="secondary">Bize ulaşın</ButtonLink>

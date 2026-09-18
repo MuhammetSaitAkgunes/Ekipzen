@@ -8,13 +8,13 @@ const cell = (value: boolean | string) =>
     : <><i aria-hidden="true" className="fa-solid fa-minus ez-no" /><span className="ez-sr-only">Yok</span></>;
 
 export function PricingPage() {
-  usePageMeta("Fiyatlandırma", "Ekibinizin büyüklüğüne ve ihtiyacınız olan modüllere göre size özel teklif alın.");
+  usePageMeta("Fiyatlandırma", "Ekipzen paketleri ve kapsamları. Fiyat, çalışan sayısına ve kullanılacak modüllere göre belirlenir.");
   return (
     <>
       <PageHero
         eyebrow="Fiyatlandırma"
-        title="İhtiyacınız kadar, sürprizsiz"
-        lead="Fiyat; çalışan sayınıza ve seçtiğiniz modüllere göre belirlenir. Size özel teklifi kısa sürede iletiyoruz."
+        title="Şirketinizin ihtiyacına göre belirlenen paketler"
+        lead="Fiyat, çalışan sayınıza ve kullanacağınız modüllere göre belirlenir. Paketlerin kapsamını aşağıda karşılaştırabilir, şirketinize özel teklif talep edebilirsiniz."
       />
       <section className="ez-section ez-section--flush" aria-label="Paketler">
         <div className="ez-container">
@@ -62,11 +62,11 @@ export function PricingPage() {
 
       <section className="ez-section" aria-labelledby="fiyat-sss-baslik">
         <div className="ez-container ez-narrow">
-          <div className="ez-section__head"><h2 id="fiyat-sss-baslik">Fiyatlandırma hakkında sorular</h2></div>
+          <div className="ez-section__head"><h2 id="fiyat-sss-baslik">Fiyatlandırmaya ilişkin sorular</h2></div>
           <FaqList items={pricingFaqs} />
         </div>
       </section>
-      <CtaBand title="Size özel teklifi alın" text="Çalışan sayınızı ve ihtiyaçlarınızı paylaşın, net bir teklifle dönelim." />
+      <CtaBand title="Şirketinize özel teklif talep edin" text="Çalışan sayınızı ve kullanmak istediğiniz modülleri paylaşın; kapsamı ve fiyatı içeren teklifi size iletelim." />
     </>
   );
 }

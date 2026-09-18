@@ -52,9 +52,9 @@ export function LoginPage() {
         </Button>
       </form>
       <p className="ez-auth__alt">
-        Şirketinizin hesabı yok mu? <Link to="/iletisim">Demo isteyin</Link>
+        Şirketinizin henüz bir hesabı yoksa <Link to="/iletisim">demo talep edin</Link>.
         <br />
-        Hesabınız varsa davet e-postanızdaki bağlantıyla şifrenizi belirleyin.
+        Hesabınız oluşturulduysa davet e-postanızdaki bağlantıyla şifrenizi belirleyebilirsiniz.
       </p>
     </AuthLayout>
   );

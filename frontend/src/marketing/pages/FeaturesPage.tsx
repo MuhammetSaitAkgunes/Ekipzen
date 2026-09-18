@@ -4,13 +4,13 @@ import { CtaBand, ModuleIcon, PageHero } from "../sections";
 import { ModuleVisual } from "../visuals";
 
 export function FeaturesPage() {
-  usePageMeta("Özellikler", "Risk Merkezi, personel, izin, puantaj, bordro ve işe alım modüllerini inceleyin.");
+  usePageMeta("Özellikler", "Ekipzen modülleri: Risk Merkezi, personel yönetimi, izin, mesai ve puantaj, bordro ve işe alım.");
   return (
     <>
       <PageHero
         eyebrow="Özellikler"
-        title="İK operasyonunuz için ihtiyacınız olan her şey"
-        lead="Birbirine bağlı modüller sayesinde bir kez girilen bilgi tüm süreçlerde doğru kalır."
+        title="İK süreçlerinin tamamı için tek bir çalışma alanı"
+        lead="Modüller aynı personel kaydı üzerinde çalışır; bir kez girilen bilgi tüm süreçlerde tutarlı biçimde kullanılır."
       >
         <nav aria-label="Modüller" className="ez-chips">
           {modules.map((m) => <a key={m.id} href={`#${m.id}`} className="ez-chip">{m.title}</a>)}
@@ -37,9 +37,9 @@ export function FeaturesPage() {
       <section className="ez-section" aria-labelledby="roller-baslik">
         <div className="ez-container">
           <div className="ez-section__head">
-            <p className="ez-eyebrow">Rol bazlı deneyim</p>
-            <h2 id="roller-baslik">Her rol kendi ekranını görür</h2>
-            <p className="ez-lead">Yetkiler hem arayüzde hem sunucuda uygulanır; kimse görmemesi gereken veriyi görmez.</p>
+            <p className="ez-eyebrow">Roller</p>
+            <h2 id="roller-baslik">İK yöneticisi, yönetici ve çalışan için ayrı çalışma alanları</h2>
+            <p className="ez-lead">Her kullanıcı yalnız rolünün gerektirdiği ekranlara ve verilere erişir. Yetki kontrolü arayüzün yanı sıra sunucu tarafında da uygulanır.</p>
           </div>
           <ul className="ez-grid-3">
             {roleViews.map((r) => (
@@ -50,7 +50,7 @@ export function FeaturesPage() {
               </li>
             ))}
           </ul>
-          <div className="ez-actions"><ButtonLink to="/guvenlik" variant="secondary">Yetkilendirme ve güvenlik</ButtonLink></div>
+          <div className="ez-actions"><ButtonLink to="/guvenlik" variant="secondary">Yetkilendirme yaklaşımını inceleyin</ButtonLink></div>
         </div>
       </section>
 

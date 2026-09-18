@@ -67,7 +67,7 @@ test("kayıt sekmesi yok; hesabı olmayan demo talebine yönlendirilir", () => {
   renderLogin();
   expect(document.getElementById("auth-login")).toHaveClass("ez-auth__form");
   expect(document.getElementById("auth-signup")).toBeNull();
-  expect(screen.getByRole("link", { name: "Demo isteyin" })).toHaveAttribute("href", "/iletisim");
+  expect(screen.getByRole("link", { name: "demo talep edin" })).toHaveAttribute("href", "/iletisim");
   expect(screen.getByRole("link", { name: /Ana sayfaya dön/ })).toHaveAttribute("href", "/");
 });
 

@@ -3,26 +3,27 @@ import { values } from "../content";
 import { CtaBand, PageHero } from "../sections";
 
 export function AboutPage() {
-  usePageMeta("Hakkımızda", "Ekipzen'in neden var olduğu ve hangi değerlerle geliştirildiği.");
+  usePageMeta("Hakkımızda", "Ekipzen'in amacı, yaklaşımı ve ürünü geliştirirken gözettiği ilkeler.");
   return (
     <>
       <PageHero
         eyebrow="Hakkımızda"
-        title="İK ekiplerinin işini kolaylaştırmak için buradayız"
-        lead="Ekipzen, dağınık tablolar ve e-posta zincirleriyle yürüyen İK operasyonlarını tek, güvenilir bir platformda toplamak için doğdu."
+        title="İK ekiplerinin günlük işini tek bir düzende toplamak için geliştiriyoruz"
+        lead="Ekipzen, farklı tablolar ve yazışmalar üzerinden yürütülen İK süreçlerini tek bir kayıt düzeninde birleştirmek amacıyla geliştirilmektedir."
       />
       <section className="ez-section ez-section--flush" aria-labelledby="misyon-baslik">
         <div className="ez-container ez-narrow ez-prose">
           <h2 id="misyon-baslik">Misyonumuz</h2>
           <p>
-            İK ekiplerinin zamanını tekrar eden işlerden kurtarıp insanlara ayırmalarını sağlamak. Bunu yaparken
-            çalışan verisini en yüksek özenle korumak ve Türkiye'nin mevzuatına baştan uyumlu bir ürün sunmak.
+            İK ekiplerinin tekrar eden işlere ayırdığı zamanı azaltmak ve bu zamanı çalışanlarla ilgili kararlara
+            aktarmalarını sağlamak. Bunu yaparken çalışan verisini özenle korumak ve yürürlükteki mevzuatı ürünün
+            temelinde gözetmek.
           </p>
           <h2>Neden Ekipzen?</h2>
           <p>
-            Personel, izin, puantaj, bordro ve işe alım birbirinden kopuk araçlarda yönetildiğinde aynı bilgi defalarca
-            girilir ve hatalar büyür. Ekipzen bu süreçleri tek veri modelinde birleştirir; risk sinyallerini de bu
-            bütün resimden üretir.
+            Personel, izin, puantaj, bordro ve işe alım ayrı araçlarda yürütüldüğünde aynı bilgi birden fazla kez
+            girilir ve kayıtlar arasında tutarsızlıklar oluşur. Ekipzen bu süreçleri tek bir veri modelinde birleştirir
+            ve risk sinyallerini de bu bütünlüklü veriden üretir.
           </p>
         </div>
       </section>

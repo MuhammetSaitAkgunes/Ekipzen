@@ -28,11 +28,11 @@ export function AuthLayout({ title, subtitle, badge, children }: {
       </main>
       <aside className="ez-auth__aside" aria-label="Ekipzen hakkında">
         <div className="ez-auth__aside-inner">
-          <p className="ez-auth__quote">Personel, izin, puantaj ve bordro — tek, güvenli platformda.</p>
+          <p className="ez-auth__quote">Özlük, izin, puantaj ve bordro süreçleri tek bir kayıt düzeninde.</p>
           <ul className="ez-auth__points">
-            <li><i aria-hidden="true" className="fa-solid fa-database" /> Şirketinize özel izole veritabanı</li>
+            <li><i aria-hidden="true" className="fa-solid fa-database" /> Şirketinize ait ayrı veritabanı</li>
             <li><i aria-hidden="true" className="fa-solid fa-user-lock" /> Rol bazlı yetkilendirme</li>
-            <li><i aria-hidden="true" className="fa-solid fa-scale-balanced" /> KVKK odaklı tasarım</li>
+            <li><i aria-hidden="true" className="fa-solid fa-scale-balanced" /> KVKK gereklilikleri gözetilerek tasarlandı</li>
           </ul>
           <div className="ez-auth__visual" aria-hidden="true">
             <RiskScoreCard />

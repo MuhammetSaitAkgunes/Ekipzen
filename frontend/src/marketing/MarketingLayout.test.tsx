@@ -28,7 +28,7 @@ test("ana menü, giriş ve demo bağlantılarını içerir", () => {
     expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
   }
   expect(screen.getAllByRole("link", { name: "Giriş yap" })[0]).toHaveAttribute("href", "/giris");
-  expect(screen.getAllByRole("link", { name: "Demo iste" })[0]).toHaveAttribute("href", "/iletisim");
+  expect(screen.getAllByRole("link", { name: "Demo talep edin" })[0]).toHaveAttribute("href", "/iletisim");
   expect(screen.getByRole("link", { name: "İçeriğe geç" })).toHaveAttribute("href", "#icerik");
 });
 

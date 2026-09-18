@@ -16,7 +16,7 @@ test("Özellikler: her modül anchor id'li bir bölümdür", () => {
     expect(section, m.id).not.toBeNull();
     expect(within(section!).getByRole("heading", { level: 2, name: m.title })).toBeInTheDocument();
   }
-  expect(screen.getByRole("heading", { name: "Her rol kendi ekranını görür" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "İK yöneticisi, yönetici ve çalışan için ayrı çalışma alanları" })).toBeInTheDocument();
   expect(document.title).toBe("Özellikler · Ekipzen");
 });
 

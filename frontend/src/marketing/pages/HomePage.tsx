@@ -5,21 +5,21 @@ import { CtaBand, FaqList, ModuleIcon } from "../sections";
 import { ActionListCard, HeroVisual, RiskScoreCard } from "../visuals";
 
 export function HomePage() {
-  usePageMeta("Ekipzen", "Ekipzen ile personel, izin, puantaj, bordro ve işe alım süreçlerinizi tek, güvenli platformda yönetin.");
+  usePageMeta("Ekipzen", "Özlük, izin, puantaj, bordro ve işe alım süreçlerinizi tek bir kayıt düzeninde yürütün. Ekipzen, İK ekipleri için tasarlanmış insan kaynakları yönetim platformudur.");
   return (
     <>
       <section className="ez-hero">
         <div className="ez-container ez-hero__grid">
           <div className="ez-hero__copy">
-            <p className="ez-eyebrow">Türkiye için İK platformu</p>
-            <h1>Ekibinizi tek yerden, güvenle yönetin</h1>
+            <p className="ez-eyebrow">İnsan kaynakları yönetimi</p>
+            <h1>İK süreçleriniz tek bir kayıt düzeninde</h1>
             <p className="ez-lead">
-              Personel, izin, puantaj, bordro ve işe alım tek platformda. Risk sinyallerini erken görün,
-              ekibinizi e-posta trafiğinden kurtarın.
+              Özlük bilgileri, izinler, puantaj, bordro ve işe alım aynı veri üzerinde ilerler. Bir süreçte
+              girilen bilgi, diğerlerinde yeniden girilmez.
             </p>
             <div className="ez-actions">
-              <ButtonLink to="/iletisim" size="lg">Demo iste</ButtonLink>
-              <ButtonLink to="/ozellikler" size="lg" variant="secondary">Özellikleri incele</ButtonLink>
+              <ButtonLink to="/iletisim" size="lg">Demo talep edin</ButtonLink>
+              <ButtonLink to="/ozellikler" size="lg" variant="secondary">Modülleri inceleyin</ButtonLink>
             </div>
             <ul className="ez-trust" aria-label="Öne çıkan güvenceler">
               {trustPoints.map((t) => (
@@ -35,8 +35,8 @@ export function HomePage() {
         <div className="ez-container">
           <div className="ez-section__head">
             <p className="ez-eyebrow">Modüller</p>
-            <h2 id="moduller-baslik">Tek platformda tüm İK süreçleri</h2>
-            <p className="ez-lead">Dağınık tablolar ve e-posta zincirleri yerine, birbirine bağlı modüller.</p>
+            <h2 id="moduller-baslik">Birbirine bağlı altı modül</h2>
+            <p className="ez-lead">Tüm modüller aynı personel kaydı üzerinde çalışır. Bordro, dönemin her iş gününün puantaj ya da onaylı izin kaydıyla karşılandığını kontrol eder.</p>
           </div>
           <ul className="ez-grid-3">
             {modules.map((m) => (
@@ -57,16 +57,16 @@ export function HomePage() {
         <div className="ez-container ez-split">
           <div>
             <p className="ez-eyebrow">Risk Merkezi</p>
-            <h2 id="risk-baslik">Sorunları istifa mektubundan önce görün</h2>
+            <h2 id="risk-baslik">Ayrılma ve tükenmişlik sinyallerini erken fark edin</h2>
             <p className="ez-lead">
-              Ayrılma, tükenmişlik ve uyum sinyalleri tek ekranda toplanır; her sinyal somut bir aksiyon önerisine bağlanır.
+              Risk Merkezi; devamsızlık, geç kalma, fazla mesai, kullanılmayan izin ve çalışan nabzı verilerini departman düzeyinde değerlendirir ve her sinyali izlenebilir bir aksiyona bağlar.
             </p>
             <ul className="ez-check-list">
-              <li>Departman bazında risk skoru ve trend</li>
+              <li>Departman bazında risk skoru ve dönemsel eğilim</li>
               <li>Yönetici yükü ve çalışan nabzı</li>
-              <li>Önerilen aksiyonların takibi</li>
+              <li>Aksiyon önerileri ve takibi</li>
             </ul>
-            <ButtonLink to="/ozellikler#risk-merkezi" variant="secondary">Risk Merkezi'ni incele</ButtonLink>
+            <ButtonLink to="/ozellikler#risk-merkezi" variant="secondary">Risk Merkezi'ni inceleyin</ButtonLink>
           </div>
           <div className="ez-split__visual" aria-hidden="true">
             <RiskScoreCard />
@@ -78,8 +78,8 @@ export function HomePage() {
       <section className="ez-section" aria-labelledby="adimlar-baslik">
         <div className="ez-container">
           <div className="ez-section__head">
-            <p className="ez-eyebrow">Nasıl çalışır</p>
-            <h2 id="adimlar-baslik">Üç adımda başlayın</h2>
+            <p className="ez-eyebrow">Başlangıç süreci</p>
+            <h2 id="adimlar-baslik">Kullanıma geçiş üç adımda tamamlanır</h2>
           </div>
           <ol className="ez-steps">
             {steps.map((s, i) => (
@@ -97,8 +97,8 @@ export function HomePage() {
         <div className="ez-container">
           <div className="ez-section__head">
             <p className="ez-eyebrow">Güvenlik</p>
-            <h2 id="guvenlik-baslik">Verileriniz sizin kontrolünüzde</h2>
-            <p className="ez-lead">İK verisi hassastır. Ekipzen'i izolasyon ve en az yetki ilkesiyle kurduk.</p>
+            <h2 id="guvenlik-baslik">Her şirketin verisi kendi veritabanında tutulur</h2>
+            <p className="ez-lead">Ekipzen, veri ayrımı ve en az yetki ilkesi üzerine kurulmuştur. Güvenlik önlemleri ürünün mimarisinin parçasıdır.</p>
           </div>
           <ul className="ez-grid-3">
             {securityPillars.slice(0, 3).map((p) => (
@@ -109,7 +109,7 @@ export function HomePage() {
               </li>
             ))}
           </ul>
-          <ButtonLink to="/guvenlik" variant="secondary">Güvenlik yaklaşımımız</ButtonLink>
+          <ButtonLink to="/guvenlik" variant="secondary">Güvenlik yaklaşımını inceleyin</ButtonLink>
         </div>
       </section>
 

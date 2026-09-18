@@ -30,7 +30,7 @@ export function MarketingLayout() {
             </ul>
             <div className="ez-header__cta">
               {primaryAction}
-              <ButtonLink to="/iletisim">Demo iste</ButtonLink>
+              <ButtonLink to="/iletisim">Demo talep edin</ButtonLink>
             </div>
           </nav>
           <button
@@ -54,7 +54,7 @@ export function MarketingLayout() {
         <div className="ez-container ez-footer__grid">
           <div className="ez-footer__brand">
             <Logo tone="light" />
-            <p>Personel, izin, puantaj, bordro ve işe alım süreçleriniz için güvenli İK platformu.</p>
+            <p>Özlük, izin, puantaj, bordro ve işe alım süreçlerini tek bir kayıt düzeninde yürüten insan kaynakları yönetim platformu.</p>
           </div>
           <div>
             <h2 className="ez-footer__title">Ürün</h2>

@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "vitest";
 import { securityPillars, faqs } from "./content";
 
@@ -12,8 +14,26 @@ test("güvenlik metinleri abartılı/yanlış iddialar içermez", () => {
   }
 });
 
-test("İzole veri iddiası İK verisi kapsamıyla sınırlıdır", () => {
-  const pillar = securityPillars.find((p) => p.title === "İzole veri");
+test("Ayrı veritabanı iddiası İK verisi kapsamıyla sınırlıdır", () => {
+  const pillar = securityPillars.find((p) => p.title === "Ayrı veritabanı");
   expect(pillar?.text).toContain("İK verileriniz");
   expect(pillar?.text).toContain("aynı tabloda bulunmaz");
+});
+
+// Üslup koruması: tanıtım ve giriş metinleri ölçülü ve kurumsal kalır; pazar/coğrafya
+// sloganı, abartılı kolaylık ifadeleri ve doğrulanmamış süre vaatleri kullanılmaz.
+test("tanıtım metinleri üslup kurallarına uyar", () => {
+  const src = join(__dirname, "..");
+  const files = [
+    ...readdirSync(join(src, "marketing")).filter((f) => /\.tsx?$/.test(f) && !f.includes(".test.")).map((f) => join(src, "marketing", f)),
+    ...readdirSync(join(src, "marketing", "pages")).filter((f) => f.endsWith(".tsx") && !f.includes(".test.")).map((f) => join(src, "marketing", "pages", f)),
+    join(src, "auth", "AuthLayout.tsx"),
+    join(src, "auth", "LoginPage.tsx"),
+    join(src, "..", "index.html"),
+  ];
+  const banned = [/Türkiye için/i, /tek tıkla/i, /sürpriz/i, /kurtar/i, /\d+\s*dakikalık/i, /kısa sürede/i, /kolayca/i];
+  for (const file of files) {
+    const text = readFileSync(file, "utf8");
+    for (const pattern of banned) expect(text, `${file} ${pattern}`).not.toMatch(pattern);
+  }
 });

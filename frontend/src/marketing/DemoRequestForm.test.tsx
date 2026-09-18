@@ -21,7 +21,7 @@ test("geçerli form gönderilir ve teşekkür mesajı gösterilir", async () => 
   await fillValid();
   await userEvent.click(screen.getByRole("button", { name: "Demo talebini gönder" }));
 
-  expect(await screen.findByRole("heading", { name: "Talebiniz bize ulaştı" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Talebiniz alındı" })).toBeInTheDocument();
   const [url, init] = vi.mocked(fetch).mock.calls[0];
   expect(url).toBe("/api/public/demo-requests");
   expect(JSON.parse(init!.body as string)).toMatchObject({
@@ -75,5 +75,5 @@ test("bilinen forma eşlenmeyen sunucu hata anahtarı genel mesajla gösterilir"
   renderPage(<DemoRequestForm />);
   await fillValid();
   await userEvent.click(screen.getByRole("button", { name: "Demo talebini gönder" }));
-  expect(await screen.findByText("Talebiniz şu anda gönderilemedi. Lütfen tekrar deneyin ya da bize e-postayla ulaşın.")).toBeInTheDocument();
+  expect(await screen.findByText("Talebiniz şu anda iletilemedi. Lütfen tekrar deneyin ya da bize e-posta ile ulaşın.")).toBeInTheDocument();
 });

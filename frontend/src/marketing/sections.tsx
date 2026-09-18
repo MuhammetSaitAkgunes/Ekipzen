@@ -18,7 +18,7 @@ export function PageHero({ eyebrow, title, lead, children }: { eyebrow: string; 
   );
 }
 
-export function CtaBand({ title = "Ekipzen'i ekibinizle birlikte görün", text = "30 dakikalık bir tanıtımda süreçlerinize nasıl uyduğunu birlikte inceleyelim." }: { title?: string; text?: string }) {
+export function CtaBand({ title = "Ekipzen'i kendi süreçleriniz üzerinden değerlendirin", text = "Demo görüşmesinde ürünü şirketinizin izin, puantaj ve bordro akışları üzerinden birlikte inceleyelim." }: { title?: string; text?: string }) {
   const id = useId();
   return (
     <section className="ez-section" aria-labelledby={id}>
@@ -29,8 +29,8 @@ export function CtaBand({ title = "Ekipzen'i ekibinizle birlikte görün", text 
             <p>{text}</p>
           </div>
           <div className="ez-actions">
-            <ButtonLink to="/iletisim" size="lg">Demo iste</ButtonLink>
-            <ButtonLink to="/fiyatlandirma" size="lg" variant="secondary">Paketleri gör</ButtonLink>
+            <ButtonLink to="/iletisim" size="lg">Demo talep edin</ButtonLink>
+            <ButtonLink to="/fiyatlandirma" size="lg" variant="secondary">Paketleri inceleyin</ButtonLink>
           </div>
         </div>
       </div>

@@ -26,7 +26,7 @@ export function DemoRequestForm({ initialMessage = "" }: { initialMessage?: stri
       if (Object.keys(fieldErrors).length > 0) return;
       setFormError(error instanceof ApiError && error.status === 429
         ? "Çok fazla talep gönderildi. Lütfen bir süre sonra tekrar deneyin."
-        : "Talebiniz şu anda gönderilemedi. Lütfen tekrar deneyin ya da bize e-postayla ulaşın.");
+        : "Talebiniz şu anda iletilemedi. Lütfen tekrar deneyin ya da bize e-posta ile ulaşın.");
     },
   });
 
@@ -52,9 +52,9 @@ export function DemoRequestForm({ initialMessage = "" }: { initialMessage?: stri
     return (
       <div className="ez-form-success" role="status">
         <span className="ez-icon"><i aria-hidden="true" className="fa-solid fa-check" /></span>
-        <h2>Talebiniz bize ulaştı</h2>
-        <p>Teşekkürler {values.fullName.split(" ")[0]}. Ekibimiz en kısa sürede {values.email} adresinden sizinle iletişime geçecek.</p>
-        <Link to="/ozellikler" className="ez-link">Bu arada özellikleri inceleyin</Link>
+        <h2>Talebiniz alındı</h2>
+        <p>Teşekkür ederiz. Ekibimiz {values.email} adresi üzerinden sizinle iletişime geçecektir.</p>
+        <Link to="/ozellikler" className="ez-link">Modülleri inceleyin</Link>
       </div>
     );
   }
@@ -82,7 +82,7 @@ export function DemoRequestForm({ initialMessage = "" }: { initialMessage?: stri
           <Input name="phone" type="tel" autoComplete="tel" inputMode="tel" value={values.phone} onChange={(e) => set("phone", e.target.value)} />
         </Field>
       </div>
-      <Field label="Mesajınız" hint="İsteğe bağlı — hangi süreçleri görmek istediğinizi yazabilirsiniz." error={errors.message}>
+      <Field label="Mesajınız" hint="İsteğe bağlı. Görüşmede öncelikli ele almak istediğiniz süreçleri belirtebilirsiniz." error={errors.message}>
         <Textarea name="message" rows={4} value={values.message} onChange={(e) => set("message", e.target.value)} />
       </Field>
       <div className="ez-honeypot" aria-hidden="true">
@@ -97,7 +97,7 @@ export function DemoRequestForm({ initialMessage = "" }: { initialMessage?: stri
           aria-invalid={errors.kvkkConsent ? true : undefined}
           aria-describedby={errors.kvkkConsent ? "kvkk-error" : undefined}
         >
-          <Link to="/kvkk-aydinlatma" target="_blank" rel="noopener">KVKK aydınlatma metnini</Link> okudum; talebime yanıt verilmesi için verilerimin işlenmesini kabul ediyorum. *
+          <Link to="/kvkk-aydinlatma" target="_blank" rel="noopener">KVKK aydınlatma metnini</Link> okudum; talebimin yanıtlanması amacıyla kişisel verilerimin işlenmesini kabul ediyorum. *
         </Checkbox>
         {errors.kvkkConsent && <p id="kvkk-error" className="ez-field__error" role="alert">{errors.kvkkConsent}</p>}
       </div>
