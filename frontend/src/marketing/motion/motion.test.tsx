@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { setReducedMotion, triggerIntersections } from "../../test/intersectionObserver";
@@ -41,6 +42,20 @@ test("useInView görünürlüğü izler; once ile görünür kalır", () => {
   act(() => triggerIntersections(true));
   act(() => triggerIntersections(false));
   expect(screen.getByTestId("p")).toHaveTextContent("evet");
+});
+
+// Geliştirme modundaki StrictMode efektleri kurar-temizler-yeniden kurar; gözlem bu
+// döngüden sonra da çalışmalı (aksi halde Reveal içerikleri kalıcı olarak görünmez kalır).
+test("useInView ve Reveal StrictMode altında da gözlemeye devam eder", () => {
+  render(
+    <StrictMode>
+      <InViewProbe once />
+      <Reveal data-testid="r">içerik</Reveal>
+    </StrictMode>,
+  );
+  act(() => triggerIntersections(true));
+  expect(screen.getByTestId("p")).toHaveTextContent("evet");
+  expect(screen.getByTestId("r")).toHaveClass("is-visible");
 });
 
 function MotionProbe() {
