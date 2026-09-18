@@ -59,16 +59,60 @@ export function ActionListCard() {
   );
 }
 
-/** Hero kompozisyonu: katmanlı panel parçaları. Değerler örnektir. */
+export function PersonnelListCard() {
+  const rows: [string, string, string][] = [
+    ["AY", "Ahmet Yılmaz", "Yazılım"],
+    ["EA", "Ece Arslan", "İnsan Kaynakları"],
+    ["SK", "Selin Koç", "Tasarım"],
+    ["MD", "Mert Demir", "Satış"],
+  ];
+  return (
+    <MockCard title="Personel" badge="42 kişi">
+      <ul className="ez-mock__table">
+        {rows.map(([initials, name, dept]) => (
+          <li key={name}><span className="ez-mock__avatar">{initials}</span><span>{name}</span><span className="ez-mock__muted">{dept}</span></li>
+        ))}
+      </ul>
+    </MockCard>
+  );
+}
+
+export function TimesheetGridCard() {
+  const days = ["Pzt", "Sal", "Çar", "Per", "Cum"];
+  const hours = [8, 8, 9.5, 8, 7];
+  return (
+    <MockCard title="Haftalık puantaj" badge="Eylül">
+      <div className="ez-mock__grid">
+        {days.map((d, i) => (
+          <div key={d}><span className="ez-mock__muted">{d}</span><strong>{hours[i]} sa</strong><span className="ez-mock__bar" style={{ height: `${hours[i] * 8}px` }} /></div>
+        ))}
+      </div>
+    </MockCard>
+  );
+}
+
+export function RecruitmentBoardCard() {
+  const columns: [string, number][] = [["Başvuru", 12], ["Mülakat", 5], ["Teklif", 2]];
+  return (
+    <MockCard title="İşe alım" badge="3 pozisyon">
+      <div className="ez-mock__kanban">
+        {columns.map(([name, count]) => (
+          <div key={name}><span className="ez-mock__muted">{name}</span><strong>{count}</strong>{Array.from({ length: Math.min(count, 3) }, (_, i) => <span key={i} className="ez-mock__chip" />)}</div>
+        ))}
+      </div>
+    </MockCard>
+  );
+}
+
+/** Hero kompozisyonu: düz, katmanlı panel parçaları. Değerler örnektir. */
 export function HeroVisual() {
   return (
     <figure className="ez-hero-visual">
-      <figcaption className="ez-sr-only">Ekipzen panelinden örnek risk, izin, bordro ve aksiyon kartları.</figcaption>
-      <div aria-hidden="true" className="ez-hero-visual__stack">
-        <RiskScoreCard />
-        <PayrollSummaryCard />
-        <LeaveCalendarCard />
-        <ActionListCard />
+      <figcaption className="ez-sr-only">Ekipzen panelinden örnek görünüm: personel listesi, izin takvimi ve bordro özeti.</figcaption>
+      <div aria-hidden="true" className="ez-hero-visual__stage">
+        <div className="ez-hero-visual__main"><PersonnelListCard /></div>
+        <div className="ez-hero-visual__float ez-hero-visual__float--a ez-float"><LeaveCalendarCard /></div>
+        <div className="ez-hero-visual__float ez-hero-visual__float--b ez-float ez-float--slow"><PayrollSummaryCard /></div>
       </div>
     </figure>
   );
@@ -76,11 +120,11 @@ export function HeroVisual() {
 
 const moduleVisuals: Record<string, () => ReactNode> = {
   "risk-merkezi": () => <><RiskScoreCard /><ActionListCard /></>,
-  personel: () => <ActionListCard />,
+  personel: () => <PersonnelListCard />,
   izin: () => <LeaveCalendarCard />,
-  puantaj: () => <LeaveCalendarCard />,
+  puantaj: () => <TimesheetGridCard />,
   bordro: () => <PayrollSummaryCard />,
-  "ise-alim": () => <ActionListCard />,
+  "ise-alim": () => <RecruitmentBoardCard />,
 };
 
 export function ModuleVisual({ id }: { id: string }) {
