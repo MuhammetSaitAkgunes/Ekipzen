@@ -48,7 +48,7 @@
 .ez-journey__card { margin: 0; display: grid; gap: 1.25rem; padding: 1.5rem; border-radius: var(--r-xl); border: 1px solid var(--ez-border); background: var(--ez-surface); box-shadow: var(--ez-shadow-lg); }
 .ez-journey__person { display: flex; gap: 0.75rem; align-items: center; }
 .ez-journey__person strong { display: block; color: var(--ez-text); }
-.ez-journey__person span:not(.ez-mock__avatar) { font-size: var(--fs-12); color: var(--ez-text-3); }
+.ez-journey__person span:not(.ez-app__avatar) { font-size: var(--fs-12); color: var(--ez-text-3); }
 .ez-journey__fields { display: grid; gap: 0.5rem; }
 .ez-journey__fields > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.625rem 0.75rem; border-radius: var(--r-md); background: var(--ez-surface-2); font-size: var(--fs-14); transition: background-color var(--dur-base) var(--ease-out); }
 .ez-journey__fields dt { color: var(--ez-text-2); }

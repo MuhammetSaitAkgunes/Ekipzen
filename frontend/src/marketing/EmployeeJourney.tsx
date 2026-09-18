@@ -26,7 +26,7 @@ export function EmployeeJourney() {
       <div className="ez-journey__sticky">
         <figure className="ez-journey__card" aria-label="Örnek personel kaydı">
           <div className="ez-journey__person">
-            <span className="ez-mock__avatar" aria-hidden="true">AY</span>
+            <span className="ez-app__avatar ez-app__avatar--0" aria-hidden="true">AY</span>
             <div><strong>Ahmet Yılmaz</strong><span>Yazılım · örnek kayıt</span></div>
           </div>
           <dl className="ez-journey__fields">

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "../ui";
-import { PayrollSummaryCard, RiskScoreCard } from "../marketing/visuals";
+import { AuthScreen } from "../marketing/visuals";
 
 export function AuthLayout({ title, subtitle, badge, children }: {
   title: string;
@@ -34,10 +34,7 @@ export function AuthLayout({ title, subtitle, badge, children }: {
             <li><i aria-hidden="true" className="fa-solid fa-user-lock" /> Rol bazlı yetkilendirme</li>
             <li><i aria-hidden="true" className="fa-solid fa-scale-balanced" /> KVKK gereklilikleri gözetilerek tasarlandı</li>
           </ul>
-          <div className="ez-auth__visual" aria-hidden="true">
-            <RiskScoreCard />
-            <PayrollSummaryCard />
-          </div>
+          <div className="ez-auth__visual"><AuthScreen /></div>
         </div>
       </aside>
     </div>

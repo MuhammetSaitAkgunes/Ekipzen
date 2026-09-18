@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ButtonLink, usePageMeta } from "../../ui";
 import { ROADMAP_STAGES, SHOWCASE_ORDER, faqs, modules, roadmap, securityPillars, trustPoints } from "../content";
 import { CtaBand, FaqList, ModuleIcon } from "../sections";
-import { HeroVisual } from "../visuals";
+import { HeroScreen } from "../visuals";
 import { ProductShowcase } from "../ProductShowcase";
 import { EmployeeJourney } from "../EmployeeJourney";
 import { StatusBadge } from "../StatusBadge";
@@ -33,7 +33,7 @@ export function HomePage() {
               ))}
             </ul>
           </div>
-          <div className="ez-hero-enter ez-hero-enter--late"><HeroVisual /></div>
+          <div className="ez-hero-enter ez-hero-enter--late"><HeroScreen /></div>
         </div>
       </section>
 
