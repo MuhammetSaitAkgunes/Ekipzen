@@ -15,11 +15,13 @@ class TestIntersectionObserver {
   unobserve(element: Element) { this.elements.delete(element); }
   disconnect() { this.elements.clear(); TestIntersectionObserver.instances.delete(this); }
   takeRecords(): IntersectionObserverEntry[] { return []; }
-  trigger(isIntersecting: boolean, predicate: (el: Element) => boolean) {
+  trigger(isIntersecting: boolean, predicate: (el: Element) => boolean, passed = false) {
     const entries = [...this.elements].filter(predicate).map((target) => ({
       isIntersecting, target, intersectionRatio: isIntersecting ? 1 : 0,
-      time: 0, boundingClientRect: target.getBoundingClientRect(),
-      intersectionRect: target.getBoundingClientRect(), rootBounds: null,
+      time: 0,
+      boundingClientRect: passed ? new DOMRect(0, -200, 100, 100) : target.getBoundingClientRect(),
+      intersectionRect: target.getBoundingClientRect(),
+      rootBounds: passed ? new DOMRect(0, 0, 1280, 800) : null,
     }) as IntersectionObserverEntry);
     if (entries.length) this.callback(entries, this as unknown as IntersectionObserver);
   }
@@ -32,6 +34,11 @@ export function installIntersectionObserver() {
 /** Gözlenen öğeleri görünür/görünmez yapar (sırayla, belge sırasına göre). */
 export function triggerIntersections(isIntersecting: boolean, predicate: (el: Element) => boolean = () => true) {
   for (const observer of [...TestIntersectionObserver.instances]) observer.trigger(isIntersecting, predicate);
+}
+
+/** Gözlenen öğeleri kesişmeden görünür alanın üstüne geçmiş gibi bildirir (hızlı kaydırma). */
+export function triggerScrolledPast(predicate: (el: Element) => boolean = () => true) {
+  for (const observer of [...TestIntersectionObserver.instances]) observer.trigger(false, predicate, true);
 }
 
 export function resetIntersectionObservers() {

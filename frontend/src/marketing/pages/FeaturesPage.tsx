@@ -9,7 +9,7 @@ import { DataFlowDiagram } from "../DataFlowDiagram";
 import { Reveal, onSpotlightMove, useInView, useScrollToHash } from "../motion";
 
 function ModuleBlock({ m, onActive }: { m: MarketingModule; onActive: (id: string) => void }) {
-  const { ref, inView } = useInView<HTMLElement>({ threshold: 0.3, rootMargin: "-30% 0px -50% 0px" });
+  const { ref, inView } = useInView<HTMLElement>({ threshold: 0, rootMargin: "-30% 0px -50% 0px" });
   useEffect(() => { if (inView) onActive(m.id); }, [inView, m.id, onActive]);
   return (
     <section ref={ref} id={m.id} className="ez-feature-block ez-anchor" aria-labelledby={`${m.id}-baslik`}>

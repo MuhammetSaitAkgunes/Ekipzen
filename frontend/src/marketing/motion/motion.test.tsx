@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
-import { setReducedMotion, triggerIntersections } from "../../test/intersectionObserver";
+import { setReducedMotion, triggerIntersections, triggerScrolledPast } from "../../test/intersectionObserver";
 import { Reveal, onSpotlightMove, useInView, usePrefersReducedMotion } from ".";
 
 test("Reveal görünür olana kadar is-visible taşımaz, görünür olunca taşır", () => {
@@ -55,6 +55,14 @@ test("useInView ve Reveal StrictMode altında da gözlemeye devam eder", () => {
   );
   act(() => triggerIntersections(true));
   expect(screen.getByTestId("p")).toHaveTextContent("evet");
+  expect(screen.getByTestId("r")).toHaveClass("is-visible");
+});
+
+test("Reveal hızlı kaydırmayla kesişmeden geçilse de görünür olur", () => {
+  render(<Reveal data-testid="r">içerik</Reveal>);
+  act(() => triggerIntersections(false));
+  expect(screen.getByTestId("r")).not.toHaveClass("is-visible");
+  act(() => triggerScrolledPast());
   expect(screen.getByTestId("r")).toHaveClass("is-visible");
 });
 

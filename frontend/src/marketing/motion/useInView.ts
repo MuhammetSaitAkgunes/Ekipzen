@@ -20,7 +20,10 @@ export function useInView<T extends Element>({ once = false, threshold = 0.15, r
     if (!node || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (entry.isIntersecting) {
+        // Hızlı kaydırma ya da çapa atlamasında öğe hiç kesişmeden görünür alanın
+        // üstünde kalabilir; "once" modunda bu da görülmüş sayılır, içerik gizli kalmaz.
+        const passed = once && entry.rootBounds !== null && entry.boundingClientRect.bottom <= entry.rootBounds.top;
+        if (entry.isIntersecting || passed) {
           setInView(true);
           if (once) observer.disconnect();
         } else if (!once) {
