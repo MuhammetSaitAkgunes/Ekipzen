@@ -270,8 +270,8 @@
 .ez-feature-block__copy { display: grid; gap: 0.875rem; justify-items: start; }
 .ez-feature-block__head { display: flex; align-items: center; gap: 0.75rem; }
 .ez-feature-block__visual { border-radius: var(--r-xl); padding: 1.25rem; background: linear-gradient(160deg, var(--ez-primary-soft), var(--ez-surface-2)); }
-.ez-roles { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
-.ez-roles__item--wide { grid-column: span 2; background: linear-gradient(160deg, var(--ez-primary-soft), var(--ez-surface)); }
+.ez-roles { list-style: none; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.25rem; }
+.ez-roles__item--wide { background: linear-gradient(160deg, var(--ez-primary-soft), var(--ez-surface)); }
 @media (max-width: 960px) {
   .ez-features-layout { grid-template-columns: 1fr; padding-top: 0; }
   .ez-module-nav { position: sticky; top: 72px; z-index: 5; display: block; margin-inline: calc(-1 * clamp(1rem, 4vw, 2rem)); padding: 0.5rem clamp(1rem, 4vw, 2rem); background: color-mix(in srgb, var(--ez-surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--ez-border); }
