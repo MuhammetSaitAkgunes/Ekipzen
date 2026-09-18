@@ -80,4 +80,6 @@
   .ez-journey__step { opacity: 1; transition: none; }
   .ez-journey__fields .is-filled dd { animation: none; }
   .ez-hero-enter { animation: none; }
+  .ez-flow__line { transition: none; stroke-dashoffset: 0; }
+  .ez-flow__core-ring { animation: none; }
 }

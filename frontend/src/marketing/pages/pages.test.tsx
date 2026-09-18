@@ -1,6 +1,7 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { renderPage } from "../../test/renderPage";
+import { triggerIntersections } from "../../test/intersectionObserver";
 import { modules, plans } from "../content";
 import { AboutPage } from "./AboutPage";
 import { FeaturesPage } from "./FeaturesPage";
@@ -8,15 +9,20 @@ import { KvkkPage } from "./KvkkPage";
 import { PricingPage } from "./PricingPage";
 import { SecurityPage } from "./SecurityPage";
 
-test("Özellikler: her modül anchor id'li bir bölümdür", () => {
+test("Özellikler: her modül anchor id'li bir bölümdür; yapışkan menü görünen modülü izler", () => {
   renderPage(<FeaturesPage />);
   expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   for (const m of modules) {
     const section = document.getElementById(m.id);
     expect(section, m.id).not.toBeNull();
     expect(within(section!).getByRole("heading", { level: 2, name: m.title })).toBeInTheDocument();
+    expect(section!.querySelector(".ez-status")).toHaveAttribute("data-status", m.status);
   }
+  const nav = screen.getByRole("navigation", { name: "Modül menüsü" });
+  act(() => triggerIntersections(true, (el) => el.id === "bordro"));
+  expect(within(nav).getByRole("link", { name: /Bordro/ })).toHaveAttribute("aria-current", "true");
   expect(screen.getByRole("heading", { name: "İK yöneticisi, yönetici ve çalışan için ayrı çalışma alanları" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Tüm modüller aynı personel kaydına bağlıdır" })).toBeInTheDocument();
   expect(document.title).toBe("Özellikler · Ekipzen");
 });
 

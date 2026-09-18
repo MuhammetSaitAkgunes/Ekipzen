@@ -248,3 +248,47 @@
 .ez-roadmap-strip__col li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 6px; height: 6px; border-radius: 50%; background: var(--ez-primary); }
 .ez-roadmap-strip__more { display: inline-flex; min-height: 44px; align-items: center; margin-top: 1rem; }
 @media (max-width: 860px) { .ez-roadmap-strip { grid-template-columns: 1fr; } }
+
+.ez-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ez-dot--active { background: var(--ez-success); }
+.ez-dot--pilot { background: var(--ez-warning); }
+.ez-dot--building { background: var(--ez-primary); }
+.ez-chip { gap: 0.5rem; }
+
+.ez-features-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: clamp(2rem, 4vw, 3.5rem); padding-block: 2rem 1rem; }
+.ez-features-layout__nav { position: relative; }
+.ez-module-nav { position: sticky; top: 104px; display: grid; grid-template-columns: 3px 1fr; gap: 1rem; }
+.ez-module-nav__track { position: relative; border-radius: 3px; background: var(--ez-border); }
+.ez-module-nav__fill { position: absolute; inset: 0 0 auto 0; height: calc(var(--progress, 0) * 100%); border-radius: 3px; background: var(--ez-primary); transition: height var(--dur-base) var(--ease-out); }
+.ez-module-nav ol { list-style: none; display: grid; gap: 0.25rem; }
+.ez-module-nav__link { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; padding: 0 0.75rem; border-radius: var(--r-md); color: var(--ez-text-3); font-weight: 600; font-size: var(--fs-14); text-decoration: none; }
+.ez-module-nav__link:hover { color: var(--ez-text); background: var(--ez-surface-2); }
+.ez-module-nav__link[aria-current="true"] { color: var(--ez-primary); background: var(--ez-primary-soft); }
+.ez-module-nav__link:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); }
+.ez-feature-block { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3rem); align-items: center; padding-block: clamp(2.5rem, 6vw, 4.5rem); border-bottom: 1px solid var(--ez-border-soft); }
+.ez-feature-block:last-child { border-bottom: 0; }
+.ez-feature-block__copy { display: grid; gap: 0.875rem; justify-items: start; }
+.ez-feature-block__head { display: flex; align-items: center; gap: 0.75rem; }
+.ez-feature-block__visual { border-radius: var(--r-xl); padding: 1.25rem; background: linear-gradient(160deg, var(--ez-primary-soft), var(--ez-surface-2)); }
+.ez-roles { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.ez-roles__item--wide { grid-column: span 2; background: linear-gradient(160deg, var(--ez-primary-soft), var(--ez-surface)); }
+@media (max-width: 960px) {
+  .ez-features-layout { grid-template-columns: 1fr; padding-top: 0; }
+  .ez-module-nav { position: sticky; top: 72px; z-index: 5; display: block; margin-inline: calc(-1 * clamp(1rem, 4vw, 2rem)); padding: 0.5rem clamp(1rem, 4vw, 2rem); background: color-mix(in srgb, var(--ez-surface) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--ez-border); }
+  .ez-module-nav__track { display: none; }
+  .ez-module-nav ol { display: flex; overflow-x: auto; gap: 0.25rem; }
+  .ez-module-nav__link { white-space: nowrap; }
+  .ez-feature-block { grid-template-columns: 1fr; }
+  .ez-roles { grid-template-columns: 1fr; }
+  .ez-roles__item--wide { grid-column: auto; }
+}
+
+.ez-flow svg { width: 100%; height: auto; }
+.ez-flow__line { fill: none; stroke: var(--indigo-300); stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 900ms var(--ease-out); }
+.ez-flow.is-drawn .ez-flow__line { stroke-dashoffset: 0; }
+.ez-flow__core { fill: var(--ez-primary); }
+.ez-flow__core-ring { fill: none; stroke: var(--indigo-200); stroke-width: 10; transform-origin: 300px 190px; animation: ez-pulse 3.2s ease-in-out infinite; }
+.ez-flow__core-text { fill: var(--ez-on-primary); font: 700 15px var(--ez-font-sans); }
+.ez-flow__node rect { fill: var(--ez-surface); stroke: var(--ez-border-strong); }
+.ez-flow__node text { fill: var(--ez-text); font: 600 13px var(--ez-font-sans); }
+@keyframes ez-pulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 0.4; } }

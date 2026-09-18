@@ -1,8 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../auth/AuthContext";
 import { SESSION_KEY } from "../api/session";
 import { MarketingLayout } from "./MarketingLayout";
@@ -58,4 +58,19 @@ test("footer yasal ve iletişim bağlantılarını içerir", () => {
   const footer = screen.getByRole("contentinfo");
   expect(within(footer).getByRole("link", { name: "KVKK aydınlatma metni" })).toHaveAttribute("href", "/kvkk-aydinlatma");
   expect(within(footer).getByRole("link", { name: "İletişim" })).toHaveAttribute("href", "/iletisim");
+});
+
+test("adreste hash varsa ilgili bölüme kaydırır", async () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  const router = createMemoryRouter(
+    [{ element: <MarketingLayout />, children: [{ path: "/ozellikler", element: <section id="bordro">bordro</section> }] }],
+    { initialEntries: ["/ozellikler#bordro"] },
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AuthProvider><RouterProvider router={router} /></AuthProvider>
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
 });
