@@ -229,11 +229,11 @@
 @media (max-width: 960px) {
   .ez-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ez-bento__item, .ez-bento__item--personel, .ez-bento__item--izin { grid-column: span 1; }
-  .ez-bento__item--risk-merkezi { grid-column: 1 / -1; }
+  .ez-bento__item--risk-merkezi, .ez-bento__item--ise-alim { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
   .ez-bento { grid-template-columns: 1fr; }
-  .ez-bento__item--risk-merkezi { grid-column: auto; }
+  .ez-bento__item--risk-merkezi, .ez-bento__item--ise-alim { grid-column: auto; }
 }
 
 .ez-roadmap-strip { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
