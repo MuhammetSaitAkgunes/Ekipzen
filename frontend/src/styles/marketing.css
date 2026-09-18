@@ -181,6 +181,7 @@
 .ez-chip:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); }
 
 .ez-plans { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; align-items: stretch; }
+.ez-plans__item { display: grid; }
 .ez-plan { display: grid; align-content: start; gap: 1rem; padding: 2rem; border-radius: var(--r-xl); border: 1px solid var(--ez-border); background: var(--ez-surface); box-shadow: var(--ez-shadow-xs); }
 .ez-plan { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
 .ez-plan:hover { transform: translateY(-4px); box-shadow: var(--ez-shadow-lg); }

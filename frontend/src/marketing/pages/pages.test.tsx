@@ -40,6 +40,23 @@ test("Fiyatlandırma: üç paket, rakam yok, teklif CTA'sı ve karşılaştırma
   expect(screen.getByRole("link", { name: "Ürün nasıl gelişiyor?" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
 });
 
+// I1: hover/lift efekti .ez-reveal.is-visible { transform: none } tarafından eziliyordu çünkü
+// aynı eleman hem .ez-reveal hem .ez-plan taşıyordu. Kart artık .ez-plans__item (reveal wrapper)
+// içinde ayrı bir .ez-plan div'i olarak render edilir.
+test("Fiyatlandırma: paket kartının hover efekti reveal wrapper'dan ayrı bir elemanda çalışır", () => {
+  renderPage(<PricingPage />);
+  const items = document.querySelectorAll(".ez-plans__item");
+  expect(items).toHaveLength(plans.length);
+  for (const item of Array.from(items)) {
+    expect(item).toHaveClass("ez-reveal");
+    expect(item).not.toHaveClass("ez-plan");
+    expect(item.querySelector(":scope > .ez-plan")).not.toBeNull();
+  }
+  const featured = document.querySelector(".ez-plan--featured")!;
+  expect(featured).toHaveClass("ez-plan");
+  expect(featured).not.toHaveClass("ez-reveal");
+});
+
 test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {
   renderPage(<SecurityPage />);
   expect(screen.getByRole("region", { name: "Katman katman güvenlik" })).toBeInTheDocument();

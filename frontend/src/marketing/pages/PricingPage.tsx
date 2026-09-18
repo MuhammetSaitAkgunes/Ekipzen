@@ -22,15 +22,17 @@ export function PricingPage() {
         <div className="ez-container">
           <ul className="ez-plans">
             {plans.map((p, i) => (
-              <Reveal as="li" key={p.id} delay={i * 100} className={`ez-plan ez-spotlight${p.highlighted ? " ez-plan--featured" : ""}`} onPointerMove={onSpotlightMove}>
-                {p.highlighted && <Badge tone="primary">Önerilen</Badge>}
-                <h2>{p.name}</h2>
-                <p className="ez-plan__audience">{p.audience}</p>
-                <p className="ez-plan__price">Size özel fiyat</p>
-                <ButtonLink to={`/iletisim?paket=${p.id}`} variant={p.highlighted ? "primary" : "secondary"} block aria-label={`${p.name} paketi için teklif alın`}>
-                  Teklif alın
-                </ButtonLink>
-                <ul className="ez-check-list">{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
+              <Reveal as="li" key={p.id} delay={i * 100} className="ez-plans__item">
+                <div className={`ez-plan ez-spotlight${p.highlighted ? " ez-plan--featured" : ""}`} onPointerMove={onSpotlightMove}>
+                  {p.highlighted && <Badge tone="primary">Önerilen</Badge>}
+                  <h2>{p.name}</h2>
+                  <p className="ez-plan__audience">{p.audience}</p>
+                  <p className="ez-plan__price">Size özel fiyat</p>
+                  <ButtonLink to={`/iletisim?paket=${p.id}`} variant={p.highlighted ? "primary" : "secondary"} block aria-label={`${p.name} paketi için teklif alın`}>
+                    Teklif alın
+                  </ButtonLink>
+                  <ul className="ez-check-list">{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
+                </div>
               </Reveal>
             ))}
           </ul>
