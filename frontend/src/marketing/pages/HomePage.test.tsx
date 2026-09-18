@@ -12,6 +12,22 @@ test("hero vaadi, iki CTA ve sayfa başlığı", () => {
   expect(screen.getByRole("link", { name: "Modülleri inceleyin" })).toHaveAttribute("href", "/ozellikler");
   expect(document.title).toBe("Ekipzen");
   expect(h1.closest(".ez-hero__copy")).not.toHaveClass("ez-reveal");
+  expect(h1.querySelector(".ez-gradient-text")).toHaveTextContent("tek bir kayıt düzeninde");
+});
+
+test("giriş bölümü büyük ürün ekranını gösterir ve gözlemciye bağlı değildir", () => {
+  renderPage(<HomePage />);
+  const hero = document.querySelector(".ez-hero")!;
+  expect(hero.querySelector(".ez-hero-screen .ez-app")).not.toBeNull();
+  expect(hero.querySelector(".ez-reveal")).toBeNull();
+});
+
+test("güvenlik bölümü dört katmanlı yığını gösterir", () => {
+  renderPage(<HomePage />);
+  const section = screen.getByRole("region", { name: "Her şirketin verisi kendi veritabanında tutulur" });
+  const layers = section.querySelectorAll(".ez-sec-layers__layer");
+  expect([...layers].map((l) => l.textContent)).toEqual(["Uygulama", "Oturum", "Yetki", "Veritabanı"]);
+  expect(section.querySelector(".ez-sec-layers")).toHaveAttribute("aria-hidden", "true");
 });
 
 test("canlı vitrin ve çalışan yolculuğu bölümleri vardır", () => {
@@ -44,7 +60,6 @@ test("güvenlik ve SSS bölümleri görünür; eski bölümler kaldırılmışt�
   expect(screen.getByRole("region", { name: "Her şirketin verisi kendi veritabanında tutulur" })).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Sık sorulan sorular" })).toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "Kullanıma geçiş üç adımda tamamlanır" })).toBeNull();
-  expect(document.querySelector(".ez-hero-visual__stack")).toBeNull();
 });
 
 test("sahte müşteri yorumu ya da logo şeridi yoktur", () => {

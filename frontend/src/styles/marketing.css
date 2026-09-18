@@ -50,12 +50,10 @@
 }
 
 .ez-hero { position: relative; overflow: hidden; padding-block: clamp(3rem, 7vw, 6rem); }
-.ez-hero__grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: center; }
 .ez-hero__copy { display: grid; gap: 1.25rem; }
 .ez-hero__copy .ez-actions { margin-top: 0.5rem; }
 .ez-trust { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1rem; font-size: var(--fs-14); color: var(--ez-text-3); font-weight: 500; }
 .ez-trust i { color: var(--ez-accent-cyan); margin-right: 0.375rem; }
-@media (max-width: 960px) { .ez-hero__grid { grid-template-columns: 1fr; } }
 
 .ez-grid-2, .ez-grid-3 { list-style: none; display: grid; gap: 1.25rem; }
 .ez-grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
@@ -190,13 +188,26 @@
 .ez-form-success { display: grid; gap: 1rem; justify-items: start; padding-block: 2rem; }
 .ez-form-success .ez-icon { background: var(--ez-success-soft); color: var(--ez-success); }
 
-.ez-hero.ez-aurora { background: var(--ez-surface); }
+/* ---------- Ana sayfa: giriş ---------- */
+.ez-hero { text-align: center; padding-block: clamp(3rem, 7vw, 5.5rem) 0; --glow-a: rgb(99 102 241 / 0.55); --glow-b: rgb(56 189 248 / 0.32); }
+.ez-hero::after { content: ""; position: absolute; z-index: -1; left: 50%; bottom: -8rem; width: 60rem; height: 24rem; margin-left: -30rem; pointer-events: none; background: radial-gradient(closest-side, rgb(147 51 234 / 0.35), transparent); }
+.ez-hero .ez-hero__copy { max-width: 780px; margin-inline: auto; justify-items: center; }
+.ez-hero .ez-actions, .ez-hero .ez-trust { justify-content: center; }
+.ez-hero__pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.875rem; border-radius: var(--r-full); font-size: var(--fs-12); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e0f2fe; }
+.ez-hero__pulse { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 0 rgb(52 211 153 / 0.6); animation: ez-pulse 2.4s ease-out infinite; }
+@keyframes ez-pulse { 70% { box-shadow: 0 0 0 10px rgb(52 211 153 / 0); } 100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0); } }
+.ez-hero__screen { position: relative; width: min(1080px, 100%); margin: clamp(2.5rem, 6vw, 4rem) auto 0; }
 .ez-feature-card__top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
 
+/* ---------- Modül bentosu: köşe ışıklı cam kartlar ---------- */
 .ez-bento { list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem; }
 .ez-bento__item { grid-column: span 2; }
 .ez-bento__item--personel, .ez-bento__item--izin { grid-column: span 3; }
 .ez-bento__item--risk-merkezi { grid-column: span 6; }
+.ez-bento .ez-feature-card { min-height: 220px; padding: 1.75rem; }
+.ez-bento .ez-feature-card::after { content: ""; position: absolute; right: -6rem; bottom: -7rem; z-index: -1; width: 18rem; height: 18rem; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, var(--card-glow, #6366f1), transparent); opacity: 0.35; transition: opacity var(--dur-base) var(--ease-out); }
+.ez-bento .ez-feature-card:hover::after { opacity: 0.6; }
+.ez-bento .ez-feature-card h3 { font-size: var(--fs-20); }
 @media (max-width: 960px) {
   .ez-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ez-bento__item, .ez-bento__item--personel, .ez-bento__item--izin { grid-column: span 1; }
@@ -207,18 +218,46 @@
   .ez-bento__item--risk-merkezi, .ez-bento__item--ise-alim { grid-column: auto; }
 }
 
+/* ---------- Yol haritası şeridi ---------- */
 .ez-roadmap-strip { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
-.ez-roadmap-strip__col { position: relative; display: grid; align-content: start; gap: 0.5rem; padding: 1.5rem; border-radius: var(--r-lg); background: var(--ez-surface); border: 1px solid var(--ez-border); }
-.ez-roadmap-strip__col::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--ez-border-strong); }
-.ez-roadmap-strip__col--now::before { background: var(--ez-warning); }
-.ez-roadmap-strip__col--next::before { background: var(--ez-primary); }
-.ez-roadmap-strip__stage { font-weight: 700; color: var(--ez-text); }
-.ez-roadmap-strip__sub { font-size: var(--fs-14); color: var(--ez-text-3); }
-.ez-roadmap-strip__col ul { list-style: none; display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+.ez-roadmap-strip__col { position: relative; overflow: hidden; display: grid; align-content: start; gap: 0.5rem; padding: 1.75rem 1.5rem 1.5rem; --stage: #94a3b8; }
+.ez-roadmap-strip__col::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, transparent, var(--stage), transparent); box-shadow: 0 0 18px var(--stage); }
+.ez-roadmap-strip__col::after { content: ""; position: absolute; inset: 0 0 auto; height: 6rem; z-index: -1; background: radial-gradient(60% 100% at 50% 0%, color-mix(in srgb, var(--stage) 22%, transparent), transparent); }
+.ez-roadmap-strip__col--now { --stage: #fbbf24; }
+.ez-roadmap-strip__col--next { --stage: #7dd3fc; }
+.ez-roadmap-strip__col--planned { --stage: #c084fc; }
+.ez-roadmap-strip__stage { font-weight: 800; font-size: var(--fs-18); color: var(--ez-text); }
+.ez-roadmap-strip__sub { font-size: var(--fs-14); color: var(--stage); font-weight: 600; }
+.ez-roadmap-strip__col ul { list-style: none; display: grid; gap: 0.5rem; margin-top: 0.75rem; }
 .ez-roadmap-strip__col li { font-size: var(--fs-14); color: var(--ez-text-2); padding-left: 1rem; position: relative; }
-.ez-roadmap-strip__col li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 6px; height: 6px; border-radius: 50%; background: var(--ez-primary); }
+.ez-roadmap-strip__col li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 6px; height: 6px; border-radius: 50%; background: var(--stage); box-shadow: 0 0 8px var(--stage); }
 .ez-roadmap-strip__more { display: inline-flex; min-height: 44px; align-items: center; margin-top: 1rem; }
 @media (max-width: 860px) { .ez-roadmap-strip { grid-template-columns: 1fr; } }
+
+/* ---------- Güvenlik bandı + 3B katman yığını ---------- */
+.ez-security-band { --glow-a: rgb(99 102 241 / 0.4); --glow-a-x: 75%; --glow-a-y: 55%; --glow-b: rgb(56 189 248 / 0.3); --glow-b-x: 90%; --glow-b-y: 40%; overflow: hidden; }
+.ez-security-band__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.ez-security-band__list { list-style: none; display: grid; gap: 0.75rem; margin-bottom: 1.75rem; }
+.ez-security-band__item { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; border-radius: var(--r-lg); }
+.ez-security-band__item h3 { font-size: var(--fs-16); }
+.ez-security-band__item p { font-size: var(--fs-14); color: var(--ez-text-3); margin-top: 0.25rem; }
+.ez-sec-layers { position: relative; height: 360px; perspective: 1000px; }
+.ez-sec-layers__layer {
+  position: absolute; left: 50%; width: 300px; height: 140px; margin-left: -150px; border-radius: 22px;
+  display: grid; place-items: center; color: #fff; font-weight: 800; letter-spacing: 0.02em;
+  border: 1px solid rgb(255 255 255 / 0.35); box-shadow: 0 30px 60px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.3);
+  transform: rotateX(58deg) rotateZ(-38deg); animation: ez-layer-float 8s ease-in-out infinite;
+}
+.ez-sec-layers__layer--1 { top: 10px; background: linear-gradient(135deg, rgb(236 72 153 / 0.55), rgb(147 51 234 / 0.35)); }
+.ez-sec-layers__layer--2 { top: 75px; background: linear-gradient(135deg, rgb(129 140 248 / 0.6), rgb(79 70 229 / 0.35)); animation-delay: -2s; }
+.ez-sec-layers__layer--3 { top: 140px; background: linear-gradient(135deg, rgb(56 189 248 / 0.55), rgb(37 99 235 / 0.35)); animation-delay: -4s; }
+.ez-sec-layers__layer--4 { top: 205px; background: linear-gradient(135deg, rgb(20 184 166 / 0.55), rgb(14 116 144 / 0.35)); animation-delay: -6s; }
+@keyframes ez-layer-float { 50% { transform: rotateX(58deg) rotateZ(-38deg) translateZ(10px); } }
+@media (max-width: 900px) {
+  .ez-security-band__grid { grid-template-columns: 1fr; }
+  .ez-sec-layers { height: 300px; transform: scale(0.85); }
+}
+@media (max-width: 420px) { .ez-sec-layers { height: 260px; transform: scale(0.72); } }
 
 .ez-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ez-dot--active { background: var(--ez-success); }

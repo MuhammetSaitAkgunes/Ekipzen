@@ -267,3 +267,24 @@ export function AuthScreen() {
     </figure>
   );
 }
+
+/** Modül kartlarında kullanılan küçük, dekoratif ürün parçası. */
+export function ModuleGlimpse({ id }: { id: string }) {
+  let body: ReactNode = null;
+  if (id === "personel") {
+    body = <div className="ez-glimpse__avatars">{["AY", "EA", "SK", "MD", "BT"].map((a, i) => <span key={a} className={`ez-app__avatar ez-app__avatar--${i}`}>{a}</span>)}<b>+137</b></div>;
+  } else if (id === "izin") {
+    const busy = new Set([2, 3, 8, 9, 10, 15]);
+    body = <div className="ez-glimpse__cal">{Array.from({ length: 21 }, (_, i) => <span key={i} className={busy.has(i) ? "is-busy" : i === 12 ? "is-today" : undefined} />)}</div>;
+  } else if (id === "puantaj") {
+    body = <div className="ez-glimpse__bars ez-glimpse__bars--amber">{[8, 8, 9.5, 8, 7].map((h, i) => <span key={i} style={{ height: `${h * 10}%` }} />)}</div>;
+  } else if (id === "bordro") {
+    body = <dl className="ez-glimpse__rows"><div><dt>Brüt</dt><dd>₺ 1.284.500</dd></div><div><dt>Net</dt><dd>₺ 912.300</dd></div></dl>;
+  } else if (id === "ise-alim") {
+    body = <div className="ez-glimpse__pipe">{[["Başvuru", 12], ["Mülakat", 5], ["Teklif", 2]].map(([n, c]) => <span key={n}><b>{c}</b>{n}</span>)}</div>;
+  } else if (id === "risk-merkezi") {
+    body = <div className="ez-glimpse__bars ez-glimpse__bars--rose">{[42, 55, 48, 62, 58, 71, 64, 52, 47, 44, 40, 38].map((h, i) => <span key={i} style={{ height: `${h}%` }} />)}</div>;
+  }
+  if (!body) return null;
+  return <div aria-hidden="true" className="ez-glimpse">{body}</div>;
+}

@@ -124,3 +124,24 @@
   .ez-notice--br, .ez-hero-screen .ez-notice--br { right: 8px; left: auto; top: auto; bottom: -16px; max-width: calc(100% - 16px); }
 }
 @media (prefers-reduced-motion: reduce) { .ez-notice { animation: none; } }
+
+/* Modül kartlarındaki küçük ürün parçaları */
+.ez-glimpse { margin-top: auto; padding-top: 0.75rem; }
+.ez-glimpse__avatars { display: flex; align-items: center; }
+.ez-glimpse__avatars .ez-app__avatar { width: 32px; height: 32px; margin-right: -8px; border: 2px solid var(--ez-night-2); font-size: 10px; }
+.ez-glimpse__avatars b { margin-left: 16px; color: var(--ez-text-3); font-size: var(--fs-12); }
+.ez-glimpse__cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 240px; }
+.ez-glimpse__cal span { height: 16px; border-radius: 4px; background: rgb(255 255 255 / 0.06); }
+.ez-glimpse__cal .is-busy { background: rgb(56 189 248 / 0.55); }
+.ez-glimpse__cal .is-today { box-shadow: inset 0 0 0 1.5px #7dd3fc; }
+.ez-glimpse__bars { display: flex; align-items: flex-end; gap: 5px; height: 52px; }
+.ez-glimpse__bars span { flex: 1; max-width: 26px; border-radius: 4px 4px 0 0; }
+.ez-glimpse__bars--amber span { background: linear-gradient(#fcd34d, #f59e0b); }
+.ez-glimpse__bars--rose span { background: linear-gradient(#fda4af, #e11d48); opacity: 0.85; }
+.ez-glimpse__rows { display: grid; gap: 6px; }
+.ez-glimpse__rows div { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 8px; background: rgb(255 255 255 / 0.05); font-size: var(--fs-12); }
+.ez-glimpse__rows dt { color: var(--ez-text-3); }
+.ez-glimpse__rows dd { font-family: var(--ez-font-mono); color: #fff; }
+.ez-glimpse__pipe { display: flex; gap: 6px; }
+.ez-glimpse__pipe span { flex: 1; display: grid; gap: 2px; padding: 6px 8px; border-radius: 8px; background: rgb(192 38 211 / 0.14); border: 1px solid rgb(192 38 211 / 0.25); color: var(--ez-text-3); font-size: 11px; }
+.ez-glimpse__pipe b { color: #fff; font-size: var(--fs-16); }
