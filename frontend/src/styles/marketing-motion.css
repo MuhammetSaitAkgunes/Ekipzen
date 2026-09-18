@@ -52,7 +52,7 @@
 .ez-journey__fields { display: grid; gap: 0.5rem; }
 .ez-journey__fields > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.625rem 0.75rem; border-radius: var(--r-md); background: var(--ez-surface-2); font-size: var(--fs-14); transition: background-color var(--dur-base) var(--ease-out); }
 .ez-journey__fields dt { color: var(--ez-text-2); }
-.ez-journey__fields dd { font-weight: 600; color: var(--ez-text-3); }
+.ez-journey__fields dd { font-weight: 600; color: var(--ez-text-2); }
 .ez-journey__fields .is-filled { background: var(--ez-primary-soft); }
 .ez-journey__fields .is-filled dd { color: var(--ez-primary); animation: ez-panel-in 360ms var(--ease-out); }
 .ez-journey__steps { list-style: none; display: grid; gap: clamp(2.5rem, 12vh, 7rem); padding-block: 2rem 30vh; }
@@ -86,7 +86,7 @@
   .ez-core::before, .ez-core::after, .ez-layers__panel { animation: none; }
   .ez-manifesto__lines path { animation: none; stroke-dashoffset: 0; }
   .ez-process::after { transition: none; transform: none; }
-  .ez-process__step { opacity: 1; transition: none; }
+  .ez-process__step { transform: none; transition: none; }
   .ez-plan--featured { animation: none; }
   .ez-plan:hover { transform: none; }
 }

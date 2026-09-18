@@ -367,8 +367,8 @@
 .ez-process::before { content: ""; position: absolute; top: calc(1.5rem + 21px); left: 22px; right: calc((100% - 5rem) / 6 - 22px); height: 2px; background: var(--ez-border); }
 .ez-process::after { content: ""; position: absolute; top: calc(1.5rem + 21px); left: 22px; right: calc((100% - 5rem) / 6 - 22px); height: 2px; background: var(--ez-primary); transform: scaleX(0); transform-origin: left; transition: transform 1.4s var(--ease-out); }
 .ez-process.is-active::after { transform: scaleX(1); }
-.ez-process__step { position: relative; display: grid; align-content: start; gap: 0.5rem; opacity: 0.75; transition: opacity 500ms var(--ease-out); }
-.ez-process.is-active .ez-process__step { opacity: 1; }
+.ez-process__step { position: relative; display: grid; align-content: start; gap: 0.5rem; transform: translateY(8px); transition: transform 500ms var(--ease-out); }
+.ez-process.is-active .ez-process__step { transform: none; }
 .ez-process__step h3 { font-size: var(--fs-16) !important; }
 .ez-process__step p { font-size: var(--fs-14); color: var(--ez-text-3); }
 .ez-process__marker { position: relative; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ez-primary); background: var(--ez-surface); color: var(--ez-primary); font-weight: 700; }

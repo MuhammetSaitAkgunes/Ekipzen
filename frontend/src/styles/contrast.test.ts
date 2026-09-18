@@ -106,12 +106,12 @@ test(".ez-journey__step pasif/etkin durumları opacity yerine yeterli kontrastl�
   expect(activePRule).toContain("var(--ez-text-2)");
 });
 
-test(".ez-process__step pasif opaklığı AA okunabilirliği için yeterince yüksek (>=0.75)", () => {
+// Pasif adım metni soluklaştırılmaz (opaklık, --ez-text-3'ü AA altına düşürüyordu);
+// etkinleşme yalnız konum hareketiyle gösterilir.
+test(".ez-process__step pasif durumda metni opaklıkla soluklaştırmaz", () => {
   const css = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing.css"), "utf8");
   const rule = css.match(/\.ez-process__step\s*\{[^}]*\}/)?.[0] ?? "";
-  const match = rule.match(/opacity:\s*([\d.]+)/);
-  expect(match).not.toBeNull();
-  expect(Number(match![1])).toBeGreaterThanOrEqual(0.75);
+  expect(rule).not.toContain("opacity");
 });
 
 test(".ez-layers__short ve .ez-journey__fields dt/dd yeterli kontrastlı token kullanır", () => {
@@ -122,6 +122,6 @@ test(".ez-layers__short ve .ez-journey__fields dt/dd yeterli kontrastlı token k
   const dtRule = motionCss.match(/\.ez-journey__fields dt\s*\{[^}]*\}/)?.[0] ?? "";
   expect(dtRule).toContain("var(--ez-text-2)");
   const ddRule = motionCss.match(/\.ez-journey__fields dd\s*\{[^}]*\}/)?.[0] ?? "";
-  expect(ddRule).toContain("var(--ez-text-3)");
-  expect(ddRule).not.toContain("var(--ez-text-4)");
+  // --ez-surface-2 zemininde --ez-text-3 ≈ 4.34:1 kalıyordu; --ez-text-2 AA sağlar.
+  expect(ddRule).toContain("var(--ez-text-2)");
 });
