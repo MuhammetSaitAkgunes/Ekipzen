@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -58,4 +58,18 @@ test("footer yasal ve iletişim bağlantılarını içerir", () => {
   const footer = screen.getByRole("contentinfo");
   expect(within(footer).getByRole("link", { name: "KVKK aydınlatma metni" })).toHaveAttribute("href", "/kvkk-aydinlatma");
   expect(within(footer).getByRole("link", { name: "İletişim" })).toHaveAttribute("href", "/iletisim");
+});
+
+test("site gece temasında açılır, menü kaydırınca koyulaşır", () => {
+  renderLayout();
+  expect(document.querySelector(".ez-site")).toHaveClass("ez-night");
+  expect(document.querySelector(".ez-grain")).toHaveAttribute("aria-hidden", "true");
+  const header = document.querySelector(".ez-header")!;
+  expect(header).not.toHaveClass("is-scrolled");
+  act(() => {
+    Object.defineProperty(window, "scrollY", { value: 120, configurable: true });
+    window.dispatchEvent(new Event("scroll"));
+  });
+  expect(header).toHaveClass("is-scrolled");
+  Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
 });

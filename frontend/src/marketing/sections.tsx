@@ -5,9 +5,11 @@ export function ModuleIcon({ icon }: { icon: string }) {
   return <span className="ez-icon"><i aria-hidden="true" className={`fa-solid ${icon}`} /></span>;
 }
 
-export function PageHero({ eyebrow, title, lead, children }: { eyebrow: string; title: string; lead: string; children?: ReactNode }) {
+export type HeroGlow = "cyan" | "teal" | "violet" | "indigo";
+
+export function PageHero({ eyebrow, title, lead, glow = "indigo", children }: { eyebrow: string; title: ReactNode; lead: string; glow?: HeroGlow; children?: ReactNode }) {
   return (
-    <section className="ez-page-hero">
+    <section className={`ez-page-hero ez-glow ez-gridlines ez-page-hero--${glow}`}>
       <div className="ez-container ez-narrow">
         <p className="ez-eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

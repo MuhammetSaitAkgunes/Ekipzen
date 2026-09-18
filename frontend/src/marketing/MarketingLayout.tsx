@@ -4,11 +4,13 @@ import { useAuth } from "../auth/AuthContext";
 import { LOGIN_PATH, roleHomeFor } from "../paths";
 import { ButtonLink, Logo } from "../ui";
 import { modules, navItems, siteInfo } from "./content";
+import { useScrolled } from "./useScrolled";
 
 export function MarketingLayout() {
   const { user } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const scrolled = useScrolled();
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
@@ -17,11 +19,12 @@ export function MarketingLayout() {
     : <ButtonLink to={LOGIN_PATH} variant="ghost">Giriş yap</ButtonLink>;
 
   return (
-    <div className="ez-site ez-light">
+    <div className="ez-site ez-night">
+      <div className="ez-grain" aria-hidden="true" />
       <a className="ez-skip" href="#icerik">İçeriğe geç</a>
-      <header className={`ez-header${menuOpen ? " is-open" : ""}`}>
+      <header className={`ez-header${menuOpen ? " is-open" : ""}${scrolled ? " is-scrolled" : ""}`}>
         <div className="ez-container ez-header__inner">
-          <Link to="/" className="ez-header__brand" aria-label="Ekipzen ana sayfa"><Logo /></Link>
+          <Link to="/" className="ez-header__brand" aria-label="Ekipzen ana sayfa"><Logo tone="light" /></Link>
           <nav id="ana-menu" className="ez-header__nav" aria-label="Ana menü">
             <ul>
               {navItems.map((item) => (
