@@ -2485,7 +2485,7 @@ git commit -m "feat(landing): rebuild about page around principles, process, mat
 
 `banned` dizisine şu kalıplar eklenir:
 - `/en çok tercih edilen/i`
-- `/bliderb/i`
+- `/\blider\b/i`
 - `/binlerce/i`
 
 Run: `npm --prefix frontend test -- --run src/marketing/pages/pages.test.tsx src/marketing/content.test.ts`
