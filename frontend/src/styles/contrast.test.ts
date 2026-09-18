@@ -89,3 +89,39 @@ test(".ez-muted-note metin için yeterli kontrastlı --ez-text-3 kullanır", () 
   expect(rule).toContain("var(--ez-text-3)");
   expect(rule).not.toContain("var(--ez-text-4)");
 });
+
+// I3: pasif .ez-journey__step artık opacity yerine renk değiştirir (düşük opaklık, AA
+// kontrastını hesaba katmadan metni soluklaştırıyordu).
+test(".ez-journey__step pasif/etkin durumları opacity yerine yeterli kontrastlı renkler kullanır", () => {
+  const css = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing-motion.css"), "utf8");
+  const baseRule = css.match(/\.ez-journey__step\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(baseRule).not.toContain("opacity");
+  const h3Rule = css.match(/\.ez-journey__step h3\s*\{[^}]*\}/)?.[0] ?? "";
+  const pRule = css.match(/\.ez-journey__step p\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(h3Rule).toContain("var(--ez-text-2)");
+  expect(pRule).toContain("var(--ez-text-3)");
+  const activeH3Rule = css.match(/\.ez-journey__step\.is-active h3\s*\{[^}]*\}/)?.[0] ?? "";
+  const activePRule = css.match(/\.ez-journey__step\.is-active p\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(activeH3Rule).toContain("var(--ez-text)");
+  expect(activePRule).toContain("var(--ez-text-2)");
+});
+
+test(".ez-process__step pasif opaklığı AA okunabilirliği için yeterince yüksek (>=0.75)", () => {
+  const css = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing.css"), "utf8");
+  const rule = css.match(/\.ez-process__step\s*\{[^}]*\}/)?.[0] ?? "";
+  const match = rule.match(/opacity:\s*([\d.]+)/);
+  expect(match).not.toBeNull();
+  expect(Number(match![1])).toBeGreaterThanOrEqual(0.75);
+});
+
+test(".ez-layers__short ve .ez-journey__fields dt/dd yeterli kontrastlı token kullanır", () => {
+  const marketingCss = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing.css"), "utf8");
+  const motionCss = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing-motion.css"), "utf8");
+  const shortRule = marketingCss.match(/\.ez-layers__short\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(shortRule).toContain("var(--ez-text-2)");
+  const dtRule = motionCss.match(/\.ez-journey__fields dt\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(dtRule).toContain("var(--ez-text-2)");
+  const ddRule = motionCss.match(/\.ez-journey__fields dd\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(ddRule).toContain("var(--ez-text-3)");
+  expect(ddRule).not.toContain("var(--ez-text-4)");
+});

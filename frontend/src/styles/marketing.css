@@ -324,7 +324,7 @@
 .ez-layers__num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ez-primary-soft); color: var(--ez-primary); font-weight: 700; }
 .ez-layers__item.is-open .ez-layers__num { background: var(--ez-primary); color: var(--ez-on-primary); }
 .ez-layers__title { font-weight: 700; }
-.ez-layers__short { font-size: var(--fs-12); color: var(--ez-text-3); }
+.ez-layers__short { font-size: var(--fs-12); color: var(--ez-text-2); }
 .ez-layers__panel { padding: 0 1rem 1rem calc(1rem + 36px + 0.75rem); color: var(--ez-text-2); animation: ez-panel-in 320ms var(--ease-out); }
 .ez-categories { margin-top: 0.5rem; }
 .ez-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -369,7 +369,7 @@
 .ez-process::before { content: ""; position: absolute; top: calc(1.5rem + 21px); left: 22px; right: calc((100% - 5rem) / 6 - 22px); height: 2px; background: var(--ez-border); }
 .ez-process::after { content: ""; position: absolute; top: calc(1.5rem + 21px); left: 22px; right: calc((100% - 5rem) / 6 - 22px); height: 2px; background: var(--ez-primary); transform: scaleX(0); transform-origin: left; transition: transform 1.4s var(--ease-out); }
 .ez-process.is-active::after { transform: scaleX(1); }
-.ez-process__step { position: relative; display: grid; align-content: start; gap: 0.5rem; opacity: 0.4; transition: opacity 500ms var(--ease-out); }
+.ez-process__step { position: relative; display: grid; align-content: start; gap: 0.5rem; opacity: 0.75; transition: opacity 500ms var(--ease-out); }
 .ez-process.is-active .ez-process__step { opacity: 1; }
 .ez-process__step h3 { font-size: var(--fs-16) !important; }
 .ez-process__step p { font-size: var(--fs-14); color: var(--ez-text-3); }

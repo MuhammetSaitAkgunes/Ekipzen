@@ -52,14 +52,16 @@
 .ez-journey__person span:not(.ez-mock__avatar) { font-size: var(--fs-12); color: var(--ez-text-3); }
 .ez-journey__fields { display: grid; gap: 0.5rem; }
 .ez-journey__fields > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.625rem 0.75rem; border-radius: var(--r-md); background: var(--ez-surface-2); font-size: var(--fs-14); transition: background-color var(--dur-base) var(--ease-out); }
-.ez-journey__fields dt { color: var(--ez-text-3); }
-.ez-journey__fields dd { font-weight: 600; color: var(--ez-text-4); }
+.ez-journey__fields dt { color: var(--ez-text-2); }
+.ez-journey__fields dd { font-weight: 600; color: var(--ez-text-3); }
 .ez-journey__fields .is-filled { background: var(--ez-primary-soft); }
 .ez-journey__fields .is-filled dd { color: var(--ez-primary); animation: ez-panel-in 360ms var(--ease-out); }
 .ez-journey__steps { list-style: none; display: grid; gap: clamp(2.5rem, 12vh, 7rem); padding-block: 2rem 30vh; }
-.ez-journey__step { display: grid; grid-template-columns: 44px 1fr; gap: 1rem; opacity: 0.45; transition: opacity var(--dur-base) var(--ease-out); }
-.ez-journey__step.is-active { opacity: 1; }
-.ez-journey__step p { color: var(--ez-text-3); }
+.ez-journey__step { display: grid; grid-template-columns: 44px 1fr; gap: 1rem; }
+.ez-journey__step h3 { color: var(--ez-text-2); transition: color var(--dur-base) var(--ease-out); }
+.ez-journey__step p { color: var(--ez-text-3); transition: color var(--dur-base) var(--ease-out); }
+.ez-journey__step.is-active h3 { color: var(--ez-text); }
+.ez-journey__step.is-active p { color: var(--ez-text-2); }
 .ez-journey__dot { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ez-border-strong); color: var(--ez-text-3); font-weight: 700; background: var(--ez-surface); transition: all var(--dur-base) var(--ease-out); }
 .ez-journey__step.is-active .ez-journey__dot { border-color: var(--ez-primary); background: var(--ez-primary); color: var(--ez-on-primary); }
 @media (max-width: 860px) {
@@ -77,7 +79,7 @@
   .ez-reveal { opacity: 1; transform: none; transition: none; }
   .ez-aurora::before, .ez-aurora::after, .ez-float { animation: none; }
   .ez-showcase__content, .ez-showcase__progress { animation: none; }
-  .ez-journey__step { opacity: 1; transition: none; }
+  .ez-journey__step, .ez-journey__step h3, .ez-journey__step p { transition: none; }
   .ez-journey__fields .is-filled dd { animation: none; }
   .ez-hero-enter { animation: none; }
   .ez-flow__line { transition: none; stroke-dashoffset: 0; }
