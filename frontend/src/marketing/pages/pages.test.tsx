@@ -51,7 +51,9 @@ test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {
 
 test("Hakkımızda: manifesto, ilkeler, süreç, olgunluk, yol haritası ve taahhütler; uydurma kişi ya da sayı yok", () => {
   renderPage(<AboutPage />);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("İK yazılımını, İK ekiplerinin günlük gerçekliğinden başlayarak geliştiriyoruz.");
+  const h1 = screen.getByRole("heading", { level: 1 });
+  expect(h1).toHaveTextContent("İK yazılımını, İK ekiplerinin günlük gerçekliğinden başlayarak geliştiriyoruz.");
+  expect(h1.closest(".ez-reveal")).toBeNull();
   for (const name of ["Neden varız", "İlkelerimiz", "Ürünü nasıl geliştiriyoruz", "Ekipzen bugün", "Yol haritası", "Taahhütlerimiz"]) {
     expect(screen.getByRole("region", { name })).toBeInTheDocument();
   }

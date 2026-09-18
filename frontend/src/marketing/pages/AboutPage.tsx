@@ -17,14 +17,14 @@ export function AboutPage() {
           <path pathLength={1} d="M0 360 C 300 300, 520 390, 760 320 S 1060 240, 1200 280" />
         </svg>
         <div className="ez-container ez-narrow">
-          <Reveal>
+          <div className="ez-hero-enter">
             <p className="ez-eyebrow">Hakkımızda</p>
             <h1>İK yazılımını, İK ekiplerinin günlük gerçekliğinden başlayarak geliştiriyoruz.</h1>
             <p className="ez-lead">
               Ekipzen, İK ekiplerinin tekrar eden işlerini azaltmak ve çalışan verisini güvenle yönetmek için geliştirilen,
               gelişmekte olan bir insan kaynakları platformudur.
             </p>
-          </Reveal>
+          </div>
         </div>
       </section>
 
