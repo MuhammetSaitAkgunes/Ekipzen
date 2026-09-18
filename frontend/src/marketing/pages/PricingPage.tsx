@@ -1,6 +1,8 @@
+import { Link } from "react-router-dom";
 import { ButtonLink, Badge, usePageMeta } from "../../ui";
 import { comparisonRows, plans, pricingFaqs } from "../content";
 import { CtaBand, FaqList, PageHero } from "../sections";
+import { Reveal, onSpotlightMove } from "../motion";
 
 const cell = (value: boolean | string) =>
   typeof value === "string" ? value : value
@@ -19,9 +21,9 @@ export function PricingPage() {
       <section className="ez-section ez-section--flush" aria-label="Paketler">
         <div className="ez-container">
           <ul className="ez-plans">
-            {plans.map((p) => (
-              <li key={p.id} className={`ez-plan${p.highlighted ? " ez-plan--featured" : ""}`}>
-                {p.highlighted && <Badge tone="primary">En çok tercih edilen</Badge>}
+            {plans.map((p, i) => (
+              <Reveal as="li" key={p.id} delay={i * 100} className={`ez-plan ez-spotlight${p.highlighted ? " ez-plan--featured" : ""}`} onPointerMove={onSpotlightMove}>
+                {p.highlighted && <Badge tone="primary">Önerilen</Badge>}
                 <h2>{p.name}</h2>
                 <p className="ez-plan__audience">{p.audience}</p>
                 <p className="ez-plan__price">Size özel fiyat</p>
@@ -29,7 +31,7 @@ export function PricingPage() {
                   Teklif alın
                 </ButtonLink>
                 <ul className="ez-check-list">{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
-              </li>
+              </Reveal>
             ))}
           </ul>
         </div>
@@ -65,6 +67,13 @@ export function PricingPage() {
           <div className="ez-section__head"><h2 id="fiyat-sss-baslik">Fiyatlandırmaya ilişkin sorular</h2></div>
           <FaqList items={pricingFaqs} />
         </div>
+      </section>
+      <section className="ez-section ez-section--flush" aria-label="Ürünün gelişimi">
+        <Reveal className="ez-container ez-narrow ez-pricing-roadmap">
+          <i aria-hidden="true" className="fa-solid fa-route" />
+          <p>Ekipzen, pilot müşterilerle birlikte doğrulanarak gelişmeye devam ediyor. Modüllerin durumunu ve yol haritasını açıkça paylaşıyoruz.</p>
+          <Link to="/hakkimizda#yol-haritasi" className="ez-link">Ürün nasıl gelişiyor?</Link>
+        </Reveal>
       </section>
       <CtaBand title="Şirketinize özel teklif talep edin" text="Çalışan sayınızı ve kullanmak istediğiniz modülleri paylaşın; kapsamı ve fiyatı içeren teklifi size iletelim." />
     </>

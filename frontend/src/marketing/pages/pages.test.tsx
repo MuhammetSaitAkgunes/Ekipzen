@@ -35,6 +35,9 @@ test("Fiyatlandırma: üç paket, rakam yok, teklif CTA'sı ve karşılaştırma
   expect(screen.queryByText(/₺|TL\/ay|\$/)).toBeNull();
   const table = screen.getByRole("table", { name: "Paket karşılaştırması" });
   expect(within(table).getAllByRole("columnheader")).toHaveLength(4);
+  expect(screen.queryByText("En çok tercih edilen")).toBeNull();
+  expect(screen.getByText("Önerilen")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Ürün nasıl gelişiyor?" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
 });
 
 test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {

@@ -31,11 +31,15 @@ test("tanıtım metinleri üslup kurallarına uyar", () => {
   const files = [
     ...readdirSync(join(src, "marketing")).filter((f) => /\.tsx?$/.test(f) && !f.includes(".test.")).map((f) => join(src, "marketing", f)),
     ...readdirSync(join(src, "marketing", "pages")).filter((f) => f.endsWith(".tsx") && !f.includes(".test.")).map((f) => join(src, "marketing", "pages", f)),
+    ...readdirSync(join(src, "marketing", "motion")).filter((f) => f.endsWith(".ts") || (f.endsWith(".tsx") && !f.includes(".test."))).map((f) => join(src, "marketing", "motion", f)),
     join(src, "auth", "AuthLayout.tsx"),
     join(src, "auth", "LoginPage.tsx"),
     join(src, "..", "index.html"),
   ];
-  const banned = [/Türkiye için/i, /tek tıkla/i, /sürpriz/i, /kurtar/i, /\d+\s*dakikalık/i, /kısa sürede/i, /kolayca/i];
+  const banned = [
+    /Türkiye için/i, /tek tıkla/i, /sürpriz/i, /kurtar/i, /\d+\s*dakikalık/i, /kısa sürede/i, /kolayca/i,
+    /en çok tercih edilen/i, /\blider\b/i, /binlerce/i,
+  ];
   for (const file of files) {
     const text = readFileSync(file, "utf8");
     for (const pattern of banned) expect(text, `${file} ${pattern}`).not.toMatch(pattern);

@@ -182,7 +182,16 @@
 
 .ez-plans { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; align-items: stretch; }
 .ez-plan { display: grid; align-content: start; gap: 1rem; padding: 2rem; border-radius: var(--r-xl); border: 1px solid var(--ez-border); background: var(--ez-surface); box-shadow: var(--ez-shadow-xs); }
-.ez-plan--featured { border: 2px solid var(--ez-primary); box-shadow: var(--ez-shadow-lg); }
+.ez-plan { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+.ez-plan:hover { transform: translateY(-4px); box-shadow: var(--ez-shadow-lg); }
+.ez-plan--featured {
+  border: 2px solid transparent; box-shadow: var(--ez-shadow-lg);
+  background: linear-gradient(var(--ez-surface), var(--ez-surface)) padding-box,
+    linear-gradient(120deg, var(--indigo-700), var(--sky-400), var(--indigo-400), var(--indigo-700)) border-box;
+  background-size: 100% 100%, 300% 300%;
+  animation: ez-border-shift 9s linear infinite alternate;
+}
+@keyframes ez-border-shift { from { background-position: 0 0, 0% 50%; } to { background-position: 0 0, 100% 50%; } }
 .ez-plan .ez-badge { justify-self: start; }
 .ez-plan__audience { color: var(--ez-text-3); min-height: 3.3em; }
 .ez-plan__price { font-size: var(--fs-24); font-weight: 800; color: var(--ez-text); }
@@ -193,6 +202,12 @@
 .ez-compare th[scope="row"], .ez-compare thead th:first-child { text-align: left; font-weight: 500; color: var(--ez-text-2); }
 .ez-compare thead th { font-weight: 700; color: var(--ez-text); background: var(--ez-bg); }
 .ez-compare tr:last-child > * { border-bottom: 0; }
+.ez-compare tbody tr { transition: background-color var(--dur-fast) var(--ease-out); }
+.ez-compare tbody tr:hover > * { background: var(--ez-primary-soft); }
+.ez-pricing-roadmap { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; align-items: center; padding: 1.5rem; border-radius: var(--r-xl); background: var(--ez-bg); border: 1px dashed var(--ez-border-strong); }
+.ez-pricing-roadmap i { grid-row: span 2; font-size: 1.5rem; color: var(--ez-primary); }
+.ez-pricing-roadmap p { color: var(--ez-text-2); }
+.ez-pricing-roadmap .ez-link { justify-self: start; display: inline-flex; min-height: 44px; align-items: center; }
 .ez-yes { color: var(--ez-success); }
 .ez-no { color: var(--ez-text-4); }
 

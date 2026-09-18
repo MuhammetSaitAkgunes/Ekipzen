@@ -86,4 +86,6 @@
   .ez-manifesto__lines path { animation: none; stroke-dashoffset: 0; }
   .ez-process::after { transition: none; transform: none; }
   .ez-process__step { opacity: 1; transition: none; }
+  .ez-plan--featured { animation: none; }
+  .ez-plan:hover { transform: none; }
 }
