@@ -20,7 +20,7 @@ function contrastRatio(hexA: string, hexB: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// Light-theme token values, copied as literals from tokens.css (`:root, .ez-light` block).
+// Açık tema (uygulama kabuğu) token değerleri; tokens.css `:root` bloğundan birebir kopyalandı.
 // Kept in sync via the "tokens.css contains the literal hex" assertions below.
 const TOKENS = {
   "--ez-text": "#0f172a", // --slate-900

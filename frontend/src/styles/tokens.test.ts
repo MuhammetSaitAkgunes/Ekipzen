@@ -14,7 +14,6 @@ test("tokens.css zorunlu amaç token'larını ve kimlik renklerini tanımlar", (
   expect(css.toLowerCase()).toContain("--slate-900: #0f172a");
   expect(css).toContain('"Plus Jakarta Sans"');
   expect(css).toContain(':root[data-theme="dark"]');
-  expect(css).toContain(".ez-light");
 });
 
 test("eski petrol/evergreen renkleri stil dosyalarında kalmaz", () => {

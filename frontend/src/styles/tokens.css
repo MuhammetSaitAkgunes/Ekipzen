@@ -30,9 +30,8 @@
   --ez-nav-border: rgb(255 255 255 / 0.06);
 }
 
-/* Açık tema amaç token'ları. .ez-light, koyu tema açıkken de alt ağaca açık temayı zorlar. */
-:root,
-.ez-light {
+/* Açık tema amaç token'ları (uygulama kabuğu). Tanıtım sitesi ve giriş ekranı night.css'teki .ez-night kapsamını kullanır. */
+:root {
   --ez-bg: var(--slate-50);
   --ez-surface: var(--slate-0);
   --ez-surface-2: var(--slate-100);
