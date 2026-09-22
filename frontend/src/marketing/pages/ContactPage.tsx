@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { usePageMeta } from "../../ui";
 import { plans, siteInfo } from "../content";
 import { DemoRequestForm } from "../DemoRequestForm";
+import { ModuleVisual } from "../visuals";
 
 export function ContactPage() {
   usePageMeta("Demo talebi ve iletişim", "Ekipzen'i kendi süreçleriniz üzerinden değerlendirmek için demo talep edin.");
@@ -10,7 +11,7 @@ export function ContactPage() {
   const initialMessage = plan ? `${plan.name} paketi için teklif almak istiyorum.` : "";
 
   return (
-    <section className="ez-section ez-contact">
+    <section className="ez-section ez-contact ez-glow ez-gridlines">
       <div className="ez-container ez-contact__grid">
         <div className="ez-contact__intro">
           <p className="ez-eyebrow">İletişim</p>
@@ -21,13 +22,16 @@ export function ContactPage() {
             <li>İhtiyaçlarınıza uygun paket ve modül önerisi</li>
             <li>Şirketinize ayrılmış bir ortamda kurulum</li>
           </ul>
-          <div className="ez-contact__card">
+          <div className="ez-contact__screen">
+            <ModuleVisual id="izin" />
+          </div>
+          <div className="ez-contact__card ez-glass">
             <h2>E-posta ile iletişim</h2>
             <p><i aria-hidden="true" className="fa-solid fa-envelope" /> <a href={`mailto:${siteInfo.email}`}>{siteInfo.email}</a></p>
             <p className="ez-muted-note">Mevcut müşterilerimiz destek taleplerini uygulama içinden ya da bu adres üzerinden iletebilir.</p>
           </div>
         </div>
-        <div className="ez-contact__form ez-card">
+        <div className="ez-contact__form ez-glass">
           <DemoRequestForm key={initialMessage} initialMessage={initialMessage} />
         </div>
       </div>

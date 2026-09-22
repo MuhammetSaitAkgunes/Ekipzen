@@ -14,9 +14,9 @@ export function NotFoundPage() {
     };
   }, []);
   return (
-    <section className="ez-section">
+    <section className="ez-section ez-notfound ez-glow ez-gridlines">
       <div className="ez-container ez-narrow">
-        <p className="ez-eyebrow">404</p>
+        <p aria-hidden="true" className="ez-notfound__code ez-gradient-text">404</p>
         <h1>Sayfa bulunamadı</h1>
         <p className="ez-lead">Aradığınız sayfa kaldırılmış ya da adresi değişmiş olabilir.</p>
         <div className="ez-actions">

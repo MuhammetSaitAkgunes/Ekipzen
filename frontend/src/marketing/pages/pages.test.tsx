@@ -10,6 +10,8 @@ import { FeaturesPage } from "./FeaturesPage";
 import { KvkkPage } from "./KvkkPage";
 import { PricingPage } from "./PricingPage";
 import { SecurityPage } from "./SecurityPage";
+import { ContactPage } from "./ContactPage";
+import { NotFoundPage } from "./NotFoundPage";
 
 test("Özellikler: her modül anchor id'li bir bölümdür; yapışkan menü görünen modülü izler", () => {
   renderPage(<FeaturesPage />);
@@ -116,4 +118,22 @@ test("KVKK: veri sorumlusu, saklama süresi ve haklar bölümleri", () => {
   expect(screen.getByRole("heading", { level: 1, name: "KVKK aydınlatma metni" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Saklama süresi" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "İlgili kişi olarak haklarınız" })).toBeInTheDocument();
+});
+
+test("fiyat kartları cam görünümde, önerilen kartta ışıklı kenar vardır", () => {
+  renderPage(<PricingPage />);
+  const featured = document.querySelector(".ez-plan--featured")!;
+  expect(featured).not.toBeNull();
+  expect(featured.querySelector(".ez-plan__ring")).not.toBeNull();
+  expect(document.querySelector(".ez-page-hero")).toHaveClass("ez-page-hero--indigo");
+});
+
+test("iletişim sayfası formun yanında küçük bir ürün ekranı gösterir", () => {
+  renderPage(<ContactPage />);
+  expect(document.querySelector(".ez-contact__screen .ez-app")).not.toBeNull();
+});
+
+test("404 sayfası büyük degrade kod gösterir", () => {
+  renderPage(<NotFoundPage />);
+  expect(document.querySelector(".ez-notfound__code")).toHaveTextContent("404");
 });

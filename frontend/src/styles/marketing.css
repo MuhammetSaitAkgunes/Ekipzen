@@ -135,31 +135,31 @@
 
 .ez-plans { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; align-items: stretch; }
 .ez-plans__item { display: grid; }
-.ez-plan { display: grid; align-content: start; gap: 1rem; padding: 2rem; border-radius: var(--r-xl); border: 1px solid var(--ez-border); background: var(--ez-surface); box-shadow: var(--ez-shadow-xs); }
+.ez-plan { position: relative; overflow: hidden; display: grid; align-content: start; gap: 1rem; padding: 2rem; border-radius: var(--r-xl); border: 1px solid var(--ez-glass-border); background: var(--ez-glass-bg); backdrop-filter: blur(12px); box-shadow: var(--ez-shadow-sm); }
 .ez-plan { transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
 .ez-plan:hover { transform: translateY(-4px); box-shadow: var(--ez-shadow-lg); }
-.ez-plan--featured {
-  border: 2px solid transparent; box-shadow: var(--ez-shadow-lg);
-  background: linear-gradient(var(--ez-surface), var(--ez-surface)) padding-box,
-    linear-gradient(120deg, var(--indigo-700), var(--sky-400), var(--indigo-400), var(--indigo-700)) border-box;
-  background-size: 100% 100%, 300% 300%;
-  animation: ez-border-shift 9s linear infinite alternate;
-}
-@keyframes ez-border-shift { from { background-position: 0 0, 0% 50%; } to { background-position: 0 0, 100% 50%; } }
+.ez-plan--featured { border-color: transparent; background: linear-gradient(160deg, rgb(99 102 241 / 0.18), rgb(255 255 255 / 0.04)); box-shadow: 0 30px 70px rgb(0 0 0 / 0.45); }
+.ez-plan__ring { position: absolute; inset: -2px; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(from var(--ez-ring-angle, 0deg), #38bdf8, #6366f1, #c026d3, #38bdf8);
+  animation: ez-ring-spin 6s linear infinite; }
+.ez-plan--featured > *:not(.ez-plan__ring) { position: relative; z-index: 1; }
+@property --ez-ring-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes ez-ring-spin { to { --ez-ring-angle: 360deg; } }
 .ez-plan .ez-badge { justify-self: start; }
 .ez-plan__audience { color: var(--ez-text-3); min-height: 3.3em; }
 .ez-plan__price { font-size: var(--fs-24); font-weight: 800; color: var(--ez-text); }
+.ez-plan .ez-check-list li::before { box-shadow: inset 0 0 0 5px var(--ez-success-soft), inset 0 0 0 10px var(--ez-success); }
 
-.ez-table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--ez-border); border-radius: var(--r-lg); background: var(--ez-surface); }
+.ez-table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--ez-glass-border); border-radius: var(--r-lg); background: var(--ez-glass-bg); }
 .ez-compare { width: 100%; min-width: 640px; border-collapse: collapse; font-size: var(--fs-14); }
-.ez-compare th, .ez-compare td { padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--ez-border); text-align: center; }
+.ez-compare th, .ez-compare td { padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--ez-border-soft); text-align: center; }
 .ez-compare th[scope="row"], .ez-compare thead th:first-child { text-align: left; font-weight: 500; color: var(--ez-text-2); }
-.ez-compare thead th { font-weight: 700; color: var(--ez-text); background: var(--ez-bg); }
+.ez-compare thead th { font-weight: 700; color: var(--ez-text); background: rgb(255 255 255 / 0.04); }
 .ez-compare tr:last-child > * { border-bottom: 0; }
 .ez-compare tbody tr { transition: background-color var(--dur-fast) var(--ease-out); }
-.ez-compare tbody tr:hover > * { background: var(--ez-primary-soft); }
-.ez-pricing-roadmap { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; align-items: center; padding: 1.5rem; border-radius: var(--r-xl); background: var(--ez-bg); border: 1px dashed var(--ez-border-strong); }
-.ez-pricing-roadmap i { grid-row: span 2; font-size: 1.5rem; color: var(--ez-primary); }
+.ez-compare tbody tr:hover > * { background: rgb(255 255 255 / 0.05); }
+.ez-pricing-roadmap { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; align-items: center; padding: 1.5rem; border-radius: var(--r-xl); background: rgb(255 255 255 / 0.03); border: 1px dashed var(--ez-border-strong); }
+.ez-pricing-roadmap i { grid-row: span 2; font-size: 1.5rem; color: var(--ez-accent-cyan); }
 .ez-pricing-roadmap p { color: var(--ez-text-2); }
 .ez-pricing-roadmap .ez-link { justify-self: start; display: inline-flex; min-height: 44px; align-items: center; }
 .ez-yes { color: var(--ez-success); }
@@ -167,23 +167,28 @@
 
 .ez-prose { display: grid; gap: 1rem; }
 .ez-prose h2 { font-size: var(--fs-24) !important; margin-top: 1rem; }
-.ez-prose a { color: var(--ez-primary); font-weight: 600; }
+.ez-prose a { color: var(--ez-accent-cyan); font-weight: 600; }
+.ez-prose p { color: var(--ez-text-2); }
 .ez-prose a:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); border-radius: var(--r-sm); }
 
-.ez-contact { background: radial-gradient(50rem 24rem at 0% 0%, var(--indigo-50), transparent 70%), var(--ez-surface); }
+.ez-contact { position: relative; overflow: hidden; --glow-a: rgb(99 102 241 / 0.4); --glow-a-x: 10%; --glow-a-y: 0%; --glow-b: rgb(56 189 248 / 0.25); --glow-b-x: 90%; --glow-b-y: 60%; }
 .ez-contact__grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
 .ez-contact__intro { display: grid; gap: 1.25rem; }
-.ez-contact__card { margin-top: 0.5rem; padding: 1.25rem; border-radius: var(--r-lg); background: var(--ez-bg); display: grid; gap: 0.5rem; }
+.ez-contact__screen { margin-top: 0.5rem; width: 100%; }
+.ez-contact__card { margin-top: 0.5rem; padding: 1.25rem; border-radius: var(--r-lg); display: grid; gap: 0.5rem; }
 .ez-contact__card h2 { font-size: var(--fs-16) !important; }
-.ez-contact__card a, .ez-link { color: var(--ez-primary); font-weight: 600; }
+.ez-contact__card a, .ez-link { color: var(--ez-accent-cyan); font-weight: 600; }
 .ez-contact__form { padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: var(--ez-shadow-lg); }
+.ez-contact__grid > * { position: relative; z-index: 1; }
 @media (max-width: 900px) { .ez-contact__grid { grid-template-columns: 1fr; } }
 
 .ez-form { display: grid; gap: 1.25rem; }
 .ez-form__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1.25rem; }
 .ez-form__note { font-size: var(--fs-12); color: var(--ez-text-3); }
 .ez-form__error { padding: 0.75rem 1rem; border-radius: var(--r-md); background: var(--ez-danger-soft); color: var(--ez-danger-strong); font-weight: 500; }
-.ez-form .ez-check a { color: var(--ez-primary); font-weight: 600; }
+.ez-form .ez-check a { color: var(--ez-accent-cyan); font-weight: 600; }
+.ez-form input, .ez-form select, .ez-form textarea { background: rgb(255 255 255 / 0.04); border-color: var(--ez-border-strong); color: var(--ez-text); }
+.ez-form input::placeholder, .ez-form textarea::placeholder { color: var(--ez-text-3); }
 .ez-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .ez-form-success { display: grid; gap: 1rem; justify-items: start; padding-block: 2rem; }
 .ez-form-success .ez-icon { background: var(--ez-success-soft); color: var(--ez-success); }
@@ -426,3 +431,9 @@
 .ez-commitment i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; font-size: 1.15rem; color: #6ee7b7; background: rgb(52 211 153 / 0.14); border: 1px solid rgb(52 211 153 / 0.3); box-shadow: 0 0 22px rgb(52 211 153 / 0.25); }
 .ez-commitment h3 { font-size: var(--fs-18) !important; margin-bottom: 0.5rem; }
 @media (max-width: 860px) { .ez-commitments { grid-template-columns: 1fr; } }
+
+/* ---------- 404 ---------- */
+.ez-notfound { position: relative; overflow: hidden; text-align: center; --glow-a: rgb(99 102 241 / 0.45); --glow-a-x: 50%; --glow-a-y: 10%; --glow-b: rgb(192 38 211 / 0.25); --glow-b-x: 50%; --glow-b-y: 80%; }
+.ez-notfound .ez-narrow { display: grid; gap: 1rem; justify-items: center; position: relative; z-index: 1; }
+.ez-notfound__code { font: 800 clamp(6rem, 20vw, 12rem)/0.9 var(--ez-font-sans); letter-spacing: -0.05em; }
+.ez-notfound .ez-actions { justify-content: center; }
