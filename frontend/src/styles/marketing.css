@@ -332,7 +332,7 @@
 .ez-layers__num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.12); color: var(--ez-text-2); font-weight: 700; }
 .ez-layers__item.is-open .ez-layers__num { background: var(--ez-grad-primary); border-color: transparent; color: #fff; box-shadow: 0 0 18px rgb(99 102 241 / 0.6); }
 .ez-layers__title { font-weight: 700; }
-.ez-layers__short { font-size: var(--fs-12); color: var(--ez-text-3); }
+.ez-layers__short { font-size: var(--fs-12); color: var(--ez-text-2); }
 .ez-layers__panel { padding: 0 1rem 1rem calc(1rem + 36px + 0.75rem); color: var(--ez-text-2); animation: ez-panel-in 320ms var(--ease-out); }
 
 .ez-categories { margin-top: 0.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
