@@ -134,3 +134,17 @@ Onaylanan yaklaşım **B**: görsel katman yeniden kurulur; içerik, dürüstlü
   - `npm --prefix frontend run lint`, `npm --prefix frontend test -- --run`, `npm --prefix frontend run build` temiz olmalı.
 - **Testler:** Mevcut etkileşim testleri (vitrin, yolculuk, yapışkan menü, güvenlik katmanları, yol haritası, fiyat, form) korunur; görsel bileşen testleri yeni ekranlara göre güncellenir.
 - **Birleştirme:** Aynı dalda (`claude/ui-ux-landing-page-design-23fc85`) devam edilir. Bitince AGENTS.md'ye uygun rapor ve tek seferlik birleştirme onayı istenir.
+
+## Revizyon — 22 Eylül 2026 (kullanıcı geri bildirimi)
+
+- **Izgara arka plan kaldırıldı.** Giriş bölümlerinde kare desen yerine `SceneBackdrop`:
+  uzun süreli (52–78 sn), gidiş-dönüşlü süzülen üç ışık bulutu, 120 sn'lik dönen hafif
+  parlaklık ve ürün ekranının altında yumuşak ufuk ışığı. Reduced-motion'da tamamen durur.
+- **Özellikler sayfasındaki yapışkan modül menüsü kaldırıldı.** Kaydırmayı izleyen menü
+  yerine her modül kendi cam panelinde (`.ez-module-panel`) duruyor: numara, ikon, başlık,
+  durum rozeti, metin ve büyük ürün ekranı. Modüllere giriş bölümündeki çiplerle atlanır.
+  `StickyModuleNav` bileşeni silindi.
+- **Çalışan yolculuğu kaydırmaya bağlı olmaktan çıktı.** `EmployeeJourney` artık adım
+  gezgini: üstte ilerleme çubuklu numaralı adımlar (tablist), altta örnek personel kartı ve
+  seçili adımın açıklaması. Adımlar 5 sn'de bir kendiliğinden ilerler; imleç üzerindeyken,
+  odaklanıldığında ya da bir adım seçildiğinde durur. Ok tuşlarıyla gezilir.

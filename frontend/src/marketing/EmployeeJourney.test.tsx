@@ -1,33 +1,61 @@
 import { act, render, screen, within } from "@testing-library/react";
-import { expect, test } from "vitest";
-import { triggerIntersections } from "../test/intersectionObserver";
+import userEvent from "@testing-library/user-event";
+import { expect, test, vi } from "vitest";
+import { setReducedMotion } from "../test/intersectionObserver";
 import { EmployeeJourney } from "./EmployeeJourney";
 
-test("başlangıçta ilk adım aktiftir ve yalnız ilk alan doludur", () => {
+test("başlangıçta ilk adım seçilidir ve yalnız ilk alan doludur", () => {
   render(<EmployeeJourney />);
-  const steps = screen.getAllByRole("listitem");
-  expect(steps).toHaveLength(5);
-  expect(steps[0]).toHaveAttribute("aria-current", "step");
+  const tabs = screen.getAllByRole("tab");
+  expect(tabs).toHaveLength(5);
+  expect(tabs[0]).toHaveAttribute("aria-selected", "true");
   const card = screen.getByRole("figure", { name: "Örnek personel kaydı" });
   expect(within(card).getByText("İşe alındı")).toBeInTheDocument();
   expect(within(card).queryByText("Hesaplamaya hazır")).toBeNull();
 });
 
-test("görünüme giren adım aktifleşir ve kart o adıma kadar dolar", () => {
+test("bir adım seçildiğinde kart o adıma kadar dolar", async () => {
   render(<EmployeeJourney />);
-  act(() => triggerIntersections(true, (el) => el.textContent?.includes("Talepler aynı kayıt") ?? false));
-  const steps = screen.getAllByRole("listitem");
-  expect(steps[2]).toHaveAttribute("aria-current", "step");
-  expect(steps[0]).not.toHaveAttribute("aria-current");
+  await userEvent.click(screen.getByRole("tab", { name: /İzin/ }));
+  const tabs = screen.getAllByRole("tab");
+  expect(tabs[2]).toHaveAttribute("aria-selected", "true");
+  expect(tabs[0]).toHaveAttribute("aria-selected", "false");
   const card = screen.getByRole("figure", { name: "Örnek personel kaydı" });
   expect(within(card).getByText("14 gün")).toBeInTheDocument();
   expect(within(card).queryByText("21 iş günü")).toBeNull();
 });
 
-test("son adıma gelindiğinde tüm alanlar dolar", () => {
+test("son adımda tüm alanlar dolar", async () => {
   render(<EmployeeJourney />);
-  act(() => triggerIntersections(true));
+  await userEvent.click(screen.getByRole("tab", { name: /Bordro/ }));
   const card = screen.getByRole("figure", { name: "Örnek personel kaydı" });
   expect(within(card).getByText("Hesaplamaya hazır")).toBeInTheDocument();
-  expect(screen.getAllByRole("listitem")[4]).toHaveAttribute("aria-current", "step");
+});
+
+test("ok tuşlarıyla adımlar arasında gezilir", async () => {
+  render(<EmployeeJourney />);
+  const tabs = screen.getAllByRole("tab");
+  tabs[0].focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "true");
+  await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
+  expect(screen.getAllByRole("tab")[4]).toHaveAttribute("aria-selected", "true");
+});
+
+test("adımlar kendiliğinden ilerler; hareket azaltılmışsa durur", () => {
+  vi.useFakeTimers();
+  try {
+    const { unmount } = render(<EmployeeJourney intervalMs={1000} />);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(screen.getAllByRole("tab")[1]).toHaveAttribute("aria-selected", "true");
+    unmount();
+
+    setReducedMotion(true);
+    render(<EmployeeJourney intervalMs={1000} />);
+    act(() => { vi.advanceTimersByTime(3000); });
+    expect(screen.getAllByRole("tab")[0]).toHaveAttribute("aria-selected", "true");
+  } finally {
+    vi.useRealTimers();
+    setReducedMotion(false);
+  }
 });

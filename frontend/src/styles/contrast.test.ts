@@ -90,24 +90,17 @@ test(".ez-muted-note metin için yeterli kontrastlı --ez-text-3 kullanır", () 
   expect(rule).not.toContain("var(--ez-text-4)");
 });
 
-// I3: pasif .ez-journey__step artık opacity yerine renk değiştirir (düşük opaklık, AA
-// kontrastını hesaba katmadan metni soluklaştırıyordu).
-test(".ez-journey__step pasif/etkin durumları opacity yerine yeterli kontrastlı renkler kullanır", () => {
+// Yolculuk adımları artık kaydırmaya bağlı değil; seçili adım renk ve ışıkla
+// gösterilir, pasif adım metni soluklaştırılmaz.
+test(".ez-journey adım gezgini opacity ile soluklaştırma yapmaz", () => {
   const css = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing-motion.css"), "utf8");
-  const baseRule = css.match(/\.ez-journey__step\s*\{[^}]*\}/)?.[0] ?? "";
-  expect(baseRule).not.toContain("opacity");
-  const h3Rule = css.match(/\.ez-journey__step h3\s*\{[^}]*\}/)?.[0] ?? "";
-  const pRule = css.match(/\.ez-journey__step p\s*\{[^}]*\}/)?.[0] ?? "";
-  expect(h3Rule).toContain("var(--ez-text-2)");
-  expect(pRule).toContain("var(--ez-text-3)");
-  const activeH3Rule = css.match(/\.ez-journey__step\.is-active h3\s*\{[^}]*\}/)?.[0] ?? "";
-  const activePRule = css.match(/\.ez-journey__step\.is-active p\s*\{[^}]*\}/)?.[0] ?? "";
-  expect(activeH3Rule).toContain("var(--ez-text)");
-  expect(activePRule).toContain("var(--ez-text-2)");
+  const tabRule = css.match(/\.ez-journey__tab\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(tabRule).not.toContain("opacity");
+  expect(tabRule).toContain("var(--ez-text-3)");
+  const activeRule = css.match(/\.ez-journey__tab\.is-active\s*\{[^}]*\}/)?.[0] ?? "";
+  expect(activeRule).toContain("var(--ez-text)");
 });
 
-// Pasif adım metni soluklaştırılmaz (opaklık, --ez-text-3'ü AA altına düşürüyordu);
-// etkinleşme yalnız konum hareketiyle gösterilir.
 test(".ez-process__step pasif durumda metni opaklıkla soluklaştırmaz", () => {
   const css = readFileSync(join(__dirname, "..", "..", "src", "styles", "marketing.css"), "utf8");
   const rule = css.match(/\.ez-process__step\s*\{[^}]*\}/)?.[0] ?? "";

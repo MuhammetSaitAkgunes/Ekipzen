@@ -1,29 +1,83 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { journeySteps } from "./content";
-import { useInView } from "./motion";
+import { usePrefersReducedMotion } from "./motion";
 
-type Step = (typeof journeySteps)[number];
-
-function JourneyStep({ step, index, active, onActive }: { step: Step; index: number; active: boolean; onActive: (i: number) => void }) {
-  const { ref, inView } = useInView<HTMLLIElement>({ threshold: 0.6, rootMargin: "-35% 0px -35% 0px" });
-  useEffect(() => { if (inView) onActive(index); }, [inView, index, onActive]);
-  return (
-    <li ref={ref} className={`ez-journey__step${active ? " is-active" : ""}`} aria-current={active ? "step" : undefined}>
-      <span className="ez-journey__dot" aria-hidden="true">{index + 1}</span>
-      <div>
-        <h3>{step.title}</h3>
-        <p>{step.text}</p>
-      </div>
-    </li>
-  );
-}
-
-export function EmployeeJourney() {
+/**
+ * Çalışan yolculuğu: adımlar kendi ritminde ilerler (kaydırmaya bağlı değil).
+ * İmleç üzerindeyken, odaklanıldığında ya da kullanıcı bir adım seçtiğinde durur.
+ */
+export function EmployeeJourney({ intervalMs = 5000 }: { intervalMs?: number }) {
   const [active, setActive] = useState(0);
-  const onActive = useCallback((i: number) => setActive(i), []);
+  const [paused, setPaused] = useState(false);
+  const [userSelected, setUserSelected] = useState(false);
+  const reduced = usePrefersReducedMotion();
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const running = !reduced && !paused && !userSelected;
+
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => setActive((i) => (i + 1) % journeySteps.length), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [running, intervalMs]);
+
+  const select = (index: number, moveFocus = false) => {
+    setActive(index);
+    setUserSelected(true);
+    if (moveFocus) tabRefs.current[index]?.focus();
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const last = journeySteps.length - 1;
+    const next =
+      event.key === "ArrowRight" ? (active === last ? 0 : active + 1)
+      : event.key === "ArrowLeft" ? (active === 0 ? last : active - 1)
+      : event.key === "Home" ? 0
+      : event.key === "End" ? last
+      : null;
+    if (next === null) return;
+    event.preventDefault();
+    select(next, true);
+  };
+
+  const step = journeySteps[active];
+  const progress = (active + 1) / journeySteps.length;
+
   return (
-    <div className="ez-journey">
-      <div className="ez-journey__sticky">
+    <div
+      className="ez-journey"
+      onPointerEnter={() => setPaused(true)}
+      onPointerLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={(event: FocusEvent<HTMLDivElement>) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false);
+      }}
+    >
+      <div className="ez-journey__rail">
+        <span className="ez-journey__track" aria-hidden="true">
+          <span className="ez-journey__fill" style={{ transform: `scaleX(${progress})` }} />
+        </span>
+        <div role="tablist" aria-label="Çalışan yolculuğu adımları" className="ez-journey__tabs" onKeyDown={onKeyDown}>
+          {journeySteps.map((s, i) => (
+            <button
+              key={s.id}
+              ref={(el) => { tabRefs.current[i] = el; }}
+              type="button"
+              role="tab"
+              id={`journey-tab-${s.id}`}
+              aria-selected={i === active}
+              aria-controls="journey-panel"
+              tabIndex={i === active ? 0 : -1}
+              className={`ez-journey__tab${i === active ? " is-active" : ""}${i < active ? " is-done" : ""}`}
+              onClick={() => select(i)}
+            >
+              <span className="ez-journey__num" aria-hidden="true">{i + 1}</span>
+              <span>{s.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div id="journey-panel" role="tabpanel" aria-labelledby={`journey-tab-${step.id}`} tabIndex={0} className="ez-journey__panel">
         <figure className="ez-journey__card" aria-label="Örnek personel kaydı">
           <div className="ez-journey__person">
             <span className="ez-app__avatar ez-app__avatar--0" aria-hidden="true">AY</span>
@@ -38,10 +92,17 @@ export function EmployeeJourney() {
             ))}
           </dl>
         </figure>
+
+        <div className="ez-journey__detail">
+          <p className="ez-journey__stage">Adım {active + 1} / {journeySteps.length}</p>
+          <h3>{step.title}</h3>
+          <p className="ez-lead">{step.text}</p>
+          <p className="ez-journey__field-note">
+            <span>{step.field.label}</span>
+            <strong>{step.field.value}</strong>
+          </p>
+        </div>
       </div>
-      <ol className="ez-journey__steps">
-        {journeySteps.map((s, i) => <JourneyStep key={s.id} step={s} index={i} active={i === active} onActive={onActive} />)}
-      </ol>
     </div>
   );
 }

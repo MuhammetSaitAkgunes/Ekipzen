@@ -1,23 +1,8 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { triggerIntersections } from "../test/intersectionObserver";
-import { StickyModuleNav } from "./StickyModuleNav";
 import { DataFlowDiagram } from "./DataFlowDiagram";
 import { modules } from "./content";
-
-const items = modules.map((m) => ({ id: m.id, title: m.title, status: m.status }));
-
-test("yapışkan menü tüm modüllere bağlanır ve aktif olanı işaretler", () => {
-  render(<StickyModuleNav items={items} activeId="bordro" />);
-  const nav = screen.getByRole("navigation", { name: "Modül menüsü" });
-  const links = within(nav).getAllByRole("link");
-  expect(links).toHaveLength(6);
-  expect(within(nav).getByRole("link", { name: /Bordro/ })).toHaveAttribute("href", "#bordro");
-  expect(within(nav).getByRole("link", { name: /Bordro/ })).toHaveAttribute("aria-current", "true");
-  expect(within(nav).getByRole("link", { name: /Personel/ })).not.toHaveAttribute("aria-current");
-  const index = modules.findIndex((m) => m.id === "bordro");
-  expect((nav as HTMLElement).style.getPropertyValue("--progress")).toBe(String((index + 1) / modules.length));
-});
 
 test("veri akışı şeması erişilebilir adla render edilir ve görünür olunca çizilir", () => {
   const { container } = render(<DataFlowDiagram />);
@@ -28,15 +13,16 @@ test("veri akışı şeması erişilebilir adla render edilir ve görünür olun
   expect(wrapper).toHaveClass("is-drawn");
 });
 
-test("özellikler sayfasında her modül bloğu büyük ürün ekranını gösterir ve yerleşim sırayla yön değiştirir", async () => {
+test("her modül kendi panelinde, numarasıyla ve büyük ürün ekranıyla durur", async () => {
   const { renderPage } = await import("../test/renderPage");
   const { FeaturesPage } = await import("./pages/FeaturesPage");
   renderPage(<FeaturesPage />);
+  expect(document.querySelector(".ez-module-nav")).toBeNull();
   modules.forEach((m, i) => {
-    const block = document.getElementById(m.id)!;
-    expect(block.querySelector(`.ez-module-visual .ez-app[data-active="${m.id}"]`), m.id).not.toBeNull();
-    if (i % 2 === 1) expect(block).toHaveClass("ez-feature-block--flip");
-    else expect(block).not.toHaveClass("ez-feature-block--flip");
+    const panel = document.getElementById(m.id)!;
+    expect(panel, m.id).toHaveClass("ez-module-panel");
+    expect(panel.querySelector(".ez-module-panel__index")).toHaveTextContent(String(i + 1).padStart(2, "0"));
+    expect(panel.querySelector(`.ez-module-visual .ez-app[data-active="${m.id}"]`), m.id).not.toBeNull();
   });
   expect(document.querySelector(".ez-page-hero")).toHaveClass("ez-page-hero--cyan");
 });

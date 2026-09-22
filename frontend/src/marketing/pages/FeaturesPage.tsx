@@ -1,37 +1,42 @@
-import { useCallback, useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { ButtonLink, usePageMeta } from "../../ui";
 import { STATUS_META, modules, roleViews, type MarketingModule } from "../content";
 import { CtaBand, ModuleIcon, PageHero } from "../sections";
 import { ModuleVisual } from "../visuals";
 import { StatusBadge } from "../StatusBadge";
-import { StickyModuleNav } from "../StickyModuleNav";
 import { DataFlowDiagram } from "../DataFlowDiagram";
-import { Reveal, onSpotlightMove, useInView, useScrollToHash } from "../motion";
+import { Reveal, onSpotlightMove, useScrollToHash } from "../motion";
 
-function ModuleBlock({ m, index, onActive }: { m: MarketingModule; index: number; onActive: (id: string) => void }) {
-  const { ref, inView } = useInView<HTMLElement>({ threshold: 0, rootMargin: "-30% 0px -50% 0px" });
-  useEffect(() => { if (inView) onActive(m.id); }, [inView, m.id, onActive]);
+const MODULE_GLOW: Record<string, string> = {
+  personel: "#6366f1", izin: "#38bdf8", puantaj: "#f59e0b", bordro: "#8b5cf6", "ise-alim": "#c026d3", "risk-merkezi": "#f43f5e",
+};
+
+function ModulePanel({ m, index }: { m: MarketingModule; index: number }) {
   return (
-    <section ref={ref} id={m.id} className={`ez-feature-block ez-anchor${index % 2 === 1 ? " ez-feature-block--flip" : ""}`} aria-labelledby={`${m.id}-baslik`}>
-      <Reveal className="ez-feature-block__copy">
-        <div className="ez-feature-block__head"><ModuleIcon icon={m.icon} /><StatusBadge status={m.status} /></div>
+    <Reveal as="section" id={m.id} className="ez-module-panel ez-anchor" aria-labelledby={`${m.id}-baslik`} style={{ "--panel-glow": MODULE_GLOW[m.id] } as CSSProperties}>
+      <header className="ez-module-panel__head">
+        <span className="ez-module-panel__index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+        <ModuleIcon icon={m.icon} />
         <h2 id={`${m.id}-baslik`}>{m.title}</h2>
-        <p className="ez-lead">{m.summary}</p>
-        <ul className="ez-check-list">{m.points.map((p) => <li key={p}>{p}</li>)}</ul>
-        <p className="ez-muted-note">Kimler için: {m.roles}</p>
-      </Reveal>
-      <Reveal delay={120} className="ez-feature-block__visual">
-        <ModuleVisual id={m.id} />
-      </Reveal>
-    </section>
+        <StatusBadge status={m.status} />
+      </header>
+      <div className="ez-module-panel__body">
+        <div className="ez-module-panel__copy">
+          <p className="ez-lead">{m.summary}</p>
+          <ul className="ez-check-list">{m.points.map((p) => <li key={p}>{p}</li>)}</ul>
+          <p className="ez-muted-note">Kimler için: {m.roles}</p>
+        </div>
+        <div className="ez-module-panel__visual">
+          <ModuleVisual id={m.id} />
+        </div>
+      </div>
+    </Reveal>
   );
 }
 
 export function FeaturesPage() {
   usePageMeta("Özellikler", "Ekipzen modülleri: Risk Merkezi, personel yönetimi, izin, mesai ve puantaj, bordro ve işe alım.");
   useScrollToHash();
-  const [activeId, setActiveId] = useState(modules[0].id);
-  const onActive = useCallback((id: string) => setActiveId(id), []);
   return (
     <>
       <PageHero
@@ -50,13 +55,8 @@ export function FeaturesPage() {
         </nav>
       </PageHero>
 
-      <div className="ez-container ez-features-layout">
-        <aside className="ez-features-layout__nav">
-          <StickyModuleNav items={modules.map((m) => ({ id: m.id, title: m.title, status: m.status }))} activeId={activeId} />
-        </aside>
-        <div className="ez-features-layout__blocks">
-          {modules.map((m, i) => <ModuleBlock key={m.id} m={m} index={i} onActive={onActive} />)}
-        </div>
+      <div className="ez-container ez-modules">
+        {modules.map((m, i) => <ModulePanel key={m.id} m={m} index={i} />)}
       </div>
 
       <section className="ez-section ez-section--muted ez-glow ez-flow-band" aria-labelledby="akis-baslik">
