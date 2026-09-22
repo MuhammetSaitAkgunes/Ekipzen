@@ -39,7 +39,7 @@ test("yol haritası panosu üç aşamayı, tüm maddeleri ve tarih notunu göste
 test("manifesto ışıklı girişte, sahneler numaralı ve taahhütler koyu bantta", () => {
   renderPage(<AboutPage />);
   const manifesto = document.querySelector(".ez-manifesto")!;
-  expect(manifesto).toHaveClass("ez-glow");
+  expect(manifesto.querySelector(".ez-scene-bg")).not.toBeNull();
   expect(manifesto.querySelector(".ez-reveal")).toBeNull();
   const scenes = document.querySelectorAll(".ez-scene__num");
   expect([...scenes].map((s) => s.textContent)).toEqual(["01", "02", "03"]);

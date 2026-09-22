@@ -194,14 +194,17 @@
 .ez-form-success .ez-icon { background: var(--ez-success-soft); color: var(--ez-success); }
 
 /* ---------- Ana sayfa: giriş ---------- */
-.ez-hero { text-align: center; padding-block: clamp(3rem, 7vw, 5.5rem) 0; --glow-a: rgb(99 102 241 / 0.55); --glow-b: rgb(56 189 248 / 0.32); }
-.ez-hero::after { content: ""; position: absolute; z-index: -1; left: 50%; bottom: -8rem; width: 60rem; height: 24rem; margin-left: -30rem; pointer-events: none; background: radial-gradient(closest-side, rgb(147 51 234 / 0.35), transparent); }
+.ez-hero { position: relative; overflow: hidden; text-align: center; padding-block: clamp(3.5rem, 8vw, 6rem) 0; }
+.ez-hero > .ez-container { position: relative; z-index: 1; }
+/* Ekranın altındaki yumuşak ufuk ışığı */
+.ez-hero__screen::before { content: ""; position: absolute; z-index: 0; left: 50%; top: 18%; width: 78rem; height: 30rem; margin-left: -39rem; pointer-events: none; background: radial-gradient(closest-side, rgb(99 102 241 / 0.45), transparent 70%); }
 .ez-hero .ez-hero__copy { max-width: 780px; margin-inline: auto; justify-items: center; }
 .ez-hero .ez-actions, .ez-hero .ez-trust { justify-content: center; }
 .ez-hero__pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.875rem; border-radius: var(--r-full); font-size: var(--fs-12); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e0f2fe; }
 .ez-hero__pulse { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 0 rgb(52 211 153 / 0.6); animation: ez-live-pulse 2.4s ease-out infinite; }
 @keyframes ez-live-pulse { 70% { box-shadow: 0 0 0 10px rgb(52 211 153 / 0); } 100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0); } }
-.ez-hero__screen { position: relative; width: min(1080px, 100%); margin: clamp(2.5rem, 6vw, 4rem) auto 0; }
+.ez-hero__screen { position: relative; z-index: 1; width: min(1080px, 100%); margin: clamp(2.5rem, 6vw, 4rem) auto 0; }
+.ez-hero__screen .ez-hero-screen__stage { position: relative; z-index: 1; }
 .ez-feature-card__top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
 
 /* ---------- Modül bentosu: köşe ışıklı cam kartlar ---------- */
@@ -359,6 +362,7 @@
 
 .ez-manifesto { position: relative; overflow: hidden; padding-block: clamp(5rem, 11vw, 8rem) clamp(3rem, 7vw, 5rem); --glow-a: rgb(168 85 247 / 0.45); --glow-a-x: 25%; --glow-a-y: 0%; --glow-b: rgb(99 102 241 / 0.35); --glow-b-x: 85%; --glow-b-y: 40%; }
 .ez-manifesto h1 { font-size: clamp(2.25rem, 1.2rem + 3.6vw, 3.75rem); }
+.ez-manifesto .ez-narrow { position: relative; z-index: 1; }
 .ez-manifesto .ez-narrow > div { display: grid; gap: 1.25rem; }
 .ez-manifesto__lines { position: absolute; inset: auto 0 0 0; width: 100%; height: 60%; pointer-events: none; }
 .ez-manifesto__lines path { fill: none; stroke: rgb(192 132 252 / 0.5); stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ez-draw 3.2s var(--ease-out) forwards; }

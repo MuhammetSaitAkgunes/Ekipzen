@@ -1,6 +1,6 @@
 import { usePageMeta } from "../../ui";
 import { aboutScenes, commitments, principles } from "../content";
-import { CtaBand, ModuleIcon } from "../sections";
+import { CtaBand, ModuleIcon, SceneBackdrop } from "../sections";
 import { ProcessTimeline } from "../ProcessTimeline";
 import { ModuleMaturity } from "../ModuleMaturity";
 import { RoadmapBoard } from "../RoadmapBoard";
@@ -11,7 +11,8 @@ export function AboutPage() {
   useScrollToHash();
   return (
     <>
-      <section className="ez-manifesto ez-glow ez-gridlines">
+      <section className="ez-manifesto">
+        <SceneBackdrop tone="violet" />
         <svg className="ez-manifesto__lines" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
           <path pathLength={1} d="M0 320 C 240 260, 420 360, 640 280 S 1020 180, 1200 220" />
           <path pathLength={1} d="M0 360 C 300 300, 520 390, 760 320 S 1060 240, 1200 280" />

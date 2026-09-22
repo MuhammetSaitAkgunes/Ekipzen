@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Logo } from "../ui";
 import { AuthScreen } from "../marketing/visuals";
+import { SceneBackdrop } from "../marketing/sections";
 
 export function AuthLayout({ title, subtitle, badge, children }: {
   title: string;
@@ -26,7 +27,8 @@ export function AuthLayout({ title, subtitle, badge, children }: {
           <Link to="/kvkk-aydinlatma">KVKK aydınlatma metni</Link> · <Link to="/guvenlik">Güvenlik</Link>
         </p>
       </main>
-      <aside className="ez-auth__aside ez-glow ez-gridlines" aria-label="Ekipzen hakkında">
+      <aside className="ez-auth__aside" aria-label="Ekipzen hakkında">
+        <SceneBackdrop />
         <div className="ez-auth__aside-inner">
           <p className="ez-auth__quote">Özlük, izin, puantaj ve bordro süreçleri tek bir kayıt düzeninde.</p>
           <ul className="ez-auth__points">

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ButtonLink, usePageMeta } from "../../ui";
+import { SceneBackdrop } from "../sections";
 
 export function NotFoundPage() {
   usePageMeta("Sayfa bulunamadı");
@@ -14,7 +15,8 @@ export function NotFoundPage() {
     };
   }, []);
   return (
-    <section className="ez-section ez-notfound ez-glow ez-gridlines">
+    <section className="ez-section ez-notfound">
+      <SceneBackdrop tone="violet" />
       <div className="ez-container ez-narrow">
         <p aria-hidden="true" className="ez-notfound__code ez-gradient-text">404</p>
         <h1>Sayfa bulunamadı</h1>

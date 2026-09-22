@@ -48,14 +48,6 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Izgara çizgileri */
-.ez-gridlines {
-  background-image:
-    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
 /* Işık bulutları — bulanıklık filtresi yerine radyal degrade */
 .ez-glow { position: relative; isolation: isolate; }
 .ez-glow::before {
@@ -72,6 +64,45 @@
   border-radius: var(--r-xl);
   backdrop-filter: blur(12px) saturate(1.2);
 }
+
+/* ------------------------------------------------------------
+   Sahne arka planı: yavaşça süzülen ışık bulutları.
+   Tek yönlü, uzun süreli ve alternate; sahne hiç kesilmez.
+   ------------------------------------------------------------ */
+.ez-scene-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.ez-scene-bg::after { content: ""; position: absolute; inset: 0; background:
+    radial-gradient(60% 45% at 50% -5%, rgb(199 210 254 / 0.12), transparent 70%),
+    radial-gradient(125% 85% at 50% 0%, transparent 52%, rgb(7 11 24 / 0.62) 100%); }
+.ez-scene-bg span { position: absolute; border-radius: 50%; will-change: transform; }
+.ez-scene-bg__a {
+  width: 78rem; height: 48rem; top: -22rem; left: -16rem;
+  background: radial-gradient(closest-side, var(--scene-a, rgb(99 102 241 / 0.62)), transparent 72%);
+  animation: ez-scene-a 52s ease-in-out infinite alternate;
+}
+.ez-scene-bg__b {
+  width: 66rem; height: 44rem; top: -14rem; right: -18rem;
+  background: radial-gradient(closest-side, var(--scene-b, rgb(56 189 248 / 0.45)), transparent 72%);
+  animation: ez-scene-b 64s ease-in-out infinite alternate;
+}
+.ez-scene-bg__c {
+  width: 72rem; height: 40rem; bottom: -24rem; left: 18%;
+  background: radial-gradient(closest-side, var(--scene-c, rgb(147 51 234 / 0.46)), transparent 72%);
+  animation: ez-scene-c 78s ease-in-out infinite alternate;
+}
+.ez-scene-bg__sheen {
+  width: 120rem; height: 120rem; top: 50%; left: 50%; margin: -60rem 0 0 -60rem; border-radius: 50%; opacity: 0.22;
+  background: conic-gradient(from 0deg, transparent, rgb(125 211 252 / 0.5), transparent 28%, rgb(192 132 252 / 0.4), transparent 62%, rgb(99 102 241 / 0.45), transparent);
+  mask-image: radial-gradient(closest-side, transparent 38%, #000 68%, transparent 92%);
+  animation: ez-scene-sheen 120s linear infinite;
+}
+.ez-scene-bg--cyan { --scene-a: rgb(56 189 248 / 0.42); --scene-b: rgb(99 102 241 / 0.4); --scene-c: rgb(14 165 233 / 0.3); }
+.ez-scene-bg--teal { --scene-a: rgb(20 184 166 / 0.4); --scene-b: rgb(56 189 248 / 0.34); --scene-c: rgb(99 102 241 / 0.32); }
+.ez-scene-bg--violet { --scene-a: rgb(168 85 247 / 0.42); --scene-b: rgb(236 72 153 / 0.26); --scene-c: rgb(99 102 241 / 0.4); }
+@keyframes ez-scene-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(10rem, 6rem, 0) scale(1.18); } }
+@keyframes ez-scene-b { from { transform: translate3d(0, 0, 0) scale(1.1); } to { transform: translate3d(-9rem, 8rem, 0) scale(0.95); } }
+@keyframes ez-scene-c { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(8rem, -7rem, 0) scale(1.22); } }
+@keyframes ez-scene-sheen { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ez-scene-bg span { animation: none; } }
 
 .ez-gradient-text { background: var(--ez-grad-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
 

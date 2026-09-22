@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { usePageMeta } from "../../ui";
 import { plans, siteInfo } from "../content";
 import { DemoRequestForm } from "../DemoRequestForm";
+import { SceneBackdrop } from "../sections";
 import { ModuleVisual } from "../visuals";
 
 export function ContactPage() {
@@ -11,7 +12,8 @@ export function ContactPage() {
   const initialMessage = plan ? `${plan.name} paketi için teklif almak istiyorum.` : "";
 
   return (
-    <section className="ez-section ez-contact ez-glow ez-gridlines">
+    <section className="ez-section ez-contact">
+      <SceneBackdrop />
       <div className="ez-container ez-contact__grid">
         <div className="ez-contact__intro">
           <p className="ez-eyebrow">İletişim</p>

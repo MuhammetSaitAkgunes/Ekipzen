@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { ButtonLink, usePageMeta } from "../../ui";
 import { ROADMAP_STAGES, SHOWCASE_ORDER, faqs, modules, roadmap, securityPillars, trustPoints } from "../content";
-import { CtaBand, FaqList, ModuleIcon } from "../sections";
+import { CtaBand, FaqList, ModuleIcon, SceneBackdrop } from "../sections";
 import { HeroScreen, ModuleGlimpse } from "../visuals";
 import { ProductShowcase } from "../ProductShowcase";
 import { EmployeeJourney } from "../EmployeeJourney";
@@ -21,7 +21,8 @@ export function HomePage() {
   usePageMeta("Ekipzen", "Özlük, izin, puantaj, bordro ve işe alım süreçlerinizi tek bir kayıt düzeninde yürütün. Ekipzen, İK ekipleri için tasarlanmış insan kaynakları yönetim platformudur.");
   return (
     <>
-      <section className="ez-hero ez-glow ez-gridlines">
+      <section className="ez-hero">
+        <SceneBackdrop />
         <div className="ez-container">
           <div className="ez-hero__copy ez-hero-enter">
             <p className="ez-hero__pill ez-glass"><span aria-hidden="true" className="ez-hero__pulse" />İnsan kaynakları yönetimi</p>

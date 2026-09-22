@@ -20,6 +20,8 @@ test("giriş bölümü büyük ürün ekranını gösterir ve gözlemciye bağl�
   const hero = document.querySelector(".ez-hero")!;
   expect(hero.querySelector(".ez-hero-screen .ez-app")).not.toBeNull();
   expect(hero.querySelector(".ez-reveal")).toBeNull();
+  expect(hero.querySelector(".ez-scene-bg")).not.toBeNull();
+  expect(hero.classList.contains("ez-gridlines")).toBe(false);
 });
 
 test("güvenlik bölümü dört katmanlı yığını gösterir", () => {
