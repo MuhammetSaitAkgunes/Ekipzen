@@ -95,3 +95,11 @@ test("gönderim sırasında buton devre dışı kalır", async () => {
   expect(screen.getByRole("button", { name: /Giriş yapılıyor/ })).toBeDisabled();
   resolve(new Response(JSON.stringify(authBody), { status: 200, headers: { "Content-Type": "application/json" } }));
 });
+
+test("giriş ekranı gece temasında, sağ panelde ürün ekranı gösterilir", () => {
+  renderLogin();
+  const root = document.querySelector(".ez-auth")!;
+  expect(root).toHaveClass("ez-night");
+  expect(root).not.toHaveClass("ez-light");
+  expect(document.querySelector(".ez-auth__aside .ez-auth-screen .ez-app")).not.toBeNull();
+});

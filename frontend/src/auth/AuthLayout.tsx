@@ -10,13 +10,13 @@ export function AuthLayout({ title, subtitle, badge, children }: {
   children: ReactNode;
 }) {
   return (
-    <div className="ez-auth ez-light">
+    <div className="ez-auth ez-night">
       <main className="ez-auth__main">
         <div className="ez-auth__top">
-          <Link to="/" aria-label="Ekipzen ana sayfa"><Logo /></Link>
+          <Link to="/" aria-label="Ekipzen ana sayfa"><Logo tone="light" /></Link>
           <Link to="/" className="ez-auth__back"><i aria-hidden="true" className="fa-solid fa-arrow-left" /> Ana sayfaya dön</Link>
         </div>
-        <div className="ez-auth__panel">
+        <div className="ez-auth__panel ez-glass">
           {badge}
           <h1>{title}</h1>
           <p className="ez-auth__subtitle">{subtitle}</p>
@@ -26,7 +26,7 @@ export function AuthLayout({ title, subtitle, badge, children }: {
           <Link to="/kvkk-aydinlatma">KVKK aydınlatma metni</Link> · <Link to="/guvenlik">Güvenlik</Link>
         </p>
       </main>
-      <aside className="ez-auth__aside" aria-label="Ekipzen hakkında">
+      <aside className="ez-auth__aside ez-glow ez-gridlines" aria-label="Ekipzen hakkında">
         <div className="ez-auth__aside-inner">
           <p className="ez-auth__quote">Özlük, izin, puantaj ve bordro süreçleri tek bir kayıt düzeninde.</p>
           <ul className="ez-auth__points">
