@@ -2,17 +2,17 @@ import { screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { renderPage } from "../../test/renderPage";
 import { HomePage } from "./HomePage";
-import { modules, roadmap } from "../content";
+import { modules } from "../content";
 
 test("hero vaadi, iki CTA ve sayfa başlığı", () => {
   renderPage(<HomePage />);
   const h1 = screen.getByRole("heading", { level: 1 });
-  expect(h1).toHaveTextContent("İK süreçleriniz tek bir kayıt düzeninde");
+  expect(h1).toHaveTextContent("Personel ve izin süreçlerinizi tek yerden yönetin.");
   expect(screen.getAllByRole("link", { name: "Demo talep edin" })[0]).toHaveAttribute("href", "/iletisim");
   expect(screen.getByRole("link", { name: "Modülleri inceleyin" })).toHaveAttribute("href", "/ozellikler");
   expect(document.title).toBe("Ekipzen");
   expect(h1.closest(".ez-hero__copy")).not.toHaveClass("ez-reveal");
-  expect(h1.querySelector(".ez-gradient-text")).toHaveTextContent("tek bir kayıt düzeninde");
+  expect(h1.querySelector(".ez-gradient-text")).toHaveTextContent("tek yerden yönetin.");
 });
 
 test("giriş bölümü büyük ürün ekranını gösterir ve gözlemciye bağlı değildir", () => {
@@ -34,34 +34,25 @@ test("güvenlik bölümü dört katmanlı yığını gösterir", () => {
 
 test("canlı vitrin ve çalışan yolculuğu bölümleri vardır", () => {
   renderPage(<HomePage />);
-  const showcase = screen.getByRole("region", { name: "Modülleri çalışırken görün" });
+  const showcase = screen.getByRole("region", { name: "Ekipzen ekranlarını keşfedin" });
   expect(within(showcase).getAllByRole("tab")).toHaveLength(6);
   expect(screen.getByRole("region", { name: "Bir çalışanın kaydı, işe alımdan bordroya" })).toBeInTheDocument();
 });
 
-test("altı modül kartı durum etiketiyle özellik sayfasına bağlanır", () => {
+test("modül kapsamı katalogdan türetilir ve yol haritasına bağlanır", () => {
   renderPage(<HomePage />);
-  const section = screen.getByRole("region", { name: "Birbirine bağlı altı modül" });
-  for (const m of modules) {
-    const link = within(section).getByRole("link", { name: new RegExp(m.title) });
-    expect(link).toHaveAttribute("href", `/ozellikler#${m.id}`);
-    expect(link.querySelector(".ez-status")).toHaveAttribute("data-status", m.status);
-  }
+  const scope = screen.getByLabelText("Modüllerin güncel durumu");
+  for (const m of modules) expect(scope).toHaveTextContent(m.title);
+  expect(within(scope).getAllByRole("listitem")).toHaveLength(3);
+  expect(within(scope).getByRole("link", { name: "Yol haritasının tamamı" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
 });
 
-test("gelişim şeridi yol haritasının ilk maddelerini ve tamamına bağlantıyı gösterir", () => {
+test("rol ve geçiş anlatımları ürün yolculuğundan sonra gelir", () => {
   renderPage(<HomePage />);
-  const strip = screen.getByRole("region", { name: "Ekipzen gelişmeye devam ediyor" });
-  for (const stage of ["Şimdi", "Sıradaki", "Planlanan"]) expect(within(strip).getByText(stage)).toBeInTheDocument();
-  expect(within(strip).getByText(roadmap[0].title)).toBeInTheDocument();
-  expect(within(strip).getByRole("link", { name: "Yol haritasının tamamı" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
-});
-
-test("güvenlik ve SSS bölümleri görünür; eski bölümler kaldırılmıştır", () => {
-  renderPage(<HomePage />);
-  expect(screen.getByRole("region", { name: "Her şirketin verisi kendi veritabanında tutulur" })).toBeInTheDocument();
-  expect(screen.getByRole("region", { name: "Sık sorulan sorular" })).toBeInTheDocument();
-  expect(screen.queryByRole("region", { name: "Kullanıma geçiş üç adımda tamamlanır" })).toBeNull();
+  const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+  expect(headings).toEqual(["Ekipzen ekranlarını keşfedin", "Bir çalışanın kaydı, işe alımdan bordroya", "Ekibinizde herkes için bir çalışma alanı", "Ekipzen ile çalışmaya nasıl başlarsınız?", "Her şirketin verisi kendi veritabanında tutulur", "Sık sorulan sorular", "Ekipzen'i kendi süreçleriniz üzerinden değerlendirin"]);
+  expect(screen.getByText(/Kurulum ve veri aktarımı desteğinin kapsamı/)).toBeInTheDocument();
+  expect(screen.getByText("Örnek verilerle hazırlanmış temsili ürün ekranı")).toBeVisible();
 });
 
 test("sahte müşteri yorumu ya da logo şeridi yoktur", () => {

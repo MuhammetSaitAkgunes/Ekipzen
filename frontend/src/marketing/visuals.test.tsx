@@ -26,7 +26,7 @@ test("giriş bölümü ekranı genel bakışı ve üç bildirimi gösterir", () 
   const { container } = render(<HeroScreen />);
   expect(container.querySelector(".ez-app[data-active='overview']")).not.toBeNull();
   expect(container.querySelectorAll(".ez-notice")).toHaveLength(3);
-  expect(container.querySelector("figcaption")).toHaveTextContent("örnek görünüm");
+  expect(container.querySelector("figcaption")).toHaveTextContent("Örnek verilerle hazırlanmış temsili ürün ekranı");
 });
 
 test("giriş sayfası görseli genel bakış ve bir bildirim içerir", () => {

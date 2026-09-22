@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { setReducedMotion } from "../test/intersectionObserver";
+import { renderPage as render } from "../test/renderPage";
 import { ProductShowcase } from "./ProductShowcase";
 
 beforeEach(() => { vi.useFakeTimers(); });
@@ -70,4 +71,10 @@ test("hareket azaltılmışsa otomatik ilerlemez", () => {
   render(<ProductShowcase intervalMs={6000} />);
   act(() => { vi.advanceTimersByTime(18000); });
   expect(selectedTab()).toHaveTextContent("Personel Yönetimi");
+});
+
+test("seçili modülün detay sayfasına bağlanır", () => {
+  render(<ProductShowcase />);
+  fireEvent.click(screen.getByRole("tab", { name: "Bordro" }));
+  expect(screen.getByRole("link", { name: "Bordro detayları" })).toHaveAttribute("href", "/ozellikler#bordro");
 });

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ButtonLink, Badge, usePageMeta } from "../../ui";
-import { comparisonRows, plans, pricingFaqs } from "../content";
+import { comparisonRows, plans, pricingFaqs, pricingLead } from "../content";
 import { CtaBand, FaqList, PageHero } from "../sections";
 import { Reveal, onSpotlightMove } from "../motion";
 import { StatusBadge } from "../StatusBadge";
@@ -18,7 +18,7 @@ export function PricingPage() {
         glow="indigo"
         eyebrow="Fiyatlandırma"
         title="Şirketinizin ihtiyacına göre belirlenen paketler"
-        lead="Fiyat, çalışan sayınıza ve kullanacağınız modüllere göre belirlenir. Paketlerin kapsamını aşağıda karşılaştırabilir, şirketinize özel teklif talep edebilirsiniz."
+        lead={pricingLead}
       />
       <section className="ez-section ez-section--flush" aria-label="Paketler">
         <div className="ez-container">

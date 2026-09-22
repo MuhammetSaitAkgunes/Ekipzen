@@ -15,11 +15,11 @@
 .ez-narrow { max-width: 820px; }
 
 /* Bölüm ritmi: üç koyu ton */
-.ez-section { position: relative; padding-block: clamp(4rem, 9vw, 7rem); background: var(--ez-night-1); }
+.ez-section { position: relative; padding-block: clamp(48px, 6vw, 80px); background: var(--ez-night-1); }
 .ez-section--muted { background: var(--ez-night-2); }
 .ez-section--dark { background: var(--ez-night-3); }
 .ez-section--muted::after, .ez-section--dark::after { content: ""; position: absolute; inset: 0 0 auto; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.1) 30%, rgb(125 211 252 / 0.25) 50%, rgb(255 255 255 / 0.1) 70%, transparent); }
-.ez-section__head { max-width: 680px; margin-bottom: 3rem; display: grid; gap: 0.875rem; }
+.ez-section__head { max-width: 680px; margin-bottom: 2rem; display: grid; gap: 0.875rem; }
 .ez-eyebrow { font: 800 var(--fs-12)/1.2 var(--ez-font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ez-accent-cyan); }
 .ez-lead { font-size: var(--fs-18); color: var(--ez-text-3); }
 .ez-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
@@ -430,3 +430,23 @@
 /* Tanıtım sitesi renkleri: giriş ve uygulama temalarından bağımsız. */
 .ez-site.ez-night { --ez-grad-primary: linear-gradient(135deg, #1d4ed8, #4338ca); }
 .ez-site.ez-night .ez-btn--primary:hover { filter: none; background: linear-gradient(135deg, #1e40af, #3730a3); }
+
+.ez-screen-caption { margin-bottom: 0.75rem; color: var(--ez-text-3); font-size: var(--fs-12); }
+.ez-scope { margin-top: 1.5rem; display: grid; gap: 1rem; }
+.ez-scope ul { list-style: none; display: grid; gap: 0.625rem; }
+.ez-scope li { display: flex; align-items: baseline; gap: 0.75rem; font-size: var(--fs-14); }
+.ez-scope .ez-status { flex-shrink: 0; }
+.ez-home-roles, .ez-onboarding { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; list-style: none; }
+.ez-home-roles li { padding-left: 1rem; border-left: 2px solid #818cf8; }
+.ez-home-roles p, .ez-onboarding p { margin-top: 0.5rem; color: var(--ez-text-3); }
+.ez-onboarding { counter-reset: steps; margin-bottom: 1.5rem; }
+.ez-onboarding li { counter-increment: steps; }
+.ez-onboarding li::before { content: "0" counter(steps); display: block; margin-bottom: 0.5rem; color: var(--ez-accent-cyan); font-weight: 700; }
+.ez-layers__benefit { color: var(--ez-text); margin-bottom: 0.5rem; }
+@media (max-width: 640px) {
+  .ez-home-roles, .ez-onboarding { grid-template-columns: 1fr; gap: 1.25rem; }
+  .ez-site .ez-section { padding-block: 48px; }
+  .ez-site .ez-section--flush { padding-top: 0; }
+  .ez-site .ez-section__head { margin-bottom: 1.5rem; }
+  .ez-hero__pill { letter-spacing: 0.02em; text-transform: none; }
+}

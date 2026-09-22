@@ -52,6 +52,25 @@ export function AboutPage() {
         </div>
       </section>
 
+      <section className="ez-section ez-section--dark" aria-labelledby="taahhut-baslik">
+        <div className="ez-container">
+          <Reveal className="ez-section__head">
+            <h2 id="taahhut-baslik">Taahhütlerimiz</h2>
+          </Reveal>
+          <ul className="ez-commitments">
+            {commitments.map((c, i) => (
+              <Reveal as="li" key={c.title} delay={i * 110} className="ez-commitment">
+                <i aria-hidden="true" className="fa-solid fa-circle-check" />
+                <div>
+                  <h3>{c.title}</h3>
+                  <p>{c.text}</p>
+                </div>
+              </Reveal>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       <section className="ez-section ez-section--muted" aria-labelledby="ilke-baslik">
         <div className="ez-container">
           <Reveal className="ez-section__head">
@@ -100,24 +119,7 @@ export function AboutPage() {
         </div>
       </section>
 
-      <section className="ez-section ez-section--dark" aria-labelledby="taahhut-baslik">
-        <div className="ez-container">
-          <Reveal className="ez-section__head">
-            <h2 id="taahhut-baslik">Taahhütlerimiz</h2>
-          </Reveal>
-          <ul className="ez-commitments">
-            {commitments.map((c, i) => (
-              <Reveal as="li" key={c.title} delay={i * 110} className="ez-commitment">
-                <i aria-hidden="true" className="fa-solid fa-circle-check" />
-                <div>
-                  <h3>{c.title}</h3>
-                  <p>{c.text}</p>
-                </div>
-              </Reveal>
-            ))}
-          </ul>
-        </div>
-      </section>
+
 
       <CtaBand
         title="Ekipzen'in gelişimine erken dahil olun"

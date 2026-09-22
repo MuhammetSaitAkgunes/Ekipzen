@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { modules } from "./content";
+import { homeCopy, modules } from "./content";
 
 /* Tanıtım sitesindeki ürün ekranları. Tüm değerler örnektir; ekranlar dekoratiftir
    (aria-hidden) ve her biri ekran okuyucuya tek cümlelik bir açıklamayla sunulur. */
@@ -245,7 +245,7 @@ export function ModuleVisual({ id }: { id: string }) {
 export function HeroScreen() {
   return (
     <figure className="ez-hero-screen">
-      <figcaption className="ez-sr-only">Ekipzen genel bakış ekranından örnek görünüm.</figcaption>
+      <figcaption className="ez-screen-caption">{homeCopy.screenCaption}</figcaption>
       <div aria-hidden="true" className="ez-hero-screen__stage">
         <AppFrame active="overview"><OverviewScreen /></AppFrame>
         <FloatingNotice tone="success" icon="fa-check" title="İzin onaylandı" detail="Ayşe Kaya · 3 gün" className="ez-notice--l" />

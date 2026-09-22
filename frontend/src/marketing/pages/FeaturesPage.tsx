@@ -42,7 +42,7 @@ export function FeaturesPage() {
       <PageHero
         glow="cyan"
         eyebrow="Özellikler"
-        title="İK süreçlerinin tamamı için tek bir çalışma alanı"
+        title="Personel, izin ve işe alım için ortak çalışma alanı"
         lead="Modüller aynı personel kaydı üzerinde çalışır; bir kez girilen bilgi tüm süreçlerde tutarlı biçimde kullanılır."
       >
         <nav aria-label="Modüller" className="ez-chips">
@@ -64,7 +64,7 @@ export function FeaturesPage() {
           <Reveal>
             <p className="ez-eyebrow">Bağlantılı veri</p>
             <h2 id="akis-baslik">Tüm modüller aynı personel kaydına bağlıdır</h2>
-            <p className="ez-lead">Bir çalışanın bilgisi bir kez girilir; izin, puantaj, bordro ve işe alım aynı kaydı kullanır. Böylece kayıtlar arasında tutarsızlık oluşmaz.</p>
+            <p className="ez-lead">Bir çalışanın bilgisi bir kez girilir; izin, puantaj, bordro ve işe alım aynı kaydı kullanır. Böylece aynı bilgiyi farklı kayıtlarda güncelleme ihtiyacı azalır.</p>
           </Reveal>
           <DataFlowDiagram />
         </div>

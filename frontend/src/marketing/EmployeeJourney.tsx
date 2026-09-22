@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
-import { journeySteps } from "./content";
+import { journeySteps, modules } from "./content";
+import { StatusBadge } from "./StatusBadge";
 import { usePrefersReducedMotion } from "./motion";
 
 /**
@@ -40,6 +41,7 @@ export function EmployeeJourney({ intervalMs = 5000 }: { intervalMs?: number }) 
   };
 
   const step = journeySteps[active];
+  const module = modules.find((m) => m.id === step.id);
   const progress = (active + 1) / journeySteps.length;
 
   return (
@@ -96,11 +98,8 @@ export function EmployeeJourney({ intervalMs = 5000 }: { intervalMs?: number }) 
         <div className="ez-journey__detail">
           <p className="ez-journey__stage">Adım {active + 1} / {journeySteps.length}</p>
           <h3>{step.title}</h3>
+          {module && module.status !== "active" && <StatusBadge status={module.status} />}
           <p className="ez-lead">{step.text}</p>
-          <p className="ez-journey__field-note">
-            <span>{step.field.label}</span>
-            <strong>{step.field.value}</strong>
-          </p>
         </div>
       </div>
     </div>

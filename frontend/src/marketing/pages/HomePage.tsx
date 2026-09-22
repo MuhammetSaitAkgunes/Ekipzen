@@ -1,21 +1,15 @@
-import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { ButtonLink, usePageMeta } from "../../ui";
-import { ROADMAP_STAGES, SHOWCASE_ORDER, faqs, modules, roadmap, securityPillars, trustPoints } from "../content";
+import { STATUS_META, faqs, homeCopy, homeRoles, homeTrustPoints, modules, onboardingNote, onboardingSteps, securityPillars } from "../content";
 import { CtaBand, FaqList, ModuleIcon, SceneBackdrop } from "../sections";
-import { HeroScreen, ModuleGlimpse } from "../visuals";
+import { HeroScreen } from "../visuals";
 import { ProductShowcase } from "../ProductShowcase";
 import { EmployeeJourney } from "../EmployeeJourney";
 import { StatusBadge } from "../StatusBadge";
-import { Reveal, onSpotlightMove } from "../motion";
+import { Reveal } from "../motion";
 
-/** Modül kartlarının köşe ışığı rengi. */
-const MODULE_GLOW: Record<string, string> = {
-  personel: "#6366f1", izin: "#38bdf8", puantaj: "#f59e0b", bordro: "#8b5cf6", "ise-alim": "#c026d3", "risk-merkezi": "#f43f5e",
-};
 const SECURITY_LAYERS = ["Uygulama", "Oturum", "Yetki", "Veritabanı"];
 
-const bentoModules = SHOWCASE_ORDER.map((id) => modules.find((m) => m.id === id)!);
 
 export function HomePage() {
   usePageMeta("Ekipzen", "Özlük, izin, puantaj, bordro ve işe alım süreçlerinizi tek bir kayıt düzeninde yürütün. Ekipzen, İK ekipleri için tasarlanmış insan kaynakları yönetim platformudur.");
@@ -25,18 +19,15 @@ export function HomePage() {
         <SceneBackdrop />
         <div className="ez-container">
           <div className="ez-hero__copy ez-hero-enter">
-            <p className="ez-hero__pill ez-glass"><span aria-hidden="true" className="ez-hero__pulse" />İnsan kaynakları yönetimi</p>
-            <h1>İK süreçleriniz <span className="ez-gradient-text">tek bir kayıt düzeninde</span></h1>
-            <p className="ez-lead">
-              Özlük bilgileri, izinler, puantaj, bordro ve işe alım aynı veri üzerinde ilerler. Bir süreçte
-              girilen bilgi, diğerlerinde yeniden girilmez.
-            </p>
+            <p className="ez-hero__pill ez-glass"><span aria-hidden="true" className="ez-hero__pulse" />{homeCopy.audience}</p>
+            <h1>{homeCopy.headline} <span className="ez-gradient-text">{homeCopy.emphasis}</span></h1>
+            <p className="ez-lead">{homeCopy.lead}</p>
             <div className="ez-actions">
               <ButtonLink to="/iletisim" size="lg">Demo talep edin</ButtonLink>
               <ButtonLink to="/ozellikler" size="lg" variant="secondary">Modülleri inceleyin</ButtonLink>
             </div>
             <ul className="ez-trust" aria-label="Öne çıkan güvenceler">
-              {trustPoints.map((t) => (
+              {homeTrustPoints.map((t) => (
                 <li key={t.label}><i aria-hidden="true" className={`fa-solid ${t.icon}`} />{t.label}</li>
               ))}
             </ul>
@@ -49,10 +40,16 @@ export function HomePage() {
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <p className="ez-eyebrow">Ürün</p>
-            <h2 id="vitrin-baslik">Modülleri çalışırken görün</h2>
+            <h2 id="vitrin-baslik">Ekipzen ekranlarını keşfedin</h2>
             <p className="ez-lead">Aşağıdaki ekranlar örnek verilerle hazırlanmış ürün görünümleridir.</p>
           </Reveal>
           <Reveal delay={100}><ProductShowcase /></Reveal>
+          <div className="ez-scope" aria-label="Modüllerin güncel durumu">
+            <ul>{(Object.keys(STATUS_META) as (keyof typeof STATUS_META)[]).map((status) => (
+              <li key={status}><StatusBadge status={status} /><span>{modules.filter((m) => m.status === status).map((m) => m.title).join(", ")}</span></li>
+            ))}</ul>
+            <Link to="/hakkimizda#yol-haritasi" className="ez-link">Yol haritasının tamamı</Link>
+          </div>
         </div>
       </section>
 
@@ -67,46 +64,18 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="ez-section" aria-labelledby="moduller-baslik">
+      <section className="ez-section" aria-labelledby="roller-baslik">
         <div className="ez-container">
-          <Reveal className="ez-section__head">
-            <p className="ez-eyebrow">Modüller</p>
-            <h2 id="moduller-baslik">Birbirine bağlı altı modül</h2>
-            <p className="ez-lead">Tüm modüller aynı personel kaydı üzerinde çalışır. Her modülün durumu açıkça belirtilir.</p>
-          </Reveal>
-          <ul className="ez-bento">
-            {bentoModules.map((m, i) => (
-              <Reveal as="li" key={m.id} delay={i * 70} className={`ez-bento__item ez-bento__item--${m.id}`}>
-                <Link to={`/ozellikler#${m.id}`} className="ez-feature-card ez-spotlight" style={{ "--card-glow": MODULE_GLOW[m.id] } as CSSProperties} onPointerMove={onSpotlightMove}>
-                  <div className="ez-feature-card__top"><ModuleIcon icon={m.icon} /><StatusBadge status={m.status} /></div>
-                  <h3>{m.title}</h3>
-                  <p>{m.summary}</p>
-                  <ModuleGlimpse id={m.id} />
-                  <span className="ez-feature-card__more">Detaylar <i aria-hidden="true" className="fa-solid fa-arrow-right" /></span>
-                </Link>
-              </Reveal>
-            ))}
-          </ul>
+          <div className="ez-section__head"><h2 id="roller-baslik">Ekibinizde herkes için bir çalışma alanı</h2></div>
+          <ul className="ez-home-roles">{homeRoles.map((role) => <li key={role.title}><h3>{role.title}</h3><p>{role.text}</p></li>)}</ul>
         </div>
       </section>
 
-      <section className="ez-section ez-section--muted" aria-labelledby="gelisim-baslik">
+      <section className="ez-section ez-section--muted" aria-labelledby="gecis-baslik">
         <div className="ez-container">
-          <Reveal className="ez-section__head">
-            <p className="ez-eyebrow">Gelişim</p>
-            <h2 id="gelisim-baslik">Ekipzen gelişmeye devam ediyor</h2>
-            <p className="ez-lead">Ürün, pilot müşterilerle birlikte doğrulanarak genişliyor. Yol haritasını açık tutuyoruz.</p>
-          </Reveal>
-          <ol className="ez-roadmap-strip">
-            {ROADMAP_STAGES.map((stage, i) => (
-              <Reveal as="li" key={stage.id} delay={i * 90} className={`ez-roadmap-strip__col ez-glass ez-roadmap-strip__col--${stage.id}`}>
-                <p className="ez-roadmap-strip__stage">{stage.title}</p>
-                <p className="ez-roadmap-strip__sub">{stage.subtitle}</p>
-                <ul>{roadmap.filter((r) => r.stage === stage.id).slice(0, 2).map((r) => <li key={r.title}>{r.title}</li>)}</ul>
-              </Reveal>
-            ))}
-          </ol>
-          <Link to="/hakkimizda#yol-haritasi" className="ez-link ez-roadmap-strip__more">Yol haritasının tamamı</Link>
+          <div className="ez-section__head"><h2 id="gecis-baslik">Ekipzen ile çalışmaya nasıl başlarsınız?</h2></div>
+          <ol className="ez-onboarding">{onboardingSteps.map((step) => <li key={step.title}><h3>{step.title}</h3><p>{step.text}</p></li>)}</ol>
+          <p className="ez-muted-note">{onboardingNote}</p>
         </div>
       </section>
 

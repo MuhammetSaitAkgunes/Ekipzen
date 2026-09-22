@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { SHOWCASE_ORDER, modules } from "./content";
 import { StatusBadge } from "./StatusBadge";
@@ -77,6 +78,7 @@ export function ProductShowcase({ intervalMs = 6000 }: { intervalMs?: number }) 
             <h3>{current.title}</h3>
             <p>{current.summary}</p>
             <ul className="ez-check-list">{current.points.map((p) => <li key={p}>{p}</li>)}</ul>
+            <Link className="ez-link" to={`/ozellikler#${current.id}`}>{current.title} detayları</Link>
           </div>
           <div className="ez-showcase__screen"><ModuleVisual id={current.id} /></div>
         </div>

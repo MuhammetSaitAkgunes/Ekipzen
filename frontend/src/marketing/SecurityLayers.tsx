@@ -23,7 +23,8 @@ export function SecurityLayers() {
               </button>
             </h3>
             <div id={`layer-${layer.id}`} role="region" aria-labelledby={`layer-btn-${layer.id}`} className="ez-layers__panel" hidden={!expanded}>
-              <p>{layer.text}</p>
+              <p className="ez-layers__benefit">{layer.benefit}</p>
+              <p className="ez-muted-note">{layer.text}</p>
             </div>
           </li>
         );

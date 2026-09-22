@@ -190,11 +190,11 @@ export const journeySteps = [
 ];
 
 export const securityLayers = [
-  { id: "baglanti", title: "Şifreli bağlantı", short: "HTTPS, HSTS, CSP", text: "Tüm trafik HTTPS üzerinden şifrelenir; HSTS ve içerik güvenliği politikası (CSP) uygulanır." },
-  { id: "kimlik", title: "Kimlik doğrulama", short: "Oturum, parola, deneme sınırı", text: "Kısa ömürlü oturum anahtarları, güçlü parola kuralları ve giriş denemelerine karşı sınırlama." },
-  { id: "yetki", title: "Rol bazlı yetki", short: "Arayüzde ve sunucuda", text: "İK yöneticisi, yönetici ve çalışan yalnız rolünün gerektirdiği verilere erişir; yetki kontrolü sunucu tarafında da uygulanır." },
-  { id: "veritabani", title: "Şirkete ait veritabanı", short: "Veri ayrımı", text: "İK verileriniz şirketinize ait ayrı bir veritabanında tutulur; başka müşterilerin İK verileriyle aynı tabloda bulunmaz." },
-  { id: "denetim", title: "Denetim izi", short: "Kim, ne zaman", text: "Kayıtlardaki değişiklikler, değişikliği yapan kişi ve zaman bilgisiyle birlikte saklanır." },
+  { id: "baglanti", benefit: "Tarayıcınızla sunucu arasındaki veri aktarımı korunur.", title: "Şifreli bağlantı", short: "HTTPS, HSTS, CSP", text: "Tüm trafik HTTPS üzerinden şifrelenir; HSTS ve içerik güvenliği politikası (CSP) uygulanır." },
+  { id: "kimlik", benefit: "Hesabınıza erişim, oturum ve parola kontrolleriyle sınırlandırılır.", title: "Kimlik doğrulama", short: "Oturum, parola, deneme sınırı", text: "Kısa ömürlü oturum anahtarları, güçlü parola kuralları ve giriş denemelerine karşı sınırlama." },
+  { id: "yetki", benefit: "Çalışanlar yalnız görevleri için gerekli verilere erişir.", title: "Rol bazlı yetki", short: "Arayüzde ve sunucuda", text: "İK yöneticisi, yönetici ve çalışan yalnız rolünün gerektirdiği verilere erişir; yetki kontrolü sunucu tarafında da uygulanır." },
+  { id: "veritabani", benefit: "Şirketinizin İK kayıtları diğer müşterilerin kayıtlarından ayrılır.", title: "Şirkete ait veritabanı", short: "Veri ayrımı", text: "İK verileriniz şirketinize ait ayrı bir veritabanında tutulur; başka müşterilerin İK verileriyle aynı tabloda bulunmaz." },
+  { id: "denetim", benefit: "Kayıtlarda kimin, ne zaman değişiklik yaptığını takip edebilirsiniz.", title: "Denetim izi", short: "Kim, ne zaman", text: "Kayıtlardaki değişiklikler, değişikliği yapan kişi ve zaman bilgisiyle birlikte saklanır." },
 ];
 
 export const securityCategories = [
@@ -221,3 +221,27 @@ export const demoSteps = [
   { title: "Ürünü süreçlerinizle inceleyelim", text: "Demo görüşmesinde ilgili ekranları ve iş akışlarını gösterelim." },
   { title: "Kapsamı ve teklifi paylaşalım", text: "Modülleri, kurulum ve veri aktarımı kapsamını içeren teklifi değerlendirin." },
 ];
+
+export const homeCopy = {
+  audience: "Küçük ve orta ölçekli şirketler için İK yönetimi",
+  headline: "Personel ve izin süreçlerinizi",
+  emphasis: "tek yerden yönetin.",
+  lead: "Özlük bilgilerini, izin taleplerini ve işe alımı aynı çalışan kaydı üzerinden takip edin. Puantaj ve bordro süreçlerini pilot kapsamında birlikte değerlendirelim.",
+  screenCaption: "Örnek verilerle hazırlanmış temsili ürün ekranı",
+};
+export const homeTrustPoints = [
+  { icon: "fa-database", label: "Şirkete özel veritabanı" },
+  { icon: "fa-user-lock", label: "Rol bazlı erişim" },
+];
+export const homeRoles = [
+  { title: "İK ekibi", text: "Personel kayıtlarını, belgeleri ve işe alım süreçlerini aynı çalışma alanından takip edin." },
+  { title: "Yönetici", text: "Ekibinizin taleplerini görün, izin ve mesai onaylarını takip edin." },
+  { title: "Çalışan", text: "İzin talebinizi oluşturun, bakiyenizi ve kişisel işlemlerinizi takip edin." },
+];
+export const onboardingSteps = [
+  { title: "İhtiyaç ve kapsam görüşmesi", text: "Öncelikli süreçlerinizi ve kullanacağınız modülleri birlikte belirleyelim." },
+  { title: "Şirketinize özel ortam", text: "Şirket hesabınız ekibimiz tarafından ayrı bir ortamda hazırlanır." },
+  { title: "Kayıt aktarımı ve davetler", text: "Personel kayıtlarınızı Excel ile aktarın, çalışanlarınızı davet bağlantısıyla dahil edin." },
+];
+export const onboardingNote = "Kurulum ve veri aktarımı desteğinin kapsamı teklifte ayrıca değerlendirilir.";
+export const pricingLead = "Fiyat, çalışan sayınıza ve seçtiğiniz modüllere göre belirlenir. Kurulum ve veri aktarımının kapsamı teklifte ayrıca belirtilir.";
