@@ -4,6 +4,12 @@ import { securityLayers } from "./content";
 export function SecurityLayers() {
   const [openId, setOpenId] = useState(securityLayers[0].id);
   return (
+    <div className="ez-layers-view">
+      <div className="ez-sec-layers ez-sec-layers--five" aria-hidden="true">
+        {securityLayers.map((layer, i) => (
+          <span key={layer.id} className={`ez-sec-layers__layer ez-sec-layers__layer--${i + 1}${openId === layer.id ? " is-active" : ""}`}>{layer.title}</span>
+        ))}
+      </div>
     <ol className="ez-layers">
       {securityLayers.map((layer, i) => {
         const expanded = openId === layer.id;
@@ -23,5 +29,6 @@ export function SecurityLayers() {
         );
       })}
     </ol>
+    </div>
   );
 }

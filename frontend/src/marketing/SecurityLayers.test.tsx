@@ -20,3 +20,15 @@ test("bir katman seçildiğinde açıklaması açılır, diğeri kapanır", () =
   expect(screen.getAllByRole("button")[0]).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByText(securityLayers[0].text)).not.toBeVisible();
 });
+
+test("katman yığını seçili katmanı öne çıkarır ve ekran okuyuculardan gizlidir", () => {
+  const { container } = render(<SecurityLayers />);
+  const stack = container.querySelector(".ez-sec-layers")!;
+  expect(stack).toHaveAttribute("aria-hidden", "true");
+  const layers = stack.querySelectorAll(".ez-sec-layers__layer");
+  expect(layers).toHaveLength(securityLayers.length);
+  expect(layers[0]).toHaveClass("is-active");
+  fireEvent.click(screen.getByRole("button", { name: /Şirkete ait veritabanı/ }));
+  expect(layers[3]).toHaveClass("is-active");
+  expect(layers[0]).not.toHaveClass("is-active");
+});

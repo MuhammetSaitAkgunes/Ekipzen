@@ -83,7 +83,7 @@
   .ez-hero-enter { animation: none; }
   .ez-flow__line { transition: none; stroke-dashoffset: 0; }
   .ez-flow__core-ring { animation: none; }
-  .ez-core::before, .ez-core::after, .ez-layers__panel { animation: none; }
+  .ez-layers__panel { animation: none; }
   .ez-manifesto__lines path { animation: none; stroke-dashoffset: 0; }
   .ez-process::after { transition: none; transform: none; }
   .ez-process__step { transform: none; transition: none; }
