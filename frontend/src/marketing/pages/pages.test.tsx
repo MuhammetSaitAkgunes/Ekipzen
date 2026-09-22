@@ -116,11 +116,11 @@ test("KVKK: veri sorumlusu, saklama süresi ve haklar bölümleri", () => {
   expect(screen.getByRole("heading", { name: "İlgili kişi olarak haklarınız" })).toBeInTheDocument();
 });
 
-test("fiyat kartları cam görünümde, önerilen kartta ışıklı kenar vardır", () => {
+test("önerilen fiyat kartı pilot kapsamını belirtir", () => {
   renderPage(<PricingPage />);
   const featured = document.querySelector(".ez-plan--featured")!;
   expect(featured).not.toBeNull();
-  expect(featured.querySelector(".ez-plan__ring")).not.toBeNull();
+  expect(within(featured as HTMLElement).getAllByText("Pilotta")).toHaveLength(2);
   expect(document.querySelector(".ez-page-hero")).toHaveClass("ez-page-hero--indigo");
 });
 

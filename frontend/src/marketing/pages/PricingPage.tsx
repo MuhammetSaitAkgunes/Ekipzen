@@ -26,7 +26,6 @@ export function PricingPage() {
             {plans.map((p, i) => (
               <Reveal as="li" key={p.id} delay={i * 100} className="ez-plans__item">
                 <div className={`ez-plan ez-spotlight${p.highlighted ? " ez-plan--featured" : ""}`} onPointerMove={onSpotlightMove}>
-                  {p.highlighted && <span aria-hidden="true" className="ez-plan__ring" />}
                   {p.highlighted && <Badge tone="primary">Önerilen</Badge>}
                   <h2>{p.name}</h2>
                   <p className="ez-plan__audience">{p.audience}</p>

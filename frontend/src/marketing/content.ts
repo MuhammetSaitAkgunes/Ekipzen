@@ -214,3 +214,10 @@ export const aboutScenes = [
   { icon: "fa-clone", title: "Aynı bilginin tekrar girilmesi", text: "Bir çalışanın bilgisi her süreçte yeniden girilir; kayıtlar arasında tutarsızlıklar oluşur." },
   { icon: "fa-id-card", title: "Tek bir kayıt düzeni", text: "Ekipzen'de tüm süreçler aynı personel kaydı üzerinden ilerler." },
 ];
+
+export const demoIntro = "İK süreçlerinizi ve önceliklerinizi paylaşın. Ekibimiz sizinle iletişime geçerek demo görüşmesini planlasın.";
+export const demoSteps = [
+  { title: "İhtiyaçlarınızı değerlendirelim", text: "Öncelikli İK süreçlerinizi ve kullanmak istediğiniz modülleri birlikte ele alalım." },
+  { title: "Ürünü süreçlerinizle inceleyelim", text: "Demo görüşmesinde ilgili ekranları ve iş akışlarını gösterelim." },
+  { title: "Kapsamı ve teklifi paylaşalım", text: "Modülleri, kurulum ve veri aktarımı kapsamını içeren teklifi değerlendirin." },
+];
