@@ -11,15 +11,16 @@ export function AboutPage() {
   useScrollToHash();
   return (
     <>
-      <section className="ez-manifesto ez-aurora">
+      <section className="ez-manifesto ez-glow ez-gridlines">
         <svg className="ez-manifesto__lines" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">
           <path pathLength={1} d="M0 320 C 240 260, 420 360, 640 280 S 1020 180, 1200 220" />
           <path pathLength={1} d="M0 360 C 300 300, 520 390, 760 320 S 1060 240, 1200 280" />
+          <path pathLength={1} d="M0 280 C 260 220, 500 330, 720 250 S 1040 140, 1200 180" />
         </svg>
         <div className="ez-container ez-narrow">
           <div className="ez-hero-enter">
             <p className="ez-eyebrow">Hakkımızda</p>
-            <h1>İK yazılımını, İK ekiplerinin günlük gerçekliğinden başlayarak geliştiriyoruz.</h1>
+            <h1>İK yazılımını, <span className="ez-gradient-text">İK ekiplerinin günlük gerçekliğinden</span> başlayarak geliştiriyoruz.</h1>
             <p className="ez-lead">
               Ekipzen, İK ekiplerinin tekrar eden işlerini azaltmak ve çalışan verisini güvenle yönetmek için geliştirilen,
               gelişmekte olan bir insan kaynakları platformudur.
@@ -40,6 +41,7 @@ export function AboutPage() {
           <ol className="ez-scenes">
             {aboutScenes.map((scene, i) => (
               <Reveal as="li" key={scene.title} delay={i * 140} className={`ez-scene ez-scene--${i + 1}`}>
+                <span className="ez-scene__num" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
                 <span className="ez-scene__icon" aria-hidden="true"><i className={`fa-solid ${scene.icon}`} /></span>
                 <h3>{scene.title}</h3>
                 <p>{scene.text}</p>

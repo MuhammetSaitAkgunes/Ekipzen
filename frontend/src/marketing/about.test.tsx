@@ -5,6 +5,8 @@ import { ProcessTimeline } from "./ProcessTimeline";
 import { ModuleMaturity } from "./ModuleMaturity";
 import { RoadmapBoard } from "./RoadmapBoard";
 import { ROADMAP_NOTE, devProcess, roadmap } from "./content";
+import { renderPage } from "../test/renderPage";
+import { AboutPage } from "./pages/AboutPage";
 
 test("süreç çizgisi altı adımı gösterir ve görünür olunca etkinleşir", () => {
   const { container } = render(<ProcessTimeline />);
@@ -32,4 +34,16 @@ test("yol haritası panosu üç aşamayı, tüm maddeleri ve tarih notunu göste
   for (const stage of ["Şimdi", "Sıradaki", "Planlanan"]) expect(screen.getByRole("heading", { level: 3, name: stage })).toBeInTheDocument();
   expect(screen.getAllByRole("article")).toHaveLength(roadmap.length);
   expect(screen.getByText(ROADMAP_NOTE)).toBeInTheDocument();
+});
+
+test("manifesto ışıklı girişte, sahneler numaralı ve taahhütler koyu bantta", () => {
+  renderPage(<AboutPage />);
+  const manifesto = document.querySelector(".ez-manifesto")!;
+  expect(manifesto).toHaveClass("ez-glow");
+  expect(manifesto.querySelector(".ez-reveal")).toBeNull();
+  const scenes = document.querySelectorAll(".ez-scene__num");
+  expect([...scenes].map((s) => s.textContent)).toEqual(["01", "02", "03"]);
+  const commitments = document.querySelector(".ez-commitments")!.closest("section")!;
+  expect(commitments).toHaveClass("ez-section--dark");
+  expect(document.getElementById("yol-haritasi")).not.toBeNull();
 });
