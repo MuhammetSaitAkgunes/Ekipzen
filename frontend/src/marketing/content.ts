@@ -245,3 +245,8 @@ export const onboardingSteps = [
 ];
 export const onboardingNote = "Kurulum ve veri aktarımı desteğinin kapsamı teklifte ayrıca değerlendirilir.";
 export const pricingLead = "Fiyat, çalışan sayınıza ve seçtiğiniz modüllere göre belirlenir. Kurulum ve veri aktarımının kapsamı teklifte ayrıca belirtilir.";
+
+export const playbackCopy = {
+  pause: "Otomatik geçişi durdur", resume: "Otomatik geçişi sürdür",
+  reduced: "Hareket azaltma tercihiniz etkin. Adımları kendiniz seçebilirsiniz.",
+};

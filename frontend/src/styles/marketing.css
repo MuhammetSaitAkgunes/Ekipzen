@@ -171,7 +171,7 @@
 .ez-contact__card { margin-top: 0.5rem; padding: 1.25rem; border-radius: var(--r-lg); display: grid; gap: 0.5rem; }
 .ez-contact__card h2 { font-size: var(--fs-16) !important; }
 .ez-contact__card a, .ez-link { color: var(--ez-accent-cyan); font-weight: 600; }
-.ez-contact__form { grid-column: 2; grid-row: 1 / 3; padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: var(--ez-shadow-lg); }
+.ez-contact__form { background: #111a30; grid-column: 2; grid-row: 1 / 3; padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: var(--ez-shadow-lg); }
 .ez-contact__grid > * { position: relative; z-index: 1; }
  .ez-contact__followup { grid-column: 1; grid-row: 2; display: grid; gap: 1.25rem; min-width: 0; }
 .ez-contact__followup > h2 { font-size: var(--fs-20); }
@@ -450,3 +450,11 @@
   .ez-site .ez-section__head { margin-bottom: 1.5rem; }
   .ez-hero__pill { letter-spacing: 0.02em; text-transform: none; }
 }
+
+/* Büyük metin tercihinde dar ekranlarda içerik kırpılmadan yeniden akar. */
+.ez-site { overflow-wrap: anywhere; }
+.ez-site .ez-btn { max-width: 100%; white-space: normal; text-align: center; padding-block: 0.5rem; }
+.ez-hero__copy > *, .ez-journey__panel > *, .ez-journey__person > div,
+.ez-security-band__grid > *, .ez-security-band__item > div, .ez-cta-band > *, .ez-site .ez-actions { min-width: 0; max-width: 100%; }
+.ez-journey__fields > div { flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.ez-site .ez-cta-band .ez-btn--primary:hover { background: #eef2ff; color: #1e1b4b; }

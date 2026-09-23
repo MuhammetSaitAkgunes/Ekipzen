@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { SHOWCASE_ORDER, modules } from "./content";
 import { StatusBadge } from "./StatusBadge";
 import { ModuleVisual } from "./visuals";
-import { usePrefersReducedMotion } from "./motion";
+import { useAutoAdvance } from "./useAutoAdvance";
+import { AutoAdvanceControl } from "./AutoAdvanceControl";
 
 const items = SHOWCASE_ORDER.map((id) => {
   const found = modules.find((m) => m.id === id);
@@ -12,23 +13,38 @@ const items = SHOWCASE_ORDER.map((id) => {
 });
 
 export function ProductShowcase({ intervalMs = 6000 }: { intervalMs?: number }) {
-  const [active, setActive] = useState(0);
-  const [hovered, setHovered] = useState(false);
-  const [userSelected, setUserSelected] = useState(false);
-  const reduced = usePrefersReducedMotion();
+  const playback = useAutoAdvance(items.length, intervalMs);
+  const { active, running } = playback;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const running = !reduced && !hovered && !userSelected;
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState(false);
 
   useEffect(() => {
-    if (!running) return;
-    const timer = window.setInterval(() => setActive((i) => (i + 1) % items.length), intervalMs);
-    return () => window.clearInterval(timer);
-  }, [running, intervalMs]);
+    const tabs = tabsRef.current;
+    if (!tabs) return;
+    let disposed = false;
+    const update = () => { if (!disposed) setOverflow(tabs.scrollWidth > tabs.clientWidth + 1); };
+    update();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(tabs);
+    window.addEventListener("resize", update);
+    document.fonts?.ready.then(update);
+    return () => { disposed = true; observer?.disconnect(); window.removeEventListener("resize", update); };
+  }, []);
+
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    const selected = tabRefs.current[active];
+    if (!tabs || !selected) return;
+    const container = tabs.getBoundingClientRect();
+    const button = selected.getBoundingClientRect();
+    if (button.left < container.left) tabs.scrollLeft += button.left - container.left;
+    else if (button.right > container.right) tabs.scrollLeft += button.right - container.right;
+  }, [active, overflow]);
 
   const select = (index: number, moveFocus = false) => {
-    setActive(index);
-    setUserSelected(true);
-    if (moveFocus) tabRefs.current[index]?.focus();
+    playback.select(index);
+    if (moveFocus) tabRefs.current[index]?.focus({ preventScroll: true });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -44,14 +60,10 @@ export function ProductShowcase({ intervalMs = 6000 }: { intervalMs?: number }) 
     select(next, true);
   };
 
-  const onBlur = (event: FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHovered(false);
-  };
-
   const current = items[active];
   return (
-    <div className="ez-showcase" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setHovered(true)} onBlur={onBlur}>
-      <div role="tablist" aria-label="Modüller" className="ez-showcase__tabs" onKeyDown={onKeyDown}>
+    <div className="ez-showcase" {...playback.interactionProps}>
+      <div ref={tabsRef} role="tablist" aria-label="Modüller" className="ez-showcase__tabs" onKeyDown={onKeyDown}>
         {items.map((m, i) => (
           <button
             key={m.id}
@@ -70,6 +82,13 @@ export function ProductShowcase({ intervalMs = 6000 }: { intervalMs?: number }) 
             {i === active && running && <span className="ez-showcase__progress" style={{ animationDuration: `${intervalMs}ms` }} aria-hidden="true" />}
           </button>
         ))}
+      </div>
+      <div className="ez-showcase__controls">
+        {overflow && <div className="ez-showcase__arrows" aria-label="Modül seçenekleri">
+          <button type="button" aria-label="Önceki modül" disabled={active === 0} onClick={() => select(active - 1)}><i aria-hidden="true" className="fa-solid fa-arrow-left" /></button>
+          <button type="button" aria-label="Sonraki modül" disabled={active === items.length - 1} onClick={() => select(active + 1)}><i aria-hidden="true" className="fa-solid fa-arrow-right" /></button>
+        </div>}
+        <AutoAdvanceControl enabled={playback.enabled} reduced={playback.reduced} onToggle={playback.toggle} />
       </div>
       <div role="tabpanel" id="showcase-panel" aria-labelledby={`showcase-tab-${current.id}`} tabIndex={0} className="ez-showcase__panel ez-spotlight">
         <div key={current.id} className="ez-showcase__content">

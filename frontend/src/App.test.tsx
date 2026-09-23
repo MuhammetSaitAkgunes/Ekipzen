@@ -5,7 +5,7 @@ import App from "./App";
 test("oturum yokken kök adres landing sayfasını açar", async () => {
   localStorage.clear();
   render(<App />);
-  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("İK süreçleriniz tek bir kayıt düzeninde");
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Personel ve izin süreçlerinizi tek yerden yönetin.");
 });
 
 afterEach(() => {

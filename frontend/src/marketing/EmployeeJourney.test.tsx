@@ -59,3 +59,11 @@ test("adımlar kendiliğinden ilerler; hareket azaltılmışsa durur", () => {
     setReducedMotion(false);
   }
 });
+
+test("puantaj ve bordro adımları pilot kapsamını belirtir", async () => {
+  render(<EmployeeJourney />);
+  for (const name of ["Puantaj", "Bordro"]) {
+    await userEvent.click(screen.getByRole("tab", { name: new RegExp(name) }));
+    expect(within(screen.getByRole("tabpanel")).getByText("Pilotta")).toBeVisible();
+  }
+});

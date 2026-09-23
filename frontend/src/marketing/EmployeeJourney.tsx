@@ -1,30 +1,20 @@
-import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { journeySteps, modules } from "./content";
 import { StatusBadge } from "./StatusBadge";
-import { usePrefersReducedMotion } from "./motion";
+import { useAutoAdvance } from "./useAutoAdvance";
+import { AutoAdvanceControl } from "./AutoAdvanceControl";
 
 /**
  * Çalışan yolculuğu: adımlar kendi ritminde ilerler (kaydırmaya bağlı değil).
  * İmleç üzerindeyken, odaklanıldığında ya da kullanıcı bir adım seçtiğinde durur.
  */
 export function EmployeeJourney({ intervalMs = 5000 }: { intervalMs?: number }) {
-  const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [userSelected, setUserSelected] = useState(false);
-  const reduced = usePrefersReducedMotion();
+  const playback = useAutoAdvance(journeySteps.length, intervalMs);
+  const { active } = playback;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const running = !reduced && !paused && !userSelected;
-
-  useEffect(() => {
-    if (!running) return;
-    const timer = window.setInterval(() => setActive((i) => (i + 1) % journeySteps.length), intervalMs);
-    return () => window.clearInterval(timer);
-  }, [running, intervalMs]);
-
   const select = (index: number, moveFocus = false) => {
-    setActive(index);
-    setUserSelected(true);
-    if (moveFocus) tabRefs.current[index]?.focus();
+    playback.select(index);
+    if (moveFocus) tabRefs.current[index]?.focus({ preventScroll: true });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -45,15 +35,7 @@ export function EmployeeJourney({ intervalMs = 5000 }: { intervalMs?: number }) 
   const progress = (active + 1) / journeySteps.length;
 
   return (
-    <div
-      className="ez-journey"
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={(event: FocusEvent<HTMLDivElement>) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false);
-      }}
-    >
+    <div className="ez-journey" {...playback.interactionProps}>
       <div className="ez-journey__rail">
         <span className="ez-journey__track" aria-hidden="true">
           <span className="ez-journey__fill" style={{ transform: `scaleX(${progress})` }} />
@@ -79,6 +61,7 @@ export function EmployeeJourney({ intervalMs = 5000 }: { intervalMs?: number }) 
         </div>
       </div>
 
+      <AutoAdvanceControl enabled={playback.enabled} reduced={playback.reduced} onToggle={playback.toggle} />
       <div id="journey-panel" role="tabpanel" aria-labelledby={`journey-tab-${step.id}`} tabIndex={0} className="ez-journey__panel">
         <figure className="ez-journey__card" aria-label="Örnek personel kaydı">
           <div className="ez-journey__person">

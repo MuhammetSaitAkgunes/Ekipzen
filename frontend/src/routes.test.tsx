@@ -62,7 +62,7 @@ test("hr-admin, settings'te gerçek Sistem Ayarları sayfasını görür", () =>
 
 test("kök yol oturumsuz ziyaretçiye landing gösterir", async () => {
   renderAt("/");
-  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("İK süreçleriniz tek bir kayıt düzeninde");
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Personel ve izin süreçlerinizi tek yerden yönetin.");
   expect(screen.getAllByRole("link", { name: "Giriş yap" })[0]).toHaveAttribute("href", "/giris");
 });
 

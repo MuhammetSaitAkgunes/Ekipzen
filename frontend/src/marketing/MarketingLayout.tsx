@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { LOGIN_PATH, roleHomeFor } from "../paths";
@@ -11,8 +11,20 @@ export function MarketingLayout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const scrolled = useScrolled();
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setMenuOpen(false);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [menuOpen]);
 
   const primaryAction = user
     ? <ButtonLink to={roleHomeFor(user.role)} variant="ghost">Uygulamaya git</ButtonLink>
@@ -37,6 +49,7 @@ export function MarketingLayout() {
             </div>
           </nav>
           <button
+            ref={toggleRef}
             type="button"
             className="ez-header__toggle"
             aria-expanded={menuOpen}

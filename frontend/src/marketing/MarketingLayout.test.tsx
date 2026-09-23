@@ -73,3 +73,12 @@ test("site gece temasında açılır, menü kaydırınca koyulaşır", () => {
   expect(header).toHaveClass("is-scrolled");
   Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
 });
+
+test("Escape mobil menüyü kapatır ve odağı açma düğmesine döndürür", async () => {
+  renderLayout();
+  await userEvent.click(screen.getByRole("button", { name: "Menüyü aç" }));
+  within(screen.getByRole("navigation", { name: "Ana menü" })).getByRole("link", { name: "Özellikler" }).focus();
+  await userEvent.keyboard("{Escape}");
+  expect(screen.getByRole("button", { name: "Menüyü aç" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Menüyü aç" })).toHaveAttribute("aria-expanded", "false");
+});

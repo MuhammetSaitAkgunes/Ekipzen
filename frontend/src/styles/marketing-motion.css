@@ -32,7 +32,7 @@
 @media (max-width: 860px) { .ez-showcase__content { grid-template-columns: 1fr; } }
 
 /* ---------- Çalışan yolculuğu: adım gezgini ---------- */
-.ez-journey { display: grid; gap: clamp(1.5rem, 3vw, 2.5rem); }
+.ez-journey { display: grid; gap: 1.25rem; }
 .ez-journey__rail { position: relative; display: grid; gap: 1rem; }
 .ez-journey__track { position: absolute; left: 0; right: 0; top: 21px; height: 2px; background: rgb(255 255 255 / 0.1); border-radius: 2px; }
 .ez-journey__fill { display: block; height: 100%; border-radius: 2px; transform-origin: left; background: linear-gradient(90deg, #38bdf8, #6366f1, #c084fc); box-shadow: 0 0 16px rgb(99 102 241 / 0.6); transition: transform 600ms var(--ease-out); }
@@ -71,9 +71,8 @@
   .ez-journey__track { top: 18px; }
 }
 @media (max-width: 560px) {
-  .ez-journey__tab > span:not(.ez-journey__num) { display: none; }
-  .ez-journey__tab.is-active > span:not(.ez-journey__num) { display: block; position: absolute; top: 52px; left: 0; right: 0; text-align: center; }
-  .ez-journey__tabs { padding-bottom: 1.75rem; }
+  .ez-journey__tab { padding-inline: 0; min-height: 64px; font-size: var(--fs-12); overflow-wrap: anywhere; }
+  .ez-journey__num { width: 38px; height: 38px; }
 }
 @media (prefers-reduced-motion: reduce) { .ez-journey__panel { animation: none; } .ez-journey__fill { transition: none; } }
 
@@ -97,3 +96,13 @@
 }
 
 @media print { .ez-reveal { opacity: 1; transform: none; } }
+
+.ez-playback { display: flex; justify-content: flex-end; }
+.ez-playback__button, .ez-showcase__arrows button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 44px; padding: 0.5rem 0.75rem; background: var(--ez-night-2); color: var(--ez-text-2); border: 1px solid var(--ez-border-strong); border-radius: var(--r-md); font-size: var(--fs-14); }
+.ez-playback__button:hover, .ez-showcase__arrows button:not(:disabled):hover { background: var(--ez-surface-2); color: var(--ez-text); }
+.ez-showcase__controls { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.ez-showcase__arrows { display: flex; gap: 0.5rem; margin-right: auto; }
+.ez-showcase__arrows button { width: 44px; }
+.ez-showcase__arrows button:disabled { opacity: 0.4; cursor: default; }
+.ez-showcase__tabs { padding: 4px; }
+.ez-site .ez-journey__tab { min-height: 64px; }

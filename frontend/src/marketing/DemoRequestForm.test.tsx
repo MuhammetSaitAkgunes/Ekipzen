@@ -77,3 +77,13 @@ test("bilinen forma eşlenmeyen sunucu hata anahtarı genel mesajla gösterilir"
   await userEvent.click(screen.getByRole("button", { name: "Demo talebini gönder" }));
   expect(await screen.findByText("Talebiniz şu anda iletilemedi. Lütfen tekrar deneyin ya da bize e-posta ile ulaşın.")).toBeInTheDocument();
 });
+
+test("bağlantı hatasında bilgiler korunur ve yeniden deneme sunulur", async () => {
+  vi.mocked(fetch).mockRejectedValueOnce(new TypeError("Network unavailable"));
+  renderPage(<DemoRequestForm />);
+  await fillValid();
+  await userEvent.click(screen.getByRole("button", { name: "Demo talebini gönder" }));
+  expect(await screen.findByText(/Talebiniz şu anda iletilemedi/)).toBeInTheDocument();
+  expect(screen.getByLabelText(/İş e-postası/)).toHaveValue("ayse@firma.example");
+  expect(screen.getByRole("button", { name: "Demo talebini gönder" })).toBeEnabled();
+});
