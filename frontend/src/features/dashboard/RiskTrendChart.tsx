@@ -29,8 +29,8 @@ export function RiskTrendChart({ trend }: { trend: number[] }) {
           maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
           scales: {
-            y: { min: 0, suggestedMax: Math.min(100, Math.max(...trend) + 10), grid: { color: chartToken("--line-soft", "#f1f5f9") } },
-            x: { grid: { display: false } },
+            y: { min: 0, suggestedMax: Math.min(100, Math.max(...trend) + 10), grid: { color: chartToken("--line-soft", "#f1f5f9") }, ticks: { color: chartToken("--muted", "#64748b") } },
+            x: { grid: { display: false }, ticks: { color: chartToken("--muted", "#64748b"), autoSkip: true, maxTicksLimit: 6, maxRotation: 0 } },
           },
         }}
       />

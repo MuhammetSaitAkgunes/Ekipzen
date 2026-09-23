@@ -18,7 +18,7 @@ const metrics = {
     { label: "Kritik Rol Riski", value: 3, meta: "Yedekleme planı yok", tone: "high" },
     { label: "Kültür / Nabız", value: 64, meta: "Çalışan nabzı", tone: "medium" },
   ],
-  employees: [{ employeeId: 1 }],
+  employees: [{ employeeId: 1 }, { employeeId: 2 }, { employeeId: 3 }, { employeeId: 4 }],
 };
 const managerLoad = { managerLoadIndex: 71, criticalManagerCount: 2, pendingApprovals: 5, openActions: 14, managers: [] };
 const voice = { pulseScore: 64, eNps: 8, participationRate: 76, decliningTeams: 2, sentimentTrend: "Düşüş", departments: [], signals: [], recommendedActions: [] };
@@ -46,40 +46,36 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-test("özet yalnız durum, öncelikli işler ve iki anlamlı geçiş gösterir", async () => {
+test("özet risk halkası ve açık iş dağılımıyla hızlı durum verir", async () => {
   renderRisk();
-  const status = await screen.findByRole("heading", { name: "Orta risk" });
-  expect(status).toBeInTheDocument();
+  expect(await screen.findByRole("img", { name: "Genel risk: 100 üzerinden 62" })).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "1 yüksek, 0 orta, 1 düşük öncelikli açık iş" })).toBeInTheDocument();
   const nav = screen.getByRole("navigation", { name: "Risk Merkezi görünümleri" });
   expect(within(nav).getByRole("link", { name: "Özet" })).toHaveAttribute("aria-current", "page");
-  expect(within(nav).getByRole("link", { name: "İnsan ve ekip" })).toHaveAttribute("href", "/app/dashboard?view=people");
-  const priorities = screen.getByRole("region", { name: "Öncelikli işler" });
-  expect(within(priorities).getByText("1 yüksek öncelikli iş açık.")).toBeInTheDocument();
-  expect(within(priorities).getByRole("link", { name: /Tükenmişlik sinyali işini İş Kutusunda aç/ })).toHaveAttribute("href", "/app/inbox?tab=actions");
+  expect(screen.getByRole("link", { name: /Tükenmişlik sinyali işini İş Kutusunda aç/ })).toHaveAttribute("href", "/app/inbox?tab=actions");
   expect(screen.queryByText("Kapanan iş")).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "Departmanlar" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "İş gücü kapasitesi" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Departman karşılaştırması" })).not.toBeInTheDocument();
 });
 
-test("insan ve ekip görünümü dört sinyali ve ekip ayrıntılarını açar", async () => {
+test("insan ve ekip görünümü metrikleri, eğilimi ve departman çubuklarını gösterir", async () => {
   renderRisk();
-  fireEvent.click(screen.getByRole("navigation", { name: "Risk Merkezi görünümleri" }).querySelector('a[href$="view=people"]')!);
-  const signals = await screen.findByRole("region", { name: "Takip edilecek alanlar" });
-  expect(within(signals).getByRole("link", { name: /Ayrılma riski/ })).toHaveAttribute("href", "/app/risk/attrition");
-  expect(within(signals).getByRole("link", { name: /Tükenmişlik/ })).toHaveAttribute("href", "/app/risk/burnout");
-  expect(within(signals).getByText("5 bekleyen onay · 14 açık iş")).toBeInTheDocument();
-  expect(screen.getByText("18 çalışan · 2 yüksek ayrılma · 1 tükenmişlik")).toBeInTheDocument();
-  expect(screen.getByText("74 / 100 · Yüksek risk")).toBeInTheDocument();
-  expect(screen.getByText("Dönemsel risk eğilimini göster")).toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "İş gücü kapasitesi" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("link", { name: "İnsan ve ekip" }));
+  expect(await screen.findByRole("link", { name: /Ayrılma riski/ })).toHaveAttribute("href", "/app/risk/attrition");
+  expect(screen.getByRole("link", { name: /Tükenmişlik/ })).toHaveAttribute("href", "/app/risk/burnout");
+  expect(screen.getByRole("img", { name: /Dönemsel risk sinyali 48 puandan 62 puana değişti/ })).toBeInTheDocument();
+  const departments = screen.getByRole("region", { name: "Departman karşılaştırması" });
+  expect(within(departments).getByText("Yazılım")).toBeInTheDocument();
+  expect(within(departments).getByText("2 ayrılma · 1 tükenmişlik", { exact: false })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /5 bekleyen onay · 14 açık yönetici işi/ })).toHaveAttribute("href", "/app/risk/manager-load");
 });
 
-test("operasyon görünümü uyumu ve kapasiteyi gösterir, nabzı tekrar etmez", async () => {
+test("operasyon görünümü evrak halkasını ve kapasite çubuklarını gösterir", async () => {
   renderRisk();
   fireEvent.click(screen.getByRole("link", { name: "Operasyon ve uyum" }));
-  const complianceSection = await screen.findByRole("region", { name: "Evrak ve uyum" });
-  expect(within(complianceSection).getByRole("link", { name: /Eksik evraklar/ })).toHaveAttribute("href", "/app/risk/compliance");
-  expect(screen.getByText("18 yaklaşan son tarih · Denetim hazırlığı: Orta")).toBeInTheDocument();
+  expect(await screen.findByRole("img", { name: "Evrak uyumu: 100 üzerinden 82" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Ayrıntılar/ })).toHaveAttribute("href", "/app/risk/compliance");
+  expect(screen.getByText("11")).toBeInTheDocument();
+  expect(screen.getByText("18")).toBeInTheDocument();
   expect(screen.getByText("İşe Alım Sağlığı")).toBeInTheDocument();
   expect(screen.getByText("Kritik Rol Riski")).toBeInTheDocument();
   expect(screen.queryByText("Kültür / Nabız")).not.toBeInTheDocument();
@@ -93,19 +89,21 @@ test("yöneticiye yetkisiz işe alım bağlantısı sunulmaz", async () => {
   expect(screen.queryByRole("link", { name: /İşe alımı aç/ })).not.toBeInTheDocument();
 });
 
-test("eksik değerler sıfır risk gibi gösterilmez", async () => {
+test("eksik veri sıfır olarak görselleştirilmez", async () => {
   stubApi({
     "/api/dashboard/metrics": { ...metrics, riskScore: null, riskTrend: [], departmentRisk: [], talentCapacity: [] },
     "/api/dashboard/manager-load": managerLoad,
     "/api/dashboard/employee-voice": voice,
-    "/api/dashboard/compliance": compliance,
+    "/api/dashboard/compliance": { ...compliance, documentComplianceScore: null },
     "/api/actions": [],
   });
   renderRisk();
-  expect(await screen.findByRole("heading", { name: "Henüz risk verisi yok" })).toBeInTheDocument();
-  expect(screen.getByText("Şu anda açık aksiyon yok. Yeni bir iş oluştuğunda burada görünecek.")).toBeInTheDocument();
+  expect(await screen.findByRole("img", { name: "Genel risk: veri yok" })).toBeInTheDocument();
+  expect(screen.getByText("Şu anda açık aksiyon yok.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("link", { name: "İnsan ve ekip" }));
   expect(await screen.findByText("Bu kapsamda departman verisi yok.")).toBeInTheDocument();
-  fireEvent.click(screen.getByText("Dönemsel risk eğilimini göster"));
-  expect(screen.getByText("Henüz karşılaştırılacak dönem verisi yok.")).toBeInTheDocument();
+  expect(screen.getByText("Karşılaştırılacak dönem verisi yok.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("link", { name: "Operasyon ve uyum" }));
+  expect(await screen.findByRole("img", { name: "Evrak uyumu: veri yok" })).toBeInTheDocument();
+  expect(screen.getByText("Bu alanda henüz gösterge yok.")).toBeInTheDocument();
 });
