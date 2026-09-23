@@ -106,7 +106,7 @@ test("içerik listeleri spec'teki yapıdadır", () => {
   expect(roadmap.filter((r) => r.stage === "now")).toHaveLength(2);
   expect(roadmap.filter((r) => r.stage === "next")).toHaveLength(2);
   expect(roadmap.filter((r) => r.stage === "planned")).toHaveLength(3);
-  expect(ROADMAP_NOTE).toBe("Tarih taahhüdü değildir; öncelikler pilot geri bildirimleriyle şekillenir.");
+  expect(ROADMAP_NOTE).toBe("Yol haritası, planlanan çalışmaları gösterir; yayın tarihi taahhüdü içermez.");
   expect(devProcess).toHaveLength(6);
   expect(principles).toHaveLength(4);
   expect(commitments).toHaveLength(3);

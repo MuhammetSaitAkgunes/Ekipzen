@@ -249,7 +249,7 @@ export function HeroScreen() {
       <div aria-hidden="true" className="ez-hero-screen__stage">
         <AppFrame active="overview"><OverviewScreen /></AppFrame>
         <FloatingNotice tone="success" icon="fa-check" title="İzin onaylandı" detail="Ayşe Kaya · 3 gün" className="ez-notice--l" />
-        <FloatingNotice tone="primary" icon="fa-turkish-lira-sign" title="Mart bordrosu hazır" detail="142 çalışan · kontrol bekliyor" className="ez-notice--r" />
+        <FloatingNotice tone="primary" icon="fa-user-plus" title="Yeni başvuru" detail="3 aday · inceleme bekliyor" className="ez-notice--r" />
         <FloatingNotice tone="violet" icon="fa-star" title="Yeni aday" detail="Ön Yüz Geliştirici · 2. tur" className="ez-notice--br" />
       </div>
     </figure>

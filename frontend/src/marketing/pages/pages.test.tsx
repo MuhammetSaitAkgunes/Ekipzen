@@ -22,7 +22,7 @@ test("Özellikler: her modül anchor id'li bir paneldir", () => {
     expect(section!.querySelector(".ez-status")).toHaveAttribute("data-status", m.status);
   }
   expect(screen.getByRole("heading", { name: "İK yöneticisi, yönetici ve çalışan için ayrı çalışma alanları" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Tüm modüller aynı personel kaydına bağlıdır" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "İK süreçleri ortak çalışan kaydıyla bağlantılıdır" })).toBeInTheDocument();
   expect(document.title).toBe("Özellikler · Ekipzen");
 });
 
@@ -64,7 +64,7 @@ test("Fiyatlandırma: üç paket, rakam yok, teklif CTA'sı ve karşılaştırma
   expect(within(table).getAllByRole("columnheader")).toHaveLength(4);
   expect(screen.queryByText("En çok tercih edilen")).toBeNull();
   expect(screen.getByText("Önerilen")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Ürün nasıl gelişiyor?" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
+  expect(screen.getByRole("link", { name: "Yol haritasını inceleyin" })).toHaveAttribute("href", "/hakkimizda#yol-haritasi");
 });
 
 // I1: hover/lift efekti .ez-reveal.is-visible { transform: none } tarafından eziliyordu çünkü
@@ -86,10 +86,10 @@ test("Fiyatlandırma: paket kartının hover efekti reveal wrapper'dan ayrı bir
 
 test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {
   renderPage(<SecurityPage />);
-  expect(screen.getByRole("region", { name: "Katman katman güvenlik" })).toBeInTheDocument();
-  const categories = screen.getByRole("region", { name: "Kontroller kategoriye göre" });
+  expect(screen.getByRole("region", { name: "Veriyi koruyan güvenlik katmanları" })).toBeInTheDocument();
+  const categories = screen.getByRole("region", { name: "Güvenlik kontrolleri" });
   expect(within(categories).getAllByRole("heading", { level: 3 })).toHaveLength(4);
-  const transparencyRegion = screen.getByRole("region", { name: "Bugün sağlananlar ve üzerinde çalıştıklarımız" });
+  const transparencyRegion = screen.getByRole("region", { name: "Mevcut kontroller ve planlanan geliştirmeler" });
   expect(within(transparencyRegion).getByText("Çok faktörlü kimlik doğrulama")).toBeInTheDocument();
   expect(within(transparencyRegion).getAllByText("Geliştiriliyor")).toHaveLength(2);
   expect(screen.getByRole("heading", { name: "KVKK ve kişisel veriler" })).toBeInTheDocument();
@@ -99,13 +99,13 @@ test("Güvenlik: katmanlar, kategoriler, şeffaflık ve KVKK bölümü", () => {
 test("Hakkımızda: manifesto, ilkeler, süreç, olgunluk, yol haritası ve taahhütler; uydurma kişi ya da sayı yok", () => {
   renderPage(<AboutPage />);
   const h1 = screen.getByRole("heading", { level: 1 });
-  expect(h1).toHaveTextContent("İK yazılımını, İK ekiplerinin günlük gerçekliğinden başlayarak geliştiriyoruz.");
+  expect(h1).toHaveTextContent("İK süreçlerine tek bir çalışma düzeni kazandırıyoruz.");
   expect(h1.closest(".ez-reveal")).toBeNull();
   for (const name of ["Neden varız", "İlkelerimiz", "Ürünü nasıl geliştiriyoruz", "Ekipzen bugün", "Yol haritası", "Taahhütlerimiz"]) {
     expect(screen.getByRole("region", { name })).toBeInTheDocument();
   }
   expect(document.getElementById("yol-haritasi")).toHaveAccessibleName("Yol haritası");
-  expect(screen.getByText("Hazır olanla geliştirileni ayırırız.")).toBeInTheDocument();
+  expect(screen.getByText("Kapsamı açıkça tanımlarız.")).toBeInTheDocument();
   expect(screen.queryByText(/kurucu|CEO|\d+\+ müşteri/i)).toBeNull();
 });
 

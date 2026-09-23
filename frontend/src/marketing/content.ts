@@ -23,8 +23,8 @@ export type ModuleStatus = "active" | "pilot" | "building";
 
 export const STATUS_META: Record<ModuleStatus, { label: string; description: string; tone: "success" | "warning" | "primary" }> = {
   active: { label: "Kullanımda", description: "Genel kullanıma açık; müşteri ortamlarında kullanılabilir.", tone: "success" },
-  pilot: { label: "Pilotta", description: "Pilot müşteride gerçek verilerle doğrulanıyor.", tone: "warning" },
-  building: { label: "Geliştiriliyor", description: "Aktif olarak geliştiriliyor; genel kullanıma açılmadan önce pilotta doğrulanacak.", tone: "primary" },
+  pilot: { label: "Pilotta", description: "Seçili müşterilerle pilot kapsamda değerlendiriliyor.", tone: "warning" },
+  building: { label: "Geliştiriliyor", description: "Genel kullanıma açılmadan önce geliştirilen modül.", tone: "primary" },
 };
 
 export type MarketingModule = { id: string; icon: string; title: string; summary: string; points: string[]; roles: string; status: ModuleStatus };
@@ -88,8 +88,8 @@ export const securityPillars = [
 ];
 
 export const faqs = [
-  { q: "Ekipzen hangi şirketlere uygun?", a: "Personel, izin, puantaj ve bordro süreçlerini tek bir kayıt düzeninde yürütmek isteyen küçük ve orta ölçekli şirketler için tasarlanmıştır." },
-  { q: "Hesabı kendim oluşturabilir miyim?", a: "Hayır. Her şirket hesabı, güvenlik gereği ekibimiz tarafından ayrı bir ortamda kurulur. Demo talebinizin ardından sizinle iletişime geçiyoruz." },
+  { q: "Ekipzen hangi şirketlere uygun?", a: "Personel kayıtlarını, izin taleplerini ve işe alımı ortak bir çalışma alanında yönetmek isteyen küçük ve orta ölçekli şirketler için tasarlanmıştır." },
+  { q: "Hesabı kendim oluşturabilir miyim?", a: "Şirket hesabı, ekibimiz tarafından şirkete özel bir ortamda hazırlanır. Demo talebinizin ardından kurulum kapsamını birlikte değerlendiririz." },
   { q: "Verilerimiz nerede ve nasıl saklanıyor?", a: "İK verileriniz şirketinize ait ayrı bir veritabanında tutulur; başka müşterilerin İK verileriyle aynı tabloda bulunmaz. Erişim rol bazlıdır ve tüm bağlantılar şifrelidir." },
   { q: "Mevcut personel listemizi aktarabilir miyiz?", a: "Evet. Personel kayıtlarınızı bir Excel dosyasından toplu olarak içe aktarabilirsiniz." },
   { q: "Çalışanlar sisteme nasıl dahil oluyor?", a: "Her çalışan kendisine gönderilen davet bağlantısıyla şifresini belirler ve yalnız rolünün izin verdiği ekranlara erişir." },
@@ -98,17 +98,17 @@ export const faqs = [
 export type Plan = { id: string; name: string; audience: string; highlighted?: boolean; features: { label: string; status?: ModuleStatus }[] };
 
 export const plans: Plan[] = [
-  { id: "baslangic", name: "Başlangıç", audience: "Personel ve izin süreçlerini dijital ortama taşıyan ekipler için",
+  { id: "baslangic", name: "Başlangıç", audience: "Personel kayıtlarını ve izin süreçlerini düzenli yönetmek isteyen ekipler için",
     features: [
       { label: "Personel yönetimi" }, { label: "İzin yönetimi" },
       { label: "Çalışan self-servis ekranları" }, { label: "E-posta desteği" },
     ] },
-  { id: "buyuyen", name: "Büyüyen", audience: "Puantaj ve bordroyu aynı sistemde yürütmek isteyen şirketler için", highlighted: true,
+  { id: "buyuyen", name: "Büyüyen", audience: "İşe alımı aynı kayıt düzenine eklemek, puantaj ve bordroyu pilot kapsamda değerlendirmek isteyen şirketler için", highlighted: true,
     features: [
       { label: "Başlangıç paketinin tüm kapsamı" }, { label: "Mesai ve puantaj", status: "pilot" },
       { label: "Bordro", status: "pilot" }, { label: "İşe alım" }, { label: "Öncelikli destek" },
     ] },
-  { id: "kurumsal", name: "Kurumsal", audience: "Risk analitiği ve kuruma özel gereksinimleri olan organizasyonlar için",
+  { id: "kurumsal", name: "Kurumsal", audience: "Yönetim görünümü ve kuruma özel kapsam gereksinimleri olan organizasyonlar için",
     features: [
       { label: "Büyüyen paketinin tüm kapsamı" }, { label: "Risk Merkezi", status: "building" },
       { label: "Yönetici konsolu" }, { label: "Kurulum ve veri aktarımında destek" },
@@ -134,8 +134,8 @@ export const pricingFaqs = [
 ];
 
 export const roleViews = [
-  { title: "İK yöneticisi", text: "Şirket genelindeki İK süreçlerini yönetir; risk sinyalleri Risk Merkezi'nin genel kullanıma açılmasıyla eklenecektir.", points: ["Risk Merkezi (geliştiriliyor)", "Personel, bordro ve işe alım", "Şirket ayarları"] },
-  { title: "Yönetici", text: "Ekibinin durumunu izler, onay bekleyen talepleri sonuçlandırır.", points: ["Ekip izin ve mesai onayları", "Yönetici konsolu", "Ekibe ait risk sinyalleri (geliştiriliyor)"] },
+  { title: "İK yöneticisi", text: "Personel kayıtlarını, izin süreçlerini ve işe alımı şirket genelinde yönetir.", points: ["Risk Merkezi (geliştiriliyor)", "Personel, bordro ve işe alım", "Şirket ayarları"] },
+  { title: "Yönetici", text: "Ekibinin taleplerini ve onay süreçlerini tek çalışma alanından takip eder.", points: ["Ekip izin ve mesai onayları", "Yönetici konsolu", "Ekibe ait risk sinyalleri (geliştiriliyor)"] },
   { title: "Çalışan", text: "Kendisiyle ilgili İK işlemlerini doğrudan uygulama üzerinden yürütür.", points: ["İzin talebi ve bakiye", "Bordro pusulası", "Kişisel verilerin dışa aktarımı"] },
 ];
 
@@ -157,7 +157,7 @@ export const roadmap: { stage: RoadmapStage; title: string; text: string }[] = [
   { stage: "planned", title: "Ek raporlar", text: "İK ve yönetim için hazır rapor setleri." },
 ];
 
-export const ROADMAP_NOTE = "Tarih taahhüdü değildir; öncelikler pilot geri bildirimleriyle şekillenir.";
+export const ROADMAP_NOTE = "Yol haritası, planlanan çalışmaları gösterir; yayın tarihi taahhüdü içermez.";
 
 export const devProcess = [
   { title: "İhtiyaç", text: "İK ekiplerinden gelen gerçek iş akışları ve geri bildirimler." },
@@ -171,14 +171,14 @@ export const devProcess = [
 export const principles = [
   { icon: "fa-scale-balanced", title: "Önce doğruluk", text: "Hesaplamalar doğrulanmadan canlı kullanım için önerilmez." },
   { icon: "fa-database", title: "Veri ayrımı", text: "Her şirketin verisi kendi veritabanında tutulur." },
-  { icon: "fa-comments", title: "Açık iletişim", text: "Neyin hazır, neyin geliştirilmekte olduğunu açıkça söyleriz." },
+  { icon: "fa-comments", title: "Açık iletişim", text: "Modüllerin kapsamını ve kullanım durumunu açıkça paylaşırız." },
   { icon: "fa-layer-group", title: "Sadelik", text: "Her ekran belirli bir işi tamamlamaya hizmet eder." },
 ];
 
 export const commitments = [
-  { title: "Hazır olanla geliştirileni ayırırız.", text: "Her modülün durumu sitede ve üründe açıkça belirtilir." },
+  { title: "Kapsamı açıkça tanımlarız.", text: "Her modülün durumu sitede ve üründe açıkça belirtilir." },
   { title: "Verinizin sahibi sizsiniz.", text: "Verileriniz şirketinize ait ayrı bir veritabanında tutulur; her kullanıcı kendi verisini dışa aktarabilir." },
-  { title: "Hesaplamalar doğrulanmadan kullanıma alınmaz.", text: "Bordro, uzman kabulünden önce ödeme veya beyan için esas alınmaz." },
+  { title: "Bordroda uzman doğrulamasını esas alırız.", text: "Pilot kapsamındaki bordro çıktıları, ödeme veya beyan öncesinde alan uzmanı tarafından doğrulanır." },
 ];
 
 export const journeySteps = [
@@ -212,10 +212,10 @@ export const transparency = {
 export const aboutScenes = [
   { icon: "fa-table-cells", title: "Dağınık tablolar ve yazışmalar", text: "Personel bilgileri, izin talepleri ve puantaj farklı dosyalarda ve e-posta zincirlerinde tutulur." },
   { icon: "fa-clone", title: "Aynı bilginin tekrar girilmesi", text: "Bir çalışanın bilgisi her süreçte yeniden girilir; kayıtlar arasında tutarsızlıklar oluşur." },
-  { icon: "fa-id-card", title: "Tek bir kayıt düzeni", text: "Ekipzen'de tüm süreçler aynı personel kaydı üzerinden ilerler." },
+  { icon: "fa-id-card", title: "Tek bir kayıt düzeni", text: "Ekipzen, personel, izin ve işe alım kayıtlarını ortak bir veri düzeninde buluşturur." },
 ];
 
-export const demoIntro = "İK süreçlerinizi ve önceliklerinizi paylaşın. Ekibimiz sizinle iletişime geçerek demo görüşmesini planlasın.";
+export const demoIntro = "İK süreçlerinizi ve önceliklerinizi paylaşın. Ekibimiz, ürünün iş akışlarını şirketinizin ihtiyaçları üzerinden göstermek üzere sizinle iletişime geçecektir.";
 export const demoSteps = [
   { title: "İhtiyaçlarınızı değerlendirelim", text: "Öncelikli İK süreçlerinizi ve kullanmak istediğiniz modülleri birlikte ele alalım." },
   { title: "Ürünü süreçlerinizle inceleyelim", text: "Demo görüşmesinde ilgili ekranları ve iş akışlarını gösterelim." },
@@ -226,7 +226,7 @@ export const homeCopy = {
   audience: "Küçük ve orta ölçekli şirketler için İK yönetimi",
   headline: "Personel ve izin süreçlerinizi",
   emphasis: "tek yerden yönetin.",
-  lead: "Özlük bilgilerini, izin taleplerini ve işe alımı aynı çalışan kaydı üzerinden takip edin. Puantaj ve bordro süreçlerini pilot kapsamında birlikte değerlendirelim.",
+  lead: "Personel kayıtlarını, izin taleplerini ve işe alımı ortak bir çalışma alanında yönetin. Ekipzen, İK ekiplerine tutarlı bir veri düzeni ve izlenebilir iş akışları sunar.",
   screenCaption: "Örnek verilerle hazırlanmış temsili ürün ekranı",
 };
 export const homeTrustPoints = [
@@ -234,17 +234,17 @@ export const homeTrustPoints = [
   { icon: "fa-user-lock", label: "Rol bazlı erişim" },
 ];
 export const homeRoles = [
-  { title: "İK ekibi", text: "Personel kayıtlarını, belgeleri ve işe alım süreçlerini aynı çalışma alanından takip edin." },
-  { title: "Yönetici", text: "Ekibinizin taleplerini görün, izin ve mesai onaylarını takip edin." },
-  { title: "Çalışan", text: "İzin talebinizi oluşturun, bakiyenizi ve kişisel işlemlerinizi takip edin." },
+  { title: "İK ekibi", text: "Personel kayıtlarını, belgeleri ve işe alım süreçlerini aynı çalışma alanında yönetin." },
+  { title: "Yönetici", text: "Ekibinizin taleplerini izleyin ve onay süreçlerini yönetin." },
+  { title: "Çalışan", text: "İzin talebinizi oluşturun, güncel bakiyenizi ve kişisel işlemlerinizi görüntüleyin." },
 ];
 export const onboardingSteps = [
-  { title: "İhtiyaç ve kapsam görüşmesi", text: "Öncelikli süreçlerinizi ve kullanacağınız modülleri birlikte belirleyelim." },
-  { title: "Şirketinize özel ortam", text: "Şirket hesabınız ekibimiz tarafından ayrı bir ortamda hazırlanır." },
-  { title: "Kayıt aktarımı ve davetler", text: "Personel kayıtlarınızı Excel ile aktarın, çalışanlarınızı davet bağlantısıyla dahil edin." },
+  { title: "İhtiyaç ve kapsam görüşmesi", text: "İK süreçlerinizi ve ihtiyaç duyduğunuz modülleri birlikte değerlendirelim." },
+  { title: "Şirketinize özel ortam", text: "Şirket hesabınız, verilerinize ayrılmış bir ortamda hazırlanır." },
+  { title: "Kayıt aktarımı ve davetler", text: "Personel kayıtlarınızı Excel üzerinden aktarın; çalışanları davet bağlantısıyla sisteme dahil edin." },
 ];
-export const onboardingNote = "Kurulum ve veri aktarımı desteğinin kapsamı teklifte ayrıca değerlendirilir.";
-export const pricingLead = "Fiyat, çalışan sayınıza ve seçtiğiniz modüllere göre belirlenir. Kurulum ve veri aktarımının kapsamı teklifte ayrıca belirtilir.";
+export const onboardingNote = "Kurulum ve veri aktarımı desteğinin kapsamı, şirketinize sunulan teklifte belirtilir.";
+export const pricingLead = "Paket kapsamı ve fiyatlandırma, çalışan sayınıza ve seçtiğiniz modüllere göre şekillenir. Kurulum ve veri aktarımı teklifte ayrıca ele alınır.";
 
 export const playbackCopy = {
   pause: "Otomatik geçişi durdur", resume: "Otomatik geçişi sürdür",

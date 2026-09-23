@@ -24,7 +24,7 @@ export function ContactPage() {
           <DemoRequestForm key={initialMessage} initialMessage={initialMessage} />
         </div>
         <div className="ez-contact__followup">
-          <h2>Demo görüşmesinde sizi ne bekliyor?</h2>
+          <h2>Demo görüşmesinin kapsamı</h2>
           <ol className="ez-contact__steps">
             {demoSteps.map((step) => <li key={step.title}><h3>{step.title}</h3><p>{step.text}</p></li>)}
           </ol>

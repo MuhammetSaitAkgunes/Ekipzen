@@ -13,16 +13,16 @@ export function SecurityPage() {
       <PageHero
         glow="teal"
         eyebrow="Güvenlik"
-        title="İK verisinin hassasiyetine göre kurulmuş bir mimari"
-        lead="Ekipzen, çalışan verisinin bir şirketin en hassas verileri arasında yer aldığı gözetilerek veri ayrımı ve en az yetki ilkeleri üzerine kurulmuştur."
+        title="Çalışan verileri için çok katmanlı güvenlik"
+        lead="Şirkete özel veritabanı, rol bazlı yetki ve şifreli bağlantı, çalışan verilerinin yönetiminde temel güvenlik katmanlarını oluşturur."
       />
 
       <section className="ez-section ez-section--flush ez-glow ez-layers-band" aria-labelledby="katman-baslik">
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <p className="ez-eyebrow">Mimari</p>
-            <h2 id="katman-baslik">Katman katman güvenlik</h2>
-            <p className="ez-lead">Bir isteğin verinize ulaşmadan önce geçtiği katmanlar. Ayrıntısını görmek için bir katman seçin.</p>
+            <h2 id="katman-baslik">Veriyi koruyan güvenlik katmanları</h2>
+            <p className="ez-lead">Erişimden veri ayrımına kadar uygulanan kontrolleri incelemek için bir katman seçin.</p>
           </Reveal>
           <Reveal delay={120}><SecurityLayers /></Reveal>
         </div>
@@ -32,7 +32,7 @@ export function SecurityPage() {
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <p className="ez-eyebrow">Kontroller</p>
-            <h2 id="kategori-baslik">Kontroller kategoriye göre</h2>
+            <h2 id="kategori-baslik">Güvenlik kontrolleri</h2>
           </Reveal>
           <ul className="ez-grid-2 ez-categories">
             {securityCategories.map((c, i) => (
@@ -50,16 +50,16 @@ export function SecurityPage() {
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <p className="ez-eyebrow">Şeffaflık</p>
-            <h2 id="seffaflik-baslik">Bugün sağlananlar ve üzerinde çalıştıklarımız</h2>
-            <p className="ez-lead">Güvenlik yaklaşımımızı, bugün ürünün sağladıklarıyla ve henüz geliştirmekte olduklarımızla birlikte açıkça paylaşıyoruz.</p>
+            <h2 id="seffaflik-baslik">Mevcut kontroller ve planlanan geliştirmeler</h2>
+            <p className="ez-lead">Kullanımdaki güvenlik kontrollerini ve geliştirme gündemindeki ek önlemleri ayrı ayrı görebilirsiniz.</p>
           </Reveal>
           <div className="ez-transparency">
             <Reveal className="ez-transparency__col ez-glass">
-              <h3>Bugün sağlanan</h3>
+              <h3>Kullanımdaki kontroller</h3>
               <ul className="ez-check-list">{transparency.provided.map((item) => <li key={item}>{item}</li>)}</ul>
             </Reveal>
             <Reveal delay={120} className="ez-transparency__col ez-glass ez-transparency__col--progress">
-              <h3>Üzerinde çalışılan</h3>
+              <h3>Geliştirme gündeminde</h3>
               <ul className="ez-transparency__list">
                 {transparency.inProgress.map((item) => <li key={item}><span>{item}</span><StatusBadge status="building" /></li>)}
               </ul>

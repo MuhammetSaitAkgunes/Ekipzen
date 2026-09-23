@@ -43,7 +43,7 @@ export function FeaturesPage() {
         glow="cyan"
         eyebrow="Özellikler"
         title="Personel, izin ve işe alım için ortak çalışma alanı"
-        lead="Modüller aynı personel kaydı üzerinde çalışır; bir kez girilen bilgi tüm süreçlerde tutarlı biçimde kullanılır."
+        lead="Personel bilgileri, izin talepleri ve işe alım kayıtları ortak bir veri düzeninde yönetilir. Her modülün kullanım durumu aşağıda belirtilir."
       >
         <nav aria-label="Modüller" className="ez-chips">
           {modules.map((m) => (
@@ -63,8 +63,8 @@ export function FeaturesPage() {
         <div className="ez-container ez-split">
           <Reveal>
             <p className="ez-eyebrow">Bağlantılı veri</p>
-            <h2 id="akis-baslik">Tüm modüller aynı personel kaydına bağlıdır</h2>
-            <p className="ez-lead">Bir çalışanın bilgisi bir kez girilir; izin, puantaj, bordro ve işe alım aynı kaydı kullanır. Böylece aynı bilgiyi farklı kayıtlarda güncelleme ihtiyacı azalır.</p>
+            <h2 id="akis-baslik">İK süreçleri ortak çalışan kaydıyla bağlantılıdır</h2>
+            <p className="ez-lead">Personel kaydı, izin ve işe alım süreçleri arasında bilgi akışını sağlar. Pilot kapsamındaki puantaj ve bordro modülleri de bu veri düzenine dayanır.</p>
           </Reveal>
           <DataFlowDiagram />
         </div>

@@ -36,7 +36,7 @@ test("canlı vitrin ve çalışan yolculuğu bölümleri vardır", () => {
   renderPage(<HomePage />);
   const showcase = screen.getByRole("region", { name: "Ekipzen ekranlarını keşfedin" });
   expect(within(showcase).getAllByRole("tab")).toHaveLength(6);
-  expect(screen.getByRole("region", { name: "Bir çalışanın kaydı, işe alımdan bordroya" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Çalışan kaydı süreçler arasında nasıl ilerler?" })).toBeInTheDocument();
 });
 
 test("modül kapsamı katalogdan türetilir ve yol haritasına bağlanır", () => {
@@ -50,7 +50,7 @@ test("modül kapsamı katalogdan türetilir ve yol haritasına bağlanır", () =
 test("rol ve geçiş anlatımları ürün yolculuğundan sonra gelir", () => {
   renderPage(<HomePage />);
   const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-  expect(headings).toEqual(["Ekipzen ekranlarını keşfedin", "Bir çalışanın kaydı, işe alımdan bordroya", "Ekibinizde herkes için bir çalışma alanı", "Ekipzen ile çalışmaya nasıl başlarsınız?", "Her şirketin verisi kendi veritabanında tutulur", "Sık sorulan sorular", "Ekipzen'i kendi süreçleriniz üzerinden değerlendirin"]);
+  expect(headings).toEqual(["Ekipzen ekranlarını keşfedin", "Çalışan kaydı süreçler arasında nasıl ilerler?", "Her rol için açık ve odaklı bir çalışma alanı", "Ekipzen ile kullanıma geçiş", "Her şirketin verisi kendi veritabanında tutulur", "Sık sorulan sorular", "İK süreçleriniz için Ekipzen'i keşfedin"]);
   expect(screen.getByText(/Kurulum ve veri aktarımı desteğinin kapsamı/)).toBeInTheDocument();
   expect(screen.getByText("Örnek verilerle hazırlanmış temsili ürün ekranı")).toBeVisible();
 });

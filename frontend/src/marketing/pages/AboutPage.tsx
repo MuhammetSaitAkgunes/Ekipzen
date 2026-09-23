@@ -21,10 +21,9 @@ export function AboutPage() {
         <div className="ez-container ez-narrow">
           <div className="ez-hero-enter">
             <p className="ez-eyebrow">Hakkımızda</p>
-            <h1>İK yazılımını, <span className="ez-gradient-text">İK ekiplerinin günlük gerçekliğinden</span> başlayarak geliştiriyoruz.</h1>
+            <h1>İK süreçlerine <span className="ez-gradient-text">tek bir çalışma düzeni</span> kazandırıyoruz.</h1>
             <p className="ez-lead">
-              Ekipzen, İK ekiplerinin tekrar eden işlerini azaltmak ve çalışan verisini güvenle yönetmek için geliştirilen,
-              gelişmekte olan bir insan kaynakları platformudur.
+              Ekipzen, personel kayıtlarını, izin taleplerini ve işe alımı ortak bir veri düzeninde buluşturur. İK ekiplerinin günlük işlerini daha izlenebilir hale getirmeyi amaçlar.
             </p>
           </div>
         </div>
@@ -35,8 +34,7 @@ export function AboutPage() {
           <Reveal className="ez-section__head">
             <h2 id="neden-baslik">Neden varız</h2>
             <p className="ez-lead">
-              Personel, izin, puantaj, bordro ve işe alım ayrı araçlarda yürütüldüğünde aynı bilgi birden fazla kez girilir
-              ve kayıtlar arasında tutarsızlıklar oluşur. Ekipzen bu süreçleri tek bir veri modelinde birleştirir.
+              Personel bilgileri, izin talepleri ve işe alım ayrı araçlarda yürütüldüğünde kayıtları güncel tutmak zorlaşır. Ekipzen, bu temel süreçleri ortak bir veri düzeninde birleştirir.
             </p>
           </Reveal>
           <ol className="ez-scenes">
@@ -75,7 +73,7 @@ export function AboutPage() {
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <h2 id="ilke-baslik">İlkelerimiz</h2>
-            <p className="ez-lead">Ürünle ilgili her kararı bu dört ilkeye göre veriyoruz.</p>
+            <p className="ez-lead">Ürün tasarımında veri güvenliği, açıklık ve günlük kullanım kolaylığını esas alıyoruz.</p>
           </Reveal>
           <ul className="ez-grid-2 ez-principles">
             {principles.map((p, i) => (
@@ -103,7 +101,7 @@ export function AboutPage() {
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <h2 id="bugun-baslik">Ekipzen bugün</h2>
-            <p className="ez-lead">Modüllerin güncel durumu. Bir modül, pilotta doğrulandıktan sonra genel kullanıma açılır.</p>
+            <p className="ez-lead">Modüllerin kullanım durumunu ve kapsamını burada inceleyebilirsiniz.</p>
           </Reveal>
           <ModuleMaturity />
         </div>
@@ -113,7 +111,7 @@ export function AboutPage() {
         <div className="ez-container">
           <Reveal className="ez-section__head">
             <h2 id="yol-baslik">Yol haritası</h2>
-            <p className="ez-lead">Ekipzen, pilot müşterilerle birlikte doğrulanarak gelişiyor. Önümüzdeki çalışmaları açık tutuyoruz.</p>
+            <p className="ez-lead">Planlanan geliştirmeleri ve değerlendirme aşamasındaki çalışmaları paylaşıyoruz.</p>
           </Reveal>
           <RoadmapBoard />
         </div>
@@ -122,8 +120,8 @@ export function AboutPage() {
 
 
       <CtaBand
-        title="Ekipzen'in gelişimine erken dahil olun"
-        text="Pilot sürecinde edindiğimiz geri bildirimler yol haritasını doğrudan şekillendiriyor. Süreçlerinizi birlikte değerlendirelim."
+        title="İK süreçlerinizi birlikte değerlendirelim"
+        text="Ekipzen'in mevcut modüllerini ve şirketinize uygun kullanım kapsamını demo görüşmesinde birlikte inceleyelim."
       />
     </>
   );

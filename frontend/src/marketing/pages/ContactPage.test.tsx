@@ -28,7 +28,7 @@ test("İletişim: paket parametresi olmadan mesaj alanı boş gelir", () => {
 test("demo formu yardımcı içerikten önce ve yalnız bir kez sunulur", () => {
   const { container } = renderAt("/iletisim");
   const form = container.querySelector("form")!;
-  const followup = screen.getByRole("heading", { name: "Demo görüşmesinde sizi ne bekliyor?" });
+  const followup = screen.getByRole("heading", { name: "Demo görüşmesinin kapsamı" });
   expect(container.querySelectorAll("form")).toHaveLength(1);
   expect(form.compareDocumentPosition(followup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

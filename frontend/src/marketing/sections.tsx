@@ -33,7 +33,7 @@ export function PageHero({ eyebrow, title, lead, glow = "indigo", children }: { 
   );
 }
 
-export function CtaBand({ title = "Ekipzen'i kendi süreçleriniz üzerinden değerlendirin", text = "Demo görüşmesinde ürünü şirketinizin izin, puantaj ve bordro akışları üzerinden birlikte inceleyelim." }: { title?: string; text?: string }) {
+export function CtaBand({ title = "İK süreçleriniz için Ekipzen'i keşfedin", text = "Demo görüşmesinde personel, izin ve işe alım iş akışlarını şirketinizin ihtiyaçları üzerinden birlikte inceleyelim." }: { title?: string; text?: string }) {
   const id = useId();
   return (
     <section className="ez-section" aria-labelledby={id}>

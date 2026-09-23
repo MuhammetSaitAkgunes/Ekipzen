@@ -67,7 +67,7 @@ export function PricingPage() {
               </tbody>
             </table>
           </div>
-          <p className="ez-muted-note">Pilotta ve Geliştiriliyor durumundaki modüller, pilot kapsamında ya da genel kullanıma açıldıklarında paketinize dahil edilir.</p>
+          <p className="ez-muted-note">Pilot ve geliştirme durumundaki modüllerin kullanım kapsamı, teklif görüşmesinde ayrıca netleştirilir.</p>
         </div>
       </section>
 
@@ -80,11 +80,11 @@ export function PricingPage() {
       <section className="ez-section ez-section--flush" aria-label="Ürünün gelişimi">
         <Reveal className="ez-container ez-narrow ez-pricing-roadmap">
           <i aria-hidden="true" className="fa-solid fa-route" />
-          <p>Ekipzen, pilot müşterilerle birlikte doğrulanarak gelişmeye devam ediyor. Modüllerin durumunu ve yol haritasını açıkça paylaşıyoruz.</p>
-          <Link to="/hakkimizda#yol-haritasi" className="ez-link">Ürün nasıl gelişiyor?</Link>
+          <p>Modüllerin güncel kullanım durumunu ve planlanan çalışmaları inceleyerek şirketiniz için uygun kapsamı belirleyebilirsiniz.</p>
+          <Link to="/hakkimizda#yol-haritasi" className="ez-link">Yol haritasını inceleyin</Link>
         </Reveal>
       </section>
-      <CtaBand title="Şirketinize özel teklif talep edin" text="Çalışan sayınızı ve kullanmak istediğiniz modülleri paylaşın; kapsamı ve fiyatı içeren teklifi size iletelim." />
+      <CtaBand title="Şirketinize özel teklif talep edin" text="Çalışan sayınızı ve öncelikli süreçlerinizi paylaşın; şirketinize uygun kapsam ve fiyatlandırmayı birlikte değerlendirelim." />
     </>
   );
 }
