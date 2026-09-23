@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { appRoutes } from "../../routes";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../auth/AuthContext";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { formatToday, getRiskLabel, getRiskLevel, priorityLabel, topPriorityActions } from "./format";
@@ -8,11 +8,11 @@ import {
   useComplianceRisk, useDashboardMetrics, useEmployeeVoice, useManagerLoad, useOpenActions,
 } from "./queries";
 
-const pathForRouteKey = (key?: string | null): string =>
-  appRoutes.find((r) => r.key === key)?.path ?? appPath("/actions");
+const count = (value?: number | null) => value == null ? "—" : value.toLocaleString("tr-TR");
+const percentWidth = (value?: number | null) => Math.max(0, Math.min(100, value ?? 0)) + "%";
 
 export function RiskCenterPage() {
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const metricsQ = useDashboardMetrics();
   const loadQ = useManagerLoad();
   const voiceQ = useEmployeeVoice();
@@ -20,8 +20,8 @@ export function RiskCenterPage() {
   const actionsQ = useOpenActions();
 
   const queries = [metricsQ, loadQ, voiceQ, complianceQ, actionsQ];
-  if (queries.some((q) => q.isPending)) return <PageLoading />;
-  const failed = queries.find((q) => q.isError);
+  if (queries.some((query) => query.isPending)) return <PageLoading />;
+  const failed = queries.find((query) => query.isError);
   if (failed) return <PageError error={failed.error} />;
 
   const metrics = metricsQ.data!;
@@ -29,203 +29,139 @@ export function RiskCenterPage() {
   const voice = voiceQ.data!;
   const compliance = complianceQ.data!;
   const actions = actionsQ.data!;
-
-  const riskScore = metrics.riskScore ?? 0;
+  const riskScore = metrics.riskScore ?? null;
   const trend = metrics.riskTrend ?? [];
-  const delta = trend.length >= 2 ? trend[trend.length - 1] - trend[0] : 0;
-  const todayCount = actions.filter((a) => a.priority === "high").length;
-  const weekCount = actions.filter((a) => a.priority === "medium").length;
-  const watchCount = actions.filter((a) => a.priority === "low").length;
+  const trendDelta = trend.length > 1 ? trend[trend.length - 1] - trend[0] : null;
+  const urgent = actions.filter((action) => action.priority === "high");
+  const departments = [...(metrics.departmentRisk ?? [])].sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
+  const areaCards = [
+    {
+      title: "Ayrılma riski", value: count(metrics.attritionHigh), unit: "kişi",
+      detail: "Yüksek risk grubundaki çalışanları ve nedenleri inceleyin.",
+      to: appPath("/risk/attrition"), icon: "fa-person-walking-arrow-right",
+    },
+    {
+      title: "Tükenmişlik", value: count(metrics.burnoutRisk), unit: "sinyal",
+      detail: "İş yükü ve çalışan nabzındaki değişimleri görün.",
+      to: appPath("/risk/burnout"), icon: "fa-heart-pulse",
+    },
+    {
+      title: "Yönetici yükü", value: count(metrics.managerLoadIndex), unit: "/100",
+      detail: count(load.pendingApprovals) + " bekleyen onay · " + count(load.openActions) + " açık iş",
+      to: appPath("/risk/manager-load"), icon: "fa-people-group",
+    },
+    {
+      title: "Çalışan nabzı", value: count(voice.pulseScore), unit: "/100",
+      detail: "eNPS " + count(voice.eNps) + " · " + count(voice.decliningTeams) + " ekipte düşüş sinyali",
+      to: appPath("/risk/employee-voice"), icon: "fa-wave-square",
+    },
+    {
+      title: "Evrak ve uyum", value: count(compliance.missingDocuments), unit: "eksik",
+      detail: count(compliance.upcomingDocuments) + " yaklaşan son tarih · Denetim hazırlığı: " + (compliance.auditReadinessRisk || "—"),
+      to: appPath("/risk/compliance"), icon: "fa-file-shield",
+    },
+  ];
 
   return (
-    <div className="dashboard-wrapper">
-      <div className="welcome-header">
+    <div className="ez-risk-page">
+      <header className="ez-risk-header">
         <div>
-          <h2>Risk & Aksiyon Merkezi</h2>
-          <p className="text-muted">Bugünün odak sorusu: hangi risk büyüyor, neden büyüyor ve hangi aksiyon alınmalı?</p>
+          <span className="ez-overline">ANALİZ / {formatToday()}</span>
+          <h1>Risk Merkezi</h1>
+          <p>Önce müdahale gerektiren işleri görün; ardından risk sinyallerini inceleyin.</p>
         </div>
-        <div className="date-widget">
-          <i aria-hidden="true" className="fa-regular fa-calendar" />
-          <span>{formatToday()}</span>
-        </div>
+        <Link className="btn btn-secondary" to={appPath("/inbox?tab=actions")}>
+          <i className="fa-solid fa-inbox" aria-hidden="true" /> İş kutusuna git
+        </Link>
+      </header>
+
+      <div className="ez-risk-first-row">
+        <section className="ez-risk-panel ez-risk-priorities" aria-labelledby="risk-priorities-title">
+          <div className="ez-risk-panel-head">
+            <div>
+              <span className="ez-overline">ŞİMDİ İLGİLENİLMESİ GEREKENLER</span>
+              <h2 id="risk-priorities-title">Öncelikli aksiyonlar</h2>
+              <p>{urgent.length > 0 ? count(urgent.length) + " yüksek öncelikli iş açık." : "Yüksek öncelikli açık iş yok."}</p>
+            </div>
+            <Link className="ez-text-link" to={appPath("/inbox?tab=actions")}>Tüm işler <span aria-hidden="true">→</span></Link>
+          </div>
+          {actions.length === 0 ? (
+            <div className="ez-risk-empty"><i className="fa-regular fa-circle-check" aria-hidden="true" /><strong>Şu anda açık aksiyon yok</strong><span>Yeni bir iş oluştuğunda burada görünecek.</span></div>
+          ) : (
+            <div className="ez-risk-action-list">
+              {topPriorityActions(actions, 3).map((action) => (
+                <Link className="ez-risk-action-row" key={action.id} to={appPath("/inbox?tab=actions")} aria-label={(action.title || "Aksiyon") + " işini İş Kutusunda aç"}>
+                  <span className={"ez-risk-priority " + (action.priority || "low")}>{priorityLabel(action.priority)}</span>
+                  <span className="ez-risk-action-copy"><strong>{action.title}</strong><small>{action.source || "Aksiyon"} · {action.owner || "Atanmamış"}{action.due ? " · " + action.due : ""}</small></span>
+                  <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className={"ez-risk-panel ez-risk-score " + (riskScore == null ? "" : getRiskLevel(riskScore))} aria-labelledby="risk-score-title">
+          <div className="ez-risk-panel-head"><div><span className="ez-overline">GENEL GÖRÜNÜM</span><h2 id="risk-score-title">İK risk düzeyi</h2></div><i className="fa-solid fa-shield-heart" aria-hidden="true" /></div>
+          <div className="ez-risk-score-value">{count(riskScore)}<small>/100</small></div>
+          <span className="ez-risk-status">{riskScore == null ? "Veri yok" : getRiskLabel(riskScore)}</span>
+          <p>Yetkili olduğunuz çalışanlar için hesaplanan ortalama risk puanı.</p>
+          <div className="ez-risk-score-footer"><span>{count(metrics.attritionHigh)} yüksek ayrılma</span><span>{count(metrics.burnoutRisk)} tükenmişlik sinyali</span></div>
+        </section>
       </div>
 
-      <div className="kpi-grid intelligence-kpis">
-        <button className={`kpi-card risk-kpi ${getRiskLevel(riskScore)} metric-card-button`} onClick={() => navigate(appPath("/actions"))}>
-          <div className="kpi-icon bg-red-light"><i aria-hidden="true" className="fa-solid fa-shield-heart" /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">İK Risk Skoru</span>
-            <h3 className="kpi-value">{riskScore}<small>/100</small></h3>
-            <span className="kpi-sub">{getRiskLabel(riskScore)} · 3 ana risk sürücüsü</span>
-          </div>
-        </button>
-        <button className="kpi-card risk-kpi medium metric-card-button" onClick={() => navigate(appPath("/risk/manager-load"))}>
-          <div className="kpi-icon bg-orange-light"><i aria-hidden="true" className="fa-solid fa-user-group" /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">Yönetici Yük Endeksi</span>
-            <h3 className="kpi-value">{metrics.managerLoadIndex ?? 0}<small>/100</small></h3>
-            <span className="kpi-sub">{load.pendingApprovals ?? 0} onay, {load.openActions ?? 0} açık aksiyon, yoğun ekip</span>
-          </div>
-        </button>
-        <button className="kpi-card risk-kpi high metric-card-button" onClick={() => navigate(appPath("/risk/attrition"))}>
-          <div className="kpi-icon bg-purple-light"><i aria-hidden="true" className="fa-solid fa-person-walking-arrow-right" /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">Ayrılma Riski Radarı</span>
-            <h3 className="kpi-value">{metrics.attritionHigh ?? 0}</h3>
-            <span className="kpi-sub">Yüksek riskli çalışan segmenti</span>
-          </div>
-        </button>
-        <button className="kpi-card risk-kpi medium metric-card-button" onClick={() => navigate(appPath("/actions"))}>
-          <div className="kpi-icon bg-blue-light"><i aria-hidden="true" className="fa-solid fa-bolt" /></div>
-          <div className="kpi-content">
-            <span className="kpi-label">Bugünkü Kritik Aksiyon</span>
-            <h3 className="kpi-value">{metrics.criticalActions ?? 0}</h3>
-            <span className="kpi-sub">{todayCount} bugün, {weekCount} bu hafta, {watchCount} izlemede</span>
-          </div>
-        </button>
-      </div>
+      <section className="ez-risk-section" aria-labelledby="risk-areas-title">
+        <div className="ez-risk-section-head"><div><span className="ez-overline">NEREDEN BAŞLAMALI?</span><h2 id="risk-areas-title">Risk alanları</h2><p>Her alanın ayrıntısına ve ilgili çalışanlara buradan ulaşın.</p></div></div>
+        <div className="ez-risk-area-grid">
+          {areaCards.map((area) => (
+            <Link className="ez-risk-area" key={area.title} to={area.to}>
+              <span className="ez-risk-area-icon"><i className={"fa-solid " + area.icon} aria-hidden="true" /></span>
+              <span className="ez-risk-area-title">{area.title}</span>
+              <span className="ez-risk-area-value">{area.value}<small>{area.unit}</small></span>
+              <span className="ez-risk-area-detail">{area.detail}</span>
+              <span className="ez-risk-area-link">Detayı incele <span aria-hidden="true">→</span></span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-      <div className="risk-dashboard-grid">
-        <div className="risk-main">
-          <div className="risk-decision-grid">
-            <div className="card chart-card">
-              <div className="card-header-clean">
-                <div>
-                  <h4>90 Günlük Risk Trendi</h4>
-                  <p className="text-muted">Risk skoru son {trend.length} hafta içinde {delta >= 0 ? "yukarı" : "aşağı"} yönlü seyrediyor.</p>
-                </div>
-                <span className="status-pill pending">{delta >= 0 ? "+" : ""}{delta} puan</span>
-              </div>
-              <RiskTrendChart trend={trend} />
-            </div>
-
-            <div className="card heatmap-card">
-              <div className="card-header-clean">
-                <div>
-                  <h4>Departman Bazlı Risk Isı Haritası</h4>
-                  <p className="text-muted">Risk seviyesi ve öne çıkan nedenler.</p>
-                </div>
-              </div>
-              <div className="risk-heatmap">
-                {(metrics.departmentRisk ?? []).map((dept) => (
-                  <div key={dept.departmentId} className={`heatmap-line ${getRiskLevel(dept.risk ?? 0)}`}>
-                    <div className="heatmap-score">{dept.risk ?? 0}</div>
-                    <div className="heatmap-body">
-                      <strong>{dept.dept}</strong>
-                      <span>{dept.employeeCount ?? 0} çalışan · {dept.highAttritionCount ?? 0} yüksek ayrılma · {dept.highBurnoutCount ?? 0} tükenmişlik sinyali</span>
-                    </div>
-                    <div className="heatmap-bar"><span style={{ width: `${dept.risk ?? 0}%` }} /></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="card capacity-card">
-            <div className="card-header-clean">
-              <div>
-                <h4>Yetenek ve Kapasite</h4>
-                <p className="text-muted">İşe alım, beceri, kritik rol ve kültür sinyalleri.</p>
-              </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/recruitment"))}>
-                <i aria-hidden="true" className="fa-solid fa-arrow-up-right-from-square" /> İşe alıma git
-              </button>
-            </div>
-            <div className="capacity-grid">
-              {(metrics.talentCapacity ?? []).map((item) => (
-                <div key={item.label} className={`capacity-item ${item.tone ?? ""}`}>
-                  <div className="capacity-top">
-                    <span>{item.label}</span>
-                    <strong>{item.value}{item.label === "Kritik Rol Riski" ? "" : "%"}</strong>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="fill" style={{ width: `${item.label === "Kritik Rol Riski" ? (item.value ?? 0) * 22 : item.value ?? 0}%` }} />
-                  </div>
-                  <small>{item.meta}</small>
+      <div className="ez-risk-evidence-grid">
+        <section className="ez-risk-panel" aria-labelledby="department-risk-title">
+          <div className="ez-risk-panel-head"><div><span className="ez-overline">EKİP GÖRÜNÜMÜ</span><h2 id="department-risk-title">Departman riskleri</h2><p>En yüksek puanlı departmanlar önce gösterilir.</p></div></div>
+          {departments.length === 0 ? <p className="ez-risk-empty-text">Bu kapsamda departman verisi yok.</p> : (
+            <div className="ez-risk-departments">
+              {departments.map((department) => (
+                <div className="ez-risk-department" key={department.departmentId}>
+                  <span className={"ez-risk-dept-score " + getRiskLevel(department.risk ?? 0)}>{count(department.risk)}</span>
+                  <div><strong>{department.dept}</strong><small>{count(department.employeeCount)} çalışan · {count(department.highAttritionCount)} yüksek ayrılma · {count(department.highBurnoutCount)} tükenmişlik</small></div>
+                  <span className="ez-risk-dept-level">{getRiskLabel(department.risk ?? 0)}</span>
                 </div>
               ))}
             </div>
-          </div>
+          )}
+        </section>
+        <section className="ez-risk-panel ez-risk-trend" aria-labelledby="risk-trend-title">
+          <div className="ez-risk-panel-head"><div><span className="ez-overline">DÖNEMSEL DEĞİŞİM</span><h2 id="risk-trend-title">Risk eğilimi</h2><p>Son {trend.length} dönem için ortalama risk sinyali.</p></div></div>
+          {trend.length === 0 ? <p className="ez-risk-empty-text">Henüz karşılaştırılacak dönem verisi yok.</p> : <RiskTrendChart trend={trend} />}
+          {trendDelta !== null && <p className="ez-risk-trend-note">İlk döneme göre {trendDelta > 0 ? "+" : ""}{trendDelta} puan {trendDelta > 0 ? "artış" : trendDelta < 0 ? "azalış" : "değişim yok"}.</p>}
+        </section>
+      </div>
 
-          <div className="card signal-card">
-            <div className="card-header-clean">
-              <div>
-                <h4>Kurumsal Sinyaller</h4>
-                <p className="text-muted">Çalışan nabzı, sessiz memnuniyetsizlik ve evrak uyum risklerini birlikte izleyin.</p>
-              </div>
-              <div className="toolbar-actions">
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/risk/employee-voice"))}>
-                  <i aria-hidden="true" className="fa-solid fa-wave-square" /> Nabız detayı
-                </button>
-                <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/risk/compliance"))}>
-                  <i aria-hidden="true" className="fa-solid fa-file-shield" /> Uyum detayı
-                </button>
-              </div>
-            </div>
-            <div className="signal-grid">
-              <button className="signal-item high metric-card-button" onClick={() => navigate(appPath("/risk/employee-voice"))}>
-                <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-heart-pulse" /></div>
-                <div>
-                  <span>Çalışan Nabız Skoru</span>
-                  <strong>{voice.pulseScore ?? 0}<small>/100</small></strong>
-                  <p>{voice.sentimentTrend}</p>
-                </div>
-              </button>
-              <button className="signal-item medium metric-card-button" onClick={() => navigate(appPath("/risk/employee-voice"))}>
-                <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-comments" /></div>
-                <div>
-                  <span>eNPS / Bağlılık</span>
-                  <strong>{(voice.eNps ?? 0) >= 0 ? "+" : ""}{voice.eNps ?? 0}</strong>
-                  <p>{voice.decliningTeams ?? 0} ekipte sessiz memnuniyetsizlik sinyali var.</p>
-                </div>
-              </button>
-              <button className="signal-item medium metric-card-button" onClick={() => navigate(appPath("/risk/compliance"))}>
-                <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-folder-check" /></div>
-                <div>
-                  <span>Evrak Uyum Skoru</span>
-                  <strong>{compliance.documentComplianceScore ?? 0}<small>/100</small></strong>
-                  <p>{compliance.missingDocuments ?? 0} eksik evrak, {compliance.upcomingDocuments ?? 0} yaklaşan son tarih.</p>
-                </div>
-              </button>
-              <button className="signal-item medium metric-card-button" onClick={() => navigate(appPath("/risk/compliance"))}>
-                <div className="signal-icon"><i aria-hidden="true" className="fa-solid fa-clipboard-check" /></div>
-                <div>
-                  <span>Denetime Hazırlık</span>
-                  <strong>{compliance.auditReadinessRisk}</strong>
-                  <p>Hazırlık skoru {compliance.auditReadinessScore ?? 0}/100; kritik evrak aksiyonları izleniyor.</p>
-                </div>
-              </button>
-            </div>
-          </div>
+      <section className="ez-risk-panel ez-risk-capacity" aria-labelledby="risk-capacity-title">
+        <div className="ez-risk-panel-head"><div><span className="ez-overline">KAPASİTE VE GELİŞİM</span><h2 id="risk-capacity-title">Yetenek göstergeleri</h2><p>İşe alım, beceri ve kritik roller için ek sinyaller.</p></div>
+          {user?.role === "hr-admin" && <Link className="ez-text-link" to={appPath("/recruitment")}>İşe alımı aç <span aria-hidden="true">→</span></Link>}
         </div>
-
-        <aside className="card action-center">
-          <div className="card-header-clean">
-            <div>
-              <h4>En Acil Aksiyonlar</h4>
-              <p className="text-muted">Önceliği en yüksek 3 müdahale.</p>
-            </div>
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate(appPath("/actions"))}>
-              Tümünü aç ({actions.length})
-            </button>
-          </div>
-          <div className="action-list">
-            {topPriorityActions(actions, 3).map((action) => (
-              <button key={action.id} className={`risk-action ${action.priority ?? ""}`} onClick={() => navigate(pathForRouteKey(action.sourceRoute))}>
-                <div className="action-priority">{priorityLabel(action.priority)}</div>
-                <strong>{action.title}</strong>
-                <p>{action.source} · {action.owner}</p>
-                {action.action && (
-                  <div className="recommended-action">
-                    <i aria-hidden="true" className="fa-solid fa-lightbulb" />
-                    <span>{action.action}</span>
-                  </div>
-                )}
-              </button>
+        {(metrics.talentCapacity ?? []).length === 0 ? <p className="ez-risk-empty-text">Bu alanda henüz gösterge yok.</p> : (
+          <div className="ez-risk-capacity-grid">
+            {(metrics.talentCapacity ?? []).map((item) => (
+              <div className="ez-risk-capacity-item" key={item.label}>
+                <span>{item.label}</span><strong>{count(item.value)}{item.label === "Kritik Rol Riski" ? "" : "%"}</strong>
+                <div className="ez-risk-capacity-bar" aria-hidden="true"><span style={{ width: percentWidth(item.label === "Kritik Rol Riski" ? (item.value ?? 0) * 20 : item.value) }} /></div>
+                <small>{item.meta}</small>
+              </div>
             ))}
           </div>
-        </aside>
-      </div>
+        )}
+      </section>
     </div>
   );
 }
