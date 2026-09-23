@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { ApiError } from "../../api/client";
+import { ApprovalsList } from "../inbox/ApprovalsList";
 import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
-import { useToast } from "../../layout/ToastProvider";
+
 import { formatToday } from "../dashboard/format";
-import { formatLeaveDate } from "../leaves/format";
-import { useDecideLeave, usePendingLeaves } from "../leaves/queries";
+
+
 import { PageError, PageLoading } from "../shared/PageState";
 import { DeptDistributionChart, RecruitmentFunnelChart } from "./OverviewCharts";
 import { useOverview } from "./queries";
@@ -13,21 +13,8 @@ import { useOverview } from "./queries";
 export function OverviewPage() {
   const overview = useOverview();
   const { user } = useAuth();
-  const { showToast } = useToast();
+
   const isManagement = user?.role === "hr-admin" || user?.role === "manager";
-  const pendingQ = usePendingLeaves(isManagement);
-  const decide = useDecideLeave();
-
-  const handleDecision = async (id: number | undefined, name: string, approve: boolean) => {
-    if (id === undefined) return;
-    try {
-      await decide.mutateAsync({ id, approve });
-      showToast(`${name} izin talebi ${approve ? "onaylandı" : "reddedildi"}.`, approve ? "success" : "info");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "İşlem tamamlanamadı.", "error");
-    }
-  };
-
   if (overview.isPending) return <PageLoading />;
   if (overview.isError) return <PageError error={overview.error} />;
 
@@ -68,7 +55,7 @@ export function OverviewPage() {
           <div className="kpi-content">
             <span className="kpi-label">Onay Bekleyen</span>
             <h3 className="kpi-value">{data.pendingApprovals ?? 0}</h3>
-            <Link className="kpi-link" to={appPath("/manager")}>Talepleri incele</Link>
+            <Link className="kpi-link" to={appPath("/inbox")}>Talepleri incele</Link>
           </div>
         </div>
         <div className="kpi-card">
@@ -136,39 +123,7 @@ export function OverviewPage() {
         </div>
       </div>
 
-      {isManagement && (
-        <div className="bottom-grid">
-          <div className="card task-list">
-            <div className="card-header-clean">
-              <div>
-                <h4>Bekleyen Aksiyonlar</h4>
-                <p className="text-muted">Öncelik sırasına göre</p>
-              </div>
-              <span className="badge-count">{(pendingQ.data ?? []).length}</span>
-            </div>
-            <div className="task-stack">
-              {(pendingQ.data ?? []).map((request) => (
-                <div key={request.id} className="task-item">
-                  <div className="task-icon warning"><i aria-hidden="true" className="fa-solid fa-plane-departure" /></div>
-                  <div className="task-desc">
-                    <strong>{request.employeeName} - {request.leaveTypeName}</strong>
-                    <small>{formatLeaveDate(request.startDate)} - {formatLeaveDate(request.endDate)}, {request.days} gün</small>
-                  </div>
-                  <div className="toolbar-actions">
-                    <button className="btn-icon-sm" aria-label={`${request.employeeName} izin talebini onayla`} title="Onayla" onClick={() => handleDecision(request.id, request.employeeName ?? "", true)}>
-                      <i aria-hidden="true" className="fa-solid fa-check" />
-                    </button>
-                    <button className="btn-icon-sm" aria-label={`${request.employeeName} izin talebini reddet`} title="Reddet" onClick={() => handleDecision(request.id, request.employeeName ?? "", false)}>
-                      <i aria-hidden="true" className="fa-solid fa-xmark" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {(pendingQ.data ?? []).length === 0 && <p className="pending-desc">Bekleyen talep yok.</p>}
-            </div>
-          </div>
-        </div>
-      )}
+      {isManagement && <section className="ez-panel"><div className="ez-panel-heading"><h2>Bekleyen onaylar</h2><Link to={appPath("/inbox")} className="ez-text-link">İş kutusuna git →</Link></div><ApprovalsList limit={3} /></section>}
     </div>
   );
 }

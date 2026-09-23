@@ -46,9 +46,10 @@ const renderOverview = () =>
 test("yönetici bekleyen izin taleplerini görür ve onaylar", async () => {
   setRole("manager");
   renderOverview();
-  expect(await screen.findByText("Bekleyen Aksiyonlar")).toBeInTheDocument();
-  expect(screen.getByText("Ahmet Yılmaz - Yıllık İzin")).toBeInTheDocument();
-  await userEvent.click(screen.getByTitle("Onayla"));
+  expect(await screen.findByText("Bekleyen onaylar")).toBeInTheDocument();
+  expect(await screen.findByText("Ahmet Yılmaz")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "İncele" }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayla" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/leaves/4/approve");
     expect(posted).toBe(true);
@@ -59,5 +60,5 @@ test("çalışan onay kartını görmez", async () => {
   setRole("employee");
   renderOverview();
   await screen.findByText("Aktif Personel");
-  expect(screen.queryByText("Bekleyen Aksiyonlar")).not.toBeInTheDocument();
+  expect(screen.queryByText("Bekleyen onaylar")).not.toBeInTheDocument();
 });
