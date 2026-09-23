@@ -19,7 +19,7 @@ const TABS: [string, string][] = [["open", "Açık"], ["week", "Bu Hafta"], ["do
 const routePathFor = (routeKey?: string | null): string | null =>
   appRoutes.find((route) => route.key === routeKey)?.path ?? null;
 
-export function ActionsPage() {
+export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -126,8 +126,8 @@ export function ActionsPage() {
     <div id="actions-screen">
       <div className="page-header">
         <div>
-          <h2>Global Aksiyon Merkezi</h2>
-          <p>Risk, bordro, uyum ve çalışan deneyimi aksiyonlarını tek operasyon merkezinde takip edin.</p>
+          {!embedded && <h2>Aksiyonlar</h2>}
+          <p>Açık işleri, sorumluları ve tamamlanan adımları takip edin.</p>
         </div>
         {isAdmin && (
           <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>

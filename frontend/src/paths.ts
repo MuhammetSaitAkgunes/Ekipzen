@@ -3,5 +3,5 @@ export const APP_BASE = "/app";
 export const LOGIN_PATH = "/giris";
 export const INVITE_PATH = "/davet";
 export const appPath = (path: string): string => `${APP_BASE}${path}`;
-export const roleHomeFor = (role: string | null | undefined): string =>
-  appPath(role === "employee" ? "/overview" : "/dashboard");
+export const roleHomeFor = (_role: string | null | undefined): string =>
+  appPath("/home");

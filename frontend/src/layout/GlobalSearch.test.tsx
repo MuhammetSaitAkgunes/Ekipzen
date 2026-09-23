@@ -5,6 +5,7 @@ import { stubApi } from "../test/apiStub";
 import { renderPage } from "../test/renderPage";
 import { AuthProvider } from "../auth/AuthContext";
 import { SESSION_KEY } from "../api/session";
+import { useLocation } from "react-router-dom";
 import { GlobalSearch } from "./GlobalSearch";
 
 const results = [
@@ -46,4 +47,16 @@ test("iki karakterden kısa sorguda API çağrısı yapılmaz", async () => {
   await userEvent.type(screen.getByLabelText("Personel, aksiyon veya sayfa ara"), "a");
   await new Promise((resolve) => setTimeout(resolve, 400));
   expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u).includes("/api/search"))).toBe(false);
+});
+
+test("personel sonucu profil rotasına, aksiyon sonucu iş kutusuna gider", async () => {
+  const Location = () => <span data-testid="location">{useLocation().pathname + useLocation().search}</span>;
+  renderPage(<AuthProvider><GlobalSearch /><Location /></AuthProvider>);
+  const search = screen.getByLabelText("Personel, aksiyon veya sayfa ara");
+  await userEvent.type(search, "ahmet");
+  await userEvent.click(await screen.findByRole("option", { name: /Ahmet Yılmaz/ }));
+  expect(screen.getByTestId("location")).toHaveTextContent("/app/personnel/3");
+  await userEvent.type(search, "sgk");
+  await userEvent.click(await screen.findByRole("option", { name: /SGK matrah kontrolü/ }));
+  expect(screen.getByTestId("location")).toHaveTextContent("/app/inbox?tab=actions");
 });

@@ -46,7 +46,7 @@ const renderShell = () =>
 
 test("KPI'lar listeden türetilir, açık sekme kartları gösterir", async () => {
   renderShell();
-  expect(await screen.findByText("Global Aksiyon Merkezi")).toBeInTheDocument();
+  expect(await screen.findByText("Aksiyonlar")).toBeInTheDocument();
   expect(screen.getByText("SGK matrah kontrolü")).toBeInTheDocument();
   expect(screen.queryByText("Eksik evrak takibi")).not.toBeInTheDocument();
   expect(screen.getByText("Tavana yaklaşan kayıtları incele.")).toBeInTheDocument();

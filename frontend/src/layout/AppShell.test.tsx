@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { render, screen, within } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -48,21 +49,23 @@ test("hr-admin tüm menü gruplarını görür, başlık rotadan gelir", async (
 test("employee menüsünde yalnız yetkili modüller görünür", () => {
   renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
   expect(screen.queryByText("Ayarlar")).not.toBeInTheDocument();
-  expect(screen.queryByText("Personel Yönetimi")).not.toBeInTheDocument();
+  expect(screen.queryByText("Çalışanlar")).not.toBeInTheDocument();
   expect(screen.getByText("İzinlerim")).toBeInTheDocument();
 });
 
-test("üretimde demo rol geçişi sunulmaz, gerçek oturum korunur", () => {
+test("üretimde demo rol geçişi sunulmaz, gerçek oturum korunur", async () => {
   vi.stubEnv("DEV", false);
   renderShellAt("/app/overview", "employee", "Pilot Kullanıcı");
   expect(screen.queryByRole("combobox", { name: "Demo rol değiştir" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Profil menüsü" }));
   expect(screen.getByRole("button", { name: "Çıkış yap" })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem(SESSION_KEY)!).user.name).toBe("Pilot Kullanıcı");
 });
 
-test("geliştirmede demo rol geçişi korunur", () => {
+test("geliştirmede demo rol geçişi korunur", async () => {
   vi.stubEnv("DEV", true);
   renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: "Profil menüsü" }));
   expect(screen.getByRole("combobox", { name: "Demo rol değiştir" })).toHaveValue("employee");
 });
 

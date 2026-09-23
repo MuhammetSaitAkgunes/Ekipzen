@@ -44,12 +44,14 @@ export function GlobalSearch() {
         .filter((r) => r.title.toLocaleLowerCase("tr-TR").includes(query.trim().toLocaleLowerCase("tr-TR")))
         .map((r) => ({ label: r.title, hint: "Sayfaya git", icon: navIcons[r.key] || "fa-compass", path: r.path }));
 
-  const apiItems: Item[] = (apiResults.data ?? []).map((result) => ({
-    label: result.label ?? "",
-    hint: result.hint ?? "",
-    icon: TYPE_ICONS[result.type ?? ""] ?? "fa-compass",
-    path: appRoutes.find((r) => r.key === result.routeKey)?.path ?? "/overview",
-  }));
+  const apiItems: Item[] = (apiResults.data ?? []).flatMap((result) => {
+    const route = appRoutes.find((r) => r.key === result.routeKey && r.roles.includes((user?.role ?? "employee") as Role));
+    if (!route) return [];
+    const path = result.routeKey === "personnel" && result.type === "personnel" && Number.isInteger(result.entityId) && Number(result.entityId) > 0
+      ? `/app/personnel/${result.entityId}`
+      : result.routeKey === "actions" ? "/app/inbox?tab=actions" : route.path;
+    return [{ label: result.label ?? "", hint: result.hint ?? "", icon: TYPE_ICONS[result.type ?? ""] ?? "fa-compass", path }];
+  });
 
   const items: Item[] = [...pageItems, ...apiItems];
 

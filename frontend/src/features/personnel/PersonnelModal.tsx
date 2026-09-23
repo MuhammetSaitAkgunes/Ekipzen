@@ -144,8 +144,8 @@ const tryNumber = (value: string): number => {
 
 const currency = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" });
 
-export function PersonnelModal({ employeeId, readOnly, onClose }:
-  { employeeId: number | null; readOnly: boolean; onClose: () => void }) {
+export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false, onEdit }:
+  { employeeId: number | null; readOnly: boolean; onClose: () => void; embedded?: boolean; onEdit?: () => void }) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>("tab-kimlik");
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -174,7 +174,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
     setCompensation((current) => ({ ...current, [key]: value }));
 
   const isEdit = employeeId !== null;
-  const title = isEdit && detailQ.data ? `Personel Kartı — ${detailQ.data.name}` : "Yeni Personel Kartı";
+  const title = isEdit && detailQ.data ? (embedded ? detailQ.data.name : `Personel Kartı — ${detailQ.data.name}`) : (embedded ? "Çalışan ekle" : "Yeni Personel Kartı");
   const description = isEdit
     ? "Kayıtlı özlük bilgilerini görüntüleyin ve güncelleyin."
     : "Gerekli alanları tamamlayarak özlük kaydını oluşturun.";
@@ -249,7 +249,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
     }
   };
 
-  if (isEdit && detailQ.isPending) return <div className="fullscreen-modal" style={{ display: "flex" }}><PageLoading /></div>;
+  if (isEdit && detailQ.isPending) return <div className={embedded ? "ez-personnel-profile" : "fullscreen-modal"} style={{ display: "flex" }}><PageLoading /></div>;
   if (isEdit && detailQ.isError) return <div className="fullscreen-modal" style={{ display: "flex" }}><PageError error={detailQ.error} /></div>;
 
   return (
@@ -261,7 +261,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
           {error && <p className="form-error" role="alert">{error}</p>}
         </div>
         <div className="modal-actions">
-          <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
+          <button className="btn btn-ghost" onClick={onClose}>{readOnly ? "Listeye dön" : "Vazgeç"}</button>
+          {readOnly && onEdit && <button className="btn btn-primary" onClick={onEdit}>Profili düzenle</button>}
           {!readOnly && (
             <button className="btn btn-primary" onClick={handleSave} disabled={save.isPending}>
               <i aria-hidden="true" className="fa-solid fa-check" /> Kaydet
@@ -271,15 +272,15 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
       </div>
 
       <div className="modal-body">
-        <aside className="modal-sidebar">
+        <aside className="modal-sidebar" aria-label="Profil bölümleri">
           {TABS.map((tab) => (
-            <button key={tab.id} className={`nav-btn ${activeTab === tab.id ? "active" : ""}`} onClick={() => setActiveTab(tab.id)}>
+            <button key={tab.id} aria-pressed={activeTab === tab.id} className={`nav-btn ${activeTab === tab.id ? "active" : ""}`} onClick={() => setActiveTab(tab.id)}>
               <i aria-hidden="true" className={tab.icon} /> {tab.label}
             </button>
           ))}
         </aside>
 
-        <main className="modal-content-area">
+        <section className="modal-content-area">
           <div id="tab-kimlik" className={`content-section ${activeTab === "tab-kimlik" ? "active" : ""}`}>
             <div className="section-head">
               <div>
@@ -291,7 +292,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
               <div className="photo-upload col-12">
                 <div className="photo-preview"><i aria-hidden="true" className="fa-solid fa-user" /></div>
                 <div>
-                  <span
+                  {!readOnly && <span
                     className="upload-btn"
                     role="button"
                     tabIndex={0}
@@ -305,8 +306,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
                     }}
                   >
                     Fotoğraf Yükle
-                  </span>
-                  <small>JPG/PNG, maksimum 2 MB</small>
+                  </span>}
+                  {!readOnly && <small>JPG/PNG, maksimum 2 MB</small>}
                   <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(e) => handlePhoto(e.target.files?.[0])} />
                 </div>
               </div>
@@ -540,7 +541,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose }:
           <div id="tab-evrak" className={`content-section ${activeTab === "tab-evrak" ? "active" : ""}`}>
             <DocumentsTab employeeId={employeeId} readOnly={readOnly} />
           </div>
-        </main>
+        </section>
       </div>
     </div>
   );

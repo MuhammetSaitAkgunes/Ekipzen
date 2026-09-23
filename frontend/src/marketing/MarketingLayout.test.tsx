@@ -49,7 +49,7 @@ test("oturum açık kullanıcı 'Uygulamaya git' görür", () => {
     user: { id: "u", name: "Ahmet", email: "a@x", role: "employee", roleLabel: "Çalışan", initials: "AY", employeeId: null },
   }));
   renderLayout();
-  expect(screen.getAllByRole("link", { name: "Uygulamaya git" })[0]).toHaveAttribute("href", "/app/overview");
+  expect(screen.getAllByRole("link", { name: "Uygulamaya git" })[0]).toHaveAttribute("href", "/app/home");
   expect(screen.queryByRole("link", { name: "Giriş yap" })).toBeNull();
 });
 

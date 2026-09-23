@@ -14,7 +14,10 @@ import { LEGACY_APP_ROOT_PATHS, mapLegacyPath } from "./legacyHash";
 import { APP_BASE, INVITE_PATH, LOGIN_PATH, appPath, roleHomeFor } from "./paths";
 
 export { APP_BASE, INVITE_PATH, LOGIN_PATH, appPath, roleHomeFor } from "./paths";
-const ActionsPage = lazy(() => import("./features/actions/ActionsPage").then((m) => ({ default: m.ActionsPage })));
+const HomePageApp = lazy(() => import("./features/home/HomePage").then((m) => ({ default: m.HomePage })));
+const InboxPage = lazy(() => import("./features/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const PersonnelProfilePage = lazy(() => import("./features/personnel/PersonnelProfilePage").then((m) => ({ default: m.PersonnelProfilePage })));
+
 const OverviewPage = lazy(() => import("./features/overview/OverviewPage").then((m) => ({ default: m.OverviewPage })));
 const RiskCenterPage = lazy(() => import("./features/dashboard/RiskCenterPage").then((m) => ({ default: m.RiskCenterPage })));
 const AttritionDetailPage = lazy(() => import("./features/dashboard/AttritionDetailPage").then((m) => ({ default: m.AttritionDetailPage })));
@@ -57,49 +60,48 @@ export type AppRoute = {
 const ALL: Role[] = ["hr-admin", "manager", "employee"];
 const MGMT: Role[] = ["hr-admin", "manager"];
 
-// routes.js ile birebir (sıra dahil).
+// Route permissions remain independent of the navigation presentation.
 export const appRoutes: AppRoute[] = [
+  { key: "home", path: appPath("/home"), title: "Ana Sayfa", eyebrow: "Ekipzen", navKey: "home", roles: ALL },
+  { key: "inbox", path: appPath("/inbox"), title: "İş Kutusu", eyebrow: "Ekipzen", navKey: "inbox", roles: ALL },
+  { key: "personnel-new", path: appPath("/personnel/new"), title: "Çalışan ekle", eyebrow: "Çalışanlar", navKey: "personnel", roles: ["hr-admin"] },
+  { key: "personnel-profile", path: appPath("/personnel/:employeeId"), title: "Çalışan profili", eyebrow: "Çalışanlar", navKey: "personnel", roles: MGMT },
   { key: "dashboard", path: appPath("/dashboard"), title: "Risk Merkezi", eyebrow: "Ekipzen", navKey: "dashboard", roles: MGMT },
   { key: "overview", path: appPath("/overview"), title: "Genel Durum", eyebrow: "Ekipzen", navKey: "overview", roles: ALL },
-  { key: "actions", path: appPath("/actions"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: ALL },
-  { key: "personnel", path: appPath("/personnel"), title: "Personel Yönetimi", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
+  { key: "actions", path: appPath("/actions"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "inbox", roles: ALL },
+  { key: "personnel", path: appPath("/personnel"), title: "Çalışanlar", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
   { key: "recruitment", path: appPath("/recruitment"), title: "İşe Alım", eyebrow: "Ekipzen", navKey: "recruitment", roles: ["hr-admin"] },
   { key: "attendance", path: appPath("/attendance"), title: "Mesai & Puantaj", eyebrow: "Ekipzen", navKey: "attendance", roles: MGMT },
-  { key: "leaves", path: appPath("/leaves"), title: "İzinlerim", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
+  { key: "leaves", path: appPath("/leaves"), title: "İzinler", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
   { key: "payroll", path: appPath("/payroll"), title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin", "employee"] },
   { key: "payroll-calculator", path: appPath("/payroll/calculator"), title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
   { key: "payroll-settings", path: appPath("/payroll/settings"), title: "Bordro", eyebrow: "Ekipzen", navKey: "payroll", roles: ["hr-admin"] },
-  { key: "manager", path: appPath("/manager"), title: "Yönetici Konsolu", eyebrow: "Ekipzen", navKey: "manager", roles: MGMT },
+  { key: "manager", path: appPath("/manager"), title: "İzin Analizleri", eyebrow: "İzinler", navKey: "leaves", roles: MGMT },
   { key: "settings", path: appPath("/settings"), title: "Ayarlar", eyebrow: "Ekipzen", navKey: "settings", roles: ["hr-admin"] },
   { key: "attrition-risk", path: appPath("/risk/attrition"), title: "Ayrılma Riski Detayı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
   { key: "burnout-risk", path: appPath("/risk/burnout"), title: "Tükenmişlik Sinyali", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
   { key: "manager-load", path: appPath("/risk/manager-load"), title: "Yönetici Yükü", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
-  { key: "action-center", path: appPath("/risk/action-center"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "actions", roles: MGMT },
+  { key: "action-center", path: appPath("/risk/action-center"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "inbox", roles: MGMT },
   { key: "employee-voice", path: appPath("/risk/employee-voice"), title: "Çalışan Nabzı", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
   { key: "compliance-risk", path: appPath("/risk/compliance"), title: "Uyum Risk Merkezi", eyebrow: "Risk Merkezi", navKey: "dashboard", roles: MGMT },
 ];
 
-// layout.js ile birebir.
 export const navIcons: Record<string, string> = {
+  home: "fa-house", inbox: "fa-inbox",
   dashboard: "fa-shield-heart", overview: "fa-chart-line", actions: "fa-list-check",
   personnel: "fa-user-tie", recruitment: "fa-briefcase", attendance: "fa-clock",
   leaves: "fa-plane-departure", payroll: "fa-money-check-dollar",
   manager: "fa-chart-pie", settings: "fa-gear",
 };
 
-export const navGroups = [
-  { label: "Ana Sayfa", keys: ["dashboard", "overview", "actions"] },
-  { label: "Çekirdek İK", keys: ["personnel", "recruitment", "attendance", "leaves"] },
-  { label: "Bordro", keys: ["payroll"] },
-  { label: "Yönetim", keys: ["manager", "settings"] },
-];
 
 // Sayfa component eşlemesi: sonraki dilimler PlaceholderPage'i gerçek sayfayla değiştirir.
 // Lazy bileşenler LazyExoticComponent tipindedir; sözlük ComponentType tutar.
 const pageFor: Record<string, ComponentType> = {
+  home: HomePageApp, inbox: InboxPage, "personnel-new": PersonnelProfilePage, "personnel-profile": PersonnelProfilePage,
   overview: OverviewPage,
-  actions: ActionsPage,
-  "action-center": ActionsPage,
+  actions: InboxPage,
+  "action-center": InboxPage,
   dashboard: RiskCenterPage,
   "attrition-risk": AttritionDetailPage,
   "burnout-risk": BurnoutDetailPage,
@@ -120,6 +122,8 @@ const pageFor: Record<string, ComponentType> = {
 // Component JSX olarak render edilir (düz fonksiyon çağrısı hook kurallarını bozar).
 function GatedPage({ route }: { route: AppRoute }) {
   const Page = pageFor[route.key] ?? PlaceholderPage;
+  if (route.key === "manager") return <RouteGate route={route}><Navigate to={appPath("/leaves?tab=analysis")} replace /></RouteGate>;
+  if (route.key === "actions" || route.key === "action-center") return <RouteGate route={route}><Navigate to={appPath("/inbox?tab=actions")} replace /></RouteGate>;
   return (
     <RouteGate route={route}>
       {/* Sayfalar rota bazlı bölünür; ilk yüklemede yalnız açılan sayfa iner. */}
@@ -183,3 +187,20 @@ export function buildRouteObjects(): RouteObject[] {
     },
   ];
 }
+
+export type NavigationItem = { key: string; path: string; label: string; employeeLabel?: string; icon: string; roles: Role[] };
+export const navigation: { label: string; items: NavigationItem[] }[] = [
+  { label: "Çalışma alanı", items: [
+    { key: "home", path: appPath("/home"), label: "Ana Sayfa", icon: "fa-house", roles: ALL },
+    { key: "inbox", path: appPath("/inbox"), label: "İş Kutusu", icon: "fa-inbox", roles: ALL },
+  ] },
+  { label: "İnsan kaynakları", items: [
+    { key: "personnel", path: appPath("/personnel"), label: "Çalışanlar", icon: "fa-user-group", roles: MGMT },
+    { key: "leaves", path: appPath("/leaves"), label: "İzinler", employeeLabel: "İzinlerim", icon: "fa-calendar-days", roles: ALL },
+    { key: "attendance", path: appPath("/attendance"), label: "Mesai ve Puantaj", icon: "fa-clock", roles: MGMT },
+    { key: "recruitment", path: appPath("/recruitment"), label: "İşe Alım", icon: "fa-briefcase", roles: ["hr-admin"] },
+    { key: "payroll", path: appPath("/payroll"), label: "Bordro", employeeLabel: "Bordrolarım", icon: "fa-wallet", roles: ["hr-admin", "employee"] },
+  ] },
+  { label: "Analiz", items: [{ key: "dashboard", path: appPath("/dashboard"), label: "Risk Merkezi", icon: "fa-chart-simple", roles: MGMT }] },
+  { label: "", items: [{ key: "settings", path: appPath("/settings"), label: "Ayarlar", icon: "fa-gear", roles: ["hr-admin"] }] },
+];
