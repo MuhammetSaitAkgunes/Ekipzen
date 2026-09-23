@@ -68,11 +68,11 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-test("liste maskeli TC ve durum rozetiyle dolar", async () => {
+test("liste temel bilgileri gösterir, kimlik ayrıntısını profile bırakır", async () => {
   setRole("hr-admin");
   renderPersonnel();
   expect(await screen.findByText("Ahmet Yılmaz")).toBeInTheDocument();
-  expect(screen.getByText("123*****901")).toBeInTheDocument();
+  expect(screen.queryByText("123*****901")).not.toBeInTheDocument();
   expect(screen.getByText("Pasif", { selector: ".badge" })).toHaveClass("badge-passive");
 });
 

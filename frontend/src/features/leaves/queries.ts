@@ -38,7 +38,11 @@ export const useCreateLeave = () => {
   return useMutation({
     mutationFn: (command: CreateLeaveRequestCommand) =>
       apiFetch<LeaveRequestDto>("/leaves", { method: "POST", body: JSON.stringify(command) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leaves"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leaves"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["actions"] });
+    },
   });
 };
 
@@ -46,7 +50,11 @@ export const useCancelLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => apiFetch<null>(`/leaves/${id}/cancel`, { method: "POST" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leaves"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leaves"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["actions"] });
+    },
   });
 };
 
@@ -67,7 +75,8 @@ export const useDecideLeave = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["actions"] });
     },
   });
 };

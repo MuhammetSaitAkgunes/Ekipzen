@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { downloadCsv, tableToCsvLines } from "../shared/csv";
 import { ImportModal } from "./ImportModal";
 import { OffboardingModal } from "./OffboardingModal";
-import { PersonnelModal } from "./PersonnelModal";
+
 import { useDepartments, useEmployees, type EmployeeFilters } from "./queries";
 
 const formatDate = (value?: string | null): string =>
@@ -17,10 +19,12 @@ export function PersonnelPage() {
   const { showToast } = useToast();
   const isHrAdmin = user?.role === "hr-admin";
 
-  const [searchInput, setSearchInput] = useState("");
-  const [filters, setFilters] = useState<EmployeeFilters>({ search: "", departmentId: "", status: "" });
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(params.get("q") ?? "");
+  const [filters, setFilters] = useState<EmployeeFilters>({ search: params.get("q") ?? "", departmentId: params.get("department") ?? "", status: params.get("status") ?? "", page: Math.max(1, Math.floor(Number(params.get("page")) || 1)) });
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [cardId, setCardId] = useState<number | null | undefined>(undefined); // undefined: kapalı, null: yeni kayıt
   const [importOpen, setImportOpen] = useState(false);
   const [offboardingId, setOffboardingId] = useState<number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -28,13 +32,34 @@ export function PersonnelPage() {
   // Arama debounce: 300ms sonra server-side filtreye yansır.
   useEffect(() => {
     const timer = setTimeout(
-      () => setFilters((current) => ({ ...current, search: searchInput })),
+      () => setFilters((current) => current.search === searchInput ? current : ({ ...current, search: searchInput, page: 1 })),
       300,
     );
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (filters.search) next.set("q", filters.search);
+    if (filters.departmentId) next.set("department", filters.departmentId);
+    if (filters.status) next.set("status", filters.status);
+    if ((filters.page ?? 1) > 1) next.set("page", String(filters.page));
+    setParams(next, { replace: true, state: location.state });
+  }, [filters, setParams, location.state]);
+  const openProfile = (id: number | null, edit = false) => {
+    const scroll = document.getElementById("main-content")?.scrollTop ?? 0;
+    navigate(location.pathname + location.search, { replace: true, state: { scroll } });
+    navigate(appPath(id === null ? "/personnel/new" : `/personnel/${id}${edit ? "?edit=1" : ""}`), {
+      state: { returnTo: location.pathname + location.search, scroll },
+    });
+  };
   const employeesQ = useEmployees(filters);
+  useEffect(() => {
+    if (!employeesQ.isSuccess) return;
+    const main = document.getElementById("main-content");
+    if (main) main.scrollTop = location.state?.scroll ?? 0;
+  }, [employeesQ.isSuccess, location.state]);
+
   const departmentsQ = useDepartments();
 
   const items = useMemo(() => employeesQ.data?.items ?? [], [employeesQ.data]);
@@ -73,7 +98,7 @@ export function PersonnelPage() {
       <div id="list-screen">
         <div className="page-header">
           <div>
-            <h2>Personel Yönetimi</h2>
+            <h2>Çalışanlar</h2>
             <p>Sicil, özlük, iletişim ve kurumsal bilgileri tek ekrandan yönetin.</p>
           </div>
           {isHrAdmin && (
@@ -81,8 +106,8 @@ export function PersonnelPage() {
               <button className="btn btn-secondary" onClick={() => setImportOpen(true)}>
                 <i aria-hidden="true" className="fa-solid fa-file-import" /> Excel'den İçe Aktar
               </button>
-              <button className="btn btn-primary" onClick={() => setCardId(null)}>
-                <i aria-hidden="true" className="fa-solid fa-plus" /> Yeni Personel
+              <button className="btn btn-primary" onClick={() => openProfile(null)}>
+                <i aria-hidden="true" className="fa-solid fa-plus" /> Çalışan ekle
               </button>
             </div>
           )}
@@ -106,7 +131,7 @@ export function PersonnelPage() {
             id="personnel-dept-filter"
             className="filter-select"
             value={filters.departmentId}
-            onChange={(e) => setFilters((c) => ({ ...c, departmentId: e.target.value }))}
+            onChange={(e) => setFilters((c) => ({ ...c, departmentId: e.target.value, page: 1 }))}
           >
             <option value="">Departman: Tümü</option>
             {departments.map((dept) => (
@@ -118,7 +143,7 @@ export function PersonnelPage() {
             id="personnel-status-filter"
             className="filter-select"
             value={filters.status}
-            onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}
+            onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value, page: 1 }))}
           >
             <option value="">Durum: Tümü</option>
             <option value="active">Aktif</option>
@@ -154,9 +179,9 @@ export function PersonnelPage() {
                 </th>
                 <th>Personel</th>
                 <th>Departman</th>
-                <th>TC Kimlik</th>
+
                 <th>İşe Giriş</th>
-                <th>İşten Ayrılma</th>
+
                 <th>Durum</th>
                 <th style={{ textAlign: "right" }} className="csv-skip">İşlemler</th>
               </tr>
@@ -177,15 +202,15 @@ export function PersonnelPage() {
                     <div className="user-meta">
                       <div className="avatar-sm" aria-hidden="true">{employee.initials}</div>
                       <div className="meta-info">
-                        <strong>{employee.name}</strong>
+                        <button type="button" className="ez-person-link" onClick={() => openProfile(employee.id ?? -1)}>{employee.name}</button>
                         <small>{employee.title}</small>
                       </div>
                     </div>
                   </td>
-                  <td><strong>{employee.department}</strong></td>
-                  <td className="mono">{employee.nationalIdMasked}</td>
-                  <td>{formatDate(employee.hireDate)}</td>
-                  <td>{formatDate(employee.terminationDate)}</td>
+                  <td data-label="Departman"><strong>{employee.department}</strong></td>
+
+                  <td data-label="İşe giriş">{formatDate(employee.hireDate)}</td>
+
                   <td>
                     <span className={`badge badge-${employee.status}`}>
                       {employee.status === "active" ? "Aktif" : "Pasif"}
@@ -193,11 +218,11 @@ export function PersonnelPage() {
                   </td>
                   <td style={{ textAlign: "right" }} className="csv-skip">
                     <div className="row-actions">
-                      <button className="btn-icon-sm" title="Görüntüle" aria-label={`${employee.name} kartını görüntüle`} onClick={() => setCardId(employee.id ?? -1)}>
+                      <button className="btn-icon-sm" title="Görüntüle" aria-label={`${employee.name} kartını görüntüle`} onClick={() => openProfile(employee.id ?? -1)}>
                         <i aria-hidden="true" className="fa-regular fa-eye" />
                       </button>
                       {isHrAdmin && (
-                        <button className="btn-icon-sm" title="Düzenle" aria-label={`${employee.name} kaydını düzenle`} onClick={() => setCardId(employee.id ?? -1)}>
+                        <button className="btn-icon-sm" title="Düzenle" aria-label={`${employee.name} kaydını düzenle`} onClick={() => openProfile(employee.id ?? -1, true)}>
                           <i aria-hidden="true" className="fa-solid fa-pen" />
                         </button>
                       )}
@@ -227,19 +252,18 @@ export function PersonnelPage() {
         </div>
       </div>
 
+      <div className="ez-pagination" aria-label="Çalışan listesi sayfaları">
+        <span>{employeesQ.data.total ?? items.length} çalışan · Sayfa {filters.page ?? 1}</span>
+        <div><button className="btn btn-secondary btn-sm" disabled={(filters.page ?? 1) <= 1} onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}>Önceki</button>
+        <button className="btn btn-secondary btn-sm" disabled={(filters.page ?? 1) >= (employeesQ.data.totalPages ?? 1)} onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}>Sonraki</button></div>
+      </div>
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
 
       {offboardingId !== null && (
         <OffboardingModal employeeId={offboardingId} onClose={() => setOffboardingId(null)} />
       )}
 
-      {cardId !== undefined && (
-        <PersonnelModal
-          employeeId={cardId}
-          readOnly={!isHrAdmin}
-          onClose={() => setCardId(undefined)}
-        />
-      )}
+
     </div>
   );
 }

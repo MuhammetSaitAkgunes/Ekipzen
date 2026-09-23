@@ -82,7 +82,7 @@ test("tarihler boşsa uyarı toast'ı, istek gitmez", async () => {
   renderModal();
   await screen.findByText("Yıllık İzin");
   await userEvent.click(screen.getByRole("button", { name: /Talebi Gönder/ }));
-  expect(await screen.findByText("Başlangıç ve bitiş tarihlerini seçin.")).toBeInTheDocument();
+  expect(await screen.findByText("Geçerli bir izin türü ve tarih aralığı seçin.")).toBeInTheDocument();
   const posted = vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/leaves" && i?.method === "POST");
   expect(posted).toBe(false);
 });

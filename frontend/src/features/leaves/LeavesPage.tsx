@@ -1,3 +1,7 @@
+import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../auth/AuthContext";
+import { appPath } from "../../paths";
+import { ManagerPage } from "../manager/ManagerPage";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -14,16 +18,18 @@ const LEDGER_TYPE_TEXT: Record<string, string> = {
   adjustment: "Manuel düzeltme",
 };
 
-export function LeavesPage() {
+function PersonalLeaves() {
   const { showToast } = useToast();
-  const [modalOpen, setModalOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [modalOpen, setModalOpen] = useState(params.get("new") === "1");
+  const closeRequest = () => { setModalOpen(false); const next = new URLSearchParams(params); next.delete("new"); setParams(next, { replace: true }); };
   const balanceQ = useLeaveBalance();
   const ledgerQ = useLeaveLedger();
   const myQ = useMyLeaves();
-  const teamQ = useTeamLeaves();
+
   const cancelLeave = useCancelLeave();
 
-  const queries = [balanceQ, ledgerQ, myQ, teamQ];
+  const queries = [balanceQ, ledgerQ, myQ];
   if (queries.some((q) => q.isPending)) return <PageLoading />;
   const failed = queries.find((q) => q.isError);
   if (failed) return <PageError error={failed.error} />;
@@ -31,7 +37,7 @@ export function LeavesPage() {
   const balance = balanceQ.data!;
   const myLeaves = myQ.data!;
   const ledger = ledgerQ.data!;
-  const team = teamQ.data!;
+
 
   const entitlement = (balance.entitledDays ?? 0) + (balance.carriedOverDays ?? 0);
   const remaining = balance.remainingDays ?? 0;
@@ -113,7 +119,7 @@ export function LeavesPage() {
                   <th>Tarih Aralığı</th>
                   <th>Süre</th>
                   <th>Durum</th>
-                  <th></th>
+                  <th><span className="sr-only">İşlemler</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -125,8 +131,8 @@ export function LeavesPage() {
                         <strong>{leave.leaveTypeName}</strong>
                       </div>
                     </td>
-                    <td>{formatLeaveDate(leave.startDate)} - {formatLeaveDate(leave.endDate)}</td>
-                    <td><span className="days-badge">{leave.days} gün</span></td>
+                    <td data-label="Tarihler">{formatLeaveDate(leave.startDate)} - {formatLeaveDate(leave.endDate)}</td>
+                    <td data-label="Süre"><span className="days-badge">{leave.days} gün</span></td>
                     <td>
                       <span className={`status-pill ${leave.status ?? ""}`}>
                         {LEAVE_STATUS_TEXT[leave.status ?? ""] ?? leave.status}
@@ -151,23 +157,7 @@ export function LeavesPage() {
           </div>
         </div>
 
-        <div className="sidebar-col">
-          <div className="team-calendar-widget card">
-            <div className="widget-header"><h3>Ofiste Kimler Yok?</h3></div>
-            <div className="away-list">
-              {team.map((member) => (
-                <div key={member.employeeId} className="away-item">
-                  <div className="away-avatar">{member.initials}</div>
-                  <div className="away-info">
-                    <strong>{member.employeeName}</strong>
-                    <span>{awayDateLabel(member.startDate, member.endDate)} • {member.leaveTypeName}</span>
-                  </div>
-                </div>
-              ))}
-              {team.length === 0 && <p className="pending-desc">Bu hafta ekipten izinli kimse yok.</p>}
-            </div>
-          </div>
-        </div>
+
       </div>
 
       <div className="leaves-list-section" style={{ marginTop: 24 }}>
@@ -200,7 +190,30 @@ export function LeavesPage() {
         </div>
       </div>
 
-      {modalOpen && <LeaveRequestModal onClose={() => setModalOpen(false)} />}
+      {modalOpen && <LeaveRequestModal onClose={closeRequest} />}
     </div>
   );
+}
+
+function TeamLeaves() {
+  const query = useTeamLeaves();
+  if (query.isPending) return <PageLoading />;
+  if (query.isError) return <PageError error={query.error} />;
+  return <section className="ez-panel"><div className="ez-panel-heading"><div><h2>Ekip izinleri</h2><p>Ekibinizin planlanmış izinlerini birlikte görün.</p></div></div>
+    <div className="ez-team-grid">{query.data.map((member) => <article className="ez-away-person" key={member.employeeId}><span className="ez-person-avatar">{member.initials}</span><div><strong>{member.employeeName}</strong><small>{awayDateLabel(member.startDate, member.endDate)}</small><small>{member.leaveTypeName}</small></div></article>)}</div>
+    {query.data.length === 0 && <div className="ez-empty"><h3>Planlanmış ekip izni yok</h3><p>Kaydedilen izinler burada görünecek.</p></div>}
+  </section>;
+}
+export function LeavesPage() {
+  const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const management = user?.role === "hr-admin" || user?.role === "manager";
+  const requested = params.get("tab");
+  const tab = requested === "team" ? "team" : requested === "analysis" && management ? "analysis" : "personal";
+  const tabs = [{ key: "personal", label: "İzinlerim" }, { key: "team", label: "Ekip izinleri" }, ...(management ? [{ key: "analysis", label: "İzin analizleri" }] : [])];
+  return <div className="ez-leaves">
+    <div className="ez-tabs" role="tablist" aria-label="İzin bölümleri">{tabs.map((item) => <button key={item.key} id={`leave-tab-${item.key}`} role="tab" aria-selected={tab === item.key} aria-controls="leave-tab-content" onClick={() => setParams({ tab: item.key })}>{item.label}</button>)}
+    {management && <Link className="ez-text-link" to={appPath("/inbox")}>Bekleyen onaylar →</Link>}</div>
+    <div role="tabpanel" id="leave-tab-content" aria-labelledby={`leave-tab-${tab}`}>{tab === "personal" ? <PersonalLeaves /> : tab === "team" ? <TeamLeaves /> : <ManagerPage />}</div>
+  </div>;
 }

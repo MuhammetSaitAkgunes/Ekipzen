@@ -49,10 +49,10 @@ export type EmployeeEmploymentFoundationDto = components["schemas"]["EmployeeEmp
 export type SaveCompensationPackageBody = components["schemas"]["SaveCompensationPackageBody"];
 export type RehireEmployeeBody = components["schemas"]["RehireEmployeeBody"];
 
-export type EmployeeFilters = { search: string; departmentId: string; status: string };
+export type EmployeeFilters = { search: string; departmentId: string; status: string; page?: number };
 
 const employeesPath = (filters: EmployeeFilters): string => {
-  const params = new URLSearchParams({ pageSize: "50" });
+  const params = new URLSearchParams({ pageSize: "50", page: String(filters.page ?? 1) });
   if (filters.search.trim()) params.set("search", filters.search.trim());
   if (filters.departmentId) params.set("departmentId", filters.departmentId);
   if (filters.status) params.set("status", filters.status);

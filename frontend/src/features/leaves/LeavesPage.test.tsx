@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -33,9 +34,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderLeaves = () =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <LeavesPage />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("bakiye kartları backend verisiyle dolar", async () => {
@@ -75,6 +76,7 @@ test("iptal isteği cancel ucuna gider", async () => {
 
 test("ekip yokluk widget'ı dolar", async () => {
   renderLeaves();
+  await userEvent.click(screen.getByRole("tab", { name: "Ekip izinleri" }));
   expect(await screen.findByText("Selin Koç")).toBeInTheDocument();
   expect(screen.getByText(/Raporlu/)).toBeInTheDocument();
 });

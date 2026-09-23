@@ -67,7 +67,11 @@ export function RecruitmentPage() {
             <div
               key={candidate.id}
               className={`candidate-item ${candidate.id === activeId ? "active" : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-pressed={candidate.id === activeId}
               onClick={() => setSelectedId(candidate.id ?? null)}
+              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedId(candidate.id ?? null); } }}
             >
               <div className="ci-avatar" aria-hidden="true">{candidate.initials}</div>
               <div className="ci-info">

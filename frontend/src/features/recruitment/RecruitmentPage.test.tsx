@@ -15,6 +15,7 @@ beforeEach(() =>
   stubApi({
     "/api/candidates": candidates,
     "/api/candidates/5": { ...candidates[0], skills: [], experiences: [], notes: [], evaluations: [], history: [] },
+    "/api/candidates/6": { ...candidates[1], skills: [], experiences: [], notes: [], evaluations: [], history: [] },
   }),
 );
 afterEach(() => vi.unstubAllGlobals());
@@ -59,4 +60,13 @@ test("aday yoksa boş durum ve Yeni Aday butonu görünür", async () => {
   renderShell();
   expect(await screen.findByText(/Henüz aday yok/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Yeni Aday/ })).toBeInTheDocument();
+});
+
+test("aday kartı klavyeyle seçilir ve ayrıntı açılır", async () => {
+  renderShell();
+  const candidate = await screen.findByRole("button", { name: /Selin Koç/ });
+  candidate.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(candidate).toHaveAttribute("aria-pressed", "true");
+  expect(await screen.findByRole("heading", { name: "Selin Koç", level: 2 })).toBeInTheDocument();
 });
