@@ -1,14 +1,12 @@
 /* Tanıtım sitesi tema seçimi. Giriş ve uygulama köklerinden bağımsızdır. */
 .ez-site .ez-theme-toggle {
-  display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
-  min-width: 44px; min-height: 44px; padding: .5rem .8rem;
-  border: 1px solid var(--ez-border-strong); border-radius: var(--r-md);
-  background: var(--ez-glass-bg); color: var(--ez-text); font: 600 var(--fs-14)/1 var(--ez-font-sans);
-  white-space: nowrap;
+  display: inline-grid; place-items: center; flex: none;
+  width: 44px; height: 44px; padding: 0;
+  border: 1px solid transparent; border-radius: var(--r-full);
+  background: transparent; color: var(--ez-text-2); font: 600 var(--fs-16)/1 var(--ez-font-sans);
 }
-.ez-site .ez-theme-toggle:hover { background: var(--ez-surface-2); }
+.ez-site .ez-theme-toggle:hover { background: var(--ez-primary-soft); color: var(--ez-primary); }
 .ez-site .ez-theme-toggle:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); }
-@media (max-width: 1100px) { .ez-site .ez-theme-toggle span { display: none; } }
 @media (max-width: 860px) { .ez-site .ez-theme-toggle { margin-left: auto; } .ez-site .ez-header__toggle { margin-left: 0; } }
 
 .ez-site.ez-light {

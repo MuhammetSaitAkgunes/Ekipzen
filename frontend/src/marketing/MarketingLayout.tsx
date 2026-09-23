@@ -65,7 +65,6 @@ export function MarketingLayout() {
           </nav>
           <button type="button" className="ez-theme-toggle" onClick={toggleTheme} aria-label={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"} title={theme === "dark" ? "Açık tema" : "Koyu tema"}>
             <i aria-hidden="true" className={`fa-solid ${theme === "dark" ? "fa-sun" : "fa-moon"}`} />
-            <span>{theme === "dark" ? "Açık tema" : "Koyu tema"}</span>
           </button>
           <button
             ref={toggleRef}

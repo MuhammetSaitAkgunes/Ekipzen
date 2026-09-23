@@ -247,5 +247,6 @@ export const pricingLead = "Paket kapsamı ve fiyatlandırma, çalışan sayın�
 
 export const playbackCopy = {
   pause: "Otomatik geçişi durdur", resume: "Otomatik geçişi sürdür",
+  pauseShort: "Durdur", resumeShort: "Sürdür",
   reduced: "Hareket azaltma tercihiniz etkin. Adımları kendiniz seçebilirsiniz.",
 };

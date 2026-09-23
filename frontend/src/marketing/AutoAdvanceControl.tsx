@@ -4,9 +4,9 @@ export function AutoAdvanceControl({ enabled, reduced, onToggle }: { enabled: bo
   return (
     <div className="ez-playback">
       {reduced ? <p className="ez-muted-note">{playbackCopy.reduced}</p> : (
-        <button type="button" className="ez-playback__button" onClick={onToggle}>
+        <button type="button" className="ez-playback__button" onClick={onToggle} aria-label={enabled ? playbackCopy.pause : playbackCopy.resume}>
           <i aria-hidden="true" className={enabled ? "fa-solid fa-pause" : "fa-solid fa-play"} />
-          {enabled ? playbackCopy.pause : playbackCopy.resume}
+          {enabled ? playbackCopy.pauseShort : playbackCopy.resumeShort}
         </button>
       )}
     </div>
