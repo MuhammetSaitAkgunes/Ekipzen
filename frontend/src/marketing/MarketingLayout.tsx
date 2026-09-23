@@ -10,8 +10,8 @@ const THEME_KEY = "ekipzen-marketing-theme";
 type MarketingTheme = "dark" | "light";
 
 function savedTheme(): MarketingTheme {
-  try { return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark"; }
-  catch { return "dark"; }
+  try { return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light"; }
+  catch { return "light"; }
 }
 
 export function MarketingLayout() {

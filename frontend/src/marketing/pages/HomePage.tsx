@@ -19,7 +19,6 @@ export function HomePage() {
         <SceneBackdrop />
         <div className="ez-container">
           <div className="ez-hero__copy ez-hero-enter">
-            <p className="ez-hero__pill ez-glass"><span aria-hidden="true" className="ez-hero__pulse" />{homeCopy.audience}</p>
             <h1>{homeCopy.headline} <span className="ez-gradient-text">{homeCopy.emphasis}</span></h1>
             <p className="ez-lead">{homeCopy.lead}</p>
             <div className="ez-actions">

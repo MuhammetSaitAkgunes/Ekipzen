@@ -8,6 +8,7 @@ test("hero vaadi, iki CTA ve sayfa başlığı", () => {
   renderPage(<HomePage />);
   const h1 = screen.getByRole("heading", { level: 1 });
   expect(h1).toHaveTextContent("Personel ve izin süreçlerinizi tek yerden yönetin.");
+  expect(document.querySelector(".ez-hero__pill")).toBeNull();
   expect(screen.getAllByRole("link", { name: "Demo talep edin" })[0]).toHaveAttribute("href", "/iletisim");
   expect(screen.getByRole("link", { name: "Modülleri inceleyin" })).toHaveAttribute("href", "/ozellikler");
   expect(document.title).toBe("Ekipzen");

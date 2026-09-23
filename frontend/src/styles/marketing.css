@@ -198,9 +198,6 @@
 .ez-hero__screen::before { content: ""; position: absolute; z-index: 0; left: 50%; top: 18%; width: 78rem; height: 30rem; margin-left: -39rem; pointer-events: none; background: radial-gradient(closest-side, rgb(99 102 241 / 0.45), transparent 70%); }
 .ez-hero .ez-hero__copy { max-width: 780px; margin-inline: auto; justify-items: center; }
 .ez-hero .ez-actions, .ez-hero .ez-trust { justify-content: center; }
-.ez-hero__pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.875rem; border-radius: var(--r-full); font-size: var(--fs-12); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #e0f2fe; }
-.ez-hero__pulse { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 0 rgb(52 211 153 / 0.6); animation: ez-live-pulse 2.4s ease-out infinite; }
-@keyframes ez-live-pulse { 70% { box-shadow: 0 0 0 10px rgb(52 211 153 / 0); } 100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0); } }
 .ez-hero__screen { position: relative; z-index: 1; width: min(1080px, 100%); margin: clamp(2.5rem, 6vw, 4rem) auto 0; }
 .ez-hero__screen .ez-hero-screen__stage { position: relative; z-index: 1; }
 .ez-feature-card__top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
@@ -448,7 +445,6 @@
   .ez-site .ez-section { padding-block: 48px; }
   .ez-site .ez-section--flush { padding-top: 0; }
   .ez-site .ez-section__head { margin-bottom: 1.5rem; }
-  .ez-hero__pill { letter-spacing: 0.02em; text-transform: none; }
 }
 
 /* Büyük metin tercihinde dar ekranlarda içerik kırpılmadan yeniden akar. */

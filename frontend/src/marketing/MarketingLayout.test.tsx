@@ -60,9 +60,9 @@ test("footer yasal ve iletişim bağlantılarını içerir", () => {
   expect(within(footer).getByRole("link", { name: "İletişim" })).toHaveAttribute("href", "/iletisim");
 });
 
-test("site varsayılan olarak gece temasında açılır, menü kaydırınca koyulaşır", () => {
+test("site varsayılan olarak açık temada açılır, menü kaydırınca belirginleşir", () => {
   renderLayout();
-  expect(document.querySelector(".ez-site")).toHaveClass("ez-night");
+  expect(document.querySelector(".ez-site")).toHaveClass("ez-light");
   expect(document.querySelector(".ez-grain")).toHaveAttribute("aria-hidden", "true");
   const header = document.querySelector(".ez-header")!;
   expect(header).not.toHaveClass("is-scrolled");
@@ -85,6 +85,7 @@ test("Escape mobil menüyü kapatır ve odağı açma düğmesine döndürür", 
 
 
 test("tema seçimi kalıcıdır ve tanıtım sitesi köküyle sınırlıdır", async () => {
+  localStorage.setItem("ekipzen-marketing-theme", "dark");
   const first = renderLayout();
   const site = first.container.querySelector(".ez-site")!;
   expect(site).toHaveClass("ez-night");

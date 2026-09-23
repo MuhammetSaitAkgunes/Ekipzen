@@ -223,7 +223,6 @@ export const demoSteps = [
 ];
 
 export const homeCopy = {
-  audience: "Küçük ve orta ölçekli şirketler için İK yönetimi",
   headline: "Personel ve izin süreçlerinizi",
   emphasis: "tek yerden yönetin.",
   lead: "Personel kayıtlarını, izin taleplerini ve işe alımı ortak bir çalışma alanında yönetin. Ekipzen, İK ekiplerine tutarlı bir veri düzeni ve izlenebilir iş akışları sunar.",

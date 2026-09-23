@@ -55,8 +55,6 @@
 .ez-site.ez-light .ez-section--muted::after,
 .ez-site.ez-light .ez-section--dark::after { background: linear-gradient(90deg, transparent, #d3dcef 30%, #a7b8e8 50%, #d3dcef 70%, transparent); }
 .ez-site.ez-light .ez-eyebrow { color: #3730a3; }
-.ez-site.ez-light .ez-hero__pill { color: #1e3a8a; background: rgb(255 255 255 / .78); }
-.ez-site.ez-light .ez-hero__pulse { background: #059669; }
 .ez-site.ez-light .ez-glow::before { opacity: .45; }
 .ez-site.ez-light .ez-scene-bg { opacity: .32; }
 .ez-site.ez-light .ez-scene-bg::after { background: linear-gradient(to bottom, rgb(248 250 255 / .25), rgb(248 250 255 / .88)); }
