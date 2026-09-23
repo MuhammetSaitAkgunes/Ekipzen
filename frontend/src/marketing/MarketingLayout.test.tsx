@@ -60,7 +60,7 @@ test("footer yasal ve iletişim bağlantılarını içerir", () => {
   expect(within(footer).getByRole("link", { name: "İletişim" })).toHaveAttribute("href", "/iletisim");
 });
 
-test("site gece temasında açılır, menü kaydırınca koyulaşır", () => {
+test("site varsayılan olarak gece temasında açılır, menü kaydırınca koyulaşır", () => {
   renderLayout();
   expect(document.querySelector(".ez-site")).toHaveClass("ez-night");
   expect(document.querySelector(".ez-grain")).toHaveAttribute("aria-hidden", "true");
@@ -81,4 +81,22 @@ test("Escape mobil menüyü kapatır ve odağı açma düğmesine döndürür", 
   await userEvent.keyboard("{Escape}");
   expect(screen.getByRole("button", { name: "Menüyü aç" })).toHaveFocus();
   expect(screen.getByRole("button", { name: "Menüyü aç" })).toHaveAttribute("aria-expanded", "false");
+});
+
+
+test("tema seçimi kalıcıdır ve tanıtım sitesi köküyle sınırlıdır", async () => {
+  const first = renderLayout();
+  const site = first.container.querySelector(".ez-site")!;
+  expect(site).toHaveClass("ez-night");
+  await userEvent.click(screen.getByRole("button", { name: "Açık temaya geç" }));
+  expect(site).toHaveClass("ez-light");
+  expect(site).not.toHaveClass("ez-night");
+  expect(localStorage.getItem("ekipzen-marketing-theme")).toBe("light");
+  expect(screen.getByRole("button", { name: "Koyu temaya geç" })).toHaveFocus();
+  first.unmount();
+  const second = renderLayout();
+  expect(second.container.querySelector(".ez-site")).toHaveClass("ez-light");
+  await userEvent.click(screen.getByRole("button", { name: "Koyu temaya geç" }));
+  expect(second.container.querySelector(".ez-site")).toHaveClass("ez-night");
+  expect(localStorage.getItem("ekipzen-marketing-theme")).toBe("dark");
 });

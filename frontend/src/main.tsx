@@ -18,6 +18,7 @@ import "./styles/leaves.css";
 import "./styles/payroll.css";
 import "./styles/manager.css";
 import "./styles/settings.css";
+import "./styles/marketing-light.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

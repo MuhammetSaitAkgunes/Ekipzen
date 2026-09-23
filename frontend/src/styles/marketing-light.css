@@ -1,0 +1,131 @@
+/* Tanıtım sitesi tema seçimi. Giriş ve uygulama köklerinden bağımsızdır. */
+.ez-site .ez-theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+  min-width: 44px; min-height: 44px; padding: .5rem .8rem;
+  border: 1px solid var(--ez-border-strong); border-radius: var(--r-md);
+  background: var(--ez-glass-bg); color: var(--ez-text); font: 600 var(--fs-14)/1 var(--ez-font-sans);
+  white-space: nowrap;
+}
+.ez-site .ez-theme-toggle:hover { background: var(--ez-surface-2); }
+.ez-site .ez-theme-toggle:focus-visible { outline: none; box-shadow: var(--ez-focus-ring); }
+@media (max-width: 1100px) { .ez-site .ez-theme-toggle span { display: none; } }
+@media (max-width: 860px) { .ez-site .ez-theme-toggle { margin-left: auto; } .ez-site .ez-header__toggle { margin-left: 0; } }
+
+.ez-site.ez-light {
+  --ez-night-1: #f8faff;
+  --ez-night-2: #eef3fb;
+  --ez-night-3: #e6ecf8;
+  --ez-bg: #f8faff;
+  --ez-surface: #ffffff;
+  --ez-surface-2: #edf2fa;
+  --ez-text: #14213b;
+  --ez-text-2: #334155;
+  --ez-text-3: #475569;
+  --ez-text-4: #64748b;
+  --ez-border: #dbe3f0;
+  --ez-border-strong: #bac8dd;
+  --ez-border-soft: #e9eef7;
+  --ez-primary: #4338ca;
+  --ez-primary-hover: #3730a3;
+  --ez-primary-soft: #e9eaff;
+  --ez-on-primary: #ffffff;
+  --ez-accent-cyan: #075985;
+  --ez-accent-violet: #6d28d9;
+  --ez-grad-primary: linear-gradient(135deg, #1d4ed8, #4338ca);
+  --ez-grad-text: linear-gradient(90deg, #1d4ed8, #4338ca 55%, #7e22ce);
+  --ez-success: #047857; --ez-success-strong: #065f46; --ez-success-soft: #dcfce7;
+  --ez-warning: #a16207; --ez-warning-strong: #854d0e; --ez-warning-soft: #fef3c7;
+  --ez-danger: #be123c; --ez-danger-strong: #9f1239; --ez-danger-soft: #ffe4e6;
+  --ez-info: #0369a1; --ez-info-strong: #075985; --ez-info-soft: #e0f2fe;
+  --ez-glass-bg: rgb(255 255 255 / .84);
+  --ez-glass-border: #dce5f3;
+  --ez-focus-ring: 0 0 0 3px rgb(67 56 202 / .32);
+  --ez-shadow-xs: 0 1px 3px rgb(25 44 83 / .06);
+  --ez-shadow-sm: 0 4px 16px rgb(25 44 83 / .07);
+  --ez-shadow-md: 0 12px 32px rgb(25 44 83 / .10);
+  --ez-shadow-lg: 0 24px 56px rgb(25 44 83 / .14);
+  color-scheme: light;
+}
+.ez-site.ez-light .ez-grain { opacity: .035; }
+.ez-site.ez-light .ez-header { background: rgb(248 250 255 / .82); }
+.ez-site.ez-light .ez-header.is-scrolled { background: rgb(248 250 255 / .96); }
+.ez-site.ez-light .ez-header__link:hover,
+.ez-site.ez-light .ez-header__link.active { background: #e8edfa; color: #312e81; }
+.ez-site.ez-light .ez-header__toggle { background: #fff; }
+.ez-site.ez-light .ez-section--muted::after,
+.ez-site.ez-light .ez-section--dark::after { background: linear-gradient(90deg, transparent, #d3dcef 30%, #a7b8e8 50%, #d3dcef 70%, transparent); }
+.ez-site.ez-light .ez-eyebrow { color: #3730a3; }
+.ez-site.ez-light .ez-hero__pill { color: #1e3a8a; background: rgb(255 255 255 / .78); }
+.ez-site.ez-light .ez-hero__pulse { background: #059669; }
+.ez-site.ez-light .ez-glow::before { opacity: .45; }
+.ez-site.ez-light .ez-scene-bg { opacity: .32; }
+.ez-site.ez-light .ez-scene-bg::after { background: linear-gradient(to bottom, rgb(248 250 255 / .25), rgb(248 250 255 / .88)); }
+.ez-site.ez-light .ez-hero__screen::before { opacity: .26; }
+.ez-site.ez-light .ez-icon { background: #e9eaff; border-color: #cfd7f2; color: #4338ca; }
+.ez-site.ez-light .ez-plan--featured { background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #2563eb, #4338ca, #7e22ce) border-box; box-shadow: 0 16px 40px rgb(67 56 202 / .12); }
+.ez-site.ez-light .ez-contact__form { background: #fff; }
+.ez-site.ez-light .ez-form input,
+.ez-site.ez-light .ez-form select,
+.ez-site.ez-light .ez-form textarea { background: #fff; }
+.ez-site.ez-light .ez-compare thead th { background: #e9eef9; }
+.ez-site.ez-light .ez-compare tbody tr:hover > * { background: #f0f4fc; }
+.ez-site.ez-light .ez-faq__item[open] { background: #f2f5ff; }
+.ez-site.ez-light .ez-feature-card:hover { box-shadow: var(--ez-shadow-lg); }
+.ez-site.ez-light .ez-pricing-roadmap,
+.ez-site.ez-light .ez-roadmap__col { background: #f7f9fe; }
+.ez-site.ez-light .ez-module-panel,
+.ez-site.ez-light .ez-showcase__panel,
+.ez-site.ez-light .ez-journey__panel { background: #fff; box-shadow: var(--ez-shadow-md); }
+.ez-site.ez-light .ez-roles__item--wide,
+.ez-site.ez-light .ez-scene--3 { background: #edf1ff; border-color: #cbd4f4; box-shadow: var(--ez-shadow-sm); }
+.ez-site.ez-light .ez-scene__icon,
+.ez-site.ez-light .ez-layers__num { background: #edf1ff; border-color: #d4ddf2; color: #4338ca; }
+.ez-site.ez-light .ez-layers__item.is-open { background: #eef4ff; box-shadow: var(--ez-shadow-sm); }
+.ez-site.ez-light .ez-transparency__col--progress { background: #fff5f8; border-color: #e9bfd0; }
+.ez-site.ez-light .ez-commitment { background: #fff; border-color: var(--ez-glass-border); box-shadow: var(--ez-shadow-sm); }
+.ez-site.ez-light .ez-commitment i { color: #047857; background: #dcfce7; border-color: #a7e3ca; box-shadow: none; }
+.ez-site.ez-light .ez-journey__track,
+.ez-site.ez-light .ez-process::before { background: #cbd5e1; }
+.ez-site.ez-light .ez-journey__num { background: #fff; border-color: #b7c5de; color: #334155; }
+.ez-site.ez-light .ez-journey__tab.is-done .ez-journey__num { color: #1d4ed8; border-color: #93b4e8; }
+.ez-site.ez-light .ez-journey__card { background: #f7f9fd; box-shadow: none; }
+.ez-site.ez-light .ez-journey__fields > div { background: #fff; border-color: #dce5f3; }
+.ez-site.ez-light .ez-journey__fields .is-filled { background: #e9eaff; border-color: #cbd4f4; }
+.ez-site.ez-light .ez-journey__fields .is-filled dd { color: #312e81; }
+.ez-site.ez-light .ez-flow__line { stroke: #2563eb; filter: none; }
+.ez-site.ez-light .ez-flow__node rect { fill: #fff; stroke: #cbd5e1; }
+.ez-site.ez-light .ez-flow__node text { fill: #14213b; }
+.ez-site.ez-light .ez-sec-layers__layer { border-color: rgb(255 255 255 / .8); box-shadow: 0 20px 46px rgb(38 53 99 / .2); }
+.ez-site.ez-light .ez-sec-layers__layer--1 { background: linear-gradient(135deg, #be185d, #7e22ce); }
+.ez-site.ez-light .ez-sec-layers__layer--2 { background: linear-gradient(135deg, #4338ca, #3730a3); }
+.ez-site.ez-light .ez-sec-layers__layer--3 { background: linear-gradient(135deg, #0369a1, #1d4ed8); }
+.ez-site.ez-light .ez-sec-layers__layer--4 { background: linear-gradient(135deg, #0d716b, #075985); }
+.ez-site.ez-light .ez-sec-layers__layer--5 { background: linear-gradient(135deg, #047857, #065f46); }
+.ez-site.ez-light .ez-footer { background: #e9eef8; }
+.ez-site.ez-light .ez-footer__title { color: #14213b !important; }
+.ez-site.ez-light .ez-footer a:hover { color: #312e81; }
+.ez-site.ez-light .ez-footer__bottom { border-color: #cbd5e1; }
+.ez-site.ez-light .ez-cta-band { background: linear-gradient(135deg, #1e3a8a, #312e81 55%, #4c1d95); border-color: #4053a3; box-shadow: 0 24px 60px rgb(49 46 129 / .24); }
+.ez-site.ez-light .ez-cta-band h2 { color: #fff; }
+.ez-site.ez-light .ez-cta-band p { color: #e0e7ff; }
+.ez-site.ez-light .ez-cta-band .ez-btn--primary { background: #fff; color: #1e1b4b; }
+.ez-site.ez-light .ez-cta-band .ez-btn--primary:hover { background: #eef2ff; color: #1e1b4b; }
+.ez-site.ez-light .ez-cta-band .ez-btn--secondary { background: transparent; color: #fff; border-color: #c7d2fe; }
+.ez-site.ez-light .ez-cta-band .ez-btn--secondary:hover { background: rgb(255 255 255 / .15); }
+.ez-site.ez-light .ez-showcase__tab[aria-selected="true"],
+.ez-site.ez-light .ez-journey__tab.is-active .ez-journey__num,
+.ez-site.ez-light .ez-layers__item.is-open .ez-layers__num,
+.ez-site.ez-light .ez-process.is-active .ez-process__marker { color: #fff; }
+
+/* Ürün ekranları temsili koyu uygulama penceresi olarak iki temada da okunur. */
+.ez-site.ez-light .ez-app,
+.ez-site.ez-light .ez-notice {
+  --ez-text: #f1f5f9; --ez-text-2: #cbd5e1; --ez-text-3: #aab8d2;
+  --ez-grad-primary: linear-gradient(135deg, #1d4ed8, #4338ca);
+}
+.ez-site.ez-light .ez-glimpse__avatars b,
+.ez-site.ez-light .ez-glimpse__rows dt { color: #475569; }
+.ez-site.ez-light .ez-glimpse__rows div { background: #eef2f9; }
+.ez-site.ez-light .ez-glimpse__rows dd,
+.ez-site.ez-light .ez-glimpse__pipe b { color: #14213b; }
+.ez-site.ez-light .ez-glimpse__pipe span { background: #eef2ff; border-color: #cbd4f4; color: #475569; }

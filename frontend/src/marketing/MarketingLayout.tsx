@@ -6,12 +6,27 @@ import { ButtonLink, Logo } from "../ui";
 import { modules, navItems, siteInfo } from "./content";
 import { useScrolled } from "./useScrolled";
 
+const THEME_KEY = "ekipzen-marketing-theme";
+type MarketingTheme = "dark" | "light";
+
+function savedTheme(): MarketingTheme {
+  try { return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark"; }
+  catch { return "dark"; }
+}
+
 export function MarketingLayout() {
   const { user } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<MarketingTheme>(savedTheme);
   const scrolled = useScrolled();
   const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* Storage may be unavailable. */ }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => current === "dark" ? "light" : "dark");
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
   useEffect(() => {
@@ -31,12 +46,12 @@ export function MarketingLayout() {
     : <ButtonLink to={LOGIN_PATH} variant="ghost">Giriş yap</ButtonLink>;
 
   return (
-    <div className="ez-site ez-night">
+    <div className={`ez-site ${theme === "dark" ? "ez-night" : "ez-light"}`}>
       <div className="ez-grain" aria-hidden="true" />
       <a className="ez-skip" href="#icerik">İçeriğe geç</a>
       <header className={`ez-header${menuOpen ? " is-open" : ""}${scrolled ? " is-scrolled" : ""}`}>
         <div className="ez-container ez-header__inner">
-          <Link to="/" className="ez-header__brand" aria-label="Ekipzen ana sayfa"><Logo tone="light" /></Link>
+          <Link to="/" className="ez-header__brand" aria-label="Ekipzen ana sayfa"><Logo tone={theme === "dark" ? "light" : "dark"} /></Link>
           <nav id="ana-menu" className="ez-header__nav" aria-label="Ana menü">
             <ul>
               {navItems.map((item) => (
@@ -48,6 +63,10 @@ export function MarketingLayout() {
               <ButtonLink to="/iletisim">Demo talep edin</ButtonLink>
             </div>
           </nav>
+          <button type="button" className="ez-theme-toggle" onClick={toggleTheme} aria-label={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"} title={theme === "dark" ? "Açık tema" : "Koyu tema"}>
+            <i aria-hidden="true" className={`fa-solid ${theme === "dark" ? "fa-sun" : "fa-moon"}`} />
+            <span>{theme === "dark" ? "Açık tema" : "Koyu tema"}</span>
+          </button>
           <button
             ref={toggleRef}
             type="button"
@@ -70,7 +89,7 @@ export function MarketingLayout() {
         <div className="ez-container ez-footer__grid">
           <div className="ez-footer__brand">
             <Logo tone="light" />
-            <p>Özlük, izin, puantaj, bordro ve işe alım süreçlerini tek bir kayıt düzeninde yürüten insan kaynakları yönetim platformu.</p>
+            <p>Personel kayıtlarını, izin süreçlerini ve işe alımı ortak bir çalışma alanında buluşturan insan kaynakları yönetim platformu.</p>
           </div>
           <div>
             <h2 className="ez-footer__title">Ürün</h2>
