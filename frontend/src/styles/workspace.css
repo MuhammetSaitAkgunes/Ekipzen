@@ -4,7 +4,7 @@
   --ez-text: #252721; --ez-text-2: #44473f; --ez-text-3: #686b62; --ez-text-4: #71756a;
   --ez-border: #e4e5dd; --ez-border-soft: #eff0e9; --ez-border-strong: #c8cbc0;
   --ez-primary: #5145b8; --ez-primary-hover: #403594; --ez-primary-soft: #eeecfb; --ez-on-primary: #fff;
-  --ez-nav-bg: #f0f1eb; --ez-nav-text: #51554b; --ez-nav-muted: #727669;
+  --ez-nav-bg: #f0f1eb; --ez-nav-text: #51554b; --ez-nav-muted: #686c5f;
   --ez-nav-accent: #5145b8; --ez-nav-active-bg: #e5e1f5; --ez-nav-border: #e0e2d7;
   --ez-shadow-sm: 0 1px 2px rgb(40 45 30 / .03); --ez-shadow-md: 0 12px 32px rgb(40 45 30 / .08);
   --primary: var(--ez-primary); --primary-strong: var(--ez-primary-hover); --primary-soft: var(--ez-primary-soft); --primary-contrast: var(--ez-on-primary);
