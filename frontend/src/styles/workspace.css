@@ -473,3 +473,23 @@
 .ez-journey-card p { max-width: 68ch; color: var(--muted); line-height: 1.6; }
 .ez-journey-card .btn { display: inline-flex; margin-top: 8px; text-decoration: none; }
 @media (max-width: 640px) { .ez-journey-card { padding: 20px; } }
+
+
+.ez-process-map { margin-top: 26px; }
+.ez-process-map-heading h2 { margin: 0 0 6px; color: var(--ink); font-size: 20px; }
+.ez-process-map-heading p, .ez-process-map-note { max-width: 72ch; color: var(--muted); line-height: 1.55; }
+.ez-process-map ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: process; }
+.ez-process-map li { min-width: 0; counter-increment: process; }
+.ez-process-map-card { height: 100%; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ez-process-map-card::before { content: counter(process, decimal-leading-zero); display: block; margin-bottom: 10px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.ez-process-coverage { display: inline-block; padding: 4px 8px; border-radius: 6px; background: var(--surface-soft); color: var(--muted); font-size: 11px; font-weight: 650; }
+.ez-process-coverage--entry, .ez-process-coverage--decision, .ez-process-coverage--tasks { background: var(--primary-soft); color: var(--primary); }
+.ez-process-map-card h3 { margin: 12px 0 8px; color: var(--ink); }
+.ez-process-map-card p { margin: 8px 0; line-height: 1.55; }
+.ez-process-connection { color: var(--muted); }
+.ez-process-connection strong { color: var(--text); }
+.ez-process-map-card a { display: inline-block; margin-top: 8px; color: var(--primary); font-weight: 650; text-decoration: none; }
+.ez-process-map-card a:hover { text-decoration: underline; }
+.ez-process-map-card a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.ez-process-map-note { margin-top: 16px; }
+@media (max-width: 720px) { .ez-process-map ol { grid-template-columns: minmax(0, 1fr); } }
