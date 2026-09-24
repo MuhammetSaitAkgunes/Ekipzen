@@ -15,6 +15,13 @@ const routes = {
   "/api/actions/badge": { openCount: 2 }, "/api/actions": [],
   "/api/dashboard/overview": { activeEmployees: 12, pendingApprovals: 1, onLeaveToday: 2, inOfficeToday: 10 },
   "/api/leaves/pending": [pending], "/api/leaves/my": [],
+  "/api/guidance/daily-tasks": [{
+    key: "leave-approval:4", kind: "leave-approval", recordId: 4,
+    title: "Ayşe Demir izin talebini incele", reason: "Yıllık İzin talebi onay bekliyor.",
+    nextAction: "Talep ayrıntılarını inceleyip onay veya ret kararı verin.",
+    dueDate: null, dateNote: "İzin başlangıcı: 23.09.2026. Karar için kayıtlı son tarih yok.",
+    targetPath: "/inbox?tab=approvals&requestId=4",
+  }],
   "/api/leaves/balance": { remainingDays: 14, usedDays: 6 }, "/api/leaves/team": [], "/api/leaves/ledger": [],
   "/api/employees/1": employee, "/api/employees/1/documents": [],
   "/api/employees/1/employment-foundation": { employmentPeriods: [], compensationPackages: [] },
@@ -44,7 +51,7 @@ test("çalışan ana sayfası yalnız kişisel verileri ister ve yönetim bağla
 
 test("yönetici ana sayfası talepleri getirir, bordro ve çalışan ekleme sunmaz", async () => {
   setup("manager");
-  expect(await screen.findByText("Ayşe Demir")).toBeInTheDocument();
+  expect(await screen.findByText("Ayşe Demir izin talebini incele")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Çalışan ekle" })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Bordro dönemleri" })).not.toBeInTheDocument();
 });
@@ -55,7 +62,7 @@ test("özet servisi hatası sıfır göstermez ve diğer işleri engellemez", as
   vi.mocked(fetch).mockImplementation(async (url, init) => String(url).includes("dashboard/overview") ? new Response("{}", { status: 503 }) : original(url, init));
   setup();
   expect(await screen.findByText("Veri yüklenemedi")).toBeInTheDocument();
-  expect(await screen.findByText("Ayşe Demir")).toBeInTheDocument();
+  expect(await screen.findByText("Ayşe Demir izin talebini incele")).toBeInTheDocument();
   expect(screen.queryByText("Aktif ekip üyeleri")).not.toBeInTheDocument();
 });
 
@@ -139,7 +146,7 @@ test("profil menüsü Escape ile kapanır ve tema tercihini saklar", async () =>
 test("çalışma alanından çıkınca koyu tema genel sayfalara sızmaz", async () => {
   localStorage.setItem("ekipzen-theme", "dark");
   const { router } = setup();
-  await screen.findByText("Onayınızı bekleyenler");
+  await screen.findByText("Bugün yapılacaklar");
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   await act(async () => { await router.navigate("/"); });
   await waitFor(() => expect(document.documentElement).not.toHaveAttribute("data-theme"));
