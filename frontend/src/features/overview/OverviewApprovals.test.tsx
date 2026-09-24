@@ -49,7 +49,8 @@ test("yönetici bekleyen izin taleplerini görür ve onaylar", async () => {
   expect(await screen.findByText("Bekleyen onaylar")).toBeInTheDocument();
   expect(await screen.findByText("Ahmet Yılmaz")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "İncele" }));
-  await userEvent.click(screen.getByRole("button", { name: "Onayla" }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayı incele" }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayı kaydet" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/leaves/4/approve");
     expect(posted).toBe(true);

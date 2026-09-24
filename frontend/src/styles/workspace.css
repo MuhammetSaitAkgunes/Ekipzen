@@ -118,6 +118,15 @@
 .ez-request-date { font-size: 10px; line-height: 1.7; color: var(--muted); text-align: right; margin-right: 8px; }
 .ez-request-detail { margin: 0 24px 16px 72px; padding: 16px; border-radius: 8px; background: var(--surface-soft); font-size: 13px; }
 .ez-request-detail .toolbar-actions { justify-content: flex-end; margin-top: 12px; }
+.ez-leave-guide { padding: 12px 14px; border-left: 3px solid var(--primary); background: var(--surface); }
+.ez-leave-guide strong, .ez-leave-decision-review h4 { color: var(--ink); }
+.ez-leave-guide p, .ez-leave-decision-review p { margin: 6px 0 0; line-height: 1.55; }
+.ez-leave-decision-review { display: grid; gap: 10px; margin-top: 14px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
+.ez-leave-decision-review h4 { margin: 0; }
+.ez-leave-decision-review label { font-weight: 600; }
+.ez-leave-decision-review textarea { width: 100%; resize: vertical; }
+.ez-leave-decision-review small { color: var(--muted); line-height: 1.5; }
+
 .ez-action-row { padding: 18px 24px; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line-soft); text-decoration: none; }
 .ez-action-row > div { flex: 1; display: grid; gap: 6px; min-width: 0; }
 .ez-action-row strong { font-size: 13px; font-weight: 550; color: var(--ink); }

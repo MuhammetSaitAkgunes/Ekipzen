@@ -89,10 +89,12 @@ test("onay detayları önce incelenir; başarısız işlem korunur ve tekrar den
   expect(screen.queryByRole("button", { name: "Onayla" })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "İncele" }));
   expect(screen.getByText("Aile ziyareti")).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Onayla" }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayı incele" }));
+  expect(screen.getByText(/sistem onay anında bakiyeyi yeniden kontrol eder/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Onayı kaydet" }));
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.getByText("Aile ziyareti")).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Onayla" }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayı kaydet" }));
   await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["leaves"] }));
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ["actions"] });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ["dashboard"] });

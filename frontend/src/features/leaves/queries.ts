@@ -71,10 +71,10 @@ export const usePendingLeaves = (enabled: boolean) =>
 export const useDecideLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, approve }: { id: number; approve: boolean }) =>
+    mutationFn: ({ id, approve, note }: { id: number; approve: boolean; note?: string }) =>
       apiFetch<LeaveRequestDto>(`/leaves/${id}/${approve ? "approve" : "reject"}`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({ note: note?.trim() || null }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });

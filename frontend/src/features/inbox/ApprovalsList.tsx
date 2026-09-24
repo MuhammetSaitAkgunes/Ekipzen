@@ -13,11 +13,21 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
   const [expanded, setExpanded] = useState(selected);
   useEffect(() => { if (selected) setExpanded(true); }, [selected]);
   const [error, setError] = useState("");
-  const resolve = async (approve: boolean) => {
+  const [reviewDecision, setReviewDecision] = useState<boolean | null>(null);
+  const [note, setNote] = useState("");
+  const beginReview = (approve: boolean) => {
+    setError("");
+    setReviewDecision(approve);
+  };
+  const resolve = async () => {
+    if (reviewDecision === null) return;
+    const approve = reviewDecision;
     if (request.id == null) return;
     setError("");
     try {
-      await decide.mutateAsync({ id: request.id, approve });
+      await decide.mutateAsync({ id: request.id, approve, note });
+      setReviewDecision(null);
+      setNote("");
       showToast(`${request.employeeName} izin talebi ${approve ? "onaylandı" : "reddedildi"}.`, "success");
     } catch (cause) { setError(cause instanceof ApiError ? cause.message : "İşlem tamamlanamadı. Tekrar deneyin."); }
   };
@@ -26,12 +36,39 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
       <span className="ez-person-avatar" aria-hidden="true">{request.employeeName?.split(" ").map((s) => s[0]).slice(0, 2).join("")}</span>
       <div className="ez-request-person"><strong>{request.employeeName}</strong><span>{request.leaveTypeName} · {request.days ?? "—"} gün</span></div>
       <span className="ez-request-date">{formatLeaveDate(request.startDate)} – {formatLeaveDate(request.endDate)}</span>
-      <button className="btn btn-secondary btn-sm" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls={`request-${request.id}`}>{expanded ? "Kapat" : "İncele"}</button>
+      <button className="btn btn-secondary btn-sm" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls={`request-detail-${request.id}`}>{expanded ? "Kapat" : "İncele"}</button>
     </div>
-    {expanded && <div className="ez-request-detail" id={`request-${request.id}`}>
+    {expanded && <div className="ez-request-detail" id={`request-detail-${request.id}`}>
       <p>{request.description || "Bu talebe açıklama eklenmemiş."}</p>
       {error && <p role="alert" className="form-error">{error}</p>}
-      <div className="toolbar-actions"><button className="btn btn-secondary btn-sm" disabled={decide.isPending} onClick={() => resolve(false)}>Reddet</button><button className="btn btn-primary btn-sm" disabled={decide.isPending} onClick={() => resolve(true)}>{decide.isPending ? "İşleniyor…" : "Onayla"}</button></div>
+      <div className="ez-leave-guide">
+        <strong>Karar öncesi kontrol</strong>
+        <p>Çalışanı, izin türünü, tarihleri, gün sayısını ve talep açıklamasını gözden geçirin. Eksik veya çelişkili bilgiyi ilgili kişiyle netleştirin.</p>
+      </div>
+      {reviewDecision === null ? (
+        <div className="toolbar-actions">
+          <button className="btn btn-secondary btn-sm" onClick={() => beginReview(false)}>Reddetmeyi incele</button>
+          <button className="btn btn-primary btn-sm" onClick={() => beginReview(true)}>Onayı incele</button>
+        </div>
+      ) : (
+        <div className="ez-leave-decision-review" role="group" aria-label="İzin kararını gözden geçir">
+          <h4>{reviewDecision ? "Onay kararı" : "Ret kararı"}</h4>
+          <p>{reviewDecision
+            ? "Onay talebin durumunu değiştirir. Bakiyeden düşen türlerde sistem onay anında bakiyeyi yeniden kontrol eder ve kullanım hareketini kaydeder."
+            : "Ret talebin durumunu değiştirir ve bekleyen onay kuyruğundan çıkarır. Bu ekranda kararı geri alma işlemi yoktur."}</p>
+          <label htmlFor={`decision-note-${request.id}`}>Karar notu (isteğe bağlı)</label>
+          <textarea id={`decision-note-${request.id}`} className="input-control" rows={2}
+            maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)}
+            placeholder="Kararın gerekçesini kısa ve somut yazın" />
+          <small>Not, izin talebinin karar kaydında saklanır. Gerekçeyi kişisel hassas bilgiler eklemeden yazın.</small>
+          <div className="toolbar-actions">
+            <button className="btn btn-secondary btn-sm" disabled={decide.isPending} onClick={() => setReviewDecision(null)}>Vazgeç</button>
+            <button className={`btn btn-sm ${reviewDecision ? "btn-primary" : "btn-secondary"}`} disabled={decide.isPending} onClick={() => void resolve()}>
+              {decide.isPending ? "İşleniyor…" : reviewDecision ? "Onayı kaydet" : "Ret kararını kaydet"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>}
   </article>;
 }
