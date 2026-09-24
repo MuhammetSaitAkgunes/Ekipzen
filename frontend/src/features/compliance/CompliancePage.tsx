@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
@@ -16,6 +17,8 @@ export const compliancePillClass = (status?: string | null): string =>
 
 export function CompliancePage() {
   const { user } = useAuth();
+  const [params] = useSearchParams();
+  const selectedDocumentId = Number(params.get("documentId"));
   const isAdmin = user?.role === "hr-admin";
   const { showToast } = useToast();
   const setDocumentStatus = useSetComplianceStatus();
@@ -40,6 +43,9 @@ export function CompliancePage() {
   if (readinessQ.isError) return <PageError error={readinessQ.error} />;
 
   const documents = documentsQ.data;
+  const displayDocuments = selectedDocumentId > 0
+    ? [...documents].sort((a, b) => Number(b.id === selectedDocumentId) - Number(a.id === selectedDocumentId))
+    : documents;
   const readiness = readinessQ.data;
 
   const changeStatus = async (doc: ComplianceDocumentDto, status: string) => {
@@ -109,8 +115,8 @@ export function CompliancePage() {
               <tr><th>Personel</th><th>Departman</th><th>Evrak</th><th>Sorumlu</th><th>Son Tarih</th><th>Durum</th><th>Risk</th>{isAdmin && <th>İşlem</th>}</tr>
             </thead>
             <tbody>
-              {documents.map((doc) => (
-                <tr key={doc.id}>
+              {displayDocuments.map((doc) => (
+                <tr key={doc.id} id={`document-${doc.id}`} className={doc.id === selectedDocumentId ? "ez-guidance-target" : undefined}>
                   <td><strong>{doc.employee}</strong></td>
                   <td>{doc.dept}</td>
                   <td>{doc.document}</td>

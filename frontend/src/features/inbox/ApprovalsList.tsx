@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { appPath } from "../../paths";
 import { useToast } from "../../layout/ToastProvider";
@@ -7,10 +7,11 @@ import { useDecideLeave, usePendingLeaves, type LeaveRequestDto } from "../leave
 import { formatLeaveDate } from "../leaves/format";
 import { PageError, PageLoading } from "../shared/PageState";
 
-function Approval({ request }: { request: LeaveRequestDto }) {
+function Approval({ request, selected }: { request: LeaveRequestDto; selected: boolean }) {
   const decide = useDecideLeave();
   const { showToast } = useToast();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(selected);
+  useEffect(() => { if (selected) setExpanded(true); }, [selected]);
   const [error, setError] = useState("");
   const resolve = async (approve: boolean) => {
     if (request.id == null) return;
@@ -20,7 +21,7 @@ function Approval({ request }: { request: LeaveRequestDto }) {
       showToast(`${request.employeeName} izin talebi ${approve ? "onaylandı" : "reddedildi"}.`, "success");
     } catch (cause) { setError(cause instanceof ApiError ? cause.message : "İşlem tamamlanamadı. Tekrar deneyin."); }
   };
-  return <article className="ez-request">
+  return <article id={`request-${request.id}`} className={`ez-request ${selected ? "ez-guidance-target" : ""}`}>
     <div className="ez-request-main">
       <span className="ez-person-avatar" aria-hidden="true">{request.employeeName?.split(" ").map((s) => s[0]).slice(0, 2).join("")}</span>
       <div className="ez-request-person"><strong>{request.employeeName}</strong><span>{request.leaveTypeName} · {request.days ?? "—"} gün</span></div>
@@ -35,12 +36,16 @@ function Approval({ request }: { request: LeaveRequestDto }) {
   </article>;
 }
 export function ApprovalsList({ limit }: { limit?: number }) {
+  const [params] = useSearchParams();
+  const requestedId = Number(params.get("requestId"));
   const query = usePendingLeaves(true);
   if (query.isPending) return <PageLoading />;
   if (query.isError) return <PageError error={query.error} />;
-  const requests = query.data;
+  const requests = requestedId > 0
+    ? [...query.data].sort((a, b) => Number(b.id === requestedId) - Number(a.id === requestedId))
+    : query.data;
   return <div className="ez-requests">
-    {requests.length === 0 ? <div className="ez-empty"><span className="ez-empty-icon"><i className="fa-solid fa-check" aria-hidden="true" /></span><h3>Her şey güncel</h3><p>İlginizi bekleyen bir izin talebi yok.</p></div> : requests.slice(0, limit).map((request) => <Approval key={request.id} request={request} />)}
+    {requests.length === 0 ? <div className="ez-empty"><span className="ez-empty-icon"><i className="fa-solid fa-check" aria-hidden="true" /></span><h3>Her şey güncel</h3><p>İlginizi bekleyen bir izin talebi yok.</p></div> : requests.slice(0, limit).map((request) => <Approval key={request.id} request={request} selected={request.id === requestedId} />)}
     {limit && requests.length > limit && <Link className="ez-section-link" to={appPath("/inbox")}>Tüm {requests.length} talebi incele <span aria-hidden="true">→</span></Link>}
   </div>;
 }

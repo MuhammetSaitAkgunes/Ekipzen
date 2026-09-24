@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
+import { dailyTasksKey } from "../guidance/queries";
 import type { components } from "../../api/schema";
 
 export type LeaveBalanceDto = components["schemas"]["LeaveBalanceDto"];
@@ -42,6 +43,7 @@ export const useCreateLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
     },
   });
 };
@@ -54,6 +56,7 @@ export const useCancelLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
     },
   });
 };
@@ -77,6 +80,7 @@ export const useDecideLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
     },
   });
 };

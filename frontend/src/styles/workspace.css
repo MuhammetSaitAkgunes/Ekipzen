@@ -441,3 +441,13 @@
   .ez-risk-compliance-grid { align-items: flex-start; }
   .ez-risk-compliance-stats div { border-left: 0; border-bottom: 1px solid var(--line-soft); padding: 6px 0; }
 }
+
+.ez-guidance-task { padding: 20px 24px; border-top: 1px solid var(--line-soft); display: grid; gap: 8px; }
+.ez-guidance-task .ez-overline { font-size: 10px; color: var(--primary); }
+.ez-guidance-task h3 { font-size: 15px; font-weight: 600; color: var(--ink); }
+.ez-guidance-task p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+.ez-guidance-task p strong { color: var(--ink); }
+.ez-guidance-task small { color: var(--muted); line-height: 1.5; }
+.ez-guidance-task > a { color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none; justify-self: start; }
+.ez-guidance-task > a:hover { text-decoration: underline; }
+.ez-guidance-target { background: var(--surface-soft); box-shadow: inset 3px 0 var(--primary); }

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
+import { dailyTasksKey } from "../guidance/queries";
 import type { components } from "../../api/schema";
 
 export type ComplianceDocumentDto = components["schemas"]["ComplianceDocumentDto"];
@@ -40,7 +41,10 @@ export const useCreateComplianceDocument = () => {
         method: "POST",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["compliance"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+    },
   });
 };
 
@@ -54,7 +58,10 @@ export const useUpdateComplianceDocument = () => {
         method: "PUT",
         body: JSON.stringify({ documentName, dueDate, level }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["compliance"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+    },
   });
 };
 
@@ -66,7 +73,10 @@ export const useSetComplianceStatus = () => {
         method: "PATCH",
         body: JSON.stringify({ status }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["compliance"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+    },
   });
 };
 
@@ -78,6 +88,9 @@ export const useAssignComplianceOwner = () => {
         method: "PATCH",
         body: JSON.stringify({ ownerName }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["compliance"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+    },
   });
 };

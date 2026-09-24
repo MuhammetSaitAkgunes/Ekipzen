@@ -1,4 +1,6 @@
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -92,4 +94,15 @@ test("manager salt-okur: Yeni Belge ve durum select'i yok", async () => {
   await screen.findAllByText("İş Sözleşmesi");
   expect(screen.queryByRole("button", { name: /Yeni Belge/ })).not.toBeInTheDocument();
   expect(screen.queryAllByLabelText("Belge durumu")).toHaveLength(0);
+});
+
+test("günlük iş bağlantısı ilgili belgeyi tabloda öne çıkarır", async () => {
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter initialEntries={["/app/risk/compliance?documentId=2"]}>
+      <AuthProvider><ToastProvider><CompliancePage /></ToastProvider></AuthProvider>
+    </MemoryRouter>
+  </QueryClientProvider>);
+  await screen.findAllByText("SGK Girişi");
+  expect(screen.getAllByRole("row")[1]).toHaveAttribute("id", "document-2");
+  expect(screen.getAllByRole("row")[1]).toHaveClass("ez-guidance-target");
 });
