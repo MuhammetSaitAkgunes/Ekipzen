@@ -554,3 +554,10 @@
 .ez-entry-follow-up a { color: var(--primary); font-weight: 650; }
 @media (max-width: 800px) { .ez-entry-follow-up ol { grid-template-columns: minmax(0, 1fr); } .ez-entry-follow-up li p { min-height: 0; } }
 @media (max-width: 640px) { .ez-entry-follow-up { padding: 18px; } }
+
+
+.ez-document-review { margin: 16px 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-document-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-document-review p { max-width: 74ch; margin: 8px 0; color: var(--text); line-height: 1.5; }
+.ez-document-review strong { color: var(--ink); }
+.ez-document-review-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
