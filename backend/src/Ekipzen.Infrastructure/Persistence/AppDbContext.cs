@@ -5,6 +5,7 @@ using Ekipzen.Domain.Entities.Actions;
 using Ekipzen.Domain.Entities.Analytics;
 using Ekipzen.Domain.Entities.Attendance;
 using Ekipzen.Domain.Entities.Compliance;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Identity;
 using Ekipzen.Domain.Entities.Leaves;
 using Ekipzen.Domain.Entities.Organization;
@@ -79,6 +80,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     // Actions & Audit
     public DbSet<GlobalAction> GlobalActions => Set<GlobalAction>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    // Guidance
+    public DbSet<GuidanceBookmark> GuidanceBookmarks => Set<GuidanceBookmark>();
+    public DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences => Set<EmployeeCreationEvidence>();
 
     // Durable Identity provisioning
     public DbSet<IdentityProvisioningOperation> IdentityProvisioningOperations => Set<IdentityProvisioningOperation>();

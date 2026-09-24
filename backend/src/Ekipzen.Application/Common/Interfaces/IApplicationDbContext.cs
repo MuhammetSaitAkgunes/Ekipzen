@@ -2,6 +2,7 @@ using Ekipzen.Domain.Entities.Actions;
 using Ekipzen.Domain.Entities.Analytics;
 using Ekipzen.Domain.Entities.Attendance;
 using Ekipzen.Domain.Entities.Compliance;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Identity;
 using Ekipzen.Domain.Entities.Leaves;
 using Ekipzen.Domain.Entities.Organization;
@@ -69,6 +70,10 @@ public interface IApplicationDbContext
     // Actions & Audit
     DbSet<GlobalAction> GlobalActions { get; }
     DbSet<AuditLog> AuditLogs { get; }
+
+    // Guidance
+    DbSet<GuidanceBookmark> GuidanceBookmarks { get; }
+    DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences { get; }
 
     // Durable Identity provisioning
     DbSet<IdentityProvisioningOperation> IdentityProvisioningOperations { get; }

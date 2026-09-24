@@ -44,6 +44,40 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
     }
 
     [Fact]
+    public async Task Export_IncludesOwnGuidanceRecords_WithoutLeakingThemToAnotherUser()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var bookmark = await admin.PutAsJsonAsync("/api/guidance/employee-entry/bookmark",
+            new { stepKey = "tab-is" });
+        bookmark.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var departments = await admin.GetFromJsonAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
+            "/api/departments");
+        var created = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Dışa", lastName = "Aktarım", title = "Uzman",
+            departmentId = departments![0].Id, hireDate = "2026-09-24",
+            contractType = "indefinite", profile = new { employmentType = "Tam Zamanlı" },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var employee = (await created.Content.ReadFromJsonAsync<Ekipzen.Application.Features.Employees.EmployeeDetailDto>())!;
+
+        using var adminExport = JsonDocument.Parse(await admin.GetStringAsync("/api/me/data-export"));
+        var adminRoot = adminExport.RootElement;
+        adminRoot.GetProperty("guidanceBookmarks").EnumerateArray()
+            .Should().ContainSingle(item =>
+                item.GetProperty("processKey").GetString() == "personnel-entry" &&
+                item.GetProperty("stepKey").GetString() == "tab-is");
+        adminRoot.GetProperty("employeeCreationEvidences").EnumerateArray()
+            .Should().ContainSingle(item => item.GetProperty("employeeId").GetInt32() == employee.Id);
+
+        var otherUser = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        using var otherExport = JsonDocument.Parse(await otherUser.GetStringAsync("/api/me/data-export"));
+        otherExport.RootElement.GetProperty("guidanceBookmarks").GetArrayLength().Should().Be(0);
+        otherExport.RootElement.GetProperty("employeeCreationEvidences").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
     public async Task Export_ForUserWithoutEmployeeLink_DoesNotCrash()
     {
         var admin = await AuthedClientAsync("ik@hrmaster.local"); // hr-admin, EmployeeId'siz seed'lenir

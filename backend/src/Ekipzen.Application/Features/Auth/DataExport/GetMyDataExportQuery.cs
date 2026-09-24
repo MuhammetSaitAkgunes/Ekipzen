@@ -19,6 +19,8 @@ public sealed record LeaveLedgerExportItem(
 public sealed record AttendanceExportItem(DateOnly WorkDate, TimeOnly? CheckIn, TimeOnly? CheckOut, int WorkedMinutes, string Status);
 public sealed record ComplianceDocumentExportItem(string DocumentName, string Status, DateOnly? DueDate);
 public sealed record PayslipExportItem(string PeriodName, string ApprovalStatus);
+public sealed record GuidanceBookmarkExportItem(string ProcessKey, string StepKey, int ContentVersion);
+public sealed record EmployeeCreationEvidenceExportItem(int EmployeeId, DateTime CreatedAtUtc);
 
 public sealed record MyDataExportDto(
     AccountInfo Account,
@@ -28,12 +30,14 @@ public sealed record MyDataExportDto(
     IReadOnlyList<AttendanceExportItem> AttendanceRecords,
     IReadOnlyList<ComplianceDocumentExportItem> ComplianceDocuments,
     IReadOnlyList<PayslipExportItem> Payslips,
+    IReadOnlyList<GuidanceBookmarkExportItem> GuidanceBookmarks,
+    IReadOnlyList<EmployeeCreationEvidenceExportItem> EmployeeCreationEvidences,
     DateTime ExportedAtUtc);
 
 /// <summary>
 /// KVKK taşınabilirlik: oturum açmış kullanıcının kendi verisini JSON paketi olarak
-/// döndürür. Yalnız EmployeeId'sine bağlı kayıtlar dahil edilir — başka kullanıcının
-/// verisi asla sızmaz. Tenant izolasyonu EF global filtresinden otomatik gelir (çifte güvence).
+/// döndürür. Çalışan verileri EmployeeId, rehber verileri UserId ile süzülür.
+/// Tenant izolasyonu EF global filtresinden otomatik gelir (çifte güvence).
 /// </summary>
 public sealed record GetMyDataExportQuery : IRequest<(byte[] Content, string FileName)>;
 
@@ -57,6 +61,16 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         IReadOnlyList<AttendanceExportItem> attendance = Array.Empty<AttendanceExportItem>();
         IReadOnlyList<ComplianceDocumentExportItem> compliance = Array.Empty<ComplianceDocumentExportItem>();
         IReadOnlyList<PayslipExportItem> payslips = Array.Empty<PayslipExportItem>();
+
+        var userId = currentUser.UserId ?? string.Empty;
+        var guidanceBookmarks = await context.GuidanceBookmarks.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new GuidanceBookmarkExportItem(item.ProcessKey, item.StepKey, item.ContentVersion))
+            .ToListAsync(cancellationToken);
+        var employeeCreationEvidences = await context.EmployeeCreationEvidences.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new EmployeeCreationEvidenceExportItem(item.EmployeeId, item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
 
         if (currentUser.EmployeeId is { } employeeId)
         {
@@ -107,7 +121,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
 
         var dto = new MyDataExportDto(
             account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
-            DateTime.UtcNow);
+            guidanceBookmarks, employeeCreationEvidences, DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
         var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";

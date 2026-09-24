@@ -5,6 +5,7 @@ using Ekipzen.Application.Common.Notifications;
 using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Employees.GetEmployee;
 using Ekipzen.Domain.Entities.Identity;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Organization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ public sealed class CreateEmployeeCommandValidator : AbstractValidator<CreateEmp
 public sealed class CreateEmployeeCommandHandler(
     IApplicationDbContext context,
     ISender sender,
+    ICurrentUser currentUser,
     INotificationTrigger notificationTrigger,
     IIdentityProvisioningProcessor provisioningProcessor)
     : IRequestHandler<CreateEmployeeCommand, EmployeeDetailDto>
@@ -66,7 +68,14 @@ public sealed class CreateEmployeeCommandHandler(
             ContractType = employee.ContractType,
         });
 
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
         context.Employees.Add(employee);
+        context.EmployeeCreationEvidences.Add(new EmployeeCreationEvidence
+        {
+            UserId = userId,
+            Employee = employee,
+        });
         await context.SaveChangesAsync(cancellationToken);
 
         await ManagerRoleProvisioning.ProcessNowAsync(provisioningProcessor, roleOperations, cancellationToken);
