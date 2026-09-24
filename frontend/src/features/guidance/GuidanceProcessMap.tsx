@@ -40,7 +40,7 @@ const processes: Process[] = [
   },
   {
     key: "attendance", title: "Mesai ve puantaj", purpose: "Çalışma kayıtlarıyla dönem özetini karşılaştırın.",
-    connection: "Eksik veya hatalı girdileri bordro hazırlığından önce inceleyin.", path: "/attendance", coverage: "screen",
+    connection: "Eksik veya hatalı girdileri bordro hazırlığından önce inceleyin.", path: "/attendance", coverage: "decision",
   },
   {
     key: "payroll", title: "Bordro", purpose: "Dönemi, girdileri, hesaplamayı ve onayı ayrı aşamalar olarak izleyin.",

@@ -526,3 +526,18 @@
 .ez-compliance-confirm-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 @media (max-width: 640px) { .ez-compliance-guide, .ez-compliance-confirm { padding: 18px; } }
 .ez-compliance-modal-note { margin: 0 0 18px; padding: 12px 14px; border-radius: 8px; background: var(--surface-soft); color: var(--text); line-height: 1.5; }
+
+
+.ez-attendance-guide { margin: 18px 0; padding: 22px 24px; }
+.ez-attendance-guide h3 { margin: 8px 0 12px; color: var(--ink); font-size: 18px; }
+.ez-attendance-guide ol { max-width: 78ch; margin: 0 0 18px; padding-left: 22px; color: var(--text); line-height: 1.6; }
+.ez-attendance-guide li { margin: 7px 0; }
+.ez-attendance-guide-note { margin: 0 0 18px; padding: 12px 14px; border-radius: 8px; background: var(--surface-soft); color: var(--text); line-height: 1.5; }
+.ez-attendance-review h4 { margin: 0 0 16px; color: var(--ink); font-size: 17px; }
+.ez-attendance-review dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 16px; }
+.ez-attendance-review dl > div { padding: 12px; border-radius: 8px; background: var(--surface-soft); }
+.ez-attendance-review dt { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+.ez-attendance-review dd { margin: 0; color: var(--ink); font-weight: 650; }
+.ez-attendance-review p { color: var(--text); line-height: 1.55; }
+.ez-attendance-review-warning { padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 8px; }
+@media (max-width: 640px) { .ez-attendance-guide { padding: 18px; } }

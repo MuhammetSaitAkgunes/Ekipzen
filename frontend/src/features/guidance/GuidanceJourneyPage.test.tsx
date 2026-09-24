@@ -48,7 +48,7 @@ test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehbe
     .toHaveAttribute("href", "/app/inbox?tab=approvals");
   expect(within(map).getByRole("link", { name: "Günlük yönetim ve analiz ekranını aç" }))
     .toHaveAttribute("href", "/app/inbox?tab=daily");
-  expect(within(map).getAllByText("Ayrıntılı rehber hazırlanıyor")).toHaveLength(6);
+  expect(within(map).getAllByText("Ayrıntılı rehber hazırlanıyor")).toHaveLength(5);
   expect(within(map).getByText(/ekranın bulunması, açıklamalı eğitimin tamamlandığı anlamına gelmez/)).toBeInTheDocument();
 });
 

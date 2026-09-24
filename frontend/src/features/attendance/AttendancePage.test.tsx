@@ -66,3 +66,14 @@ test("puantaj sekmesi tabloyu ve aylık toplamı gösterir", async () => {
   expect(await screen.findByText("Fazla mesai")).toBeInTheDocument();
   expect(screen.getByText("18:00", { selector: ".text-blue" })).toBeInTheDocument(); // 1080 dk aylık toplam
 });
+
+test("rehber aylık puantaj sekmesine geçirir ve düzeltme sınırını açıklar", async () => {
+  renderAttendance();
+  await screen.findByText("Zamanında");
+  expect(screen.getByRole("heading", { name: "Bir kaydı nasıl kontrol ederim?" })).toBeInTheDocument();
+  expect(screen.getByText(/Aynı çalışan için aynı güne ikinci kayıt açılamaz/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Aylık puantajı aç" }));
+  expect(await screen.findByText("Fazla mesai")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Eksik günü kaydet" }));
+  expect(screen.getByRole("heading", { name: "Manuel Puantaj Girişi" })).toBeInTheDocument();
+});

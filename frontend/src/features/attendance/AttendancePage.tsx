@@ -90,6 +90,18 @@ export function AttendancePage() {
         <div className="stat-box"><span className="sb-label">Devamsızlık</span><strong className="sb-val">{absentDays} <small>gün</small></strong></div>
       </div>
 
+      <section className="ez-panel ez-attendance-guide" aria-labelledby="attendance-guide-title">
+        <span className="ez-overline">PUANTAJ İŞ AKIŞI</span>
+        <h3 id="attendance-guide-title">Bir kaydı nasıl kontrol ederim?</h3>
+        <ol>
+          <li>Ayı ve çalışanı seçip Aylık Puantaj satırlarını gerçek giriş-çıkış kaydıyla karşılaştırın. Canlı İzleme yalnız o günün görünümüdür.</li>
+          <li>Eksik günü manuel girin; yanlış saati mevcut satırdan düzeltin. Aynı çalışan için aynı güne ikinci kayıt açılamaz.</li>
+          <li>Kaydettikten sonra süre ve fazla mesai sonucunu yeniden okuyun. Bu uygulama hesabıdır; izin veya yasal fazla çalışma kararı yerine geçmez.</li>
+          <li>Bordro dönemi önceden açıldıysa, ilgili bordro girdisini ayrıca kontrol edin.</li>
+        </ol>
+        <button className="btn btn-ghost" onClick={() => setActiveTab("timesheet-view")}>Aylık puantajı aç</button>
+      </section>
+
       <div className="att-content surface">
         <div className="att-tabs">
           <button className={`att-tab ${activeTab === "live-view" ? "active" : ""}`} onClick={() => setActiveTab("live-view")}>
@@ -139,6 +151,7 @@ export function AttendancePage() {
                 <option key={emp.id} value={emp.id}>{emp.name} ({emp.department})</option>
               ))}
             </select>
+            <button className="btn btn-ghost btn-sm" onClick={() => setEntry({ rowId: null })}>Eksik günü kaydet</button>
             <div className="legend">
               <span className="leg-item"><span className="dot ok" /> Normal</span>
               <span className="leg-item"><span className="dot warn" /> Geç/Erken</span>

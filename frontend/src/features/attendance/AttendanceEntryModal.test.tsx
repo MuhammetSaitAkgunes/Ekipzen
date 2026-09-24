@@ -27,7 +27,11 @@ test("yeni kayıt POST /attendance gövdesiyle gider", async () => {
   await userEvent.type(screen.getByLabelText("Tarih"), "2026-07-14");
   await userEvent.type(screen.getByLabelText("Giriş"), "09:00");
   await userEvent.type(screen.getByLabelText("Çıkış"), "18:00");
-  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  expect(screen.getByRole("heading", { name: "Kaydetmeden önce kontrol edin" })).toBeInTheDocument();
+  expect(screen.getByText(/2026-07-14 · Tam/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance" && i?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/attendance" && i?.method === "POST",
@@ -43,11 +47,24 @@ test("düzenleme PUT /attendance/{id} ile gider ve alanlar dolu gelir", async ()
   renderModal(33, savedRow);
   await screen.findByText("Puantaj Kaydını Düzenle");
   expect(screen.getByLabelText("Tarih")).toHaveValue("2026-07-14");
-  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  expect(screen.getByText(/aynı çalışanın aylık puantajındaki satırı düzenleyebilirsiniz/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
   await waitFor(() => {
     const put = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/attendance/33" && i?.method === "PUT",
     );
     expect(put).toBeTruthy();
   });
+});
+
+test("ön incelemeden geri dönünce kayıt gönderilmeden alanlar düzeltilebilir", async () => {
+  renderModal(null);
+  await screen.findByRole("option", { name: /Ahmet Yılmaz/ });
+  await userEvent.selectOptions(screen.getByLabelText("Personel"), "1");
+  await userEvent.type(screen.getByLabelText("Tarih"), "2026-07-14");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  await userEvent.click(screen.getByRole("button", { name: "Düzelt" }));
+  expect(screen.getByLabelText("Tarih")).toHaveValue("2026-07-14");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance" && i?.method === "POST")).toBe(false);
 });
