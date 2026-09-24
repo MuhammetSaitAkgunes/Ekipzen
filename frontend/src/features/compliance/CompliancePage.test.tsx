@@ -79,6 +79,9 @@ test("hr-admin durum select'i PATCH status atar", async () => {
   renderShell();
   await screen.findAllByText("İş Sözleşmesi");
   await userEvent.selectOptions(screen.getAllByLabelText("Belge durumu")[0], "Tamamlandı");
+  expect(screen.getByRole("group", { name: "Belge durum değişikliği ön kontrolü" })).toHaveTextContent("Ahmet Yılmaz · İş Sözleşmesi");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/compliance/documents/1/status" && i?.method === "PATCH")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Durumu kaydet" }));
   await waitFor(() => {
     const patched = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/compliance/documents/1/status" && i?.method === "PATCH",
@@ -94,6 +97,11 @@ test("manager salt-okur: Yeni Belge ve durum select'i yok", async () => {
   await screen.findAllByText("İş Sözleşmesi");
   expect(screen.queryByRole("button", { name: /Yeni Belge/ })).not.toBeInTheDocument();
   expect(screen.queryAllByLabelText("Belge durumu")).toHaveLength(0);
+  await userEvent.click(screen.getByRole("button", { name: "İş Sözleşmesi belgesinin rehberini aç" }));
+  const guideTitle = screen.getByRole("heading", { name: "Ahmet Yılmaz · İş Sözleşmesi" });
+  expect(guideTitle).toBeInTheDocument();
+  expect(guideTitle.closest("section")).toHaveFocus();
+  expect(screen.getByText(/İK yöneticisine bildirin/)).toBeInTheDocument();
 });
 
 test("günlük iş bağlantısı ilgili belgeyi tabloda öne çıkarır", async () => {
@@ -105,4 +113,23 @@ test("günlük iş bağlantısı ilgili belgeyi tabloda öne çıkarır", async 
   await screen.findAllByText("SGK Girişi");
   expect(screen.getAllByRole("row")[1]).toHaveAttribute("id", "document-2");
   expect(screen.getAllByRole("row")[1]).toHaveClass("ez-guidance-target");
+  expect(screen.getByRole("heading", { name: "Ece Arslan · SGK Girişi" })).toBeInTheDocument();
+  expect(screen.getByText(/durum değiştirmek dosya yüklemez/)).toBeInTheDocument();
+});
+
+test("durum değişikliğinden vazgeçmek sunucuya PATCH göndermez", async () => {
+  renderShell();
+  await screen.findAllByText("İş Sözleşmesi");
+  await userEvent.selectOptions(screen.getAllByLabelText("Belge durumu")[0], "Tamamlandı");
+  await userEvent.click(screen.getByRole("button", { name: "Vazgeç" }));
+  expect(screen.queryByRole("group", { name: "Belge durum değişikliği ön kontrolü" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/compliance/documents/1/status" && i?.method === "PATCH")).toBe(false);
+});
+
+test("incelemede ön kontrolü günlük iş kartının kalkacağını açıklar", async () => {
+  renderShell();
+  await screen.findAllByText("İş Sözleşmesi");
+  await userEvent.selectOptions(screen.getAllByLabelText("Belge durumu")[1], "İncelemede");
+  expect(screen.getByRole("group", { name: "Belge durum değişikliği ön kontrolü" }))
+    .toHaveTextContent("Bu seçim kaydı günlük iş listesinden çıkarır");
 });

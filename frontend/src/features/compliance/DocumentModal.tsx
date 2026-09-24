@@ -81,6 +81,7 @@ export function DocumentModal({ document: doc, onClose }: {
           </button>
         </div>
         <div className="modal-body-scroll">
+          <p className="ez-compliance-modal-note">Burada bir belge takip kaydı açılır veya düzenlenir; dosya yüklenmez. Son tarih ve risk düzeyini kaynağına göre doğrulayın. “Tamamlandı” durumunu yalnız belgeyi gerçekten kontrol ettiyseniz seçin.</p>
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="form-grid-2">
             {!isEdit && (

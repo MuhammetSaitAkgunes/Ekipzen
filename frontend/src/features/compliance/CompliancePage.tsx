@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -17,7 +17,7 @@ export const compliancePillClass = (status?: string | null): string =>
 
 export function CompliancePage() {
   const { user } = useAuth();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const selectedDocumentId = Number(params.get("documentId"));
   const isAdmin = user?.role === "hr-admin";
   const { showToast } = useToast();
@@ -29,14 +29,32 @@ export function CompliancePage() {
   const [documentModal, setDocumentModal] = useState<
     { mode: "create" } | { mode: "edit"; document: ComplianceDocumentDto } | null
   >(null);
+  const [pendingStatus, setPendingStatus] = useState<{ document: ComplianceDocumentDto; status: string } | null>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const guideRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    if (pendingStatus) confirmButtonRef.current?.focus();
+  }, [pendingStatus]);
+
+  const cancelStatusChange = () => {
+    const documentId = pendingStatus?.document.id;
+    setPendingStatus(null);
+    if (documentId) document.getElementById("doc-status-" + documentId)?.focus();
+  };
+
   const documentsQ = useComplianceDocuments({ search: debouncedSearch, status: statusFilter, level: levelFilter });
   const readinessQ = useComplianceReadiness();
+  const selectedDocumentExists = documentsQ.data?.some((document) => document.id === selectedDocumentId);
+
+  useEffect(() => {
+    if (selectedDocumentId > 0 && selectedDocumentExists) guideRef.current?.focus();
+  }, [selectedDocumentId, selectedDocumentExists]);
 
   if (documentsQ.isPending || readinessQ.isPending) return <PageLoading />;
   if (documentsQ.isError) return <PageError error={documentsQ.error} />;
@@ -47,14 +65,26 @@ export function CompliancePage() {
     ? [...documents].sort((a, b) => Number(b.id === selectedDocumentId) - Number(a.id === selectedDocumentId))
     : documents;
   const readiness = readinessQ.data;
+  const selectedDocument = documents.find((document) => document.id === selectedDocumentId);
 
   const changeStatus = async (doc: ComplianceDocumentDto, status: string) => {
     try {
       await setDocumentStatus.mutateAsync({ id: doc.id!, status });
+      setPendingStatus(null);
       showToast(`${doc.document} durumu "${status}" yapıldı.`, "success");
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Durum güncellenemedi.", "error");
     }
+  };
+
+  const showGuide = (id: number) => {
+    if (id === selectedDocumentId) {
+      guideRef.current?.focus();
+      return;
+    }
+    const next = new URLSearchParams(params);
+    next.set("documentId", String(id));
+    setParams(next);
   };
 
   const deadlines = documents
@@ -108,11 +138,46 @@ export function CompliancePage() {
         )}
       </div>
 
+      {selectedDocument && (
+        <section ref={guideRef} tabIndex={-1} className="ez-panel ez-compliance-guide" aria-labelledby="compliance-guide-title">
+          <span className="ez-overline">GERÇEK KAYIT ÜZERİNDE REHBER</span>
+          <h3 id="compliance-guide-title">{selectedDocument.employee} · {selectedDocument.document}</h3>
+          <p>Bu takip kaydı <strong>{selectedDocument.status}</strong> durumunda. Önce belgenin gerçekten mevcut ve uygun olup olmadığını kendi kaynağından doğrulayın; burada durum değiştirmek dosya yüklemez veya dış kuruma bildirim yapmaz.</p>
+          <ol>
+            <li>Sorumluyu ({selectedDocument.owner || "henüz atanmadı"}) ve kayıtlı son tarihi ({selectedDocument.dueDate || "yok"}) kontrol edin. Tarih yoksa hukuki son tarih varsaymayın.</li>
+            <li>Eksikse sorumluyu belirleyin ve belgeyi temin edin. İncelemedeyse doğrulama sonucunu ayrıca takip edin; bu durum günlük iş kartını kaldırır.</li>
+            <li>Yalnız doğruladığınız sonucu {isAdmin ? "durum alanına işleyin" : "İK yöneticisine bildirin"}. Tamamlandı seçimi bu kaydı günlük iş listesinden çıkarır ve risk göstergesini etkiler.</li>
+          </ol>
+          <p><strong>Örnek:</strong> Bir iş sözleşmesi kaydı “Eksik” görünüyorsa önce imzalı nüshanın gerçekten saklandığını kontrol edin; yalnız çalışana istem göndermek “Tamamlandı” demek için yeterli değildir.</p>
+          <p><strong>Düzeltme:</strong> {isAdmin ? "Yanlış durum seçtiyseniz aynı satırdan doğru durumu yeniden seçin. Ad, son tarih, risk veya sorumlu hatalıysa Düzenle’yi açın." : "Hatalı bir kayıt görürseniz İK yöneticisine iletin."} Tamamlanmış kayıt yeniden açıldığında risk seviyesini de tekrar değerlendirin.</p>
+          <p><strong>Dayanak sınırı:</strong> Bu ekrandaki tarih ve risk seviyesi kayıt alanlarıdır. Belgenin hangi mevzuat hükmüyle zorunlu olduğu burada doğrulanmadığından, bunları yasal zorunluluk veya son tarih olarak yorumlamayın.</p>
+        </section>
+      )}
+      {selectedDocumentId > 0 && !selectedDocument && (
+        <p className="ez-panel" role="status">Bağlantıdaki belge mevcut filtrelerde görünmüyor. Filtreleri temizleyin veya kaydın erişiminizi kontrol edin.</p>
+      )}
+
+      {pendingStatus && (
+        <section className="ez-panel ez-compliance-confirm" role="group" aria-label="Belge durum değişikliği ön kontrolü" aria-live="polite">
+          <h3>Durum değişikliğini doğrulayın</h3>
+          <p><strong>{pendingStatus.document.employee} · {pendingStatus.document.document}</strong>: {pendingStatus.document.status} → {pendingStatus.status}</p>
+          <p>{pendingStatus.status === "Tamamlandı"
+            ? "Belgenin gerçekten mevcut ve doğrulanmış olduğunu kontrol edin. Bu seçim günlük işi kapatır ve risk göstergesini düşürür."
+            : pendingStatus.status === "İncelemede"
+              ? "Bu seçim kaydı günlük iş listesinden çıkarır; incelemenin sonucunu ayrıca takip edin. Hata varsa durumu yeniden açabilirsiniz."
+              : "Bu seçim kaydı günlük iş listesine getirir. Risk seviyesini ve sorumluyu tekrar kontrol edin."}</p>
+          <div className="ez-compliance-confirm-actions">
+            <button className="btn btn-ghost" onClick={cancelStatusChange} disabled={setDocumentStatus.isPending}>Vazgeç</button>
+            <button ref={confirmButtonRef} className="btn btn-primary" onClick={() => changeStatus(pendingStatus.document, pendingStatus.status)} disabled={setDocumentStatus.isPending}>Durumu kaydet</button>
+          </div>
+        </section>
+      )}
+
       <div className="compliance-layout">
         <div className="table-container">
           <table className="detail-table data-table">
             <thead>
-              <tr><th>Personel</th><th>Departman</th><th>Evrak</th><th>Sorumlu</th><th>Son Tarih</th><th>Durum</th><th>Risk</th>{isAdmin && <th>İşlem</th>}</tr>
+              <tr><th>Personel</th><th>Departman</th><th>Evrak</th><th>Sorumlu</th><th>Son Tarih</th><th>Durum</th><th>Risk</th><th>Rehber</th>{isAdmin && <th>İşlem</th>}</tr>
             </thead>
             <tbody>
               {displayDocuments.map((doc) => (
@@ -130,7 +195,8 @@ export function CompliancePage() {
                           id={`doc-status-${doc.id}`}
                           className="input-control input-sm"
                           value={doc.status ?? "Eksik"}
-                          onChange={(e) => changeStatus(doc, e.target.value)}
+                          onChange={(e) => setPendingStatus({ document: doc, status: e.target.value })}
+                          disabled={setDocumentStatus.isPending}
                         >
                           {COMPLIANCE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
                         </select>
@@ -140,6 +206,7 @@ export function CompliancePage() {
                     )}
                   </td>
                   <td><span className={`risk-badge ${doc.level ?? ""}`}>{getLevelText(doc.level)}</span></td>
+                  <td><button className="btn btn-ghost btn-sm" aria-label={doc.document + " belgesinin rehberini aç"} onClick={() => showGuide(doc.id!)}>Rehber</button></td>
                   {isAdmin && (
                     <td>
                       <button
@@ -155,7 +222,7 @@ export function CompliancePage() {
                 </tr>
               ))}
               {documents.length === 0 && (
-                <tr><td colSpan={isAdmin ? 8 : 7}><p className="pending-desc">Filtreye uyan belge yok.</p></td></tr>
+                <tr><td colSpan={isAdmin ? 9 : 8}><p className="pending-desc">Filtreye uyan belge yok.</p></td></tr>
               )}
             </tbody>
           </table>

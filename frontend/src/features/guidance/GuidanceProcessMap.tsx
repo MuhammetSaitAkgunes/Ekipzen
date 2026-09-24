@@ -48,7 +48,7 @@ const processes: Process[] = [
   },
   {
     key: "compliance", title: "Uyum ve belgeler", purpose: "Eksik veya süresi yaklaşan belge kayıtlarını inceleyin.",
-    connection: "Belge durumunu gerçek dosya ve sorumlu kişiyle doğrulayın.", path: "/risk/compliance", coverage: "screen",
+    connection: "Belge durumunu gerçek dosya ve sorumlu kişiyle doğrulayın.", path: "/risk/compliance", coverage: "decision",
   },
   {
     key: "offboarding", title: "İşten ayrılış", purpose: "İlgili çalışan dosyasından ayrılış hazırlığını takip edin.",
