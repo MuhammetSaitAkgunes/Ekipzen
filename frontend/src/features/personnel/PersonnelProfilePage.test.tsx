@@ -59,7 +59,8 @@ test("başarılı çalışan kaydından sonra aynı çalışanın evrak adımın
   await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
 
   expect(await screen.findByText("Çalışan kartı oluşturuldu.")).toBeInTheDocument();
-  expect(await screen.findByText("Bu kaydı oluşturduğunuz işlem sunucuda doğrulandı.")).toBeInTheDocument();
+  expect(await screen.findByText(/Bu kaydı oluşturduğunuz işlem sunucuda doğrulandı/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Öğrenme yolculuğumu gör" })).toHaveAttribute("href", "/app/guidance");
   expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Belgeleri kayda bağla");
   expect(screen.getByLabelText("Evrak dosyası seç")).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url) === "/api/employees" && init?.method === "POST")).toBe(true);

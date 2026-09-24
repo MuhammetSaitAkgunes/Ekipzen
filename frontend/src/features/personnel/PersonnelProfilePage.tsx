@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { appPath } from "../../paths";
 import { PersonnelModal } from "./PersonnelModal";
@@ -27,7 +27,7 @@ export function PersonnelProfilePage() {
   return <div className="ez-profile-page"><button className="ez-back-link" onClick={goBack}><span aria-hidden="true">←</span> Çalışanlara dön</button>
     {(location.state?.guideCreated || evidenceQ.data?.createdByCurrentUser) && <div className="ez-guide-next" role="status">
       <strong>Çalışan kartı oluşturuldu.</strong> Şimdi evrakları yükleyin; ardından ücret paketini ve uygulama dışındaki işe giriş adımlarını ayrı ayrı kontrol edin.
-      {evidenceQ.data?.createdByCurrentUser && <small>Bu kaydı oluşturduğunuz işlem sunucuda doğrulandı.</small>}
+      {evidenceQ.data?.createdByCurrentUser && <small>Bu kaydı oluşturduğunuz işlem sunucuda doğrulandı. <Link to={appPath("/guidance")}>Öğrenme yolculuğumu gör</Link></small>}
     </div>}
     <PersonnelModal key={`${id}-${editing}`} employeeId={id} readOnly={!editing} embedded onClose={close}
       onCreated={onCreated} guided={guideActive} initialTab={initialTab}

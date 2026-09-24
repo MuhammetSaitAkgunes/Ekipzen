@@ -23,6 +23,7 @@ const renderShellAt = (path: string, role: string, name: string) => {
     "/api/dashboard/employee-voice": { departments: [], signals: [], recommendedActions: [] },
     "/api/dashboard/compliance": { records: [], deadlines: [] },
     "/api/dashboard/overview": { departmentDistribution: [], recruitmentFunnel: {} },
+    "/api/guidance/employee-entry/journey": { processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false, bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null },
   });
   const router = createMemoryRouter(buildRouteObjects(), { initialEntries: [path] });
   return render(
@@ -50,6 +51,7 @@ test("employee menüsünde yalnız yetkili modüller görünür", () => {
   renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
   expect(screen.queryByText("Ayarlar")).not.toBeInTheDocument();
   expect(screen.queryByText("Çalışanlar")).not.toBeInTheDocument();
+  expect(screen.queryByText("Öğrenme Yolculuğum")).not.toBeInTheDocument();
   expect(screen.getByText("İzinlerim")).toBeInTheDocument();
 });
 
@@ -80,4 +82,13 @@ test("sekme başlığı rotaya göre güncellenir", async () => {
   renderShellAt("/app/dashboard", "hr-admin", "İK Yöneticisi");
   await screen.findByText("Risk Merkezi", { selector: ".header-title" });
   expect(document.title).toBe("Risk Merkezi · Ekipzen");
+});
+
+
+test("öğrenme yolculuğu yalnız İK yöneticisi menüsünde ve rotasında görünür", async () => {
+  renderShellAt("/app/guidance", "hr-admin", "İK Yöneticisi");
+  expect(await screen.findByRole("heading", { name: "Öğrenme yolculuğum" })).toBeInTheDocument();
+  const sidebar = document.querySelector("aside.sidebar") as HTMLElement;
+  expect(within(sidebar).getByRole("link", { name: "Öğrenme Yolculuğum" }))
+    .toHaveAttribute("href", "/app/guidance");
 });

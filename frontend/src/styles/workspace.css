@@ -451,3 +451,16 @@
 .ez-guidance-task > a { color: var(--primary); font-size: 13px; font-weight: 600; text-decoration: none; justify-self: start; }
 .ez-guidance-task > a:hover { text-decoration: underline; }
 .ez-guidance-target { background: var(--surface-soft); box-shadow: inset 3px 0 var(--primary); }
+
+
+/* Öğrenme yolculuğu: konum ve gerçek işlem kanıtı ayrı okunur. */
+.ez-journey-page { width: min(100%, 980px); margin-inline: auto; }
+.ez-journey-card { padding: 28px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ez-journey-card h2 { margin: 8px 0 20px; color: var(--ink); font-size: 22px; }
+.ez-journey-card dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 0 0 20px; }
+.ez-journey-card dl > div { padding: 16px; border-radius: 8px; background: var(--surface-soft); }
+.ez-journey-card dt { margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+.ez-journey-card dd { margin: 0; color: var(--ink); font-weight: 650; }
+.ez-journey-card p { max-width: 68ch; color: var(--muted); line-height: 1.6; }
+.ez-journey-card .btn { display: inline-flex; margin-top: 8px; text-decoration: none; }
+@media (max-width: 640px) { .ez-journey-card { padding: 20px; } }

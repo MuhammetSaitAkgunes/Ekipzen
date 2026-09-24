@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
+import { personnelEntryJourneyKey } from "../guidance/journeyQueries";
 import type { PersonnelGuideStep } from "./PersonnelGuide";
 
 export type PersonnelEntryBookmark = {
@@ -33,7 +34,10 @@ export const useSavePersonnelEntryBookmark = () => {
         method: "PUT",
         body: JSON.stringify({ stepKey }),
       }),
-    onSuccess: (bookmark) => queryClient.setQueryData(bookmarkKey, bookmark),
+    onSuccess: (bookmark) => {
+      queryClient.setQueryData(bookmarkKey, bookmark);
+      void queryClient.invalidateQueries({ queryKey: personnelEntryJourneyKey });
+    },
   });
 };
 

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
+import { personnelEntryJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
 
 export type EmployeeListItemDto = components["schemas"]["EmployeeListItemDto"];
@@ -103,7 +104,10 @@ export const useSaveEmployee = () => {
       id === null
         ? apiFetch<EmployeeDetailDto>("/employees", { method: "POST", body: JSON.stringify(model) })
         : apiFetch<EmployeeDetailDto>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(model) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+    onSuccess: async (_employee, { id }) => {
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
+      if (id === null) await queryClient.invalidateQueries({ queryKey: personnelEntryJourneyKey });
+    },
   });
 };
 
