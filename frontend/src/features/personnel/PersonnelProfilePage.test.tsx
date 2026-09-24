@@ -1,0 +1,63 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { AuthProvider } from "../../auth/AuthContext";
+import { SESSION_KEY } from "../../api/session";
+import { ToastProvider } from "../../layout/ToastProvider";
+import { stubApi } from "../../test/apiStub";
+import { PersonnelProfilePage } from "./PersonnelProfilePage";
+
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    token: "T", refreshToken: "R",
+    user: { id: "admin", name: "İK Yetkilisi", email: "ik@example.test", role: "hr-admin", roleLabel: "İK", initials: "İK", employeeId: null },
+  }));
+  const employee = {
+    id: 42, firstName: "Yeni", lastName: "Kişi", name: "Yeni Kişi", title: "Uzman",
+    nationalId: "98765432109", status: "active", hireDate: "2026-09-24",
+    contractType: "indefinite", departmentId: 1, department: "Yazılım", managerId: null,
+    profile: { employmentType: "Tam Zamanlı" }, documents: [],
+  };
+  stubApi({
+    "/api/departments": [{ id: 1, name: "Yazılım", code: "YZL", employeeCount: 0 }],
+    "/api/employees": employee,
+    "/api/employees/42": employee,
+    "/api/employees/42/documents": [],
+    "/api/employees/42/employment-foundation": {
+      employeeId: 42, contractType: "indefinite", employmentPeriods: [], compensationPackages: [],
+    },
+  });
+});
+
+afterEach(() => vi.unstubAllGlobals());
+
+test("başarılı çalışan kaydından sonra aynı çalışanın evrak adımına geçer", async () => {
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={["/app/personnel/new"]}>
+        <AuthProvider><ToastProvider><Routes>
+          <Route path="/app/personnel/new" element={<PersonnelProfilePage />} />
+          <Route path="/app/personnel/:employeeId" element={<PersonnelProfilePage />} />
+        </Routes></ToastProvider></AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+  await userEvent.type(screen.getByLabelText("Adı"), "Yeni");
+  await userEvent.type(screen.getByLabelText("Soyadı"), "Kişi");
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.selectOptions(screen.getByLabelText("Departman"), "1");
+  await userEvent.type(screen.getByLabelText("Ünvan / Görev"), "Uzman");
+  await userEvent.type(screen.getByLabelText("İşe Giriş Tarihi"), "2026-09-24");
+  await userEvent.selectOptions(screen.getByLabelText("Sözleşme Türü"), "indefinite");
+  await userEvent.selectOptions(screen.getByLabelText("Çalışma Şekli"), "Tam Zamanlı");
+  await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
+
+  expect(await screen.findByText("Çalışan kartı oluşturuldu.")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Belgeleri kayda bağla");
+  expect(screen.getByLabelText("Evrak dosyası seç")).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url) === "/api/employees" && init?.method === "POST")).toBe(true);
+});

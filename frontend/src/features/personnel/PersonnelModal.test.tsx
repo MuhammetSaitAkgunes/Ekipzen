@@ -38,10 +38,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const renderModal = (employeeId: number | null, readOnly = false) =>
+const renderModal = (employeeId: number | null, readOnly = false, onCreated?: (id: number) => void) =>
   renderPage(
     <ToastProvider>
-      <PersonnelModal employeeId={employeeId} readOnly={readOnly} onClose={() => {}} />
+      <PersonnelModal employeeId={employeeId} readOnly={readOnly} onClose={() => {}} onCreated={onCreated} />
     </ToastProvider>,
   );
 
@@ -113,13 +113,31 @@ test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderili
   });
 });
 
-test("yeni kayıt kaydedilince POST body doğru kurulur", async () => {
+test("yeni kayıtta doğrulanmamış seçimleri varsaymaz ve sözleşme seçimini ister", async () => {
   renderModal(null);
+  expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Kişiyi doğru kaydet");
+  expect(screen.getByLabelText("Cinsiyet")).toHaveValue("");
+  await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Sözleşme türünü imzalı belgeyle doğrulayıp seçin.");
+  expect(screen.getByLabelText("Sözleşme Türü").closest(".content-section")).toHaveClass("active");
+  await userEvent.selectOptions(screen.getByLabelText("Sözleşme Türü"), "indefinite");
+  await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Çalışma şeklini doğrulayıp seçin.");
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url) === "/api/employees" && init?.method === "POST")).toBe(false);
+});
+
+test("yeni kayıt kaydedilince POST body doğru kurulur ve yalnız başarılı yanıtta devam eder", async () => {
+  const onCreated = vi.fn();
+  renderModal(null, false, onCreated);
   await screen.findByText("Yeni Personel Kartı");
   await userEvent.type(screen.getByLabelText("TC Kimlik No *"), "98765432109");
   await userEvent.type(screen.getByLabelText("Adı"), "Yeni");
   await userEvent.type(screen.getByLabelText("Soyadı"), "Kişi");
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Çalışma ilişkisini tanımla");
+  await userEvent.selectOptions(screen.getByLabelText("Departman"), "1");
+  await userEvent.selectOptions(screen.getByLabelText("Sözleşme Türü"), "indefinite");
+  await userEvent.selectOptions(screen.getByLabelText("Çalışma Şekli"), "Tam Zamanlı");
   await userEvent.type(screen.getByLabelText("Ünvan / Görev"), "Uzman");
   const hire = screen.getByLabelText("İşe Giriş Tarihi");
   await userEvent.clear(hire);
@@ -134,6 +152,9 @@ test("yeni kayıt kaydedilince POST body doğru kurulur", async () => {
     expect(body.nationalId).toBe("98765432109");
     expect(body.firstName).toBe("Yeni");
     expect(body.profile.employmentType).toBe("Tam Zamanlı");
+    expect(body.contractType).toBe("indefinite");
+    expect(body.departmentId).toBe(1);
+    expect(onCreated).toHaveBeenCalledWith(1);
   });
 });
 

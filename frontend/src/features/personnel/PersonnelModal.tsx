@@ -3,6 +3,7 @@ import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { DocumentsTab } from "./DocumentsTab";
+import { PersonnelGuide } from "./PersonnelGuide";
 import {
   useDepartments,
   useEmployee,
@@ -40,13 +41,13 @@ type FormState = {
 
 const emptyForm: FormState = {
   nationalId: "", birthDate: "", firstName: "", lastName: "",
-  gender: "Erkek", maritalStatus: "Evli", bloodType: "0 Rh+",
+  gender: "", maritalStatus: "", bloodType: "",
   mobilePhone: "", personalEmail: "", homeAddress: "",
   emergencyContactName: "", emergencyContactPhone: "",
-  departmentId: "", title: "", hireDate: "", employmentType: "Tam Zamanlı", contractType: "indefinite",
+  departmentId: "", title: "", hireDate: "", employmentType: "", contractType: "",
   rehireEligibility: "Değerlendirilmedi", exitCode: "Yok",
-  iban: "", bankName: "", salaryType: "Net Maaş", pensionStatus: "Otomatik Katılım", mealCard: "",
-  tshirtSize: "M", pantsSize: "32", coatSize: "M", shoeSize: "42",
+  iban: "", bankName: "", salaryType: "", pensionStatus: "", mealCard: "",
+  tshirtSize: "", pantsSize: "", coatSize: "", shoeSize: "",
   canWorkAtHeight: false, canWorkNightShift: false, canLiftHeavyLoads: false, healthNotes: "",
 };
 
@@ -98,19 +99,19 @@ const modelFrom = (form: FormState, existing: EmployeeDetailDto | undefined): Em
   contractType: form.contractType,
   profile: {
     birthDate: form.birthDate || null,
-    gender: form.gender, maritalStatus: form.maritalStatus, bloodType: form.bloodType,
+    gender: form.gender || null, maritalStatus: form.maritalStatus || null, bloodType: form.bloodType || null,
     mobilePhone: form.mobilePhone || null, personalEmail: form.personalEmail || null,
     homeAddress: form.homeAddress || null,
     emergencyContactName: form.emergencyContactName || null,
     emergencyContactRelation: null,
     emergencyContactPhone: form.emergencyContactPhone || null,
-    employmentType: form.employmentType,
+    employmentType: form.employmentType || null,
     rehireEligibility: form.rehireEligibility, exitCode: form.exitCode,
     iban: form.iban || null, bankName: form.bankName || null,
-    salaryType: form.salaryType, pensionStatus: form.pensionStatus,
+    salaryType: form.salaryType || null, pensionStatus: form.pensionStatus || null,
     mealCard: form.mealCard || null,
-    tshirtSize: form.tshirtSize, pantsSize: form.pantsSize, coatSize: form.coatSize,
-    shoeSize: form.shoeSize,
+    tshirtSize: form.tshirtSize || null, pantsSize: form.pantsSize || null, coatSize: form.coatSize || null,
+    shoeSize: form.shoeSize || null,
     canWorkAtHeight: form.canWorkAtHeight, canWorkNightShift: form.canWorkNightShift,
     canLiftHeavyLoads: form.canLiftHeavyLoads,
     healthNotes: form.healthNotes || null,
@@ -144,10 +145,11 @@ const tryNumber = (value: string): number => {
 
 const currency = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" });
 
-export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false, onEdit }:
-  { employeeId: number | null; readOnly: boolean; onClose: () => void; embedded?: boolean; onEdit?: () => void }) {
+export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false, onEdit, onCreated, guided = false, initialTab }:
+  { employeeId: number | null; readOnly: boolean; onClose: () => void; embedded?: boolean; onEdit?: () => void;
+    onCreated?: (id: number) => void; guided?: boolean; initialTab?: TabId }) {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<TabId>("tab-kimlik");
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "tab-kimlik");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
@@ -181,9 +183,20 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
 
   const handleSave = async () => {
     setError(null);
+    if (!isEdit && (!form.contractType || !form.employmentType)) {
+      setActiveTab("tab-is");
+      setError(!form.contractType
+        ? "Sözleşme türünü imzalı belgeyle doğrulayıp seçin."
+        : "Çalışma şeklini doğrulayıp seçin.");
+      return;
+    }
     try {
-      await save.mutateAsync({ id: employeeId, model: modelFrom(form, detailQ.data) });
+      const saved = await save.mutateAsync({ id: employeeId, model: modelFrom(form, detailQ.data) });
       showToast(isEdit ? "Personel kaydı güncellendi." : "Personel kaydı başarıyla oluşturuldu.", "success");
+      if (!isEdit && onCreated && typeof saved.id === "number" && saved.id > 0) {
+        onCreated(saved.id);
+        return;
+      }
       onClose();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Beklenmeyen bir hata oluştu.");
@@ -281,6 +294,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
         </aside>
 
         <section className="modal-content-area">
+          {!readOnly && (guided || !isEdit) && <PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} />}
           <div id="tab-kimlik" className={`content-section ${activeTab === "tab-kimlik" ? "active" : ""}`}>
             <div className="section-head">
               <div>
@@ -330,19 +344,19 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               <div className="input-group col-4">
                 <label className="input-label" htmlFor="pm-gender">Cinsiyet</label>
                 <select id="pm-gender" className="input-control" value={form.gender} disabled={readOnly} onChange={(e) => set("gender", e.target.value)}>
-                  <option>Erkek</option><option>Kadın</option>
+                  <option value="">Belirtilmedi</option><option>Erkek</option><option>Kadın</option>
                 </select>
               </div>
               <div className="input-group col-4">
                 <label className="input-label" htmlFor="pm-marital">Medeni Durum</label>
                 <select id="pm-marital" className="input-control" value={form.maritalStatus} disabled={readOnly} onChange={(e) => set("maritalStatus", e.target.value)}>
-                  <option>Evli</option><option>Bekar</option>
+                  <option value="">Belirtilmedi</option><option>Evli</option><option>Bekar</option>
                 </select>
               </div>
               <div className="input-group col-4">
                 <label className="input-label" htmlFor="pm-blood">Kan Grubu</label>
                 <select id="pm-blood" className="input-control" value={form.bloodType} disabled={readOnly} onChange={(e) => set("bloodType", e.target.value)}>
-                  <option>0 Rh+</option><option>A Rh+</option><option>B Rh+</option>
+                  <option value="">Belirtilmedi</option><option>0 Rh+</option><option>A Rh+</option><option>B Rh+</option>
                 </select>
               </div>
             </div>
@@ -374,6 +388,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-contract">Sözleşme Türü</label>
                 <select id="pm-contract" className="input-control" value={form.contractType} disabled={readOnly} onChange={(e) => set("contractType", e.target.value)}>
+                  <option value="">Sözleşmeden seçin</option>
                   <option value="indefinite">Belirsiz süreli</option>
                   <option value="fixed-term">Belirli süreli</option>
                 </select>
@@ -381,7 +396,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-employment">Çalışma Şekli</label>
                 <select id="pm-employment" className="input-control" value={form.employmentType} disabled={readOnly} onChange={(e) => set("employmentType", e.target.value)}>
-                  <option>Tam Zamanlı</option><option>Yarı Zamanlı</option><option>Uzaktan</option>
+                  <option value="">Belirtilmedi</option><option>Tam Zamanlı</option><option>Yarı Zamanlı</option><option>Uzaktan</option>
                 </select>
               </div>
               <div className="notice-card col-12">
@@ -437,13 +452,13 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-salary">Maaş Tipi</label>
                 <select id="pm-salary" className="input-control" value={form.salaryType} disabled={readOnly} onChange={(e) => set("salaryType", e.target.value)}>
-                  <option>Net Maaş</option><option>Brüt Maaş</option>
+                  <option value="">Belirtilmedi</option><option>Net Maaş</option><option>Brüt Maaş</option>
                 </select>
               </div>
               <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-pension">BES Durumu</label>
                 <select id="pm-pension" className="input-control" value={form.pensionStatus} disabled={readOnly} onChange={(e) => set("pensionStatus", e.target.value)}>
-                  <option>Otomatik Katılım</option><option>İptal</option><option>Muaf</option>
+                  <option value="">Belirtilmedi</option><option>Otomatik Katılım</option><option>İptal</option><option>Muaf</option>
                 </select>
               </div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-meal">Yemek Kartı</label><input id="pm-meal" type="text" className="input-control" value={form.mealCard} disabled={readOnly} onChange={(e) => set("mealCard", e.target.value)} /></div>
@@ -515,19 +530,19 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               <div className="input-group col-3">
                 <label className="input-label" htmlFor="pm-tshirt">T-Shirt</label>
                 <select id="pm-tshirt" className="input-control" value={form.tshirtSize} disabled={readOnly} onChange={(e) => set("tshirtSize", e.target.value)}>
-                  <option>S</option><option>M</option><option>L</option><option>XL</option>
+                  <option value="">Belirtilmedi</option><option>S</option><option>M</option><option>L</option><option>XL</option>
                 </select>
               </div>
               <div className="input-group col-3">
                 <label className="input-label" htmlFor="pm-pants">Pantolon</label>
                 <select id="pm-pants" className="input-control" value={form.pantsSize} disabled={readOnly} onChange={(e) => set("pantsSize", e.target.value)}>
-                  <option>30</option><option>32</option><option>34</option>
+                  <option value="">Belirtilmedi</option><option>30</option><option>32</option><option>34</option>
                 </select>
               </div>
               <div className="input-group col-3">
                 <label className="input-label" htmlFor="pm-coat">Mont</label>
                 <select id="pm-coat" className="input-control" value={form.coatSize} disabled={readOnly} onChange={(e) => set("coatSize", e.target.value)}>
-                  <option>M</option><option>L</option>
+                  <option value="">Belirtilmedi</option><option>M</option><option>L</option>
                 </select>
               </div>
               <div className="input-group col-3"><label className="input-label" htmlFor="pm-shoe">Ayakkabı</label><input id="pm-shoe" type="number" className="input-control" value={form.shoeSize} disabled={readOnly} onChange={(e) => set("shoeSize", e.target.value)} /></div>

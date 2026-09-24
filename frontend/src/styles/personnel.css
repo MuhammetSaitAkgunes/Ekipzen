@@ -293,3 +293,27 @@
     min-width: 190px;
   }
 }
+
+/* Contextual guidance stays in the same scroll area as the form it explains. */
+.ez-personnel-guide,
+.ez-guide-next {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-soft);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.ez-personnel-guide-heading span {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.ez-personnel-guide h3 { margin: 5px 0 10px; }
+.ez-personnel-guide p { margin: 8px 0; line-height: 1.5; }
+.ez-personnel-guide details { margin: 12px 0; }
+.ez-personnel-guide summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+.ez-personnel-guide small { color: var(--muted); line-height: 1.4; }
+.ez-guide-next { line-height: 1.5; }
