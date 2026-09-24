@@ -40,6 +40,8 @@ test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehbe
   renderPage(<GuidanceJourneyPage />);
   const map = await screen.findByRole("region", { name: "İK süreç haritası" });
   expect(within(map).getAllByRole("listitem")).toHaveLength(10);
+  expect(within(map).getByRole("link", { name: "Şirket hazırlığı ekranını aç" }))
+    .toHaveAttribute("href", "/app/settings");
   expect(within(map).getByRole("link", { name: "İşe giriş ekranını aç" }))
     .toHaveAttribute("href", "/app/personnel/new");
   expect(within(map).getByRole("link", { name: "İzin ve onay ekranını aç" }))

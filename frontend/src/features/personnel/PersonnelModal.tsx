@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
+import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { DocumentsTab } from "./DocumentsTab";
 import { PersonnelGuide } from "./PersonnelGuide";
@@ -320,6 +322,10 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
 
         <section className="modal-content-area">
           {bookmarkQ.isError && guided && employeeId === null && <p role="status">Rehber konumu yüklenemedi; ilk adımdan devam edebilirsiniz.</p>}
+          {!isEdit && departmentsQ.isSuccess && departmentsQ.data.length === 0 && <p className="ez-personnel-precondition" role="status">
+            Çalışan kartı için önce departman oluşturun. <Link to={appPath("/settings")}>Ayarlar bölümüne git</Link>.
+            Kaydedilmemiş form alanları bu geçişte korunmaz.
+          </p>}
           {!readOnly && (guided || !isEdit) && <PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} />}
           <div id="tab-kimlik" className={`content-section ${activeTab === "tab-kimlik" ? "active" : ""}`}>
             <div className="section-head">

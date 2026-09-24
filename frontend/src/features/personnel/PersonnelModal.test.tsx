@@ -177,3 +177,15 @@ test("salt-okur modda inputlar disabled, Kaydet yok", async () => {
   expect(screen.getByLabelText("Adı")).toBeDisabled();
   expect(screen.queryByRole("button", { name: /Kaydet/ })).not.toBeInTheDocument();
 });
+
+
+test("departman yoksa yeni çalışan için hazırlık adımına yönlendirir", async () => {
+  stubApi({
+    "/api/departments": [],
+    "/api/guidance/employee-entry/bookmark": { processKey: "personnel-entry", stepKey: "tab-kimlik", contentVersion: 1 },
+  });
+  renderModal(null, false, undefined, true);
+  expect(await screen.findByText(/Çalışan kartı için önce departman oluşturun/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Ayarlar bölümüne git" })).toHaveAttribute("href", "/app/settings");
+  expect(screen.getByText(/Kaydedilmemiş form alanları bu geçişte korunmaz/)).toBeInTheDocument();
+});

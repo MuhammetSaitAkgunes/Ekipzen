@@ -8,6 +8,7 @@ import {
 } from "./queries";
 
 import { TenantSetupPanel } from "./TenantSetupPanel";
+import { DepartmentsPanel } from "./DepartmentsPanel";
 
 const SECTIONS: [string, string, string][] = [
   ["general", "fa-building", "Şirket Bilgileri"],
@@ -164,7 +165,8 @@ export function SettingsPage() {
         <main className="settings-content">
           {section === "general" && (
             <div id="set-general" className="set-section active">
-              <div className="set-card">
+              <DepartmentsPanel />
+              <div className="set-card mt-4">
                 <div className="card-head">
                   <h3>Marka & Görünüm</h3>
                   <p>Sistemde görünecek şirket adı ve marka varlıkları.</p>
