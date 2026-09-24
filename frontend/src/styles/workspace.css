@@ -541,3 +541,16 @@
 .ez-attendance-review p { color: var(--text); line-height: 1.55; }
 .ez-attendance-review-warning { padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 8px; }
 @media (max-width: 640px) { .ez-attendance-guide { padding: 18px; } }
+
+
+.ez-entry-follow-up { margin: 18px 0; padding: 22px 24px; }
+.ez-entry-follow-up h2 { margin: 8px 0 10px; color: var(--ink); font-size: 19px; }
+.ez-entry-follow-up > p { max-width: 78ch; color: var(--text); line-height: 1.55; }
+.ez-entry-follow-up ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; padding: 0; list-style: none; }
+.ez-entry-follow-up li { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-entry-follow-up li strong { color: var(--ink); }
+.ez-entry-follow-up li p { min-height: 66px; color: var(--text); line-height: 1.5; }
+.ez-entry-follow-up small { display: block; color: var(--muted); line-height: 1.5; }
+.ez-entry-follow-up a { color: var(--primary); font-weight: 650; }
+@media (max-width: 800px) { .ez-entry-follow-up ol { grid-template-columns: minmax(0, 1fr); } .ez-entry-follow-up li p { min-height: 0; } }
+@media (max-width: 640px) { .ez-entry-follow-up { padding: 18px; } }

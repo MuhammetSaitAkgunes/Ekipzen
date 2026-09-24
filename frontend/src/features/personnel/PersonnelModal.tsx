@@ -181,6 +181,10 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     }
   }, [employeeId, guided, bookmarkQ.data]);
 
+  useEffect(() => {
+    if (employeeId !== null && initialTab) setActiveTab(initialTab);
+  }, [employeeId, initialTab]);
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 

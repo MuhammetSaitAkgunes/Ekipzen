@@ -58,10 +58,20 @@ test("başarılı çalışan kaydından sonra aynı çalışanın evrak adımın
   await userEvent.selectOptions(screen.getByLabelText("Çalışma Şekli"), "Tam Zamanlı");
   await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
 
-  expect(await screen.findByText("Çalışan kartı oluşturuldu.")).toBeInTheDocument();
-  expect(await screen.findByText(/Bu kaydı oluşturduğunuz işlem sunucuda doğrulandı/)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Çalışan kartı oluşturuldu; kalan adımları kontrol edin" })).toBeInTheDocument();
+  expect(await screen.findByText(/Kartı oluşturma işleminiz sunucuda doğrulandı/)).toBeInTheDocument();
+  expect(await screen.findByText("Bu çalışan için henüz dosya yüklenmemiş.")).toBeInTheDocument();
+  expect(await screen.findByText("Etkin çalışma dönemi belirlenemedi; ücret hazırlığını tamamlandı saymayın.")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Öğrenme yolculuğumu gör" })).toHaveAttribute("href", "/app/guidance");
   expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Belgeleri kayda bağla");
   expect(screen.getByLabelText("Evrak dosyası seç")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Ücret bölümünü aç" }));
+  expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Ödeme hazırlığını kontrol et");
+  const salary = screen.getByLabelText("Aylık brüt maaş");
+  await userEvent.type(salary, "50000");
+  await userEvent.click(screen.getByRole("button", { name: "Belgeleri aç" }));
+  expect(screen.getByLabelText("Evrak dosyası seç")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Ücret bölümünü aç" }));
+  expect(screen.getByLabelText("Aylık brüt maaş")).toHaveValue(50000);
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url) === "/api/employees" && init?.method === "POST")).toBe(true);
 });
