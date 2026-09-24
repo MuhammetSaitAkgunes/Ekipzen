@@ -72,6 +72,38 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Journey_CountsOnlyVerifiedEmployeeCreates_WithoutClaimingProcessCompletion()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var before = await GetAsync<PersonnelEntryJourneyDto>(admin, "/api/guidance/employee-entry/journey");
+        (await admin.PutAsJsonAsync(BookmarkUrl, new { stepKey = "tab-mali" }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var withBookmark = await GetAsync<PersonnelEntryJourneyDto>(admin, "/api/guidance/employee-entry/journey");
+        withBookmark.BookmarkStepKey.Should().Be("tab-mali");
+        withBookmark.VerifiedEmployeeRecords.Should().Be(before.VerifiedEmployeeRecords,
+            "sekme seçmek gerçek işlem kanıtı değildir");
+
+        var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
+        var created = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Yolculuk", lastName = "Kanıt", title = "Uzman",
+            departmentId = departments[0].Id, hireDate = "2026-09-24",
+            contractType = "indefinite", profile = new { employmentType = "Tam Zamanlı" },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var after = await GetAsync<PersonnelEntryJourneyDto>(admin, "/api/guidance/employee-entry/journey");
+        after.ProcessKey.Should().Be("personnel-entry");
+        after.VerifiedEmployeeRecords.Should().Be(before.VerifiedEmployeeRecords + 1);
+        after.LastVerifiedAtUtc.Should().NotBeNull();
+        after.HasSavedPosition.Should().BeTrue();
+
+        (await (await AuthedClientAsync("ece.arslan@hrmaster.local"))
+            .GetAsync("/api/guidance/employee-entry/journey"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private async Task<HttpClient> AuthedClientAsync(string email)
     {
         var anonymous = factory.CreateClient();

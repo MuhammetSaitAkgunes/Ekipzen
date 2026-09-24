@@ -11,6 +11,11 @@ namespace Ekipzen.API.Controllers;
 [Authorize(Policy = Policies.HrAdminOnly)]
 public sealed class GuidanceController(ISender sender) : ControllerBase
 {
+    [HttpGet("journey")]
+    [ProducesResponseType<PersonnelEntryJourneyDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<PersonnelEntryJourneyDto>> GetJourney(CancellationToken ct) =>
+        Ok(await sender.Send(new GetPersonnelEntryJourneyQuery(), ct));
+
     [HttpGet("bookmark")]
     [ProducesResponseType<GuidanceBookmarkDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<GuidanceBookmarkDto>> GetBookmark(CancellationToken ct) =>
