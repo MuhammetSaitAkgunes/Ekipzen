@@ -1,4 +1,4 @@
-type PersonnelGuideStep =
+export type PersonnelGuideStep =
   | "tab-kimlik" | "tab-iletisim" | "tab-is"
   | "tab-mali" | "tab-ozluk" | "tab-evrak";
 

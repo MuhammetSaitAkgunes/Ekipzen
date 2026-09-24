@@ -19,6 +19,7 @@ beforeEach(() => {
   localStorage.clear();
   stubApi({
     "/api/departments": departments,
+    "/api/guidance/employee-entry/bookmark": { processKey: "personnel-entry", stepKey: "tab-mali", contentVersion: 1 },
     "/api/employees/1": detail,
     "/api/employees": detail,
     "/api/employees/1/documents": [],
@@ -38,10 +39,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const renderModal = (employeeId: number | null, readOnly = false, onCreated?: (id: number) => void) =>
+const renderModal = (employeeId: number | null, readOnly = false, onCreated?: (id: number) => void, guided = false) =>
   renderPage(
     <ToastProvider>
-      <PersonnelModal employeeId={employeeId} readOnly={readOnly} onClose={() => {}} onCreated={onCreated} />
+      <PersonnelModal employeeId={employeeId} readOnly={readOnly} onClose={() => {}} onCreated={onCreated} guided={guided} />
     </ToastProvider>,
   );
 
@@ -110,6 +111,18 @@ test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderili
       rehireDate: "2026-09-15",
       contractType: "fixed-term",
     });
+  });
+});
+
+test("rehber konumunu sunucudan yükler ve sekme değişimini kaydeder", async () => {
+  renderModal(null, false, undefined, true);
+  expect(await screen.findByText("Ödeme hazırlığını kontrol et")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(
+      ([url, init]) => String(url) === "/api/guidance/employee-entry/bookmark" && init?.method === "PUT",
+    );
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({ stepKey: "tab-is" });
   });
 });
 

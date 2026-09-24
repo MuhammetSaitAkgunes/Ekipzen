@@ -317,3 +317,5 @@
 .ez-personnel-guide summary { cursor: pointer; color: var(--primary); font-weight: 600; }
 .ez-personnel-guide small { color: var(--muted); line-height: 1.4; }
 .ez-guide-next { line-height: 1.5; }
+
+.ez-guide-next small { display: block; margin-top: 6px; color: var(--muted); }

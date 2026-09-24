@@ -24,6 +24,8 @@ beforeEach(() => {
   stubApi({
     "/api/departments": [{ id: 1, name: "Yazılım", code: "YZL", employeeCount: 0 }],
     "/api/employees": employee,
+    "/api/guidance/employee-entry/bookmark": { processKey: "personnel-entry", stepKey: "tab-kimlik", contentVersion: 1 },
+    "/api/guidance/employee-entry/employees/42/evidence": { employeeId: 42, createdByCurrentUser: true, createdAtUtc: "2026-09-24T10:00:00Z" },
     "/api/employees/42": employee,
     "/api/employees/42/documents": [],
     "/api/employees/42/employment-foundation": {
@@ -57,6 +59,7 @@ test("başarılı çalışan kaydından sonra aynı çalışanın evrak adımın
   await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
 
   expect(await screen.findByText("Çalışan kartı oluşturuldu.")).toBeInTheDocument();
+  expect(await screen.findByText("Bu kaydı oluşturduğunuz işlem sunucuda doğrulandı.")).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Belgeleri kayda bağla");
   expect(screen.getByLabelText("Evrak dosyası seç")).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url) === "/api/employees" && init?.method === "POST")).toBe(true);

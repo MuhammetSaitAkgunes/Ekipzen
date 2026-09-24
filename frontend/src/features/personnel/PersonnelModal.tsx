@@ -4,6 +4,7 @@ import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { DocumentsTab } from "./DocumentsTab";
 import { PersonnelGuide } from "./PersonnelGuide";
+import { usePersonnelEntryBookmark, useSavePersonnelEntryBookmark } from "./guidanceQueries";
 import {
   useDepartments,
   useEmployee,
@@ -150,6 +151,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     onCreated?: (id: number) => void; guided?: boolean; initialTab?: TabId }) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "tab-kimlik");
+  const selectedGuideStep = useRef(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
@@ -161,6 +163,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const departmentsQ = useDepartments();
   const foundationQ = useEmployeeEmploymentFoundation(employeeId, !readOnly);
   const save = useSaveEmployee();
+  const bookmarkQ = usePersonnelEntryBookmark(guided && employeeId === null && !readOnly);
+  const saveBookmark = useSavePersonnelEntryBookmark();
   const rehire = useRehireEmployee();
   const saveCompensation = useSaveCompensationPackage();
   const uploadPhoto = useUploadPhoto();
@@ -169,11 +173,27 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     if (detailQ.data) setForm(formFrom(detailQ.data));
   }, [detailQ.data]);
 
+  useEffect(() => {
+    if (employeeId === null && guided && bookmarkQ.data && !selectedGuideStep.current) {
+      setActiveTab(bookmarkQ.data.stepKey);
+    }
+  }, [employeeId, guided, bookmarkQ.data]);
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
   const setCompensationField = <K extends keyof CompensationForm>(key: K, value: CompensationForm[K]) =>
     setCompensation((current) => ({ ...current, [key]: value }));
+
+  const chooseTab = (step: TabId) => {
+    selectedGuideStep.current = true;
+    setActiveTab(step);
+    if (guided && employeeId === null && step !== "tab-evrak") {
+      saveBookmark.mutate(step, {
+        onError: () => showToast("Rehber konumu kaydedilemedi.", "error"),
+      });
+    }
+  };
 
   const isEdit = employeeId !== null;
   const title = isEdit && detailQ.data ? (embedded ? detailQ.data.name : `Personel Kartı — ${detailQ.data.name}`) : (embedded ? "Çalışan ekle" : "Yeni Personel Kartı");
@@ -193,6 +213,11 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     try {
       const saved = await save.mutateAsync({ id: employeeId, model: modelFrom(form, detailQ.data) });
       showToast(isEdit ? "Personel kaydı güncellendi." : "Personel kaydı başarıyla oluşturuldu.", "success");
+      if (!isEdit && guided) {
+        saveBookmark.mutate("tab-kimlik", {
+          onError: () => showToast("Rehber konumu sıfırlanamadı.", "error"),
+        });
+      }
       if (!isEdit && onCreated && typeof saved.id === "number" && saved.id > 0) {
         onCreated(saved.id);
         return;
@@ -287,13 +312,14 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
       <div className="modal-body">
         <aside className="modal-sidebar" aria-label="Profil bölümleri">
           {TABS.map((tab) => (
-            <button key={tab.id} aria-pressed={activeTab === tab.id} className={`nav-btn ${activeTab === tab.id ? "active" : ""}`} onClick={() => setActiveTab(tab.id)}>
+            <button key={tab.id} aria-pressed={activeTab === tab.id} className={`nav-btn ${activeTab === tab.id ? "active" : ""}`} onClick={() => chooseTab(tab.id)}>
               <i aria-hidden="true" className={tab.icon} /> {tab.label}
             </button>
           ))}
         </aside>
 
         <section className="modal-content-area">
+          {bookmarkQ.isError && guided && employeeId === null && <p role="status">Rehber konumu yüklenemedi; ilk adımdan devam edebilirsiniz.</p>}
           {!readOnly && (guided || !isEdit) && <PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} />}
           <div id="tab-kimlik" className={`content-section ${activeTab === "tab-kimlik" ? "active" : ""}`}>
             <div className="section-head">
