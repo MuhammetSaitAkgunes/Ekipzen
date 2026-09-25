@@ -136,7 +136,7 @@ export function CandidateDetail({ id }: { id: number }) {
           </div>
         </div>
         <div className="dh-actions">
-          <div className="match-score"><span className="score-circle">{candidate.score}</span><span className="score-label">AI puanı</span></div>
+          <div className="match-score"><span className="score-circle">{candidate.score}</span><span className="score-label">Elle verilen aday puanı</span></div>
           <label className="sr-only" htmlFor="candidate-status">Pipeline durumu</label>
           <select
             id="candidate-status"
@@ -161,7 +161,7 @@ export function CandidateDetail({ id }: { id: number }) {
         <p><strong>Gerçek kayıt:</strong> {candidate.name} · {pendingStatus.from} → {pendingStatus.to}</p>
         <p><strong>Ne olacak?</strong> {STAGE_EXPLANATIONS[pendingStatus.to]}</p>
         <p><strong>Örnek:</strong> {STAGE_EXAMPLES[pendingStatus.to]}</p>
-        <p><strong>Neden kontrol ediyoruz?</strong> Mülakat notları, değerlendirme ve başvuru belgeleriyle bu aşamanın gerekçesini karşılaştırın. AI puanı tek başına karar kanıtı değildir.</p>
+        <p><strong>Neden kontrol ediyoruz?</strong> Mülakat notları, değerlendirme ve başvuru belgeleriyle bu aşamanın gerekçesini karşılaştırın. Elle verilen aday puanı tek başına karar kanıtı değildir.</p>
         <p>Yanlış aşamayı kaydederseniz işe alınmamış adayın durumunu yeniden değiştirebilirsiniz; önceki hareket geçmişte kalır. İşe alınmış adayın aşaması bu alandan değiştirilemez.</p>
         <p>Onaydan hemen önce sunucudaki mevcut aşama yeniden okunur; başka işlem araya girerse kararınızı yeniden değerlendirin.</p>
         <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>

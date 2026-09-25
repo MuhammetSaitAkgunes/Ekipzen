@@ -30,7 +30,7 @@ const renderShell = () =>
 test("aday listesi skor ve durum etiketleriyle dolar", async () => {
   renderShell();
   expect(await screen.findByText("Burak Yılmaz")).toBeInTheDocument();
-  expect(screen.getByText("%92 uygun")).toBeInTheDocument();
+  expect(screen.getByText("92/100 puan")).toBeInTheDocument();
   expect(screen.getByText("Selin Koç")).toBeInTheDocument();
   expect(screen.getByText("Aday Havuzu")).toBeInTheDocument();
 });

@@ -13,19 +13,26 @@ beforeEach(() =>
 );
 afterEach(() => vi.unstubAllGlobals());
 
-test("form doldurulup kaydedilince POST candidates tam gövdeyle gider", async () => {
-  const onCreated = vi.fn();
+const renderModal = (onCreated = vi.fn()) => {
   renderPage(
     <ToastProvider>
       <CandidateModal onClose={() => {}} onCreated={onCreated} />
     </ToastProvider>,
   );
+  return onCreated;
+};
+
+test("ön kontrolden sonra aday tam gövdeyle kaydedilir", async () => {
+  const onCreated = renderModal();
   await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
   await userEvent.type(screen.getByLabelText("Başvurulan pozisyon"), "QA Engineer");
-  await userEvent.clear(screen.getByLabelText("AI puanı (0-100)"));
-  await userEvent.type(screen.getByLabelText("AI puanı (0-100)"), "70");
+  await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "70");
   await userEvent.type(screen.getByLabelText("Yetenekler (virgülle)"), "Playwright, API testi");
-  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+  expect(screen.getByRole("region", { name: "Aday kaydı rehberi" })).toHaveTextContent("sistem AI ile hesaplamaz");
+  expect(screen.getByText("Kaydetmeden önce son kontrol")).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: /Adayı oluştur/ }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/candidates" && i?.method === "POST",
@@ -39,13 +46,33 @@ test("form doldurulup kaydedilince POST candidates tam gövdeyle gider", async (
   });
 });
 
-test("ad boşsa form hatası gösterilir, istek atılmaz", async () => {
-  renderPage(
-    <ToastProvider>
-      <CandidateModal onClose={() => {}} onCreated={() => {}} />
-    </ToastProvider>,
-  );
-  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+test("ad boşsa ön kontrol hatası gösterilir, istek atılmaz", async () => {
+  renderModal();
+  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Ad Soyad ve pozisyon zorunludur.");
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+});
+
+test("boş veya geçersiz puan sessizce varsayılmaz", async () => {
+  renderModal();
+  await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
+  await userEvent.type(screen.getByLabelText("Başvurulan pozisyon"), "QA Engineer");
+  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Aday puanını 0-100 arasında");
+  await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "101");
+  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Aday puanını 0-100 arasında");
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+});
+
+test("ön kontrolden sonra alan değişirse eski onay geçersiz olur", async () => {
+  renderModal();
+  await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
+  await userEvent.type(screen.getByLabelText("Başvurulan pozisyon"), "QA Engineer");
+  await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "70");
+  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+  await userEvent.type(screen.getByLabelText("Ad Soyad"), " Yılmaz");
+  expect(screen.queryByRole("button", { name: /Adayı oluştur/ })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Bilgileri kontrol et/ })).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
 });

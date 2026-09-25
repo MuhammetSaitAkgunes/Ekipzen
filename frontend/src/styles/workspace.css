@@ -642,3 +642,10 @@
 .ez-candidate-status-review label input { flex: 0 0 auto; margin-top: 4px; }
 .ez-candidate-status-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 @media (max-width: 640px) { .ez-candidate-status-review { padding: 16px; } }
+
+.ez-candidate-create-guide { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-candidate-create-review { margin: 18px 0 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-candidate-create-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-candidate-create-guide p, .ez-candidate-create-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
+.ez-candidate-create-guide strong, .ez-candidate-create-review strong { color: var(--ink); }
+@media (max-width: 640px) { .ez-candidate-create-guide, .ez-candidate-create-review { padding: 16px; } }

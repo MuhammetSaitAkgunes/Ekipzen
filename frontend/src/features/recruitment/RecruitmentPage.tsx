@@ -82,7 +82,7 @@ export function RecruitmentPage() {
                 <p>{candidate.appliedRole}</p>
                 <div className="ci-meta">
                   <span className={`status-tag ${statusTagClass(candidate.status)}`}>{candidate.status}</span>
-                  <span className={`score-text ${scoreClass(candidate.score)}`}>%{candidate.score} uygun</span>
+                  <span className={`score-text ${scoreClass(candidate.score)}`}>{candidate.score}/100 puan</span>
                 </div>
               </div>
             </div>
