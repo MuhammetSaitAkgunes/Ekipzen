@@ -572,3 +572,11 @@
 .ez-hire-outcome a { display: inline-flex; margin-top: 8px; }
 .ez-hire-status-note { margin: 14px 0; color: var(--text); }
 @media (max-width: 640px) { .ez-hire-guide, .ez-hire-review, .ez-hire-outcome { padding: 16px; } }
+
+.ez-leave-request-calendar { grid-template-columns: minmax(0, 1fr); }
+.ez-leave-request-guide { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-leave-request-guide strong, .ez-leave-request-review strong { color: var(--ink); }
+.ez-leave-request-guide p, .ez-leave-request-review p { margin: 9px 0; color: var(--text); line-height: 1.55; }
+.ez-leave-request-review { margin: 18px 0 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-leave-request-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+@media (max-width: 640px) { .ez-leave-request-guide, .ez-leave-request-review { padding: 16px; } }

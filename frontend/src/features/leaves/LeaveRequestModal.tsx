@@ -4,16 +4,32 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
-import { formatLeaveDate } from "./format";
 import { useCreateLeave, useLeaveBalance, useLeaveTypes, useSubstituteOptions, type LeaveTypeDto } from "./queries";
 
 const typeCardMeta = (type: LeaveTypeDto, remaining: number): { icon: string; tone: string; small: string } => {
   const name = type.name ?? "";
-  if (name.includes("Yıllık")) return { icon: "fa-sun", tone: "annual", small: `Kalan: ${remaining} gün` };
-  if (name.includes("Rapor")) return { icon: "fa-notes-medical", tone: "sick", small: "Belge gerekli" };
-  if (name.includes("Mazeret")) return { icon: "fa-clock", tone: "excuse", small: "Saatlik/günlük" };
-  if (name.includes("Uzaktan")) return { icon: "fa-laptop-house", tone: "remote", small: "Evden çalışma" };
-  return { icon: "fa-sun", tone: "annual", small: name };
+  const appearance = name.includes("Rapor") ? { icon: "fa-notes-medical", tone: "sick" }
+    : name.includes("Mazeret") ? { icon: "fa-clock", tone: "excuse" }
+      : name.includes("Uzaktan") ? { icon: "fa-laptop-house", tone: "remote" }
+        : { icon: "fa-sun", tone: "annual" };
+  return {
+    ...appearance,
+    small: type.deductsFromAnnualBalance === true ? "Yıllık bakiye: " + remaining + " gün"
+      : type.deductsFromAnnualBalance === false ? "Yıllık bakiyeden düşmez" : "Bakiye etkisi bilinmiyor",
+  };
+};
+
+type LeaveReview = {
+  typeId: number;
+  typeName: string;
+  deductsFromAnnualBalance: boolean;
+  requiresApproval: boolean;
+  startDate: string;
+  endDate: string;
+  calendarDays: number;
+  description: string;
+  substituteId: number | null;
+  substituteName: string | null;
 };
 
 export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
@@ -32,36 +48,73 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
   const [description, setDescription] = useState("");
   const [substituteId, setSubstituteId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [review, setReview] = useState<LeaveReview | null>(null);
 
   const types = typesQ.data ?? [];
   const remaining = balanceQ.data?.remainingDays ?? 0;
-  const selectedTypeId = typeId ?? types[0]?.id ?? null;
+  const selectedType = types.find((type) => type.id === typeId);
+  const validRange = Boolean(startDate && endDate && endDate >= startDate);
+  // Bu yalnız takvim günü sayısıdır; sunucunun iş günü hesabının yerine geçmez.
+  const previewDays = validRange
+    ? Math.round((Date.parse(endDate + "T00:00:00Z") - Date.parse(startDate + "T00:00:00Z")) / 86_400_000) + 1
+    : null;
 
-  // Takvim günü ön izlemesi; kesin süreyi backend hesaplar.
-  const start = startDate ? new Date(startDate) : null;
-  const end = endDate ? new Date(endDate) : null;
-  const validRange = start && end && end.getTime() >= start.getTime();
-  const previewDays = validRange ? Math.round((end!.getTime() - start!.getTime()) / 86_400_000) + 1 : null;
-  const returnDate = validRange ? new Date(end!.getTime() + 86_400_000) : null;
-
-  const submit = async () => {
+  const prepareReview = () => {
     setError(null);
-    if (!startDate || !endDate || !validRange || !selectedTypeId) {
-      showToast("Geçerli bir izin türü ve tarih aralığı seçin.", "warning");
+    if (!selectedType?.id) {
+      setError("İzin türünü kayıttaki koşullarla karşılaştırıp açıkça seçin.");
       return;
     }
+    if (selectedType.deductsFromAnnualBalance === undefined || selectedType.requiresApproval === undefined) {
+      setError("İzin türünün bakiye veya onay bilgisi okunamadı; talebi göndermeden önce yeniden yükleyin.");
+      return;
+    }
+    if (!validRange || previewDays === null || !Number.isFinite(previewDays)) {
+      setError("Başlangıç ve bitiş tarihlerini doğrulayın; bitiş başlangıçtan önce olamaz.");
+      return;
+    }
+    if (description.trim().length > 1000) {
+      setError("Açıklama 1000 karakteri geçemez.");
+      return;
+    }
+    const substitute = substitutesQ.data?.find((employee) => String(employee.id) === substituteId);
+    if (substituteId && !substitute?.id) {
+      setError("Seçilen vekil doğrulanamadı; listeyi yeniden yükleyip kontrol edin.");
+      return;
+    }
+    setReview({
+      typeId: selectedType.id,
+      typeName: selectedType.name ?? "İzin",
+      deductsFromAnnualBalance: selectedType.deductsFromAnnualBalance === true,
+      requiresApproval: selectedType.requiresApproval === true,
+      startDate,
+      endDate,
+      calendarDays: previewDays,
+      description: description.trim(),
+      substituteId: substitute?.id ?? null,
+      substituteName: substitute?.name ?? null,
+    });
+  };
+
+  const submit = async () => {
+    if (!review || createLeave.isPending) return;
+    setError(null);
     try {
-      await createLeave.mutateAsync({
-        leaveTypeId: selectedTypeId ?? undefined,
-        startDate,
-        endDate,
-        description: description || null,
-        substituteEmployeeId: substituteId ? Number(substituteId) : null,
+      const created = await createLeave.mutateAsync({
+        leaveTypeId: review.typeId,
+        startDate: review.startDate,
+        endDate: review.endDate,
+        description: review.description || null,
+        substituteEmployeeId: review.substituteId,
       });
-      showToast("İzin talebiniz yönetici onayına gönderildi.", "success");
+      showToast(created.status === "approved"
+        ? "İzin talebi oluşturuldu ve onaylandı."
+        : created.status === "pending"
+          ? "İzin talebi oluşturuldu; onay bekliyor."
+          : "İzin talebi oluşturuldu; güncel durumunu izin listesinde kontrol edin.", "success");
       onClose();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Beklenmeyen bir hata oluştu.");
+      setError(e instanceof ApiError ? e.message : "İzin talebi oluşturulamadı.");
     }
   };
 
@@ -71,18 +124,25 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
         <div className="modal-head">
           <div>
             <h3 id="leave-request-title">Yeni İzin Talebi</h3>
-            <p>Talep detaylarını net ve eksiksiz doldurun.</p>
+            <p>İzin türünü ve tarihleri doğrulayın; göndermeden önce sonucu gözden geçirin.</p>
           </div>
-          <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="İzin talebi penceresini kapat">
+          <button className="btn-icon-sm" onClick={onClose} disabled={createLeave.isPending} title="Kapat" aria-label="İzin talebi penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
 
         <div className="modal-body-scroll">
           {error && <p className="form-error" role="alert">{error}</p>}
-          {typesQ.isPending || balanceQ.isPending ? <PageLoading /> : typesQ.isError || balanceQ.isError ? <PageError error={typesQ.error ?? balanceQ.error} /> : <p className="ez-balance-note">Kullanılabilir yıllık izin: <strong>{remaining} gün</strong></p>}
-          <label className="input-label">İzin Türü</label>
-          <div className="type-grid">
+          <section className="ez-leave-request-guide" aria-label="İzin talebi rehberi">
+            <strong>Ne yapıyoruz?</strong>
+            <p>Gerçek izin talebini oluşturuyoruz. Türü, başlangıç ve bitişi; ilgili kayıt ve belgelerle karşılaştırın.</p>
+            <p><strong>Neden?</strong> Tür, yıllık bakiyeden düşme ve onay gereksinimini etkiler. Örneğin “Raporlu” adını görmeniz tek başına belge koşulunu kanıtlamaz; belge ve şirket kuralını ayrıca doğrulayın.</p>
+            <p>Bu ekran yalnız sunucudaki tür adı, bakiye etkisi ve onay bilgisini gösterir. Ayrıntılı mevzuat dayanağı henüz onaylı içerik olarak sunulmuyor.</p>
+          </section>
+          {typesQ.isPending || balanceQ.isPending ? <PageLoading /> : typesQ.isError || balanceQ.isError ? <PageError error={typesQ.error ?? balanceQ.error} /> : <p className="ez-balance-note">Görüntülenen yıllık izin bakiyesi: <strong>{remaining} gün</strong></p>}
+          <p className="input-label" id="leave-type-label">İzin Türü — açıkça seçin</p>
+          {typesQ.isSuccess && types.length === 0 && <p role="status">Tanımlı izin türü yok; talep oluşturulamıyor.</p>}
+          <div className="type-grid" role="radiogroup" aria-labelledby="leave-type-label">
             {types.map((type) => {
               const meta = typeCardMeta(type, remaining);
               return (
@@ -90,13 +150,15 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
                   <input
                     type="radio"
                     name="leaveType"
-                    checked={selectedTypeId === type.id}
-                    onChange={() => setTypeId(type.id ?? null)}
+                    checked={typeId === type.id}
+                    onChange={() => { setReview(null); setTypeId(type.id ?? null); }}
                   />
                   <div className="tc-content">
                     <div className={`tc-icon ${meta.tone}`}><i aria-hidden="true" className={`fa-solid ${meta.icon}`} /></div>
                     <span>{type.name}</span>
                     <small>{meta.small}</small>
+                    <small>{type.requiresApproval === true ? "Yönetici onayı gerekir"
+                      : type.requiresApproval === false ? "Onay beklemeden oluşur" : "Onay koşulu bilinmiyor"}</small>
                   </div>
                 </label>
               );
@@ -106,41 +168,56 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
           <div className="form-grid-2 mt-4">
             <div className="input-group">
               <label className="input-label" htmlFor="start-date">Başlangıç Tarihi</label>
-              <input type="date" className="input-control" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input type="date" className="input-control" id="start-date" value={startDate} onChange={(e) => { setReview(null); setStartDate(e.target.value); }} />
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="end-date">Bitiş Tarihi</label>
-              <input type="date" className="input-control" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <input type="date" className="input-control" id="end-date" value={endDate} onChange={(e) => { setReview(null); setEndDate(e.target.value); }} />
             </div>
           </div>
 
-          <div className="calc-box">
-            <div className="cb-item"><span>Takvim günü önizlemesi</span><strong id="calc-days">{previewDays !== null ? `${previewDays} gün` : "- gün"}</strong></div>
-            <div className="cb-item"><span>Tahmini işe dönüş</span><strong id="return-date">{returnDate ? formatLeaveDate(returnDate.toISOString()) : "-"}</strong></div>
+          <div className="calc-box ez-leave-request-calendar">
+            <div className="cb-item"><span>Takvim günü önizlemesi</span><strong id="calc-days">{previewDays !== null ? String(previewDays) + " gün" : "- gün"}</strong></div>
           </div>
 
           <div className="input-group mt-4">
             <label className="input-label" htmlFor="leave-desc">Açıklama / Adres</label>
-            <textarea id="leave-desc" className="input-control" rows={2} placeholder="İzin nedeni veya bulunacağınız adres" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <textarea id="leave-desc" className="input-control" rows={2} placeholder="İzin nedeni veya bulunacağınız adres" value={description} onChange={(e) => { setReview(null); setDescription(e.target.value); }} />
           </div>
 
-          <p className="ez-quiet">Kesin izin süresi çalışma takviminize göre hesaplanır.</p>
+          <p className="ez-quiet">Takvim günü, izin bakiyesinden düşecek iş günü değildir. Kesin iş günü, çakışma ve yeterli bakiye sunucuda talep gönderilirken doğrulanır. Gösterilen bakiye bugünkü kayıttır.</p>
           <div className="input-group mt-3">
             <label className="input-label" htmlFor="leave-substitute">Yerine Bakacak Kişi</label>
-            <select id="leave-substitute" className="input-control" value={substituteId} onChange={(e) => setSubstituteId(e.target.value)}>
+            <select id="leave-substitute" className="input-control" value={substituteId} onChange={(e) => { setReview(null); setSubstituteId(e.target.value); }}>
               <option value="">Seçiniz...</option>
               {(substitutesQ.data ?? []).map((emp) => (
                 <option key={emp.id} value={emp.id}>{emp.name}</option>
               ))}
             </select>
           </div>
+          {review && <section className="ez-leave-request-review" aria-labelledby="leave-review-title" aria-live="polite">
+            <h4 id="leave-review-title">Göndermeden önce kontrol edin</h4>
+            <p><strong>Tür:</strong> {review.typeName} · {review.deductsFromAnnualBalance ? "Yıllık bakiyeden düşer" : "Yıllık bakiyeden düşmez"}</p>
+            <p><strong>Tarih:</strong> {review.startDate} – {review.endDate} · {review.calendarDays} takvim günü</p>
+            <p><strong>Onay:</strong> {review.requiresApproval ? "Yönetici onayı bekleyecek" : "Sunucu kurallarına uygunsa doğrudan onaylanabilir"}</p>
+            {review.substituteName && <p><strong>Vekil:</strong> {review.substituteName}</p>}
+            {review.description && <p><strong>Açıklama:</strong> {review.description}</p>}
+            <p>Gönderimden sonra tarih veya tür bu ekranda düzenlenmez. Bekleyen ya da onaylı talebi iptal edip gerekirse doğru bilgilerle yeni talep oluşturabilirsiniz; onaylı iptal bakiyede ters hareket üretir.</p>
+          </section>}
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
-          <button className="btn btn-primary" onClick={submit} disabled={createLeave.isPending || !typesQ.isSuccess || !balanceQ.isSuccess || !selectedTypeId}>
-            <i aria-hidden="true" className="fa-solid fa-paper-plane" /> Talebi Gönder
-          </button>
+          {review ? <>
+            <button className="btn btn-ghost" onClick={() => setReview(null)} disabled={createLeave.isPending}>Bilgileri düzelt</button>
+            <button className="btn btn-primary" onClick={submit} disabled={createLeave.isPending}>
+              <i aria-hidden="true" className="fa-solid fa-paper-plane" /> Talebi onayla ve gönder
+            </button>
+          </> : <>
+            <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
+            <button className="btn btn-primary" onClick={prepareReview} disabled={createLeave.isPending || !typesQ.isSuccess || !balanceQ.isSuccess || types.length === 0}>
+              Bilgileri kontrol et
+            </button>
+          </>}
         </div>
       </div>
     </div>

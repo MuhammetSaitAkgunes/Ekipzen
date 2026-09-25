@@ -41,32 +41,39 @@ const renderModal = () =>
     </AuthProvider>,
   );
 
-test("izin türleri backend'den dolar, yıllık kartında kalan gün yazar", async () => {
+test("izin türleri sunucu bayraklarıyla açıklanır ve başlangıçta hiçbiri seçili değildir", async () => {
   setRole("employee");
   renderModal();
   expect(await screen.findByText("Yıllık İzin")).toBeInTheDocument();
-  expect(screen.getByText("Kalan: 14 gün")).toBeInTheDocument();
-  expect(screen.getByText("Belge gerekli")).toBeInTheDocument();
+  expect(screen.getByText("Yıllık bakiye: 14 gün")).toBeInTheDocument();
+  expect(screen.getByText("Yıllık bakiyeden düşmez")).toBeInTheDocument();
+  expect(screen.getByText("Onay beklemeden oluşur")).toBeInTheDocument();
+  expect(screen.getAllByRole("radio").every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
 });
 
-test("tarih seçilince süre ve işe dönüş ön izlemesi hesaplanır", async () => {
+test("tarih seçilince takvim günü ön izlemesi yapılır; işe dönüş tahmin edilmez", async () => {
   setRole("employee");
   renderModal();
   await screen.findByText("Yıllık İzin");
   await userEvent.type(screen.getByLabelText("Başlangıç Tarihi"), "2026-08-01");
   await userEvent.type(screen.getByLabelText("Bitiş Tarihi"), "2026-08-03");
   expect(screen.getByText("3 gün")).toBeInTheDocument();
-  expect(screen.getByText("04 Ağu 2026")).toBeInTheDocument();
+  expect(screen.queryByText("Tahmini işe dönüş")).not.toBeInTheDocument();
+  expect(screen.getByText(/Takvim günü, izin bakiyesinden düşecek iş günü değildir/)).toBeInTheDocument();
 });
 
 test("talep gönderilince POST /leaves doğru gövdeyle gider", async () => {
   setRole("manager");
   renderModal();
   await screen.findByText("Yıllık İzin");
+  await userEvent.click(screen.getByRole("radio", { name: /Yıllık İzin/ }));
   await userEvent.type(screen.getByLabelText("Başlangıç Tarihi"), "2026-08-01");
   await userEvent.type(screen.getByLabelText("Bitiş Tarihi"), "2026-08-03");
   await userEvent.selectOptions(await screen.findByLabelText("Yerine Bakacak Kişi"), "7");
-  await userEvent.click(screen.getByRole("button", { name: /Talebi Gönder/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("region", { name: "Göndermeden önce kontrol edin" })).toHaveTextContent("Selin Koç");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/leaves" && i?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Talebi onayla ve gönder" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/leaves" && i?.method === "POST",
@@ -77,12 +84,30 @@ test("talep gönderilince POST /leaves doğru gövdeyle gider", async () => {
   });
 });
 
-test("tarihler boşsa uyarı toast'ı, istek gitmez", async () => {
+test("tarihler boşsa ön kontrol durur ve istek gitmez", async () => {
   setRole("employee");
   renderModal();
   await screen.findByText("Yıllık İzin");
-  await userEvent.click(screen.getByRole("button", { name: /Talebi Gönder/ }));
-  expect(await screen.findByText("Geçerli bir izin türü ve tarih aralığı seçin.")).toBeInTheDocument();
-  const posted = vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/leaves" && i?.method === "POST");
-  expect(posted).toBe(false);
+  await userEvent.click(screen.getByRole("radio", { name: /Yıllık İzin/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Başlangıç ve bitiş tarihlerini doğrulayın");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/leaves" && i?.method === "POST")).toBe(false);
+});
+
+test("onay gerekmeyen türde sunucunun onaylı sonucunu doğru bildirir", async () => {
+  stubApi({
+    "/api/leaves/types": types,
+    "/api/leaves/balance": balance,
+    "/api/leaves": { ...created, leaveTypeId: 2, leaveTypeName: "Raporlu", status: "approved" },
+  });
+  setRole("employee");
+  renderModal();
+  await screen.findByText("Raporlu");
+  await userEvent.click(screen.getByRole("radio", { name: /Raporlu/ }));
+  await userEvent.type(screen.getByLabelText("Başlangıç Tarihi"), "2026-08-01");
+  await userEvent.type(screen.getByLabelText("Bitiş Tarihi"), "2026-08-03");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("region", { name: "Göndermeden önce kontrol edin" })).toHaveTextContent("doğrudan onaylanabilir");
+  await userEvent.click(screen.getByRole("button", { name: "Talebi onayla ve gönder" }));
+  expect(await screen.findByText("İzin talebi oluşturuldu ve onaylandı.")).toBeInTheDocument();
 });
