@@ -157,6 +157,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
+  const [compensationReview, setCompensationReview] = useState<CompensationForm | null>(null);
   const [rehireDate, setRehireDate] = useState("");
   const [rehireContractType, setRehireContractType] = useState("indefinite");
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -188,8 +189,10 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  const setCompensationField = <K extends keyof CompensationForm>(key: K, value: CompensationForm[K]) =>
+  const setCompensationField = <K extends keyof CompensationForm>(key: K, value: CompensationForm[K]) => {
+    setCompensationReview(null);
     setCompensation((current) => ({ ...current, [key]: value }));
+  };
 
   const chooseTab = (step: TabId) => {
     selectedGuideStep.current = true;
@@ -234,12 +237,43 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     }
   };
 
-  const handleCompensationSave = async () => {
-    if (employeeId === null) return;
+  const compensationIssue = (draft: CompensationForm): string | null => {
+    if (!foundationQ.isSuccess) return "Çalışma dönemi doğrulanamadı; ücret paketini kaydetmeden önce yeniden yükleyin.";
+    const activePeriod = foundationQ.data.employmentPeriods?.find((period) => period.endDate === null);
+    if (!activePeriod?.startDate) return "Açık çalışma dönemi ve başlangıç tarihi doğrulanamadı; ücret paketi eklenemez.";
+    if (!draft.effectiveFrom || tryNumber(draft.monthlyGrossSalary) <= 0 || !draft.sourceReference.trim()) {
+      return "Ücret paketi için başlangıç tarihi, pozitif brüt maaş ve kaynak referansı zorunludur.";
+    }
+    if (draft.effectiveFrom < activePeriod.startDate) return "Yürürlük tarihi açık çalışma döneminin başlangıcından önce olamaz.";
+    if (foundationQ.data.compensationPackages?.some((item) =>
+      item.employmentPeriodId === activePeriod.id && item.effectiveFrom === draft.effectiveFrom)) {
+      return "Bu yürürlük tarihinde zaten bir ücret paketi var. Aynı tarihe yeni kayıt ekleyerek hatayı düzeltemezsiniz.";
+    }
+    if ([draft.regularPremium, draft.roadAllowance, draft.mealAllowance, draft.otherRegularBenefits]
+      .some((value) => value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0))) {
+      return "Düzenli prim ve yan hak tutarları negatif olamaz.";
+    }
+    if (draft.sourceReference.trim().length > 256) return "Kaynak referansı 256 karakteri geçemez.";
+    return null;
+  };
+
+  const prepareCompensationReview = () => {
     setError(null);
-    if (!compensation.effectiveFrom || tryNumber(compensation.monthlyGrossSalary) <= 0
-      || !compensation.sourceReference.trim()) {
-      setError("Ücret paketi için başlangıç tarihi, pozitif brüt maaş ve kaynak referansı zorunludur.");
+    const issue = compensationIssue(compensation);
+    if (issue) {
+      setError(issue);
+      return;
+    }
+    setCompensationReview({ ...compensation });
+  };
+
+  const handleCompensationSave = async () => {
+    if (employeeId === null || !compensationReview || saveCompensation.isPending) return;
+    setError(null);
+    const issue = compensationIssue(compensationReview);
+    if (issue) {
+      setCompensationReview(null);
+      setError(issue);
       return;
     }
 
@@ -247,16 +281,17 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
       await saveCompensation.mutateAsync({
         employeeId,
         body: {
-          effectiveFrom: compensation.effectiveFrom,
-          monthlyGrossSalary: tryNumber(compensation.monthlyGrossSalary),
-          regularPremium: tryNumber(compensation.regularPremium),
-          roadAllowance: tryNumber(compensation.roadAllowance),
-          mealAllowance: tryNumber(compensation.mealAllowance),
-          otherRegularBenefits: tryNumber(compensation.otherRegularBenefits),
-          sourceReference: compensation.sourceReference.trim(),
+          effectiveFrom: compensationReview.effectiveFrom,
+          monthlyGrossSalary: tryNumber(compensationReview.monthlyGrossSalary),
+          regularPremium: tryNumber(compensationReview.regularPremium),
+          roadAllowance: tryNumber(compensationReview.roadAllowance),
+          mealAllowance: tryNumber(compensationReview.mealAllowance),
+          otherRegularBenefits: tryNumber(compensationReview.otherRegularBenefits),
+          sourceReference: compensationReview.sourceReference.trim(),
         },
       });
       setCompensation(emptyCompensation);
+      setCompensationReview(null);
       showToast("Yeni ücret paketi yürürlük tarihiyle kaydedildi.", "success");
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Ücret paketi kaydedilemedi.");
@@ -515,6 +550,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                     </p>
                   ))}
                   {foundationQ.data?.compensationPackages?.length === 0 && <p>Henüz ücret paketi yok.</p>}
+                  <p>Yeni paketin yürürlük tarihini ve tutarını ücret kararınızla karşılaştırın. Örneğin 1 Ekim tarihli değişikliği 1 Eylül olarak girerseniz farklı bordro dönemleri etkilenebilir.</p>
+                  <p>Yanlış kaydedilmiş bir paketi bu ekrandan düzenleme veya silme işlemi henüz yok; göndermeden önce bilgileri kontrol edin.</p>
                   <div className="form-grid-2">
                     <div className="input-group">
                       <label className="input-label" htmlFor="pm-comp-effective">Yürürlük başlangıcı</label>
@@ -552,9 +589,25 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                         onChange={(e) => setCompensationField("sourceReference", e.target.value)} placeholder="Ücret yazısı, kurul kararı veya belge no" />
                     </div>
                   </div>
-                  <button type="button" className="btn btn-secondary" onClick={handleCompensationSave} disabled={saveCompensation.isPending}>
-                    Yeni ücret paketini kaydet
+                  <button type="button" className="btn btn-secondary" onClick={prepareCompensationReview} disabled={saveCompensation.isPending}>
+                    Kaydetmeden önce kontrol et
                   </button>
+                  {compensationReview && <section className="ez-compensation-review" aria-labelledby="compensation-review-title" aria-live="polite">
+                    <h4 id="compensation-review-title">Ücret paketi ön kontrolü</h4>
+                    <p><strong>Çalışan:</strong> {detailQ.data?.name}</p>
+                    <p><strong>Yürürlük:</strong> {compensationReview.effectiveFrom} · <strong>Aylık brüt:</strong> {currency.format(tryNumber(compensationReview.monthlyGrossSalary))}</p>
+                    <p><strong>Düzenli toplam:</strong> {currency.format([
+                      compensationReview.monthlyGrossSalary, compensationReview.regularPremium,
+                      compensationReview.roadAllowance, compensationReview.mealAllowance,
+                      compensationReview.otherRegularBenefits,
+                    ].reduce((total, value) => total + tryNumber(value), 0))}</p>
+                    <p><strong>Kaynak:</strong> {compensationReview.sourceReference.trim()}</p>
+                    <p>Bu kayıt mevcut paket geçmişini silmez; yürürlük tarihine göre paketlerin dönem sınırları değişebilir. Kaynak belgedeki tutarları ve tarihi yeniden karşılaştırın.</p>
+                    <div className="ez-compensation-review-actions">
+                      <button type="button" className="btn btn-ghost" onClick={() => setCompensationReview(null)} disabled={saveCompensation.isPending}>Düzenlemeye dön</button>
+                      <button type="button" className="btn btn-primary" onClick={handleCompensationSave} disabled={saveCompensation.isPending}>Ücret paketini onayla ve kaydet</button>
+                    </div>
+                  </section>}
                 </div>
               )}
             </div>

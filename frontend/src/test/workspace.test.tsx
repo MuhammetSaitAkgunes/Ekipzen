@@ -116,7 +116,7 @@ test("profil salt okunur açılır; İK bilinçli olarak düzenlemeye geçer", a
   expect(screen.getByLabelText("Adı")).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "Profili düzenle" }));
   await waitFor(() => expect(screen.getByLabelText("Adı")).toBeEnabled());
-  expect(screen.getByRole("button", { name: /Kaydet/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^Kaydet$/ })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Vazgeç" }));
   await waitFor(() => expect(screen.getByLabelText("Adı")).toBeDisabled());
 });

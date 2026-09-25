@@ -67,8 +67,15 @@ test("yürürlük tarihli ücret paketini kaynak referansıyla kaydeder", async 
   await userEvent.type(screen.getByLabelText("Yürürlük başlangıcı"), "2026-09-01");
   await userEvent.type(screen.getByLabelText("Aylık brüt maaş"), "50000");
   await userEvent.type(screen.getByLabelText("Kaynak / karar referansı"), "Ücret yazısı-42");
-  await userEvent.click(screen.getByRole("button", { name: "Yeni ücret paketini kaydet" }));
+  await userEvent.click(screen.getByRole("button", { name: "Kaydetmeden önce kontrol et" }));
+  const postedBeforeConfirmation = vi.mocked(fetch).mock.calls.some(
+    ([u, i]) => String(u) === "/api/employees/1/compensation-packages" && i?.method === "POST",
+  );
+  expect(postedBeforeConfirmation).toBe(false);
+  expect(screen.getByRole("region", { name: "Ücret paketi ön kontrolü" })).toHaveTextContent("Ücret yazısı-42");
+  expect(screen.getByRole("region", { name: "Ücret paketi ön kontrolü" })).toHaveTextContent("Ahmet Yılmaz");
 
+  await userEvent.click(screen.getByRole("button", { name: "Ücret paketini onayla ve kaydet" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/employees/1/compensation-packages" && i?.method === "POST",
@@ -79,6 +86,50 @@ test("yürürlük tarihli ücret paketini kaynak referansıyla kaydeder", async 
       sourceReference: "Ücret yazısı-42",
     });
   });
+});
+
+test("aynı yürürlük tarihindeki paketi yeni kayıtla düzeltmeye izin vermez", async () => {
+  stubApi({
+    "/api/departments": departments,
+    "/api/employees/1": detail,
+    "/api/employees/1/employment-foundation": {
+      employeeId: 1,
+      contractType: "indefinite",
+      employmentPeriods: [{ id: 1, startDate: "2021-03-12", endDate: null, contractType: "indefinite" }],
+      compensationPackages: [{ id: 2, employmentPeriodId: 1, effectiveFrom: "2026-09-01", effectiveTo: null, monthlyRecurringTotal: 50000, sourceReference: "Eski karar" }],
+    },
+  });
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await screen.findByText(/Eski karar/);
+  await userEvent.type(screen.getByLabelText("Yürürlük başlangıcı"), "2026-09-01");
+  await userEvent.type(screen.getByLabelText("Aylık brüt maaş"), "55000");
+  await userEvent.type(screen.getByLabelText("Kaynak / karar referansı"), "Yeni karar");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydetmeden önce kontrol et" }));
+  expect(screen.getByText(/Aynı tarihe yeni kayıt ekleyerek hatayı düzeltemezsiniz/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(
+    ([u, i]) => String(u) === "/api/employees/1/compensation-packages" && i?.method === "POST",
+  )).toBe(false);
+});
+
+test("ön kontrol form değişince geçersizleşir ve iptal edilebilir", async () => {
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await screen.findByText("Henüz ücret paketi yok.");
+  await userEvent.type(screen.getByLabelText("Yürürlük başlangıcı"), "2026-09-01");
+  await userEvent.type(screen.getByLabelText("Aylık brüt maaş"), "50000");
+  await userEvent.type(screen.getByLabelText("Kaynak / karar referansı"), "Ücret yazısı-42");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydetmeden önce kontrol et" }));
+  expect(screen.getByRole("region", { name: "Ücret paketi ön kontrolü" })).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Kaynak / karar referansı"), " güncel");
+  expect(screen.queryByRole("region", { name: "Ücret paketi ön kontrolü" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Kaydetmeden önce kontrol et" }));
+  await userEvent.click(screen.getByRole("button", { name: "Düzenlemeye dön" }));
+  expect(vi.mocked(fetch).mock.calls.some(
+    ([u, i]) => String(u) === "/api/employees/1/compensation-packages" && i?.method === "POST",
+  )).toBe(false);
 });
 
 test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderilir", async () => {
