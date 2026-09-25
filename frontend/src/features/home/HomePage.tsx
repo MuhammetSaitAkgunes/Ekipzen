@@ -75,7 +75,7 @@ export function HomePage() {
     {management ? <ManagementMetrics /> : <PersonalMetrics />}
     <div className="ez-home-grid">
       <div className="ez-home-main">
-        {management && <section className="ez-panel"><div className="ez-panel-heading"><div><span className="ez-overline">GERÇEK KAYITLARDAN</span><h2>Bugün yapılacaklar</h2><p>Her işin neden göründüğünü ve sonraki adımı inceleyin.</p></div><Link className="ez-text-link" to={appPath("/inbox?tab=daily")}>Tümünü gör <span aria-hidden="true">→</span></Link></div><DailyGuidanceTasks limit={4} /></section>}
+        {management && <section className="ez-panel"><div className="ez-panel-heading"><div><span className="ez-overline">GERÇEK KAYITLARDAN</span><h2>Takip gerektiren kayıtlar</h2><p>Her kaydın neden göründüğünü ve sonraki adımı inceleyin.</p></div><Link className="ez-text-link" to={appPath("/inbox?tab=daily")}>Tümünü gör <span aria-hidden="true">→</span></Link></div><DailyGuidanceTasks limit={4} /></section>}
         {!management && <section className="ez-panel"><div className="ez-panel-heading"><div><span className="ez-overline">ÖNCE BUNLARA BAKALIM</span><h2>İzin taleplerim</h2></div></div><MyRequests /></section>}
         <section className="ez-panel"><div className="ez-panel-heading"><div><h2>Öncelikli işler</h2><p>Bugünü kolaylaştıracak küçük adımlar.</p></div><Link className="ez-text-link" to={appPath("/inbox?tab=actions")}>Tümünü gör <span aria-hidden="true">→</span></Link></div><PriorityActions /></section>
       </div>

@@ -26,7 +26,8 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
     ],
   });
   renderPage(<DailyGuidanceTasks />);
-  const documentCard = (await screen.findByText("Ece Arslan · Sözleşme")).closest("article")!;
+  expect(await screen.findByText(/Diğer İK işleri burada henüz üretilmez/)).toBeInTheDocument();
+  const documentCard = screen.getByText("Ece Arslan · Sözleşme").closest("article")!;
   expect(within(documentCard).getByText(/Son tarih kayıtlı değil/)).toBeInTheDocument();
   expect(within(documentCard).getByText(/Neden?/)).toBeInTheDocument();
   expect(within(documentCard).getByRole("link", { name: /Kaydı incele/ }))

@@ -12,6 +12,7 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
 
   const tasks = limit ? query.data.slice(0, limit) : query.data;
   return <div className="ez-guidance-tasks">
+    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını ve İK yöneticileri için eksik veya süresi yaklaşan uyum belgelerini gösterir. Diğer İK işleri burada henüz üretilmez.</p>
     {tasks.map((task) => <article className="ez-guidance-task" key={task.key}>
       <span className="ez-overline">{task.kind === "leave-approval" ? "İZİN ONAYI" : "BELGE TAKİBİ"}</span>
       <h3>{task.title}</h3>
