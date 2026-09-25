@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
@@ -23,9 +23,25 @@ const money = new Intl.NumberFormat("tr-TR", {
   minimumFractionDigits: 2,
 });
 
-const nonNegativeNumber = (value: string): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+
+const terminationReasonLabel: Record<string, string> = {
+  "employee-resignation": "Çalışan istifası",
+  "employer-termination": "İşveren feshi",
+  "employer-termination-for-cause": "İşveren haklı feshi",
+  "mutual-agreement": "İkale",
+  "fixed-term-expiry": "Belirli süre bitimi",
+  retirement: "Emeklilik",
+  "military-service": "Askerlik",
+  marriage: "Evlilik",
+  death: "Vefat",
+  other: "Diğer",
+};
+const noticeHandlingLabel: Record<string, string> = {
+  "not-applicable": "Uygulanmaz",
+  worked: "Süre çalışıldı",
+  "payable-to-employee": "Çalışana ödeme",
+  "payable-to-employer": "İşverene ödeme",
+  waived: "Feragat / mahsup",
 };
 
 export function OffboardingModal({ employeeId, onClose }: {
@@ -33,6 +49,7 @@ export function OffboardingModal({ employeeId, onClose }: {
   onClose: () => void;
 }) {
   const { showToast } = useToast();
+  const actionInFlight = useRef(false);
   const contextQ = useEmployeeOffboardingContext(employeeId);
   const rulesQ = useTerminationCalculationRules();
   const saveDraft = useSaveOffboardingDraft();
@@ -40,11 +57,11 @@ export function OffboardingModal({ employeeId, onClose }: {
   const complete = useCompleteOffboarding();
   const reverse = useReverseOffboarding();
 
-  const [terminationDate, setTerminationDate] = useState(todayInputValue);
+  const [terminationDate, setTerminationDate] = useState("");
   const [exitCode, setExitCode] = useState("");
   const [exitReason, setExitReason] = useState("");
-  const [terminationReason, setTerminationReason] = useState("other");
-  const [noticeHandling, setNoticeHandling] = useState("not-applicable");
+  const [terminationReason, setTerminationReason] = useState("");
+  const [noticeHandling, setNoticeHandling] = useState("");
   const [successorId, setSuccessorId] = useState("");
   const [unusedLeaveDays, setUnusedLeaveDays] = useState("0");
   const [unusedLeavePayment, setUnusedLeavePayment] = useState("0");
@@ -57,6 +74,9 @@ export function OffboardingModal({ employeeId, onClose }: {
   const [manualOverride, setManualOverride] = useState(false);
   const [reversalReason, setReversalReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [completionReview, setCompletionReview] = useState(false);
+  const [completionAcknowledged, setCompletionAcknowledged] = useState(false);
+  const [reverseReview, setReverseReview] = useState(false);
 
   const context = contextQ.data;
   const currentCase = context?.currentCase as EmployeeOffboardingCaseDto | null | undefined;
@@ -76,11 +96,11 @@ export function OffboardingModal({ employeeId, onClose }: {
 
   useEffect(() => {
     if (currentCase?.status !== "draft") return;
-    setTerminationDate(currentCase.terminationDate ?? todayInputValue());
+    setTerminationDate(currentCase.terminationDate ?? "");
     setExitCode(currentCase.exitCode ?? "");
     setExitReason(currentCase.exitReason ?? "");
-    setTerminationReason(currentCase.terminationReason ?? "other");
-    setNoticeHandling(currentCase.noticeHandling ?? "not-applicable");
+    setTerminationReason(currentCase.terminationReason ?? "");
+    setNoticeHandling(currentCase.noticeHandling ?? "");
     setSuccessorId(currentCase.successorManagerId ? String(currentCase.successorManagerId) : "");
     setUnusedLeaveDays(String(currentCase.unusedLeaveDays ?? 0));
     setUnusedLeavePayment(String(currentCase.unusedLeavePayment ?? 0));
@@ -90,12 +110,32 @@ export function OffboardingModal({ employeeId, onClose }: {
     setSettlementNotes(currentCase.settlementNotes ?? "");
   }, [currentCase]);
 
+  useEffect(() => {
+    setCompletionReview(false);
+    setCompletionAcknowledged(false);
+    setReverseReview(false);
+  }, [currentCase?.id, currentCase?.version, currentCase?.status]);
+
   const validateDraft = (): string | null => {
-    if (!terminationDate) return "İşten ayrılma tarihi zorunludur.";
-    if (!exitCode.trim()) return "Çıkış kodu zorunludur.";
-    if (!exitReason.trim()) return "Çıkış gerekçesi zorunludur.";
-    if (!settlementReference.trim()) return "Hesap ve uzman inceleme referansı zorunludur.";
+    if (!terminationDate || terminationDate > todayInputValue()) return "Gerçek işten ayrılma tarihini seçin; gelecek tarih kullanılamaz.";
+    if (!exitCode.trim() || exitCode.trim().length > 64) return "Çıkış kodunu doğrulayın (en çok 64 karakter).";
+    if (!exitReason.trim() || exitReason.trim().length > 1000) return "Çıkış gerekçesini doğrulayın (en çok 1000 karakter).";
+    if (!terminationReason) return "Fesih nedenini belgedeki duruma göre açıkça seçin.";
+    if (!noticeHandling) return "İhbar uygulamasını uzman değerlendirmesine göre açıkça seçin.";
+    if (!settlementReference.trim() || settlementReference.trim().length > 256) return "Uzman/harici hesap referansını doğrulayın (en çok 256 karakter).";
+    if (settlementNotes.trim().length > 2000) return "Kapanış notu 2000 karakteri geçemez.";
     if (requiresSuccessor && !successorId) return "Ekibi olan yönetici için halef seçilmelidir.";
+    const amounts = [
+      ["Ödenecek kullanılmamış izin günü", unusedLeaveDays],
+      ["İzin ödemesi", unusedLeavePayment],
+      ["Kıdem ödemesi", severancePayment],
+      ["İhbar ödemesi", noticePayment],
+    ] as const;
+    for (const [label, value] of amounts) {
+      if (!value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0) {
+        return label + " boş, geçersiz veya negatif olamaz; tutarı doğrulayın.";
+      }
+    }
     return null;
   };
 
@@ -107,15 +147,27 @@ export function OffboardingModal({ employeeId, onClose }: {
     terminationReason,
     noticeHandling,
     successorManagerId: successorId ? Number(successorId) : null,
-    unusedLeaveDays: nonNegativeNumber(unusedLeaveDays),
-    unusedLeavePayment: nonNegativeNumber(unusedLeavePayment),
-    severancePayment: nonNegativeNumber(severancePayment),
-    noticePayment: nonNegativeNumber(noticePayment),
+    unusedLeaveDays: Number(unusedLeaveDays),
+    unusedLeavePayment: Number(unusedLeavePayment),
+    severancePayment: Number(severancePayment),
+    noticePayment: Number(noticePayment),
     settlementReference: settlementReference.trim(),
     settlementNotes: settlementNotes.trim() || null,
   });
 
+  const prepareCompletion = () => {
+    setError(null);
+    const validationError = validateDraft();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setCompletionAcknowledged(false);
+    setCompletionReview(true);
+  };
+
   const save = async (finish: boolean) => {
+    if (isBusy || actionInFlight.current || (finish && (!completionReview || !completionAcknowledged))) return;
     setError(null);
     const validationError = validateDraft();
     if (validationError) {
@@ -123,6 +175,8 @@ export function OffboardingModal({ employeeId, onClose }: {
       return;
     }
 
+    actionInFlight.current = true;
+    let draftPersisted = false;
     try {
       if (finish && calculationLocked && currentCase?.status === "draft") {
         if (currentCase.id == null || currentCase.version == null) {
@@ -139,6 +193,7 @@ export function OffboardingModal({ employeeId, onClose }: {
       }
 
       const saved = await saveDraft.mutateAsync({ employeeId, body: draftBody() });
+      draftPersisted = true;
       if (finish) {
         if (saved.id == null || saved.version == null) {
           throw new Error("İşten çıkış taslağı kimlik veya sürüm bilgisi döndürmedi.");
@@ -150,16 +205,21 @@ export function OffboardingModal({ employeeId, onClose }: {
         });
         showToast("İşten çıkış dosyası tamamlandı; erişim ve rol işleri güvenli kuyruğa alındı.", "success");
       } else {
-        showToast("İşten çıkış taslağı kaydedildi.", "success");
+        showToast("İşten çıkış taslağı kaydedildi; personel durumu değişmedi.", "success");
       }
       onClose();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "İşten çıkış dosyası kaydedilemedi.");
+      const message = cause instanceof ApiError ? cause.message : "İşten çıkış işlemi tamamlanamadı.";
+      setError(draftPersisted
+        ? "Taslak kaydedildi, ancak sonraki adım tamamlanamadı: " + message + " Dosyanın güncel durumunu kontrol edin."
+        : message);
+    } finally {
+      actionInFlight.current = false;
     }
   };
 
-
   const calculateDraft = async () => {
+    if (isBusy || actionInFlight.current) return;
     setError(null);
     const validationError = validateDraft();
     if (validationError) {
@@ -171,8 +231,11 @@ export function OffboardingModal({ employeeId, onClose }: {
       return;
     }
 
+    actionInFlight.current = true;
+    let draftPersisted = false;
     try {
       const saved = await saveDraft.mutateAsync({ employeeId, body: draftBody() });
+      draftPersisted = true;
       if (saved.id == null || saved.version == null) {
         throw new Error("İşten çıkış taslağı kimlik veya sürüm bilgisi döndürmedi.");
       }
@@ -187,17 +250,33 @@ export function OffboardingModal({ employeeId, onClose }: {
       showToast("Onaylı kural sürümüyle hesap taslağı üretildi. Tamamlamadan önce yeniden inceleyin.", "success");
       onClose();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "Hesap taslağı üretilemedi.");
+      const message = cause instanceof ApiError ? cause.message : "Hesap taslağı üretilemedi.";
+      setError(draftPersisted
+        ? "İşten çıkış taslağı kaydedildi, ancak hesap taslağı üretilemedi: " + message + " Dosyanın güncel durumunu kontrol edin."
+        : message);
+    } finally {
+      actionInFlight.current = false;
     }
   };
-  const reverseCompleted = async () => {
-    if (!completedCase) return;
+
+  const prepareReverse = () => {
     setError(null);
-    if (!reversalReason.trim()) {
-      setError("Geri alma gerekçesi zorunludur.");
+    if (!reversalReason.trim() || reversalReason.trim().length > 1000) {
+      setError("Geri alma gerekçesini doğrulayın (1–1000 karakter).");
+      return;
+    }
+    setReverseReview(true);
+  };
+
+  const reverseCompleted = async () => {
+    if (!completedCase || !reverseReview || isBusy || actionInFlight.current) return;
+    setError(null);
+    if (!reversalReason.trim() || reversalReason.trim().length > 1000) {
+      setError("Geri alma gerekçesini doğrulayın (1–1000 karakter).");
       return;
     }
 
+    actionInFlight.current = true;
     try {
       if (completedCase.id == null || completedCase.version == null) {
         throw new Error("İşten çıkış dosyası kimlik veya sürüm bilgisi içermiyor.");
@@ -208,10 +287,12 @@ export function OffboardingModal({ employeeId, onClose }: {
         expectedVersion: completedCase.version,
         reason: reversalReason.trim(),
       });
-      showToast("İşten çıkış kontrollü biçimde geri alındı.", "success");
+      showToast("İşten çıkış kontrollü biçimde geri alındı; erişim işlemlerinin durumunu kontrol edin.", "success");
       onClose();
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "İşten çıkış geri alınamadı.");
+      setError(cause instanceof ApiError ? cause.message : "İşten çıkış geri alınamadı. Dosyanın güncel durumunu kontrol edin.");
+    } finally {
+      actionInFlight.current = false;
     }
   };
 
@@ -229,7 +310,7 @@ export function OffboardingModal({ employeeId, onClose }: {
             </h3>
             <p>{context?.employeeName ?? "Personel"} için denetlenebilir kapanış sürecini yönetin.</p>
           </div>
-          <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="İşten çıkış penceresini kapat">
+          <button className="btn-icon-sm" onClick={onClose} disabled={isBusy} title="Kapat" aria-label="İşten çıkış penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
@@ -238,11 +319,17 @@ export function OffboardingModal({ employeeId, onClose }: {
           {contextQ.isPending && <p>İşten çıkış bilgileri yükleniyor…</p>}
           {contextError && <p className="form-error" role="alert">{contextError}</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
+          {context && <section className="ez-offboarding-guide" aria-label="İşten ayrılış rehberi">
+            <strong>Ne yapıyoruz?</strong>
+            <p>Önce ayrılış dosyasını taslak olarak hazırlıyoruz. Taslak kaydı personeli pasife almaz. Tamamlama ise istihdam dönemini kapatır, varsa ekibi halefe devreder ve erişim/rol işlemlerini kuyruğa alır.</p>
+            <p><strong>Neden kontrol ediyoruz?</strong> Tarih, çıkış kodu, fesih nedeni, ihbar uygulaması ve finansal tutarlar gerçek vaka ve uzman incelemesiyle uyuşmalıdır. Hesap taslağı tek başına hukuki hak kararı veya ödeme kanıtı değildir.</p>
+            <p>Bu ekranda onaylı mevzuat açıklaması henüz yoktur. Gerekli dış bildirim ve ödemeleri ayrıca takip edin; tamamlanan uygulama kaydı bunları doğrulamaz.</p>
+          </section>}
 
           {context && completedCase && (
             <>
               <div className="notice-card">
-                <strong>Tamamlanmış ve geri alınabilir süreç kaydı</strong>
+                <strong>Tamamlanmış süreç kaydı</strong>
                 <p>
                   {completedCase.settlementSource === "approved-rule-draft"
                     ? "Tutarlar onaylı kural sürümüyle taslaklandı ve insan onayıyla tamamlandı."
@@ -280,10 +367,16 @@ export function OffboardingModal({ employeeId, onClose }: {
                   className="input-control"
                   rows={3}
                   value={reversalReason}
-                  onChange={(event) => setReversalReason(event.target.value)}
+                  onChange={(event) => { setReversalReason(event.target.value); setReverseReview(false); }}
                   placeholder="Hatalı tarih, yanlış personel veya onay düzeltmesi"
                 />
               </div>
+              {reverseReview && <section className="ez-offboarding-review" role="region" aria-label="Geri almadan önce kontrol edin">
+                <h4>Geri almadan önce kontrol edin</h4>
+                <p><strong>Personel:</strong> {context.employeeName} · <strong>Dosya:</strong> #{completedCase.id} · <strong>Gerekçe:</strong> {reversalReason.trim()}</p>
+                <p>Sunucu, personel durumunu ve kapanan istihdam/ücret dönemini geri açmayı, değişmeyen ekip bağlarını geri kurmayı ve erişim işlemlerini kuyruğa almayı dener. Arada değişmiş kayıt varsa güvenli geri almayı reddeder.</p>
+                <p>Uygulama dışındaki bildirimler ve yapılmış ödemeler otomatik geri alınmaz; bunları ilgili uzmanla ayrıca değerlendirin.</p>
+              </section>}
             </>
           )}
 
@@ -301,7 +394,7 @@ export function OffboardingModal({ employeeId, onClose }: {
                   {requiresSuccessor ? " seçilen halefin kapsamına aktarılacak." : " bulunuyor."}
                 </p>
                 {calculationLocked && (
-                  <button className="btn btn-secondary" onClick={() => setManualOverride(true)}>
+                  <button className="btn btn-secondary" onClick={() => { setManualOverride(true); setCompletionReview(false); }}>
                     Harici uzman girişine dön
                   </button>
                 )}
@@ -313,7 +406,7 @@ export function OffboardingModal({ employeeId, onClose }: {
                 </p>
               )}
 
-              <fieldset disabled={calculationLocked} className="offboarding-calculation-fieldset">
+              <fieldset disabled={calculationLocked} className="offboarding-calculation-fieldset" onChange={() => { setCompletionReview(false); setCompletionAcknowledged(false); }}>
                 <div className="form-grid-2 offboarding-form-grid">
                 <div className="input-group">
                   <label htmlFor="offboarding-date">İşten ayrılma tarihi</label>
@@ -329,6 +422,7 @@ export function OffboardingModal({ employeeId, onClose }: {
                   <label htmlFor="offboarding-termination-reason">Fesih nedeni</label>
                   <select id="offboarding-termination-reason" className="input-control" value={terminationReason}
                     onChange={(event) => setTerminationReason(event.target.value)}>
+                    <option value="">Fesih nedenini seçin</option>
                     <option value="employee-resignation">Çalışan istifası</option>
                     <option value="employer-termination">İşveren feshi</option>
                     <option value="employer-termination-for-cause">İşveren haklı feshi</option>
@@ -345,6 +439,7 @@ export function OffboardingModal({ employeeId, onClose }: {
                   <label htmlFor="offboarding-notice-handling">İhbar uygulaması</label>
                   <select id="offboarding-notice-handling" className="input-control" value={noticeHandling}
                     onChange={(event) => setNoticeHandling(event.target.value)}>
+                    <option value="">İhbar uygulamasını seçin</option>
                     <option value="not-applicable">Uygulanmaz</option>
                     <option value="worked">Süre çalışıldı</option>
                     <option value="payable-to-employee">Çalışana ödeme</option>
@@ -421,6 +516,17 @@ export function OffboardingModal({ employeeId, onClose }: {
               </div>
               </fieldset>
 
+              {completionReview && <section className="ez-offboarding-review" role="region" aria-label="Tamamlamadan önce kontrol edin">
+                <h4>Tamamlamadan önce kontrol edin</h4>
+                <p><strong>Personel:</strong> {context.employeeName} · <strong>Ayrılış:</strong> {terminationDate} · <strong>Çıkış kodu:</strong> {exitCode.trim()}</p>
+                <p><strong>Fesih nedeni:</strong> {terminationReasonLabel[terminationReason]} · <strong>İhbar:</strong> {noticeHandlingLabel[noticeHandling]}</p>
+                {requiresSuccessor && <p><strong>Halef:</strong> {successors.find((item) => String(item.id) === successorId)?.name ?? "Seçilmedi"} · {directReportCount} ekip üyesi · {pendingLeaveCount} bekleyen izin talebi</p>}
+                <p><strong>Hesap kaynağı:</strong> {calculationLocked ? "Onaylı kural sürümlü taslak" : "Harici uzman girişi"} · <strong>Referans:</strong> {settlementReference.trim()}</p>
+                <p><strong>Kalan izin:</strong> {unusedLeaveDays} gün · <strong>İzin ödemesi:</strong> {money.format(Number(unusedLeavePayment))} · <strong>Kıdem:</strong> {money.format(Number(severancePayment))} · <strong>İhbar:</strong> {money.format(Number(noticePayment))}</p>
+                <p>Tamamlama personeli pasife alır, istihdam dönemini kapatır ve erişim/rol işlerini kuyruğa alır. Taslak ve tamamlanmış kayıt aynı şey değildir; dış ödeme veya bildirimin tamamlandığı sonucunu çıkarmayın.</p>
+                <label className="checkbox-line"><input type="checkbox" checked={completionAcknowledged} onChange={(event) => setCompletionAcknowledged(event.target.checked)} /> Vaka bilgilerini, uzman hesap referansını ve dış adımları ayrıca kontrol ettiğimi onaylıyorum.</label>
+              </section>}
+
               {requiresSuccessor && !hasEligibleSuccessor && (
                 <p className="form-error" role="alert">
                   Aktif ve giriş hesabı bağlı uygun halef bulunamadı. Önce bir yönetici hesabı hazırlayın.
@@ -431,27 +537,38 @@ export function OffboardingModal({ employeeId, onClose }: {
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
+          <button className="btn btn-ghost" onClick={onClose} disabled={isBusy}>Vazgeç</button>
           {completedCase ? (
-            <button className="btn btn-danger" onClick={reverseCompleted} disabled={isBusy}>
-              <i aria-hidden="true" className="fa-solid fa-rotate-left" /> İşten çıkışı geri al
+            reverseReview ? <>
+              <button className="btn btn-ghost" onClick={() => setReverseReview(false)} disabled={isBusy}>Bilgileri düzelt</button>
+              <button className="btn btn-danger" onClick={reverseCompleted} disabled={isBusy}>
+                <i aria-hidden="true" className="fa-solid fa-rotate-left" /> Geri almayı onayla
+              </button>
+            </> : <button className="btn btn-danger" onClick={prepareReverse} disabled={isBusy}>
+              İşten çıkışı geri almayı gözden geçir
             </button>
           ) : (
             <>
-              {!calculationLocked && activeRule && (
+              {!completionReview && !calculationLocked && activeRule && (
                 <button className="btn btn-secondary" onClick={calculateDraft}
                   disabled={!context || !hasEligibleSuccessor || isBusy}>
                   Onaylı kuralla taslak hesapla
                 </button>
               )}
-              <button className="btn btn-secondary" onClick={() => save(false)}
+              {!completionReview && <button className="btn btn-secondary" onClick={() => save(false)}
                 disabled={!context || !hasEligibleSuccessor || isBusy}>
                 Taslağı kaydet
-              </button>
-              <button className="btn btn-danger" onClick={() => save(true)}
+              </button>}
+              {completionReview ? <>
+                <button className="btn btn-ghost" onClick={() => setCompletionReview(false)} disabled={isBusy}>Bilgileri düzelt</button>
+                <button className="btn btn-danger" onClick={() => save(true)}
+                  disabled={!completionAcknowledged || !context || !hasEligibleSuccessor || isBusy}>
+                  <i aria-hidden="true" className="fa-solid fa-user-slash" /> İşten çıkışı onayla ve tamamla
+                </button>
+              </> : <button className="btn btn-danger" onClick={prepareCompletion}
                 disabled={!context || !hasEligibleSuccessor || isBusy}>
-                <i aria-hidden="true" className="fa-solid fa-user-slash" /> İşten çıkışı tamamla
-              </button>
+                İşten çıkışı gözden geçir
+              </button>}
             </>
           )}
         </div>

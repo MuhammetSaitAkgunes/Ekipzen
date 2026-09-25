@@ -94,6 +94,8 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
   await userEvent.click(screen.getByRole("button", { name: "Ahmet Yılmaz için işten çıkış dosyasını aç" }));
   expect(await screen.findByRole("heading", { name: "İşten Çıkış ve Finansal Kapanış" })).toBeInTheDocument();
   expect(screen.getByText("İki güvenli kapanış yolu")).toBeInTheDocument();
+  expect(screen.getByLabelText("Fesih nedeni")).toHaveValue("");
+  expect(screen.getByLabelText("İhbar uygulaması")).toHaveValue("");
 
   await userEvent.selectOptions(screen.getByLabelText("Halef yönetici"), "2");
   const date = screen.getByLabelText("İşten ayrılma tarihi");
@@ -101,12 +103,20 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
   await userEvent.type(date, "2026-08-15");
   await userEvent.type(screen.getByLabelText("Çıkış kodu"), "Kod-03");
   await userEvent.type(screen.getByLabelText("Çıkış gerekçesi"), "İstifa");
+  await userEvent.selectOptions(screen.getByLabelText("Fesih nedeni"), "employee-resignation");
+  await userEvent.selectOptions(screen.getByLabelText("İhbar uygulaması"), "not-applicable");
   await userEvent.clear(screen.getByLabelText("Ödenecek kullanılmamış izin (gün)"));
   await userEvent.type(screen.getByLabelText("Ödenecek kullanılmamış izin (gün)"), "4.5");
   await userEvent.clear(screen.getByLabelText("İzin ödemesi (₺)"));
   await userEvent.type(screen.getByLabelText("İzin ödemesi (₺)"), "12000");
   await userEvent.type(screen.getByLabelText("Uzman/harici hesap referansı"), "MM-2026-18");
-  await userEvent.click(screen.getByRole("button", { name: /İşten çıkışı tamamla/ }));
+  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı gözden geçir" }));
+  expect(screen.getByRole("region", { name: "Tamamlamadan önce kontrol edin" })).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
+    String(url) === "/api/employees/1/offboarding-draft" && init?.method === "PUT")).toBe(false);
+  expect(screen.getByRole("button", { name: "İşten çıkışı onayla ve tamamla" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("checkbox", { name: /Vaka bilgilerini, uzman hesap referansını/ }));
+  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı onayla ve tamamla" }));
 
   await waitFor(() => {
     const saved = vi.mocked(fetch).mock.calls.find(([url, init]) =>
@@ -117,6 +127,8 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
       terminationDate: "2026-08-15",
       exitCode: "Kod-03",
       exitReason: "İstifa",
+      terminationReason: "employee-resignation",
+      noticeHandling: "not-applicable",
       successorManagerId: 2,
       unusedLeaveDays: 4.5,
       unusedLeavePayment: 12000,
@@ -129,6 +141,30 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
   });
 });
 
+test("geçersiz finansal tutarı kaydetmeden kullanıcıya düzeltme ister", async () => {
+  setRole("hr-admin");
+  renderPersonnel();
+  await screen.findByText("Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: "Ahmet Yılmaz için işten çıkış dosyasını aç" }));
+  await screen.findByRole("heading", { name: "İşten Çıkış ve Finansal Kapanış" });
+
+  await userEvent.selectOptions(screen.getByLabelText("Halef yönetici"), "2");
+  await userEvent.type(screen.getByLabelText("İşten ayrılma tarihi"), "2026-08-15");
+  await userEvent.type(screen.getByLabelText("Çıkış kodu"), "Kod-03");
+  await userEvent.type(screen.getByLabelText("Çıkış gerekçesi"), "İstifa");
+  await userEvent.selectOptions(screen.getByLabelText("Fesih nedeni"), "employee-resignation");
+  await userEvent.selectOptions(screen.getByLabelText("İhbar uygulaması"), "not-applicable");
+  await userEvent.type(screen.getByLabelText("Uzman/harici hesap referansı"), "MM-2026-18");
+  await userEvent.clear(screen.getByLabelText("İzin ödemesi (₺)"));
+  await userEvent.type(screen.getByLabelText("İzin ödemesi (₺)"), "-1");
+
+  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı gözden geçir" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("İzin ödemesi boş, geçersiz veya negatif olamaz");
+  expect(screen.queryByRole("region", { name: "Tamamlamadan önce kontrol edin" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
+    String(url) === "/api/employees/1/offboarding-draft" && init?.method === "PUT")).toBe(false);
+});
+
 test("tamamlanmış dosyayı gerekçeli ve sürümlü geri alır", async () => {
   setRole("hr-admin");
   renderPersonnel();
@@ -139,7 +175,11 @@ test("tamamlanmış dosyayı gerekçeli ve sürümlü geri alır", async () => {
   expect(screen.getAllByText("₺12.000,00")).toHaveLength(2);
 
   await userEvent.type(screen.getByLabelText("Geri alma gerekçesi"), "Yanlış personel seçildi");
-  await userEvent.click(screen.getByRole("button", { name: /İşten çıkışı geri al/ }));
+  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı geri almayı gözden geçir" }));
+  expect(screen.getByRole("region", { name: "Geri almadan önce kontrol edin" })).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
+    String(url) === "/api/employees/2/offboarding/20/reverse" && init?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Geri almayı onayla" }));
 
   await waitFor(() => {
     const reversed = vi.mocked(fetch).mock.calls.find(([url, init]) =>
