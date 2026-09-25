@@ -6,7 +6,7 @@ import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
-import { useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
+import { useAddCandidateEvaluation, useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
 
 const STAGE_EXPLANATIONS: Record<string, string> = {
   "Yeni": "Başvuruyu yeniden ilk inceleme sırasına alır; önceki notlar ve aşama geçmişi kalır.",
@@ -33,6 +33,14 @@ type InterviewNoteReview = {
   text: string;
 };
 
+type CandidateEvaluationReview = {
+  candidateId: number;
+  candidateName: string;
+  criterion: string;
+  score: number;
+  maxScore: number;
+};
+
 const initialsOf = (name?: string | null): string =>
   (name ?? "")
     .split(" ")
@@ -46,12 +54,18 @@ export function CandidateDetail({ id }: { id: number }) {
   const detailQ = useCandidate(id);
   const setStatus = useSetCandidateStatus();
   const addNote = useAddInterviewNote();
+  const addEvaluation = useAddCandidateEvaluation();
   const retryProvisioning = useRetryCandidateProvisioning();
   const [tab, setTab] = useState("cv");
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState(NOTE_TYPES[0]);
   const [noteReview, setNoteReview] = useState<InterviewNoteReview | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
+  const [criterion, setCriterion] = useState("");
+  const [evaluationScore, setEvaluationScore] = useState("");
+  const [evaluationMaxScore, setEvaluationMaxScore] = useState("5");
+  const [evaluationReview, setEvaluationReview] = useState<CandidateEvaluationReview | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [hireOpen, setHireOpen] = useState(false);
   const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string } | null>(null);
   const [statusConfirmed, setStatusConfirmed] = useState(false);
@@ -62,6 +76,11 @@ export function CandidateDetail({ id }: { id: number }) {
     setNoteReview(null);
     setNoteText("");
     setNoteError(null);
+    setCriterion("");
+    setEvaluationScore("");
+    setEvaluationMaxScore("5");
+    setEvaluationReview(null);
+    setEvaluationError(null);
   }, [id]);
 
   useEffect(() => {
@@ -78,6 +97,7 @@ export function CandidateDetail({ id }: { id: number }) {
 
   const pendingStatus = statusReview?.candidateId === id && statusReview.from === (candidate.status ?? "Yeni") ? statusReview : null;
   const pendingNote = noteReview?.candidateId === id && noteReview.candidateName === candidate.name ? noteReview : null;
+  const pendingEvaluation = evaluationReview?.candidateId === id && evaluationReview.candidateName === candidate.name ? evaluationReview : null;
 
   const prepareStatus = (status: string) => {
     setStatusConfirmed(false);
@@ -129,6 +149,47 @@ export function CandidateDetail({ id }: { id: number }) {
       showToast("Mülakat notu eklendi.", "success");
     } catch (e) {
       setNoteError(e instanceof ApiError ? e.message : "Not eklenemedi.");
+    }
+  };
+
+  const prepareEvaluation = () => {
+    const cleanCriterion = criterion.trim();
+    setEvaluationError(null);
+    if (!cleanCriterion || cleanCriterion.length > 128) {
+      setEvaluationError("Ölçüt adını 1-128 karakter arasında girin.");
+      return;
+    }
+    if (!/^(?:[1-9]|10)$/.test(evaluationMaxScore)) {
+      setEvaluationError("Azami puan 1-10 arasında tam sayı olmalıdır.");
+      return;
+    }
+    const maxScore = Number(evaluationMaxScore);
+    if (!/^(0|[1-9]|10)$/.test(evaluationScore) || Number(evaluationScore) > maxScore) {
+      setEvaluationError("Verilen puan 0 ile azami puan arasında tam sayı olmalıdır.");
+      return;
+    }
+    setEvaluationReview({
+      candidateId: id, candidateName: candidate.name ?? "",
+      criterion: cleanCriterion, score: Number(evaluationScore), maxScore,
+    });
+  };
+
+  const submitEvaluation = async () => {
+    if (!pendingEvaluation || addEvaluation.isPending) return;
+    setEvaluationError(null);
+    try {
+      await addEvaluation.mutateAsync({
+        id: pendingEvaluation.candidateId,
+        criterion: pendingEvaluation.criterion,
+        score: pendingEvaluation.score,
+        maxScore: pendingEvaluation.maxScore,
+      });
+      setEvaluationReview(null);
+      setCriterion("");
+      setEvaluationScore("");
+      showToast("Aday değerlendirmesi kaydedildi.", "success");
+    } catch (e) {
+      setEvaluationError(e instanceof ApiError ? e.message : "Değerlendirme kaydedilemedi.");
     }
   };
 
@@ -337,6 +398,41 @@ export function CandidateDetail({ id }: { id: number }) {
 
         {tab === "eval" && (
           <div id="tab-eval" className="tab-content active">
+            <section className="ez-candidate-evaluation-guide" aria-label="Aday değerlendirme rehberi">
+              <p><strong>Ne yapıyoruz?</strong> Adayı belirli bir iş ölçütü için puanlıyoruz. Örneğin teknik görüşmede TypeScript bilgisi için 4/5 kaydı açabilirsiniz.</p>
+              <p><strong>Neden ölçüt yazıyoruz?</strong> Sayının neyi ölçtüğü ve azami puanı açık olursa sonraki incelemede gerekçe anlaşılır. Bu kayıt adayın genel puanını veya pipeline aşamasını otomatik değiştirmez.</p>
+              <p>Kaydedilen değerlendirmeyi düzenleme veya silme API'si yok. Gözlemin dayanağını mülakat notunda belirtin; adayı, ölçütü ve puanı kaydetmeden önce doğrulayın.</p>
+            </section>
+            <div className="ez-candidate-evaluation-form">
+              <div className="input-group">
+                <label className="input-label" htmlFor="candidate-evaluation-criterion">Değerlendirme ölçütü</label>
+                <input id="candidate-evaluation-criterion" className="input-control" value={criterion}
+                  onChange={(e) => { setCriterion(e.target.value); setEvaluationReview(null); setEvaluationError(null); }} />
+              </div>
+              <div className="input-group">
+                <label className="input-label" htmlFor="candidate-evaluation-score">Verilen puan</label>
+                <input id="candidate-evaluation-score" className="input-control" type="number" min="0" max="10" step="1" value={evaluationScore}
+                  onChange={(e) => { setEvaluationScore(e.target.value); setEvaluationReview(null); setEvaluationError(null); }} />
+              </div>
+              <div className="input-group">
+                <label className="input-label" htmlFor="candidate-evaluation-max">Azami puan</label>
+                <input id="candidate-evaluation-max" className="input-control" type="number" min="1" max="10" step="1" value={evaluationMaxScore}
+                  onChange={(e) => { setEvaluationMaxScore(e.target.value); setEvaluationReview(null); setEvaluationError(null); }} />
+              </div>
+              <div className="ez-candidate-evaluation-actions">
+                {pendingEvaluation && <button className="btn btn-ghost" onClick={() => setEvaluationReview(null)}>Bilgileri düzelt</button>}
+                <button className="btn btn-primary" onClick={pendingEvaluation ? submitEvaluation : prepareEvaluation} disabled={addEvaluation.isPending}>
+                  {pendingEvaluation ? "Değerlendirmeyi kaydet" : "Bilgileri kontrol et"}
+                </button>
+              </div>
+            </div>
+            {evaluationError && <p className="form-error" role="alert">{evaluationError}</p>}
+            {pendingEvaluation && <section className="ez-candidate-evaluation-review" role="region" aria-label="Aday değerlendirmesi ön kontrolü" aria-live="polite">
+              <h4>Değerlendirmeyi kaydetmeden önce</h4>
+              <p><strong>Aday:</strong> {pendingEvaluation.candidateName} · <strong>Ölçüt:</strong> {pendingEvaluation.criterion}</p>
+              <p><strong>Puan:</strong> {pendingEvaluation.score}/{pendingEvaluation.maxScore}</p>
+              <p>Bu ölçüt adayın değerlendirmelerine eklenecek. Aşama değişmeyecek ve adaya mesaj gönderilmeyecek.</p>
+            </section>}
             <div className="eval-grid">
               {(candidate.evaluations ?? []).map((evaluation) => (
                 <div key={evaluation.id} className="eval-card">

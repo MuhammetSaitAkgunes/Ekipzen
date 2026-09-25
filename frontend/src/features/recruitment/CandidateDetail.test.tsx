@@ -24,6 +24,7 @@ beforeEach(() =>
     "/api/candidates/5": detail,
     "/api/candidates/5/status": { ...detail, status: "Teklif" },
     "/api/candidates/5/notes": detail.notes[0],
+    "/api/candidates/5/evaluations": { id: 2, criterion: "TypeScript bilgisi", score: 4, maxScore: 5 },
     "/api/candidates/5/hire": { candidateId: 5, employeeId: 9, employeeName: "Burak Yılmaz" },
     "/api/departments": departments,
   }),
@@ -89,6 +90,57 @@ test("not değişince önceki ön kontrol geçersiz olur", async () => {
   await userEvent.selectOptions(screen.getByLabelText("Not türü"), "İK Görüşmesi");
   expect(screen.queryByRole("button", { name: "Notu kaydet" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Notu kontrol et" })).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+});
+
+test("aday değerlendirmesi ön kontrolden sonra POST ile kaydedilir", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Değerlendirme" }));
+  await userEvent.type(screen.getByLabelText("Değerlendirme ölçütü"), "TypeScript bilgisi");
+  await userEvent.type(screen.getByLabelText("Verilen puan"), "4");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  const review = screen.getByRole("region", { name: "Aday değerlendirmesi ön kontrolü" });
+  expect(review).toHaveTextContent("Burak Yılmaz");
+  expect(review).toHaveTextContent("TypeScript bilgisi");
+  expect(review).toHaveTextContent("4/5");
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Değerlendirmeyi kaydet" }));
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(
+      ([u, i]) => String(u) === "/api/candidates/5/evaluations" && i?.method === "POST",
+    );
+    expect(posted).toBeTruthy();
+    expect(JSON.parse(String(posted![1]?.body))).toEqual({
+      criterion: "TypeScript bilgisi", score: 4, maxScore: 5,
+    });
+  });
+});
+
+test("eksik ve aralık dışı değerlendirme puanı gönderilmez", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Değerlendirme" }));
+  await userEvent.type(screen.getByLabelText("Değerlendirme ölçütü"), "TypeScript bilgisi");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Verilen puan 0 ile azami puan");
+  await userEvent.type(screen.getByLabelText("Verilen puan"), "6");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Verilen puan 0 ile azami puan");
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+});
+
+test("değerlendirme alanı değişince eski ön kontrol geçersiz olur", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Değerlendirme" }));
+  await userEvent.type(screen.getByLabelText("Değerlendirme ölçütü"), "TypeScript bilgisi");
+  await userEvent.type(screen.getByLabelText("Verilen puan"), "4");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  await userEvent.clear(screen.getByLabelText("Verilen puan"));
+  await userEvent.type(screen.getByLabelText("Verilen puan"), "3");
+  expect(screen.queryByRole("button", { name: "Değerlendirmeyi kaydet" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Bilgileri kontrol et" })).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
 });
 

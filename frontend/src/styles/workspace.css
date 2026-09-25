@@ -655,3 +655,11 @@
 .ez-interview-note-guide p, .ez-interview-note-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
 .ez-interview-note-guide strong, .ez-interview-note-review strong { color: var(--ink); }
 @media (max-width: 640px) { .ez-interview-note-guide, .ez-interview-note-review { padding: 16px; } }
+.ez-candidate-evaluation-guide { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-candidate-evaluation-form { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; margin-bottom: 16px; }
+.ez-candidate-evaluation-actions { display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; }
+.ez-candidate-evaluation-review { margin: 16px 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-candidate-evaluation-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-candidate-evaluation-guide p, .ez-candidate-evaluation-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
+.ez-candidate-evaluation-guide strong, .ez-candidate-evaluation-review strong { color: var(--ink); }
+@media (max-width: 640px) { .ez-candidate-evaluation-guide, .ez-candidate-evaluation-review { padding: 16px; } .ez-candidate-evaluation-form { grid-template-columns: minmax(0, 1fr); } }

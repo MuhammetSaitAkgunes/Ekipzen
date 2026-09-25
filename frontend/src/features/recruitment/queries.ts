@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
 export type CandidateDetailDto = components["schemas"]["CandidateDetailDto"];
 export type InterviewNoteDto = components["schemas"]["InterviewNoteDto"];
+export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationDto"];
 export type HireResultDto = components["schemas"]["HireResultDto"];
 export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
 export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
@@ -63,6 +64,20 @@ export const useAddInterviewNote = () => {
         body: JSON.stringify({ noteType, text }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+  });
+};
+
+export const useAddCandidateEvaluation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, criterion, score, maxScore }: {
+      id: number; criterion: string; score: number; maxScore: number;
+    }) =>
+      apiFetch<CandidateEvaluationDto>("/candidates/" + id + "/evaluations", {
+        method: "POST",
+        body: JSON.stringify({ criterion, score, maxScore }),
+      }),
+    onSuccess: (_result, { id }) => queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", id] }),
   });
 };
 
