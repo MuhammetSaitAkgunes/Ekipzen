@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
-import { useCreateCandidate, type CreateCandidateCommand } from "./queries";
+import { useCreateCandidate, usePositions, type CreateCandidateCommand } from "./queries";
 
 type CandidateForm = {
-  name: string; appliedRole: string; score: string; location: string;
+  name: string; appliedRole: string; positionId: string; score: string; location: string;
   experienceYears: string; summary: string; skills: string;
 };
 
@@ -13,11 +13,15 @@ export function CandidateModal({ onClose, onCreated }: {
 }) {
   const { showToast } = useToast();
   const createCandidate = useCreateCandidate();
+  const positionsQ = usePositions();
   const [form, setForm] = useState<CandidateForm>({
-    name: "", appliedRole: "", score: "", location: "", experienceYears: "0", summary: "", skills: "",
+    name: "", appliedRole: "", positionId: "", score: "", location: "", experienceYears: "0", summary: "", skills: "",
   });
   const [review, setReview] = useState<CreateCandidateCommand | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const selectedPosition = form.positionId
+    ? positionsQ.data?.find((position) => String(position.id) === form.positionId)
+    : null;
 
   const set = (key: keyof CandidateForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -34,6 +38,10 @@ export function CandidateModal({ onClose, onCreated }: {
       setError("Ad Soyad ve pozisyon zorunludur.");
       return;
     }
+    if (form.positionId && (!selectedPosition || !selectedPosition.isOpen || (selectedPosition.openCount ?? 0) < 1)) {
+      setError("Seçilen pozisyon artık açık değil. Pozisyonu yeniden seçin.");
+      return;
+    }
     if (name.length > 200 || appliedRole.length > 128 || form.summary.trim().length > 2000) {
       setError("Ad en fazla 200, pozisyon 128 ve başvuru özeti 2000 karakter olabilir.");
       return;
@@ -47,7 +55,7 @@ export function CandidateModal({ onClose, onCreated }: {
       return;
     }
     setReview({
-      name, appliedRole, score: Number(form.score),
+      name, appliedRole, positionId: selectedPosition?.id ?? null, score: Number(form.score),
       location: form.location.trim() || null,
       experienceYears: Number(form.experienceYears),
       summary: form.summary.trim() || null,
@@ -59,6 +67,15 @@ export function CandidateModal({ onClose, onCreated }: {
     if (!review || createCandidate.isPending) return;
     setError(null);
     try {
+      if (review.positionId) {
+        const latest = await positionsQ.refetch();
+        const position = latest.data?.find((item) => item.id === review.positionId);
+        if (latest.isError || !position?.isOpen || (position.openCount ?? 0) < 1 || position.title !== review.appliedRole) {
+          setReview(null);
+          setError("Pozisyonun güncel kaydı değişti veya okunamadı. Seçimi yeniden kontrol edin.");
+          return;
+        }
+      }
       const candidate = await createCandidate.mutateAsync(review);
       showToast(candidate.name + " aday havuzuna eklendi.", "success");
       if (candidate.id !== undefined) onCreated(candidate.id);
@@ -86,6 +103,7 @@ export function CandidateModal({ onClose, onCreated }: {
             <p><strong>Ne yapıyoruz?</strong> Başvuruyu aday havuzuna kaydediyoruz. Aday “Yeni” aşamasında açılır; bu işlem çalışan kaydı oluşturmaz veya adaya mesaj göndermez.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Kimlik, başvurulan rol ve değerlendirme puanı sonraki aşama kararlarında görünür. Örneğin farklı bir pozisyon için yapılan başvuruyu yanlış role kaydetmek değerlendirmeyi yanıltır.</p>
             <p><strong>Puanın kaynağı:</strong> Buradaki 0-100 puanı siz girersiniz; sistem AI ile hesaplamaz. Değerlendirmeniz yoksa rastgele puan vermeyin. Mevcut kayıt sözleşmesi puansız adayı ayrı gösteremiyor.</p>
+            <p>Açık pozisyon seçerseniz aday o kadroya bağlanır ve rol adı pozisyondan alınır. İlan yayımlamadan gelen başvuruyu pozisyon bağlantısı olmadan da kaydedebilirsiniz.</p>
           </section>
           <div className="form-grid-2">
             <div className="input-group">
@@ -93,8 +111,24 @@ export function CandidateModal({ onClose, onCreated }: {
               <input id="cand-name" className="input-control" value={form.name} onChange={set("name")} />
             </div>
             <div className="input-group">
-              <label className="input-label" htmlFor="cand-role">Başvurulan pozisyon</label>
-              <input id="cand-role" className="input-control" value={form.appliedRole} onChange={set("appliedRole")} />
+              <label className="input-label" htmlFor="cand-position">Açık pozisyon kaydı</label>
+              <select id="cand-position" className="input-control" value={form.positionId}
+                onChange={(e) => {
+                  const position = positionsQ.data?.find((item) => String(item.id) === e.target.value);
+                  setForm((current) => ({ ...current, positionId: e.target.value, appliedRole: position?.title ?? "" }));
+                  setReview(null);
+                  setError(null);
+                }}>
+                <option value="">Pozisyona bağlama</option>
+                {(positionsQ.data ?? []).filter((position) => position.isOpen && (position.openCount ?? 0) > 0).map((position) => (
+                  <option key={position.id} value={position.id}>{position.title} · {position.openCount} açık kadro</option>
+                ))}
+              </select>
+              {positionsQ.isError && <small role="alert">Pozisyon listesi yüklenemedi; adayı yalnız rol adıyla kaydedebilirsiniz.</small>}
+            </div>
+            <div className="input-group">
+              <label className="input-label" htmlFor="cand-role">Başvurulan rol</label>
+              <input id="cand-role" className="input-control" value={form.appliedRole} onChange={set("appliedRole")} disabled={!!form.positionId} />
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="cand-score">Elle verilen aday puanı (0-100)</label>
@@ -120,10 +154,11 @@ export function CandidateModal({ onClose, onCreated }: {
           {review && <section className="ez-candidate-create-review" aria-labelledby="candidate-create-review-title" aria-live="polite">
             <h4 id="candidate-create-review-title">Kaydetmeden önce son kontrol</h4>
             <p><strong>Aday:</strong> {review.name} · <strong>Başvurulan rol:</strong> {review.appliedRole}</p>
+            <p><strong>Pozisyon bağlantısı:</strong> {review.positionId ? selectedPosition?.title || "Seçilen pozisyon" : "Bağlanmadı"}</p>
             <p><strong>Elle verilen puan:</strong> {review.score}/100 · <strong>Deneyim:</strong> {review.experienceYears} yıl · <strong>Lokasyon:</strong> {review.location || "Belirtilmedi"}</p>
             <p><strong>Yetenekler:</strong> {review.skills?.length ? review.skills.join(", ") : "Belirtilmedi"}</p>
             <p><strong>Başvuru özeti:</strong> {review.summary || "Belirtilmedi"}</p>
-            <p><strong>Sonuç:</strong> Aday “Yeni” aşamasında açılacak. Bu form mevcut pozisyon kaydına bağlantı kurmaz; aynı kişinin zaten kayıtlı olup olmadığını aday listesinde kontrol edin.</p>
+            <p><strong>Sonuç:</strong> Aday “Yeni” aşamasında açılacak. Pozisyon bağlantısını ve aynı kişinin zaten kayıtlı olup olmadığını kontrol edin.</p>
             <p>Mevcut API aday kaydını düzenleme veya silme sunmuyor. Hatalı bilgiyi bu aşamada düzeltin.</p>
           </section>}
         </div>

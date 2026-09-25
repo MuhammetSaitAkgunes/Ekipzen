@@ -9,6 +9,7 @@ import { CandidateModal } from "./CandidateModal";
 beforeEach(() =>
   stubApi({
     "/api/candidates": { id: 7, name: "Zeynep Aksoy", appliedRole: "QA Engineer", status: "Yeni", score: 70, initials: "ZA" },
+    "/api/positions": [],
   }),
 );
 afterEach(() => vi.unstubAllGlobals());
@@ -25,7 +26,7 @@ const renderModal = (onCreated = vi.fn()) => {
 test("ön kontrolden sonra aday tam gövdeyle kaydedilir", async () => {
   const onCreated = renderModal();
   await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
-  await userEvent.type(screen.getByLabelText("Başvurulan pozisyon"), "QA Engineer");
+  await userEvent.type(screen.getByLabelText("Başvurulan rol"), "QA Engineer");
   await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "70");
   await userEvent.type(screen.getByLabelText("Yetenekler (virgülle)"), "Playwright, API testi");
   await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
@@ -56,7 +57,7 @@ test("ad boşsa ön kontrol hatası gösterilir, istek atılmaz", async () => {
 test("boş veya geçersiz puan sessizce varsayılmaz", async () => {
   renderModal();
   await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
-  await userEvent.type(screen.getByLabelText("Başvurulan pozisyon"), "QA Engineer");
+  await userEvent.type(screen.getByLabelText("Başvurulan rol"), "QA Engineer");
   await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
   expect(screen.getByRole("alert")).toHaveTextContent("Aday puanını 0-100 arasında");
   await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "101");
@@ -68,11 +69,36 @@ test("boş veya geçersiz puan sessizce varsayılmaz", async () => {
 test("ön kontrolden sonra alan değişirse eski onay geçersiz olur", async () => {
   renderModal();
   await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
-  await userEvent.type(screen.getByLabelText("Başvurulan pozisyon"), "QA Engineer");
+  await userEvent.type(screen.getByLabelText("Başvurulan rol"), "QA Engineer");
   await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "70");
   await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
   await userEvent.type(screen.getByLabelText("Ad Soyad"), " Yılmaz");
   expect(screen.queryByRole("button", { name: /Adayı oluştur/ })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Bilgileri kontrol et/ })).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+});
+
+test("açık pozisyon seçilince aday gerçek pozisyon kimliğiyle bağlanır", async () => {
+  stubApi({
+    "/api/positions": [{ id: 12, title: "QA Engineer", department: "Ürün", isOpen: true, openCount: 2, candidateCount: 1 }],
+    "/api/candidates": { id: 7, name: "Zeynep Aksoy", appliedRole: "QA Engineer", positionId: 12, status: "Yeni", score: 70 },
+  });
+  renderModal();
+  await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
+  await screen.findByRole("option", { name: /QA Engineer/ });
+  await userEvent.selectOptions(screen.getByLabelText("Açık pozisyon kaydı"), "12");
+  expect(screen.getByLabelText("Başvurulan rol")).toHaveValue("QA Engineer");
+  expect(screen.getByLabelText("Başvurulan rol")).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "70");
+  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+  expect(screen.getByText(/Pozisyon bağlantısı:/).closest("p")).toHaveTextContent("QA Engineer");
+  await userEvent.click(screen.getByRole("button", { name: /Adayı oluştur/ }));
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(
+      ([u, i]) => String(u) === "/api/candidates" && i?.method === "POST",
+    );
+    expect(JSON.parse(String(posted?.[1]?.body))).toMatchObject({
+      name: "Zeynep Aksoy", appliedRole: "QA Engineer", positionId: 12, score: 70,
+    });
+  });
 });

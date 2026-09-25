@@ -14,6 +14,7 @@ const candidates = [
 beforeEach(() =>
   stubApi({
     "/api/candidates": candidates,
+    "/api/positions": [{ id: 12, title: "QA Engineer", department: "Ürün", isOpen: true, openCount: 2, candidateCount: 1 }],
     "/api/candidates/5": { ...candidates[0], skills: [], experiences: [], notes: [], evaluations: [], history: [] },
     "/api/candidates/6": { ...candidates[1], skills: [], experiences: [], notes: [], evaluations: [], history: [] },
   }),
@@ -33,6 +34,14 @@ test("aday listesi skor ve durum etiketleriyle dolar", async () => {
   expect(screen.getByText("92/100 puan")).toBeInTheDocument();
   expect(screen.getByText("Selin Koç")).toBeInTheDocument();
   expect(screen.getByText("Aday Havuzu")).toBeInTheDocument();
+});
+
+test("gerçek pozisyon listesi ve oluşturma girişi görünür", async () => {
+  renderShell();
+  expect(await screen.findByRole("heading", { name: "Açık pozisyonlar" })).toBeInTheDocument();
+  expect(await screen.findByText("QA Engineer")).toBeInTheDocument();
+  expect(screen.getByText(/2 açık kadro · 1 bağlı aday/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Yeni pozisyon" })).toBeInTheDocument();
 });
 
 test("durum filtre sekmesi server-side sorgu atar", async () => {

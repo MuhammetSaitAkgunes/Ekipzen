@@ -9,6 +9,8 @@ export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationD
 export type HireResultDto = components["schemas"]["HireResultDto"];
 export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
 export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
+export type PositionDto = components["schemas"]["PositionDto"];
+export type CreatePositionCommand = components["schemas"]["CreatePositionCommand"];
 
 const candidatesPath = (search: string, status: string): string => {
   const params = new URLSearchParams();
@@ -30,6 +32,21 @@ export const useCandidate = (id: number | null) =>
     queryFn: () => apiFetch<CandidateDetailDto>(`/candidates/${id}`),
     enabled: id !== null,
   });
+
+export const usePositions = () =>
+  useQuery({ queryKey: ["recruitment", "positions"], queryFn: () => apiFetch<PositionDto[]>("/positions") });
+
+export const useCreatePosition = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (command: CreatePositionCommand) =>
+      apiFetch<PositionDto>("/positions", {
+        method: "POST",
+        body: JSON.stringify(command),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment", "positions"] }),
+  });
+};
 
 export const useCreateCandidate = () => {
   const queryClient = useQueryClient();

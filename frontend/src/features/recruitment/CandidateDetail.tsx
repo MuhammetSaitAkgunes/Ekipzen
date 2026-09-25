@@ -218,6 +218,7 @@ export function CandidateDetail({ id }: { id: number }) {
           <div>
             <h2>{candidate.name}</h2>
             <p className="dh-role">{candidate.appliedRole}</p>
+            {candidate.positionTitle && <p className="dh-role">Bağlı pozisyon: {candidate.positionTitle}</p>}
             <div className="dh-tags">
               <span className="tag-pill"><i aria-hidden="true" className="fa-solid fa-location-dot" /> {candidate.location || "Belirtilmedi"}</span>
               <span className="tag-pill"><i aria-hidden="true" className="fa-solid fa-briefcase" /> {candidate.experienceYears ?? 0} yıl deneyim</span>

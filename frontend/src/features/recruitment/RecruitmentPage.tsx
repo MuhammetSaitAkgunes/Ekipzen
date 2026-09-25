@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { PageError, PageLoading } from "../shared/PageState";
 import { CandidateDetail } from "./CandidateDetail";
 import { CandidateModal } from "./CandidateModal";
+import { PositionModal } from "./PositionModal";
 import { formatTimeAgo, scoreClass, statusTagClass } from "./format";
-import { useCandidates } from "./queries";
+import { useCandidates, usePositions } from "./queries";
 
 const FILTER_TABS: [string, string][] = [["", "Tümü"], ["Yeni", "Yeni"], ["Mülakat", "Mülakat"]];
 
@@ -13,6 +14,7 @@ export function RecruitmentPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [positionOpen, setPositionOpen] = useState(false);
 
   // Personel sayfasındaki server-side arama debounce deseni.
   useEffect(() => {
@@ -21,6 +23,7 @@ export function RecruitmentPage() {
   }, [search]);
 
   const candidatesQ = useCandidates(debouncedSearch, statusFilter);
+  const positionsQ = usePositions();
 
   if (candidatesQ.isPending) return <PageLoading />;
   if (candidatesQ.isError) return <PageError error={candidatesQ.error} />;
@@ -29,12 +32,34 @@ export function RecruitmentPage() {
   const activeId = selectedId ?? candidates[0]?.id ?? null;
 
   return (
-    <div id="ats-container">
+    <div className="ez-recruitment-page">
+      <section className="ez-recruitment-positions" aria-labelledby="recruitment-positions-title">
+        <div className="ez-recruitment-positions-head">
+          <div>
+            <h2 id="recruitment-positions-title">Açık pozisyonlar</h2>
+            <p>Pozisyonu açın, ardından adayı ilgili kayda bağlayın. Liste açık ve kapanmış kadroları gösterir.</p>
+          </div>
+          <button className="btn btn-secondary" onClick={() => setPositionOpen(true)}>Yeni pozisyon</button>
+        </div>
+        {positionsQ.isPending && <p className="pending-desc">Pozisyonlar yükleniyor.</p>}
+        {positionsQ.isError && <p className="form-error" role="alert">Pozisyonlar yüklenemedi. Adayı pozisyona bağlamadan önce listeyi yeniden yükleyin.</p>}
+        {positionsQ.data?.length === 0 && <p className="pending-desc">Henüz pozisyon yok. İlk açık kadroyu “Yeni pozisyon” ile oluşturun.</p>}
+        {positionsQ.data && positionsQ.data.length > 0 && <div className="ez-recruitment-position-list">
+          {positionsQ.data.map((position) => (
+            <div className="ez-recruitment-position-card" key={position.id}>
+              <strong>{position.title}</strong>
+              <span>{position.department || "Departman seçilmedi"}</span>
+              <span>{position.isOpen ? "Açık" : "Kapalı"} · {position.openCount ?? 0} açık kadro · {position.candidateCount ?? 0} bağlı aday</span>
+            </div>
+          ))}
+        </div>}
+      </section>
+      <div id="ats-container">
       <aside className="ats-sidebar">
         <div className="sidebar-header">
           <div>
             <h3>Aday Havuzu <span className="badge-count">{candidates.length}</span></h3>
-            <p>Aktif pozisyonlara göre sıralandı</p>
+            <p>Adaylar ve başvuru aşamaları</p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setCreateOpen(true)}>
             <i aria-hidden="true" className="fa-solid fa-plus" /> Yeni Aday
@@ -104,6 +129,8 @@ export function RecruitmentPage() {
       {createOpen && (
         <CandidateModal onClose={() => setCreateOpen(false)} onCreated={(id) => setSelectedId(id)} />
       )}
+      {positionOpen && <PositionModal onClose={() => setPositionOpen(false)} />}
+      </div>
     </div>
   );
 }
