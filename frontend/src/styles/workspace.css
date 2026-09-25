@@ -625,3 +625,11 @@
 @media (max-width: 640px) { .ez-compliance-document-review { padding: 16px; } }
 
 .ez-guidance-task-scope { margin: 0; padding: 12px 24px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+.ez-payroll-review { margin: 18px 0 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-payroll-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-payroll-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
+.ez-payroll-review strong { color: var(--ink); }
+.ez-payroll-review label { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; line-height: 1.45; }
+.ez-payroll-review label input { flex: 0 0 auto; margin-top: 4px; }
+@media (max-width: 640px) { .ez-payroll-review { padding: 16px; } }

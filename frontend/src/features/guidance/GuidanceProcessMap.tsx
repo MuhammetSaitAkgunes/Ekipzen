@@ -44,7 +44,7 @@ const processes: Process[] = [
   },
   {
     key: "payroll", title: "Bordro", purpose: "Dönemi, girdileri, hesaplamayı ve onayı ayrı aşamalar olarak izleyin.",
-    connection: "Uygulamadaki onay, dış ödeme veya bildirimin yapıldığını göstermez.", path: "/payroll", coverage: "screen",
+    connection: "Dönem açılışında son dönemi, onayda gerçek satırları kontrol edin; uygulama dış ödeme yapmaz.", path: "/payroll", coverage: "decision",
   },
   {
     key: "compliance", title: "Uyum ve belgeler", purpose: "Eksik veya süresi yaklaşan belge kayıtlarını inceleyin.",

@@ -9,7 +9,8 @@ import { CalculatorTab } from "./CalculatorTab";
 import { MyPayslipsView } from "./MyPayslipsView";
 import { PeriodTab } from "./PeriodTab";
 import { SettingsTab } from "./SettingsTab";
-import { useCreatePayrollPeriod, usePayrollPeriods, useSubmitPayrollPeriod } from "./queries";
+import { usePayrollPeriod, usePayrollPeriods, useSubmitPayrollPeriod } from "./queries";
+import { CreatePeriodModal, SubmitPeriodModal } from "./PayrollPeriodGuidance";
 
 const TABS = [
   { tab: "period", path: appPath("/payroll"), icon: "fa-table-list", label: "Dönem Bordrosu" },
@@ -31,6 +32,8 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
   const submitPeriod = useSubmitPayrollPeriod();
   const [periodId, setPeriodId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const periodDetailQ = usePayrollPeriod(tab === "period" ? periodId : null);
 
   useEffect(() => {
     if (periodId === null && (periodsQ.data ?? []).length > 0) {
@@ -44,16 +47,17 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
   const periods = periodsQ.data;
   const selected = periods.find((p) => p.id === periodId) ?? null;
 
+  const selectedDetail = periodDetailQ.data?.id === periodId ? periodDetailQ.data : null;
+  const canSubmit = selected?.status === "draft" || selected?.status === "control";
+
   const handleSubmitPeriod = async () => {
-    if (periodId === null) {
-      showToast("Önce bir bordro dönemi seçin.", "warning");
-      return;
-    }
+    if (periodId === null || !canSubmit) return;
     try {
       await submitPeriod.mutateAsync(periodId);
-      showToast("Dönem bordrosu onaylandı ve kapatıldı.", "success");
+      setSubmitOpen(false);
+      showToast("Dönem bordrosu onaylandı. Bu işlem ödeme veya dış bildirim yapmaz.", "success");
     } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Dönem gönderilemedi.", "error");
+      showToast(e instanceof ApiError ? e.message : "Dönem onaylanamadı.", "error");
     }
   };
 
@@ -76,7 +80,7 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
                 id="payroll-period-select"
                 className="small-select"
                 value={periodId ?? ""}
-                onChange={(e) => setPeriodId(Number(e.target.value))}
+                onChange={(e) => { setPeriodId(Number(e.target.value)); setSubmitOpen(false); }}
               >
                 {periods.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -90,9 +94,11 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
           <button className="btn btn-secondary" onClick={() => navigate(appPath("/payroll/calculator"))}>
             <i aria-hidden="true" className="fa-solid fa-calculator" /> Tekil hesapla
           </button>
-          <button className="btn btn-primary" onClick={handleSubmitPeriod} disabled={submitPeriod.isPending}>
-            <i aria-hidden="true" className="fa-solid fa-paper-plane" /> Onaya gönder
-          </button>
+          {tab === "period" && canSubmit && (
+            <button className="btn btn-primary" onClick={() => setSubmitOpen(true)} disabled={!selectedDetail || submitPeriod.isPending}>
+              <i aria-hidden="true" className="fa-solid fa-paper-plane" /> Dönemi onayla
+            </button>
+          )}
         </div>
       </div>
 
@@ -121,68 +127,11 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
       )}
 
       {createOpen && (
-        <CreatePeriodModal onClose={() => setCreateOpen(false)} onCreated={(id) => setPeriodId(id)} />
+        <CreatePeriodModal latest={periods[0] ?? null} onClose={() => setCreateOpen(false)} onCreated={(id) => setPeriodId(id)} />
       )}
-    </div>
-  );
-}
-
-function CreatePeriodModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
-  const { showToast } = useToast();
-  const createPeriod = useCreatePayrollPeriod();
-  const now = new Date();
-  const [year, setYear] = useState(String(now.getFullYear()));
-  const [month, setMonth] = useState(String(now.getMonth() + 1));
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async () => {
-    setError(null);
-    try {
-      const period = await createPeriod.mutateAsync({ year: Number(year), month: Number(month) });
-      showToast(`${period.name} bordro dönemi oluşturuldu.`, "success");
-      if (period.id !== undefined) onCreated(period.id);
-      onClose();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Dönem oluşturulamadı.");
-    }
-  };
-
-  return (
-    <div className="modal-overlay" style={{ display: "flex" }}>
-      <div className="modal-card scale-in">
-        <div className="modal-head">
-          <div>
-            <h3>Yeni Bordro Dönemi</h3>
-            <p>Aktif personel için girdi satırları otomatik oluşturulur.</p>
-          </div>
-          <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="Dönem penceresini kapat">
-            <i aria-hidden="true" className="fa-solid fa-xmark" />
-          </button>
-        </div>
-        <div className="modal-body-scroll">
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <div className="form-grid-2">
-            <div className="input-group">
-              <label className="input-label" htmlFor="pp-year">Yıl</label>
-              <input id="pp-year" type="number" className="input-control" value={year} onChange={(e) => setYear(e.target.value)} />
-            </div>
-            <div className="input-group">
-              <label className="input-label" htmlFor="pp-month">Ay</label>
-              <select id="pp-month" className="input-control" value={month} onChange={(e) => setMonth(e.target.value)}>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
-          <button className="btn btn-primary" onClick={submit} disabled={createPeriod.isPending}>
-            <i aria-hidden="true" className="fa-solid fa-check" /> Oluştur
-          </button>
-        </div>
-      </div>
+      {submitOpen && selectedDetail && (
+        <SubmitPeriodModal detail={selectedDetail} pending={submitPeriod.isPending} onClose={() => setSubmitOpen(false)} onSubmit={handleSubmitPeriod} />
+      )}
     </div>
   );
 }
