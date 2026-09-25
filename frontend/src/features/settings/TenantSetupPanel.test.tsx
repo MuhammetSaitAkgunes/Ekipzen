@@ -24,7 +24,13 @@ test("açık kurulumdan sonra durum yenilenir ve uzman onayı beklenir", async (
   vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
     Response.json(init?.method === "POST" ? { ...missing, needsInitialization: false } : missing)));
   renderPage(<TenantSetupPanel onInitialized={done} />);
-  await userEvent.click(await screen.findByRole("button", { name: "Eksik başlangıç kayıtlarını oluştur" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
+  expect(screen.getByRole("region", { name: "Başlangıç kayıtlarını oluşturmadan önce kontrol edin" })).toBeInTheDocument();
+  expect(screen.getByText(/4 eksik tür eklenecek/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" })).toBeDisabled();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByText("Başlangıç kayıtları mevcut.")).toBeInTheDocument();
   await waitFor(() => expect(done).toHaveBeenCalledOnce());
   expect(screen.getByText(/Yürürlükte onaylı bordro seti yok/)).toBeInTheDocument();
@@ -35,9 +41,11 @@ test("kurulum hatası görünür ve yeniden denemeye izin verir", async () => {
   vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
     init?.method === "POST" ? Response.json({ title: "Kurulum başarısız" }, { status: 500 }) : Response.json(missing)));
   renderPage(<TenantSetupPanel />);
-  await userEvent.click(await screen.findByRole("button", { name: "Eksik başlangıç kayıtlarını oluştur" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
+  await userEvent.click(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Kurulum başarısız");
-  expect(screen.getByRole("button", { name: "Eksik başlangıç kayıtlarını oluştur" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" })).toBeEnabled();
 });
 
 test("durum okuma hatasında kurulum butonu sunulmaz", async () => {

@@ -207,7 +207,11 @@ test("onaylı set yokken mevcut taslak ilk açılışta yüklenir ve sürümüyl
 test("boş şirket kurulumdan sonra ilk bordro taslağını açar", async () => {
   settingsStatus = 404;
   renderTab();
-  await userEvent.click(await screen.findByRole("button", { name: "Eksik başlangıç kayıtlarını oluştur" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
+    String(url) === "/api/setup" && init?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByLabelText("Brüt asgari ücret / SGK alt sınırı")).toHaveValue(33030);
   expect(screen.getByLabelText("Uzman inceleme kaydı")).toHaveValue("");
   expect(screen.getByRole("button", { name: /Mevzuat setini onayla/ })).toBeDisabled();
@@ -225,7 +229,7 @@ test("taslak okuma hatası boş şirket sanılmaz", async () => {
   draftsStatus = 500;
   renderTab();
   expect(await screen.findByRole("alert")).toHaveTextContent("Taslaklar okunamadı");
-  expect(screen.queryByRole("button", { name: "Eksik başlangıç kayıtlarını oluştur" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Kurulumu gözden geçir" })).not.toBeInTheDocument();
 });
 
 test("kaydedilmemiş parametre ve vergi dilimi değişikliği eski taslağın onayını kapatır", async () => {

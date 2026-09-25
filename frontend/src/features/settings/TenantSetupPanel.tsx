@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -7,6 +8,9 @@ type SetupStatus = components["schemas"]["TenantSetupStatusDto"];
 
 export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void }) {
   const queryClient = useQueryClient();
+  const actionInFlight = useRef(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
   const status = useQuery({ queryKey: ["tenant-setup"], queryFn: () => apiFetch<SetupStatus>("/setup") });
   const initialize = useMutation({
     mutationFn: () => apiFetch<SetupStatus>("/setup", { method: "POST" }),
@@ -17,6 +21,24 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
       onInitialized?.();
     },
   });
+
+  useEffect(() => {
+    setReviewing(false);
+    setAcknowledged(false);
+  }, [status.data]);
+
+  const confirmInitialize = async () => {
+    if (!reviewing || !acknowledged || !status.data?.needsInitialization
+      || initialize.isPending || actionInFlight.current) return;
+    actionInFlight.current = true;
+    try {
+      await initialize.mutateAsync();
+    } catch {
+      // Mutation error is rendered below; keep review visible for retry.
+    } finally {
+      actionInFlight.current = false;
+    }
+  };
 
   if (status.isError) return <PageError error={status.error} />;
   if (status.isPending) return <p role="status">Başlangıç kayıtları kontrol ediliyor…</p>;
@@ -32,9 +54,24 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
       {data.needsInitialization && (
         <>
           <p>Eksik izin türü: {data.missingLeaveTypeCount} · Eksik tam gün tatil: {data.missingFullDayHolidayCount}</p>
-          <button className="btn btn-primary" disabled={initialize.isPending} onClick={() => initialize.mutate()}>
-            {initialize.isPending ? "Kurulum yapılıyor…" : "Eksik başlangıç kayıtlarını oluştur"}
-          </button>
+          {reviewing && <section className="ez-setup-review" role="region" aria-label="Başlangıç kayıtlarını oluşturmadan önce kontrol edin">
+            <h4>Başlangıç kayıtlarını oluşturmadan önce kontrol edin</h4>
+            <p><strong>Şirket profili:</strong> {data.companyProfileExists ? "Mevcut, korunacak" : "Kiracı adıyla oluşturulacak"}</p>
+            <p><strong>İzin türleri:</strong> {data.missingLeaveTypeCount} eksik tür eklenecek. <strong>Tam gün tatiller:</strong> {data.missingFullDayHolidayCount} eksik tarih eklenecek.</p>
+            <p><strong>Bordro ayarı:</strong> {data.payrollSettingsExists ? "Mevcut set korunacak" : "Onaysız taslak oluşturulacak"}.</p>
+            <p>Bu işlem mevcut kayıtları değiştirmez. Şablon yılı {data.templateYear} için başlangıç verisidir; hukuki doğrulama veya bordro onayı değildir. Kurulumdan sonra izin türlerini, tatilleri ve bordro kurallarını şirketinizin gerçek durumuyla karşılaştırın.</p>
+            <label><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /> Eksik kayıtların oluşturulacağını ve uzman kontrolünün ayrıca gerektiğini anladım.</label>
+          </section>}
+          {reviewing
+            ? <div className="ez-setup-actions">
+              <button className="btn btn-ghost" disabled={initialize.isPending} onClick={() => { setReviewing(false); setAcknowledged(false); }}>Geri dön</button>
+              <button className="btn btn-primary" disabled={!acknowledged || initialize.isPending} onClick={() => void confirmInitialize()}>
+                {initialize.isPending ? "Kurulum yapılıyor…" : "Kontrol ettim, kayıtları oluştur"}
+              </button>
+            </div>
+            : <button className="btn btn-primary" disabled={initialize.isPending} onClick={() => setReviewing(true)}>
+              Kurulumu gözden geçir
+            </button>}
         </>
       )}
       {initialize.isError && <p role="alert">{initialize.error instanceof ApiError

@@ -606,3 +606,12 @@
 .ez-offboarding-review .checkbox-line { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; line-height: 1.45; }
 .ez-offboarding-review .checkbox-line input { flex: 0 0 auto; margin-top: 4px; }
 @media (max-width: 640px) { .ez-offboarding-guide, .ez-offboarding-review { padding: 16px; } }
+
+.ez-setup-review { margin: 16px 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-setup-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-setup-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
+.ez-setup-review strong { color: var(--ink); }
+.ez-setup-review label { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; line-height: 1.45; }
+.ez-setup-review label input { flex: 0 0 auto; margin-top: 4px; }
+.ez-setup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 640px) { .ez-setup-review { padding: 16px; } }
