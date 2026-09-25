@@ -62,10 +62,20 @@ test("mülakat notu ekleme POST notes ucuna gider", async () => {
   });
 });
 
-test("pipeline durumu PATCH status ucuna gider", async () => {
+test("pipeline aşaması gerekçeli ön kontrol ve teyitten sonra değişir", async () => {
   renderDetail();
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Teklif");
+  const review = screen.getByRole("region", { name: "Aday aşaması ön kontrolü" });
+  expect(review).toHaveTextContent("Mülakat → Teklif");
+  expect(review).toHaveTextContent("teklif belgesi hazırlamaz veya adaya göndermez");
+  expect(review).toHaveTextContent("teklif belgesinin gönderimini ayrıca doğrulayın");
+  expect(review).toHaveTextContent("önceki hareket geçmişte kalır");
+  expect(screen.getByRole("button", { name: /İşe Al/ })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Aşamayı kaydet" })).toBeDisabled();
+  expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/candidates/5/status")).toBe(false);
+  await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
+  await userEvent.click(screen.getByRole("button", { name: "Aşamayı kaydet" }));
   await waitFor(() => {
     const patched = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/candidates/5/status" && i?.method === "PATCH",
@@ -73,6 +83,31 @@ test("pipeline durumu PATCH status ucuna gider", async () => {
     expect(patched).toBeTruthy();
     expect(JSON.parse(String(patched![1]?.body))).toMatchObject({ status: "Teklif" });
   });
+});
+
+test("aşama seçimi vazgeçilince kayıt değişmez", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Red");
+  expect(screen.getByRole("region", { name: "Aday aşaması ön kontrolü" })).toHaveTextContent("adaya mesaj göndermez");
+  await userEvent.click(screen.getByRole("button", { name: "Vazgeç" }));
+  expect(screen.getByLabelText("Pipeline durumu")).toHaveValue("Mülakat");
+  expect(screen.getByRole("button", { name: /İşe Al/ })).toBeEnabled();
+  expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/candidates/5/status")).toBe(false);
+});
+
+test("başka işlem aday aşamasını değiştirdiyse eski kararı göndermez", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Teklif");
+  await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...detail, status: "Red" }), {
+    status: 200, headers: { "Content-Type": "application/json" },
+  })));
+  await userEvent.click(screen.getByRole("button", { name: "Aşamayı kaydet" }));
+  expect(await screen.findByText(/Adayın durumu bu sırada değişti/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Pipeline durumu")).toHaveValue("Red");
+  expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/candidates/5/status")).toBe(false);
 });
 
 test("işe alma ön kontrolünden sonra personel kaydı oluşturur ve kalan işe giriş adımına bağlar", async () => {

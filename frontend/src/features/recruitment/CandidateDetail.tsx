@@ -8,6 +8,20 @@ import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
 import { useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
 
+const STAGE_EXPLANATIONS: Record<string, string> = {
+  "Yeni": "Başvuruyu yeniden ilk inceleme sırasına alır; önceki notlar ve aşama geçmişi kalır.",
+  "Mülakat": "Adayı değerlendirme aşamasında gösterir; görüşme randevusu oluşturmaz.",
+  "Teklif": "Adayı teklif aşamasında gösterir; teklif belgesi hazırlamaz veya adaya göndermez.",
+  "Red": "Adayı reddedilmiş olarak işaretler ve bu durumdayken işe alma düğmesini kapatır; adaya mesaj göndermez.",
+};
+
+const STAGE_EXAMPLES: Record<string, string> = {
+  "Yeni": "Örneğin reddedilmiş başvuru yeniden incelenecekse ilk sıraya alınabilir; önceki red geçmişte görünmeye devam eder.",
+  "Mülakat": "Örneğin görüşme planlandıysa takvim davetinin gerçekten gönderildiğini ayrıca doğrulayın.",
+  "Teklif": "Örneğin ücret koşulları konuşulduysa bile teklif belgesinin gönderimini ayrıca doğrulayın.",
+  "Red": "Örneğin değerlendirme olumsuzsa adayın bilgilendirilmesini bu etiketin dışında takip edin.",
+};
+
 const TABS: [string, string][] = [
   ["cv", "Özgeçmiş"], ["notes", "Mülakat Notları"], ["eval", "Değerlendirme"], ["history", "Geçmiş"],
 ];
@@ -30,6 +44,8 @@ export function CandidateDetail({ id }: { id: number }) {
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState(NOTE_TYPES[0]);
   const [hireOpen, setHireOpen] = useState(false);
+  const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string } | null>(null);
+  const [statusConfirmed, setStatusConfirmed] = useState(false);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
 
@@ -45,12 +61,31 @@ export function CandidateDetail({ id }: { id: number }) {
   const isHired = candidate.status === "İşe Alındı" || hireOutcome !== null;
   const provisioning = candidate.provisioning;
 
-  const changeStatus = async (status: string) => {
+  const pendingStatus = statusReview?.candidateId === id && statusReview.from === (candidate.status ?? "Yeni") ? statusReview : null;
+
+  const prepareStatus = (status: string) => {
+    setStatusConfirmed(false);
+    setStatusReview(status === (candidate.status ?? "Yeni") ? null : {
+      candidateId: id, from: candidate.status ?? "Yeni", to: status,
+    });
+  };
+
+  const changeStatus = async () => {
+    if (!pendingStatus || !statusConfirmed || setStatus.isPending) return;
     try {
-      await setStatus.mutateAsync({ id, status });
-      showToast(`${candidate.name} durumu "${status}" olarak güncellendi.`, "success");
+      const latest = await detailQ.refetch();
+      if (latest.isError || !latest.data) throw new Error("Adayın güncel durumu okunamadı.");
+      if (latest.data.status !== pendingStatus.from) {
+        setStatusReview(null);
+        showToast("Adayın durumu bu sırada değişti. Güncel kaydı inceleyip yeniden karar verin.", "warning");
+        return;
+      }
+      await setStatus.mutateAsync({ id, status: pendingStatus.to });
+      setStatusReview(null);
+      setStatusConfirmed(false);
+      showToast(candidate.name + " için pipeline durumu " + pendingStatus.to + " olarak kaydedildi.", "success");
     } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Durum güncellenemedi.", "error");
+      showToast(e instanceof ApiError ? e.message : "Durum güncellenemedi; adayı yeniden kontrol edin.", "error");
     }
   };
 
@@ -106,20 +141,35 @@ export function CandidateDetail({ id }: { id: number }) {
           <select
             id="candidate-status"
             className="input-control"
-            value={isHired ? "" : candidate.status ?? "Yeni"}
+            value={isHired ? "" : (pendingStatus?.to ?? candidate.status ?? "Yeni")}
             disabled={isHired || setStatus.isPending}
-            onChange={(e) => changeStatus(e.target.value)}
+            onChange={(e) => prepareStatus(e.target.value)}
           >
             {isHired && <option value="">İşe Alındı</option>}
             {PIPELINE_STATUSES.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
-          <button className="btn btn-primary" disabled={isHired || candidate.status === "Red"} onClick={() => setHireOpen(true)}>
+          <button className="btn btn-primary" disabled={isHired || candidate.status === "Red" || pendingStatus !== null} onClick={() => setHireOpen(true)}>
             <i aria-hidden="true" className="fa-solid fa-thumbs-up" /> İşe Al
           </button>
         </div>
       </div>
+
+      {pendingStatus && <section className="ez-candidate-status-review" role="region" aria-label="Aday aşaması ön kontrolü">
+        <h3>Aşama değişikliğinden önce</h3>
+        <p><strong>Gerçek kayıt:</strong> {candidate.name} · {pendingStatus.from} → {pendingStatus.to}</p>
+        <p><strong>Ne olacak?</strong> {STAGE_EXPLANATIONS[pendingStatus.to]}</p>
+        <p><strong>Örnek:</strong> {STAGE_EXAMPLES[pendingStatus.to]}</p>
+        <p><strong>Neden kontrol ediyoruz?</strong> Mülakat notları, değerlendirme ve başvuru belgeleriyle bu aşamanın gerekçesini karşılaştırın. AI puanı tek başına karar kanıtı değildir.</p>
+        <p>Yanlış aşamayı kaydederseniz işe alınmamış adayın durumunu yeniden değiştirebilirsiniz; önceki hareket geçmişte kalır. İşe alınmış adayın aşaması bu alandan değiştirilemez.</p>
+        <p>Onaydan hemen önce sunucudaki mevcut aşama yeniden okunur; başka işlem araya girerse kararınızı yeniden değerlendirin.</p>
+        <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>
+        <div className="ez-candidate-status-actions">
+          <button className="btn btn-ghost" onClick={() => { setStatusReview(null); setStatusConfirmed(false); }}>Vazgeç</button>
+          <button className="btn btn-primary" onClick={changeStatus} disabled={!statusConfirmed || setStatus.isPending}>Aşamayı kaydet</button>
+        </div>
+      </section>}
 
       {candidate.status === "Red" && <p role="status" className="ez-hire-status-note">
         Reddedilmiş aday işe alınamaz. Karar değiştiyse önce pipeline durumunu güncelleyin.

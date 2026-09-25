@@ -24,7 +24,7 @@ const processes: Process[] = [
   },
   {
     key: "recruitment", title: "İşe alım", purpose: "Pozisyonu ve adayları değerlendirme aşamalarında izleyin.",
-    connection: "Adayın ilerlemesi ile çalışan kartının oluşmasını ayrı doğrulayın.", path: "/recruitment", coverage: "screen",
+    connection: "Aday aşamasını gerekçesiyle doğrulayın; teklif veya red etiketi tek başına dış iletişim değildir.", path: "/recruitment", coverage: "decision",
   },
   {
     key: "entry", title: "İşe giriş", purpose: "Gerçek çalışan kartını açıp temel iş bilgilerini doğrulayın.",
