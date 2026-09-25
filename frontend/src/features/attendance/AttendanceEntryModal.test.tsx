@@ -24,6 +24,13 @@ const renderModal = (rowId: number | null, initial?: typeof savedRow) =>
 test("yeni kayıt POST /attendance gövdesiyle gider", async () => {
   renderModal(null);
   await screen.findByText("Manuel Puantaj Girişi");
+  expect(screen.getByLabelText("Personel")).toHaveValue("");
+  expect(screen.getByLabelText("Tip")).toHaveValue("");
+  expect(screen.getByLabelText("Mola (dk)")).toHaveValue(null);
+  await screen.findByRole("option", { name: /Ahmet Yılmaz/ });
+  await userEvent.selectOptions(screen.getByLabelText("Personel"), "1");
+  await userEvent.selectOptions(screen.getByLabelText("Tip"), "Tam");
+  await userEvent.type(screen.getByLabelText("Mola (dk)"), "60");
   await userEvent.type(screen.getByLabelText("Tarih"), "2026-07-14");
   await userEvent.type(screen.getByLabelText("Giriş"), "09:00");
   await userEvent.type(screen.getByLabelText("Çıkış"), "18:00");
@@ -39,8 +46,24 @@ test("yeni kayıt POST /attendance gövdesiyle gider", async () => {
     expect(posted).toBeTruthy();
     const body = JSON.parse(String(posted![1]?.body));
     expect(body.employeeId).toBe(1);
-    expect(body.model).toMatchObject({ workDate: "2026-07-14", checkIn: "09:00", checkOut: "18:00", type: "Tam" });
+    expect(body.model).toMatchObject({ workDate: "2026-07-14", checkIn: "09:00", checkOut: "18:00", type: "Tam", breakMinutes: 60 });
   });
+});
+
+test("boş veya geçersiz mola süresi kayda dönüşmez", async () => {
+  renderModal(null);
+  await screen.findByRole("option", { name: /Ahmet Yılmaz/ });
+  await userEvent.selectOptions(screen.getByLabelText("Personel"), "1");
+  await userEvent.selectOptions(screen.getByLabelText("Tip"), "Tam");
+  await userEvent.type(screen.getByLabelText("Tarih"), "2026-07-14");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Mola süresini");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance" && i?.method === "POST")).toBe(false);
+
+  await userEvent.type(screen.getByLabelText("Mola (dk)"), "-1");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Mola süresini");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance" && i?.method === "POST")).toBe(false);
 });
 
 test("düzenleme PUT /attendance/{id} ile gider ve alanlar dolu gelir", async () => {
@@ -62,6 +85,8 @@ test("ön incelemeden geri dönünce kayıt gönderilmeden alanlar düzeltilebil
   renderModal(null);
   await screen.findByRole("option", { name: /Ahmet Yılmaz/ });
   await userEvent.selectOptions(screen.getByLabelText("Personel"), "1");
+  await userEvent.selectOptions(screen.getByLabelText("Tip"), "Rapor");
+  await userEvent.type(screen.getByLabelText("Mola (dk)"), "0");
   await userEvent.type(screen.getByLabelText("Tarih"), "2026-07-14");
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
   await userEvent.click(screen.getByRole("button", { name: "Düzelt" }));
