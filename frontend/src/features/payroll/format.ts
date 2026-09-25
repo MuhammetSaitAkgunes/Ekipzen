@@ -54,15 +54,18 @@ export const derivePayrollSteps = (
 ): PayrollStepView[] => {
   const approved = rows.filter((r) => r.approvalStatus === "Onaylandı").length;
   const waiting = rows.length - approved;
-  const totalWarnings = controls.reduce((total, c) => total + (c.value ?? 0), 0);
+  const totalWarnings = controls.reduce((total, c) => total + (c.label === "Onay Bekleyen" ? 0 : c.value ?? 0), 0);
   const periodDone = status === "approved" || status === "closed";
+  const allRowsReady = rows.every((row) =>
+    row.approvalStatus === "Onaya Hazır" || row.approvalStatus === "Onaylandı",
+  );
 
   return [
     { id: "prep", label: "Hazırlık", status: "done", meta: "Puantaj ve personel verisi" },
     { id: "calc", label: "Hesaplama", status: "done", meta: "Ön hesap oluşturuldu" },
     {
       id: "check", label: "Kontrol",
-      status: status === "draft" ? "active" : "done",
+      status: periodDone || (status === "control" && allRowsReady && totalWarnings === 0) ? "done" : "active",
       meta: `${totalWarnings} uyarı inceleniyor`,
     },
     {

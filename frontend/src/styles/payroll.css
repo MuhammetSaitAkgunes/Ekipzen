@@ -154,6 +154,16 @@
   align-items: start;
 }
 
+.ez-payroll-control-guide {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+.ez-payroll-control-guide p { margin: 7px 0; color: var(--text); line-height: 1.5; }
+.ez-payroll-control-guide strong { color: var(--ink); }
+
 .payroll-control-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

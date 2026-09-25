@@ -40,8 +40,15 @@ describe("derivePayrollSteps", () => {
     expect(steps[3].meta).toBe("3 kayıt bekliyor");
   });
 
-  test("kontrol döneminde onay adımı aktiftir", () => {
+  test("kontrol döneminde eksik satır varsa kontrol adımı aktif kalır", () => {
     const steps = derivePayrollSteps("control", rows(1, 3), controls);
+    expect(steps[2].status).toBe("active");
+    expect(steps[3].status).toBe("active");
+  });
+
+  test("kontrol döneminde bütün satırlar hazırsa kontrol adımı tamamlanır", () => {
+    const ready = [{ approvalStatus: "Onaya Hazır" }, { approvalStatus: "Onaylandı" }] as never[];
+    const steps = derivePayrollSteps("control", ready, []);
     expect(steps[2].status).toBe("done");
     expect(steps[3].status).toBe("active");
   });

@@ -35,14 +35,23 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
   const controls = detail.controls ?? [];
   const totals = detail.totals ?? {};
   const approvedCount = rows.filter((r) => r.approvalStatus === "Onaylandı").length;
+  const periodLocked = detail.status === "approved" || detail.status === "closed";
   const steps = derivePayrollSteps(detail.status ?? undefined, rows, controls);
   const departments = [...new Set(rows.map((r) => r.department ?? ""))].filter(Boolean);
   const visibleRows = deptFilter ? rows.filter((r) => r.department === deptFilter) : rows;
 
   const handleCheck = async () => {
     try {
-      await runCheck.mutateAsync(periodId);
-      showToast("Kontrol listesi işaretlendi; uyarılar denetim izine kaydedildi.", "success");
+      const result = await runCheck.mutateAsync(periodId);
+      const needsWork = (result.rows ?? []).filter((item) =>
+        item.approvalStatus !== "Onaya Hazır" && item.approvalStatus !== "Onaylandı",
+      ).length;
+      showToast(
+        needsWork > 0
+          ? "Kontrol çalıştı. " + needsWork + " satırda eksik veya yeniden incelenecek veri var."
+          : "Kontrol çalıştı. Satır durumlarını ve uyarıları gözden geçirin; henüz onay verilmedi.",
+        needsWork > 0 ? "warning" : "success",
+      );
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Kontrol çalıştırılamadı.", "error");
     }
@@ -82,7 +91,7 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
         <div className="card-header-clean">
           <div>
             <h4>Bordro Akışı</h4>
-            <p className="text-muted">Dönem kapanışı için adım adım operasyon takibi.</p>
+            <p className="text-muted">Dönem kontrolü ve onayı için adım adım operasyon takibi.</p>
           </div>
         </div>
         <div className="payroll-flow">
@@ -107,9 +116,14 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
               <h4>Kontrol Merkezi</h4>
               <p className="text-muted">Eksik veri, matrah ve onay uyarıları.</p>
             </div>
-            <button className="btn btn-secondary btn-sm" onClick={handleCheck} disabled={runCheck.isPending}>
-              <i aria-hidden="true" className="fa-solid fa-check-double" /> Kontrol edildi
-            </button>
+            {!periodLocked && <button className="btn btn-secondary btn-sm" onClick={handleCheck} disabled={runCheck.isPending}>
+              <i aria-hidden="true" className="fa-solid fa-check-double" /> {detail.status === "control" ? "Kontrolü yeniden çalıştır" : "Kontrolü çalıştır"}
+            </button>}
+          </div>
+          <div className="ez-payroll-control-guide">
+            <p><strong>Ne yapıyoruz?</strong> {rows.length} bordro satırının {rows.length - approvedCount} tanesi henüz onaylı değil. Kontrol, onaylanmamış satırların puantaj ve kümülatif matrahını sunucuda yeniler; satır durumlarını yeniden hesaplar.</p>
+            <p><strong>Neden?</strong> Eksik girdileri onaydan önce bulmak için. Dönemin Kontrol durumuna geçmesi, bütün uyarıların giderildiği veya bordronun onaylandığı anlamına gelmez.</p>
+            <p>{periodLocked ? "Bu dönem onaylı veya kapalı olduğu için kontrol yeniden çalıştırılamaz." : "Uyarı varsa ilgili satırın detayına dönün, kaydı düzeltin ve kontrolü yeniden çalıştırın. Bu adım ödeme veya dış bildirim yapmaz."}</p>
           </div>
           <div className="payroll-control-grid">
             {controls.map((control) => {

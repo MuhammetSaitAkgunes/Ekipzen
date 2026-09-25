@@ -76,14 +76,24 @@ test("kontrol merkezi backend kartlarını statik detaylarla gösterir", async (
   expect(screen.getByText("Ödeme listesine girmeden tamamlanmalı.")).toBeInTheDocument();
 });
 
-test("kontrol edildi butonu check ucuna gider", async () => {
+test("kontrol adımı etkisini açıklar, eksik satırı bildirir ve check ucuna gider", async () => {
   renderTab();
   await screen.findByText("Eksik IBAN");
-  await userEvent.click(screen.getByRole("button", { name: /Kontrol edildi/ }));
+  expect(screen.getByText(/Kontrol, onaylanmamış satırların puantaj/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Kontrolü çalıştır" }));
   await waitFor(() => {
     const hit = vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/payroll/periods/3/check");
     expect(hit).toBe(true);
   });
+  expect(await screen.findByText(/1 satırda eksik veya yeniden incelenecek veri var/)).toBeInTheDocument();
+});
+
+test("onaylı dönemde kontrol yeniden çalıştırılamaz", async () => {
+  stubApi({ "/api/payroll/periods/3": { ...detail, status: "approved" } });
+  renderTab();
+  expect(await screen.findByText("Onaylandı", { selector: ".sb-val" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Kontrolü çalıştır|Kontrolü yeniden çalıştır/ })).not.toBeInTheDocument();
+  expect(screen.getByText(/kontrol yeniden çalıştırılamaz/)).toBeInTheDocument();
 });
 
 test("tablo satırları ve departman filtresi çalışır", async () => {
