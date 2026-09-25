@@ -4,6 +4,8 @@
 
 Ana plan: [`../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md`](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md).
 
+Frontend sırasında doğrulanan backend bağımlılıkları: [API eksikleri](2026-09-25-ik-rehberi-backend-api-eksikleri.md). Backend geliştirmesi frontend aşamasından sonra ele alınacak.
+
 Her alt işlem için rehbere girmeden önce cevaplanacak sorular: Kim başlatabilir? Hangi kayıt önkoşul? Tamamlandığını hangi sunucu durumu kanıtlar? Hata hangi aşamada nasıl düzeltilir? Kullanıcının hangi kararı öğrenmesi gerekir? Uygulama dışındaki adım hangisidir?
 
 | Süreç | Kaynak ve mevcut alt işlemler | Rehberde bağlanacak karar ve kontrol | Henüz çözülmesi gerekenler |
