@@ -4,9 +4,16 @@ import { CandidateDetail } from "./CandidateDetail";
 import { CandidateModal } from "./CandidateModal";
 import { PositionModal } from "./PositionModal";
 import { formatTimeAgo, scoreClass, statusTagClass } from "./format";
-import { useCandidates, usePositions } from "./queries";
+import { useCandidates, usePositions, useRecruitmentFunnel, type RecruitmentFunnelDto } from "./queries";
 
-const FILTER_TABS: [string, string][] = [["", "Tümü"], ["Yeni", "Yeni"], ["Mülakat", "Mülakat"]];
+const STAGES: { status: string; label: string; count: keyof RecruitmentFunnelDto; explanation: string }[] = [
+  { status: "Yeni", label: "Yeni", count: "new", explanation: "Başvurular ilk inceleme sırasındadır; bu sayı tek başına gecikme veya yapılmış kontrol anlamına gelmez." },
+  { status: "Mülakat", label: "Mülakat", count: "interview", explanation: "Adaylar değerlendirme aşamasındadır; randevu veya davetin gönderildiğini bu etiket kanıtlamaz." },
+  { status: "Teklif", label: "Teklif", count: "offer", explanation: "Adaylar teklif aşamasındadır; teklif belgesinin hazırlanıp gönderildiğini ayrıca doğrulayın." },
+  { status: "Red", label: "Red", count: "rejected", explanation: "Adaylar red aşamasındadır; aday iletişiminin tamamlandığını bu etiket göstermez." },
+  { status: "İşe Alındı", label: "İşe Alındı", count: "hired", explanation: "Adaylar çalışan kaydına dönüştürülmüştür; kalan işe giriş adımlarını personel kartında kontrol edin." },
+];
+const FILTER_TABS: [string, string][] = [["", "Tümü"], ...STAGES.map((stage): [string, string] => [stage.status, stage.label])];
 
 export function RecruitmentPage() {
   const [search, setSearch] = useState("");
@@ -24,12 +31,14 @@ export function RecruitmentPage() {
 
   const candidatesQ = useCandidates(debouncedSearch, statusFilter);
   const positionsQ = usePositions();
+  const funnelQ = useRecruitmentFunnel();
 
   if (candidatesQ.isPending) return <PageLoading />;
   if (candidatesQ.isError) return <PageError error={candidatesQ.error} />;
 
   const candidates = candidatesQ.data;
-  const activeId = selectedId ?? candidates[0]?.id ?? null;
+  const activeId = candidates.find((candidate) => candidate.id === selectedId)?.id ?? candidates[0]?.id ?? null;
+  const activeStage = STAGES.find((stage) => stage.status === statusFilter);
 
   return (
     <div className="ez-recruitment-page">
@@ -53,6 +62,24 @@ export function RecruitmentPage() {
             </div>
           ))}
         </div>}
+      </section>
+      <section className="ez-recruitment-funnel" aria-labelledby="recruitment-funnel-title">
+        <h2 id="recruitment-funnel-title">Aday aşamaları</h2>
+        <p>Bu sayılar adayların şu anki aşamalarını gösterir; tarihsel geçiş veya işe alım dönüşüm oranı değildir.</p>
+        {funnelQ.isPending && <p className="pending-desc">Aşama sayıları yükleniyor.</p>}
+        {funnelQ.isError && <p className="form-error" role="alert">Aşama sayıları yüklenemedi. Aday listesindeki filtreleri kullanabilirsiniz.</p>}
+        {funnelQ.data && <div className="ez-recruitment-funnel-list">
+          <button className="ez-recruitment-funnel-card" aria-label={"Tümü: " + (funnelQ.data.total ?? 0) + " aday"} aria-pressed={statusFilter === ""} onClick={() => setStatusFilter("")}>
+            <strong>Tümü</strong><span>{funnelQ.data.total ?? 0} aday</span>
+          </button>
+          {STAGES.map((stage) => (
+            <button key={stage.status} className="ez-recruitment-funnel-card" aria-label={stage.label + ": " + (funnelQ.data?.[stage.count] ?? 0) + " aday"} aria-pressed={statusFilter === stage.status}
+              onClick={() => setStatusFilter(stage.status)}>
+              <strong>{stage.label}</strong><span>{funnelQ.data?.[stage.count] ?? 0} aday</span>
+            </button>
+          ))}
+        </div>}
+        {activeStage && <p className="ez-recruitment-stage-explanation" role="status">{activeStage.explanation}</p>}
       </section>
       <div id="ats-container">
       <aside className="ats-sidebar">
@@ -127,7 +154,7 @@ export function RecruitmentPage() {
       </main>
 
       {createOpen && (
-        <CandidateModal onClose={() => setCreateOpen(false)} onCreated={(id) => setSelectedId(id)} />
+        <CandidateModal onClose={() => setCreateOpen(false)} onCreated={(id) => { setStatusFilter(""); setSearch(""); setSelectedId(id); }} />
       )}
       {positionOpen && <PositionModal onClose={() => setPositionOpen(false)} />}
       </div>

@@ -678,3 +678,14 @@
 .ez-position-guide p, .ez-position-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
 .ez-position-guide strong, .ez-position-review strong { color: var(--ink); }
 @media (max-width: 640px) { .ez-recruitment-positions-head { flex-direction: column; } .ez-position-guide, .ez-position-review { padding: 16px; } }
+.ez-recruitment-funnel { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ez-recruitment-funnel h2 { margin: 0 0 6px; color: var(--ink); font-size: 18px; }
+.ez-recruitment-funnel p { margin: 0; color: var(--text); line-height: 1.5; }
+.ez-recruitment-funnel-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.ez-recruitment-funnel-card { display: grid; gap: 5px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-soft); color: var(--text); text-align: left; cursor: pointer; }
+.ez-recruitment-funnel-card strong { color: var(--ink); }
+.ez-recruitment-funnel-card[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); }
+.ez-recruitment-funnel-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.ez-recruitment-funnel .ez-recruitment-stage-explanation { margin-top: 14px; }
+@media (max-width: 980px) { .ez-recruitment-funnel-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .ez-recruitment-funnel-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

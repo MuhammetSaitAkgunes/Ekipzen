@@ -10,6 +10,7 @@ export type HireResultDto = components["schemas"]["HireResultDto"];
 export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
 export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
 export type PositionDto = components["schemas"]["PositionDto"];
+export type RecruitmentFunnelDto = components["schemas"]["RecruitmentFunnelDto"];
 export type CreatePositionCommand = components["schemas"]["CreatePositionCommand"];
 
 const candidatesPath = (search: string, status: string): string => {
@@ -31,6 +32,12 @@ export const useCandidate = (id: number | null) =>
     queryKey: ["recruitment", "candidate", id],
     queryFn: () => apiFetch<CandidateDetailDto>(`/candidates/${id}`),
     enabled: id !== null,
+  });
+
+export const useRecruitmentFunnel = () =>
+  useQuery({
+    queryKey: ["recruitment", "funnel"],
+    queryFn: () => apiFetch<RecruitmentFunnelDto>("/recruitment/funnel"),
   });
 
 export const usePositions = () =>
