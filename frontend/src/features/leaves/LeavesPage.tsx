@@ -22,6 +22,8 @@ function PersonalLeaves() {
   const { showToast } = useToast();
   const [params, setParams] = useSearchParams();
   const [modalOpen, setModalOpen] = useState(params.get("new") === "1");
+  const [cancelReviewId, setCancelReviewId] = useState<number | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const closeRequest = () => { setModalOpen(false); const next = new URLSearchParams(params); next.delete("new"); setParams(next, { replace: true }); };
   const balanceQ = useLeaveBalance();
   const ledgerQ = useLeaveLedger();
@@ -44,14 +46,24 @@ function PersonalLeaves() {
   const progress = entitlement > 0 ? Math.round((remaining / entitlement) * 100) : 0;
   const pendingLeaves = myLeaves.filter((l) => l.status === "pending");
   const firstPending = pendingLeaves[0];
+  const cancelTarget = myLeaves.find((leave) => leave.id === cancelReviewId
+    && (leave.status === "pending" || leave.status === "approved"));
 
-  const handleCancel = async (id: number | undefined, type: string) => {
-    if (id === undefined) return;
+  const prepareCancel = (id: number | undefined) => {
+    if (id === undefined || cancelLeave.isPending) return;
+    setCancelError(null);
+    setCancelReviewId(id);
+  };
+
+  const handleCancel = async () => {
+    if (!cancelTarget?.id || cancelLeave.isPending) return;
+    setCancelError(null);
     try {
-      await cancelLeave.mutateAsync(id);
-      showToast(`${type} talebi iptal edildi.`, "info");
+      await cancelLeave.mutateAsync(cancelTarget.id);
+      setCancelReviewId(null);
+      showToast("İzin talebi iptal edildi. Güncel durumu ve bakiyeyi kontrol edin.", "info");
     } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Talep iptal edilemedi.", "error");
+      setCancelError(e instanceof ApiError ? e.message : "Talep iptal edilemedi. Güncel durumunu kontrol edip tekrar deneyin.");
     }
   };
 
@@ -67,6 +79,11 @@ function PersonalLeaves() {
         </button>
       </div>
 
+      <section className="ez-leave-overview" aria-label="İzin bakiyesi rehberi">
+        <strong>Bu ekranı nasıl okuyacağım?</strong>
+        <p>Kalan bakiye izin defterindeki hak ediş, kullanım ve iade hareketlerinden gelir. Bekleyen taleplerin rezervasyonu ayrıca gösterilir; yeni bir talebin uygunluğu sunucuda yeniden kontrol edilir.</p>
+        <p>Örneğin onaylı yıllık izni yanlış tarihle oluşturduysanız talebi iptal edip doğru tarihlerle yeni talep açın. İptal eski kaydı silmez; bakiyeden düşen kullanım için deftere iade hareketi eklenir.</p>
+      </section>
       <div className="balance-grid">
         <div className="bal-card primary">
           <div className="bal-header">
@@ -144,7 +161,9 @@ function PersonalLeaves() {
                           className="btn-icon-sm"
                           title="Talebi iptal et"
                           aria-label={`${leave.leaveTypeName} talebini iptal et`}
-                          onClick={() => handleCancel(leave.id, leave.leaveTypeName ?? "İzin")}
+                          onClick={() => prepareCancel(leave.id)}
+                          disabled={cancelLeave.isPending}
+                          aria-expanded={cancelReviewId === leave.id}
                         >
                           <i aria-hidden="true" className="fa-solid fa-trash" />
                         </button>
@@ -155,6 +174,28 @@ function PersonalLeaves() {
               </tbody>
             </table>
           </div>
+          {cancelReviewId !== null && !cancelTarget && (
+            <div className="ez-leave-cancel-review" role="status">
+              <p>Seçilen talep artık iptal edilebilir durumda görünmüyor. Güncel listeyi kontrol edin.</p>
+              <button className="btn btn-ghost" onClick={() => setCancelReviewId(null)}>Kapat</button>
+            </div>
+          )}
+          {cancelTarget && (
+            <section className="ez-leave-cancel-review" role="region" aria-labelledby="leave-cancel-review-title">
+              <h4 id="leave-cancel-review-title">Talebi iptal etmeden önce</h4>
+              <p><strong>Talep:</strong> {cancelTarget.leaveTypeName ?? "İzin"} · {formatLeaveDate(cancelTarget.startDate)} – {formatLeaveDate(cancelTarget.endDate)} · {cancelTarget.days} iş günü</p>
+              <p><strong>Şu anki durum:</strong> {LEAVE_STATUS_TEXT[cancelTarget.status ?? ""] ?? cancelTarget.status}</p>
+              {cancelTarget.status === "pending"
+                ? <p>Bekleyen talep iptal edilir. Yıllık bakiyeden rezervasyon yapıldıysa bu rezervasyon kalkar.</p>
+                : <p>Onaylı talep iptal edilir. Bu tür yıllık bakiyeden düşüyorsa sunucu silinmeyen kullanım kaydına karşılık iade hareketi ekler.</p>}
+              <p>İptal, talebin tarihini veya türünü düzenlemez. Düzeltme gerekiyorsa doğru bilgilerle yeni bir talep oluşturun; yeni talep yeniden kontrol ve onay sürecine girer.</p>
+              {cancelError && <p className="form-error" role="alert">{cancelError}</p>}
+              <div className="ez-leave-cancel-actions">
+                <button className="btn btn-ghost" onClick={() => { setCancelReviewId(null); setCancelError(null); }} disabled={cancelLeave.isPending}>İptalden vazgeç</button>
+                <button className="btn btn-primary" onClick={handleCancel} disabled={cancelLeave.isPending}>Talebi iptal etmeyi onayla</button>
+              </div>
+            </section>
+          )}
         </div>
 
 

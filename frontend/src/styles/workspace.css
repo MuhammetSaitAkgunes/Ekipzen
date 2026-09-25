@@ -580,3 +580,11 @@
 .ez-leave-request-review { margin: 18px 0 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
 .ez-leave-request-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
 @media (max-width: 640px) { .ez-leave-request-guide, .ez-leave-request-review { padding: 16px; } }
+
+.ez-leave-overview { margin: 0 0 20px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-leave-overview strong, .ez-leave-cancel-review strong { color: var(--ink); }
+.ez-leave-overview p, .ez-leave-cancel-review p { margin: 9px 0; color: var(--text); line-height: 1.55; }
+.ez-leave-cancel-review { margin-top: 18px; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-leave-cancel-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-leave-cancel-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+@media (max-width: 640px) { .ez-leave-overview, .ez-leave-cancel-review { padding: 16px; } }

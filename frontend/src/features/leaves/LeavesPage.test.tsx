@@ -64,14 +64,29 @@ test("hak ediş ve kullanım izin defterinde görünür", async () => {
   expect(screen.getByText("-5 gün")).toBeInTheDocument();
 });
 
-test("iptal isteği cancel ucuna gider", async () => {
+test("bekleyen talep önce açıklanır, onaydan sonra yalnız bir kez iptal edilir", async () => {
   renderLeaves();
   await screen.findByText("Mazeret İzni");
   await userEvent.click(screen.getByRole("button", { name: "Mazeret İzni talebini iptal et" }));
+  expect(screen.getByRole("region", { name: "Talebi iptal etmeden önce" })).toHaveTextContent("Bekleyen talep iptal edilir");
+  expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/leaves/2/cancel")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Talebi iptal etmeyi onayla" }));
   await waitFor(() => {
-    const posted = vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/leaves/2/cancel");
-    expect(posted).toBe(true);
+    const posted = vi.mocked(fetch).mock.calls.filter(([u, init]) => String(u) === "/api/leaves/2/cancel" && init?.method === "POST");
+    expect(posted).toHaveLength(1);
   });
+  expect(await screen.findByText(/İzin talebi iptal edildi/)).toBeInTheDocument();
+});
+
+test("onaylı talep için iade koşulu açıklanır; vazgeçince istek gitmez", async () => {
+  renderLeaves();
+  await screen.findByText("Yıllık İzin");
+  await userEvent.click(screen.getByRole("button", { name: "Yıllık İzin talebini iptal et" }));
+  expect(screen.getByRole("region", { name: "Talebi iptal etmeden önce" })).toHaveTextContent("Onaylı talep iptal edilir");
+  expect(screen.getByText(/iade hareketi ekler/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "İptalden vazgeç" }));
+  expect(screen.queryByRole("region", { name: "Talebi iptal etmeden önce" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/leaves/1/cancel")).toBe(false);
 });
 
 test("ekip yokluk widget'ı dolar", async () => {
