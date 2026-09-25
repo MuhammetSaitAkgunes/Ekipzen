@@ -304,6 +304,10 @@
   display: flex;
 }
 
+.ez-payroll-row-overlay {
+  z-index: 1100;
+}
+
 .payroll-detail-panel {
   width: min(980px, 100%);
   height: 100%;
@@ -687,4 +691,13 @@
   .payroll-detail-panel {
     padding: 18px;
   }
+}
+
+.ez-payroll-unsaved-note {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-soft);
 }

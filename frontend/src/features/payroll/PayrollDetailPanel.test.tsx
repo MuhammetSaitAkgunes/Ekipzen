@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -35,6 +35,7 @@ const baseRow: PayrollRowDto = {
 };
 
 beforeEach(() => stubApi({
+  "/api/payroll/periods/3": { id: 3, name: "Temmuz 2026", rows: [baseRow] },
   "/api/payroll/periods/3/rows/7": { ...baseRow },
   "/api/payroll/periods/3/rows/7/approve": { ...baseRow, approvalStatus: "Onaylandı" },
   "/api/payroll/periods/3/rows/7/payslip": {},
@@ -93,13 +94,49 @@ test("girdi kaydetme tüm zorunlu sınıflandırmalarla PUT ucuna gider", async 
   });
 });
 
-test("satırı onayla approve ucuna gider", async () => {
+test("satır onayı güncel kayıt incelemesi ve açık teyitten sonra gider", async () => {
   renderPanel();
   await userEvent.click(screen.getByRole("button", { name: /Satırı onayla/ }));
+  const dialog = await screen.findByRole("dialog", { name: "Bordro satırı onay ön kontrolü" });
+  expect(within(dialog).getByText(/Kaydedilmiş durum/)).toBeInTheDocument();
+  expect(within(dialog).getByText("Kontrol bekliyor")).toBeInTheDocument();
+  expect(within(dialog).getByRole("button", { name: "Onayı tamamla" })).toBeDisabled();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/payroll/periods/3/rows/7/approve")).toBe(false);
+  await userEvent.click(within(dialog).getByLabelText("Kaydedilmiş satırı ve kaynak bilgilerini kontrol ettim."));
+  await userEvent.click(within(dialog).getByRole("button", { name: "Onayı tamamla" }));
   await waitFor(() => {
     const hit = vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/payroll/periods/3/rows/7/approve");
     expect(hit).toBe(true);
   });
+});
+
+test("ön kontrolde ekran açıldıktan sonra sunucuda değişen tutarı gösterir", async () => {
+  stubApi({
+    "/api/payroll/periods/3": {
+      id: 3, name: "Temmuz 2026",
+      rows: [{ ...baseRow, grossEarnings: 130000, netPay: 91000 }],
+    },
+    "/api/payroll/periods/3/rows/7/approve": { ...baseRow, approvalStatus: "Onaylandı" },
+  });
+  renderPanel();
+  await userEvent.click(screen.getByRole("button", { name: /Satırı onayla/ }));
+  const dialog = await screen.findByRole("dialog", { name: "Bordro satırı onay ön kontrolü" });
+  expect(within(dialog).getByText(/130.000/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/91.000/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) =>
+    String(url) === "/api/payroll/periods/3",
+  )).toBe(true);
+});
+
+test("kaydedilmemiş alan değişikliği eski bordro satırını onaylatmaz", async () => {
+  renderPanel();
+  const gross = screen.getByLabelText("Aylık brüt ücret");
+  await userEvent.clear(gross);
+  await userEvent.type(gross, "120000");
+  await userEvent.click(screen.getByRole("button", { name: /Satırı onayla/ }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Kaydedilmemiş değişiklikler var");
+  expect(screen.queryByRole("dialog", { name: "Bordro satırı onay ön kontrolü" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/payroll/periods/3/rows/7/approve")).toBe(false);
 });
 
 test("onaylı satırda düzenleme formu gizli, PDF butonu görünür", async () => {

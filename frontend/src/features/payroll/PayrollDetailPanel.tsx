@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ApiError, apiDownload } from "../../api/client";
+import { ApiError, apiDownload, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { formatPayrollMoney, formatPayrollNumber, payrollStatusClass } from "./format";
-import { useApprovePayrollRow, useUpdatePayrollRow, type PayrollRowDto } from "./queries";
+import { useApprovePayrollRow, useUpdatePayrollRow, type PayrollPeriodDetailDto, type PayrollRowDto } from "./queries";
 
 const Line = ({ label, value, tone = "" }: { label: string; value?: number; tone?: string }) => (
   <div className={`payroll-line ${tone}`}><span>{label}</span><strong>{formatPayrollMoney(value)}</strong></div>
@@ -73,6 +73,11 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     ibanComplete: row.ibanComplete ?? true,
     notes: row.notes ?? "",
   });
+  const [savedForm] = useState(form);
+  const [reviewRow, setReviewRow] = useState<PayrollRowDto | null>(null);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const hasUnsavedChanges = JSON.stringify(form) !== JSON.stringify(savedForm);
 
   const rowId = row.id!;
   const isApproved = row.approvalStatus === "Onaylandı";
@@ -124,7 +129,32 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     }
   };
 
+  const openApprovalReview = async () => {
+    setError(null);
+    if (hasUnsavedChanges) {
+      setError("Kaydedilmemiş değişiklikler var. Önce Kaydet ile sunucuya yazın, sonra satırı yeniden açıp onaylayın.");
+      showToast("Önce bordro değişikliklerini kaydedin ve satırı yeniden açın.", "warning");
+      return;
+    }
+    setReviewLoading(true);
+    try {
+      const detail = await apiFetch<PayrollPeriodDetailDto>("/payroll/periods/" + periodId);
+      const current = detail.rows?.find((item) => item.id === rowId);
+      if (!current) throw new Error("Satır artık bu dönemde bulunamadı.");
+      if (current.approvalStatus === "Onaylandı") throw new Error("Satır başka bir işlemde onaylandı. Dönem listesini yenileyin.");
+      setReviewRow(current);
+      setReviewConfirmed(false);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Satır yeniden okunamadı.";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const approve = async () => {
+    if (!reviewRow || !reviewConfirmed || hasUnsavedChanges) return;
     setError(null);
     try {
       await approveRow.mutateAsync({ periodId, rowId });
@@ -316,6 +346,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
         </section>
       </div>
 
+      {hasUnsavedChanges && !isApproved && <p className="ez-payroll-unsaved-note" role="status">Bu formda kaydedilmemiş değişiklikler var. Önce Kaydet ile sunucuya yazın; ardından satırı yeniden açıp onaylayın.</p>}
       <div className="payroll-detail-footer">
         <button className="btn btn-secondary" onClick={onClose}>Kapat</button>
         {isApproved ? (
@@ -323,10 +354,37 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
         ) : (
           <>
             <button className="btn btn-secondary" onClick={save} disabled={updateRow.isPending}><i aria-hidden="true" className="fa-solid fa-floppy-disk" /> Kaydet</button>
-            <button className="btn btn-primary" onClick={approve} disabled={approveRow.isPending}><i aria-hidden="true" className="fa-solid fa-shield-halved" /> Satırı onayla</button>
+            <button className="btn btn-primary" onClick={openApprovalReview} disabled={approveRow.isPending || reviewLoading}><i aria-hidden="true" className="fa-solid fa-shield-halved" /> Satırı onayla</button>
           </>
         )}
       </div>
+      {reviewRow && (
+        <div className="modal-overlay ez-payroll-row-overlay" style={{ display: "flex" }}>
+          <div className="modal-card scale-in" role="dialog" aria-modal="true" aria-label="Bordro satırı onay ön kontrolü">
+            <div className="modal-head">
+              <div><h3>Satır onayı ön kontrolü</h3><p>Sunucudan yeniden okunan bordro kaydı</p></div>
+              <button className="btn-icon-sm" onClick={() => setReviewRow(null)} aria-label="Ön kontrolü kapat"><i aria-hidden="true" className="fa-solid fa-xmark" /></button>
+            </div>
+            <div className="modal-body-scroll">
+              {error && <p className="form-error" role="alert">{error}</p>}
+              <div className="ez-payroll-review">
+                <h4>{reviewRow.name} · {periodName}</h4>
+                <p><strong>Kaydedilmiş durum:</strong> {reviewRow.approvalStatus} · <strong>Brüt kazanç:</strong> {formatPayrollMoney(reviewRow.grossEarnings)} · <strong>Net ücret:</strong> {formatPayrollMoney(reviewRow.netPay)}</p>
+                <p><strong>Ne yapıyoruz?</strong> Satırın hesap sonucu onaylı kayıt olarak saklanır. Onaydan sonra bu satırın girdileri bu ekranda değiştirilemez.</p>
+                <p><strong>Neden kontrol ediyoruz?</strong> Gerçek ücret ve yan ödeme belgelerini, puantajı, IBAN bilgisini, matrahları ve sınıflandırmaları kaynak kayıtlarla karşılaştırın.</p>
+                <p><strong>Puantaj:</strong> {reviewRow.timesheetComplete ? "Sistem kontrolü tamam" : "Sistem kontrolünde eksik"} · <strong>IBAN:</strong> {reviewRow.ibanComplete ? "Tamam" : "Eksik"}</p>
+                {(reviewRow.warnings ?? []).length > 0 && <div><strong>Hesap uyarıları:</strong><ul>{reviewRow.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
+                <p>Bu ön kontrol, sunucunun nihai onay kurallarının yerine geçmez. Eksik veya hatalı kayıt varsa geri dönüp düzeltin; sunucu onay sırasında yeniden denetler.</p>
+                <label><input type="checkbox" checked={reviewConfirmed} onChange={(e) => setReviewConfirmed(e.target.checked)} /> Kaydedilmiş satırı ve kaynak bilgilerini kontrol ettim.</label>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setReviewRow(null)}>Düzeltmeye dön</button>
+              <button className="btn btn-primary" onClick={approve} disabled={!reviewConfirmed || approveRow.isPending}>Onayı tamamla</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
