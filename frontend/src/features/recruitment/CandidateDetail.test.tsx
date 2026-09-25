@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -50,7 +50,13 @@ test("mülakat notu ekleme POST notes ucuna gider", async () => {
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.click(screen.getByRole("button", { name: "Mülakat Notları" }));
   await userEvent.type(screen.getByLabelText("Mülakat notu"), "Teknik derinlik iyi.");
-  await userEvent.click(screen.getByRole("button", { name: "Not Ekle" }));
+  await userEvent.click(screen.getByRole("button", { name: "Notu kontrol et" }));
+  const review = screen.getByRole("region", { name: "Mülakat notu ön kontrolü" });
+  expect(review).toHaveTextContent("Burak Yılmaz");
+  expect(review).toHaveTextContent("Teknik Mülakat");
+  expect(review).toHaveTextContent("Teknik derinlik iyi.");
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Notu kaydet" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/candidates/5/notes" && i?.method === "POST",
@@ -60,6 +66,30 @@ test("mülakat notu ekleme POST notes ucuna gider", async () => {
       noteType: "Teknik Mülakat", text: "Teknik derinlik iyi.",
     });
   });
+});
+
+test("boş veya uzun mülakat notu kaydedilmez", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Mülakat Notları" }));
+  await userEvent.click(screen.getByRole("button", { name: "Notu kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Önce not içeriğini yazın.");
+  fireEvent.change(screen.getByLabelText("Mülakat notu"), { target: { value: "a".repeat(4001) } });
+  await userEvent.click(screen.getByRole("button", { name: "Notu kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("en fazla 4000 karakter");
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+});
+
+test("not değişince önceki ön kontrol geçersiz olur", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Mülakat Notları" }));
+  await userEvent.type(screen.getByLabelText("Mülakat notu"), "İlk gözlem.");
+  await userEvent.click(screen.getByRole("button", { name: "Notu kontrol et" }));
+  await userEvent.selectOptions(screen.getByLabelText("Not türü"), "İK Görüşmesi");
+  expect(screen.queryByRole("button", { name: "Notu kaydet" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Notu kontrol et" })).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
 });
 
 test("pipeline aşaması gerekçeli ön kontrol ve teyitten sonra değişir", async () => {

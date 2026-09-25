@@ -26,6 +26,13 @@ const TABS: [string, string][] = [
   ["cv", "Özgeçmiş"], ["notes", "Mülakat Notları"], ["eval", "Değerlendirme"], ["history", "Geçmiş"],
 ];
 
+type InterviewNoteReview = {
+  candidateId: number;
+  candidateName: string;
+  noteType: string;
+  text: string;
+};
+
 const initialsOf = (name?: string | null): string =>
   (name ?? "")
     .split(" ")
@@ -43,11 +50,19 @@ export function CandidateDetail({ id }: { id: number }) {
   const [tab, setTab] = useState("cv");
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState(NOTE_TYPES[0]);
+  const [noteReview, setNoteReview] = useState<InterviewNoteReview | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [hireOpen, setHireOpen] = useState(false);
   const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string } | null>(null);
   const [statusConfirmed, setStatusConfirmed] = useState(false);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
+
+  useEffect(() => {
+    setNoteReview(null);
+    setNoteText("");
+    setNoteError(null);
+  }, [id]);
 
   useEffect(() => {
     const email = detailQ.data?.provisioning?.email;
@@ -62,6 +77,7 @@ export function CandidateDetail({ id }: { id: number }) {
   const provisioning = candidate.provisioning;
 
   const pendingStatus = statusReview?.candidateId === id && statusReview.from === (candidate.status ?? "Yeni") ? statusReview : null;
+  const pendingNote = noteReview?.candidateId === id && noteReview.candidateName === candidate.name ? noteReview : null;
 
   const prepareStatus = (status: string) => {
     setStatusConfirmed(false);
@@ -89,18 +105,30 @@ export function CandidateDetail({ id }: { id: number }) {
     }
   };
 
-  const submitNote = async () => {
+  const prepareNote = () => {
     const text = noteText.trim();
+    setNoteError(null);
     if (!text) {
-      showToast("Önce not içeriğini yazın.", "warning");
+      setNoteError("Önce not içeriğini yazın.");
       return;
     }
+    if (text.length > 4000) {
+      setNoteError("Mülakat notu en fazla 4000 karakter olabilir.");
+      return;
+    }
+    setNoteReview({ candidateId: id, candidateName: candidate.name ?? "", noteType, text });
+  };
+
+  const submitNote = async () => {
+    if (!pendingNote || addNote.isPending) return;
+    setNoteError(null);
     try {
-      await addNote.mutateAsync({ id, noteType, text });
+      await addNote.mutateAsync({ id: pendingNote.candidateId, noteType: pendingNote.noteType, text: pendingNote.text });
+      setNoteReview(null);
       setNoteText("");
       showToast("Mülakat notu eklendi.", "success");
     } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Not eklenemedi.", "error");
+      setNoteError(e instanceof ApiError ? e.message : "Not eklenemedi.");
     }
   };
 
@@ -260,24 +288,37 @@ export function CandidateDetail({ id }: { id: number }) {
         {tab === "notes" && (
           <div id="tab-notes" className="tab-content active">
             <div className="notes-container">
+              <section className="ez-interview-note-guide" aria-label="Mülakat notu rehberi">
+                <p><strong>Ne yapıyoruz?</strong> Görüşmede gözlediğiniz iş ile ilgili bilgiyi aday kaydına ekliyoruz. Bu işlem değerlendirme puanı veya pipeline aşamasını değiştirmez.</p>
+                <p><strong>Neden kontrol ediyoruz?</strong> Notu sonraki değerlendirmede aynı adaya ve doğru görüşme türüne bağlayabilmek için. Örneğin teknik görüşme bulgusunu İK görüşmesi diye etiketlemeyin; gözlem ve karar yorumunu açıkça ayırın.</p>
+                <p>Not kaydedildiğinde yazarı ve ekleme olayı geçmişe geçer. Mevcut API notu düzenleme veya silme sunmuyor; kaydetmeden önce kişiyi, türü ve metni kontrol edin.</p>
+              </section>
               <div className="add-note-box">
                 <label className="sr-only" htmlFor="interview-note">Mülakat notu</label>
                 <textarea
                   id="interview-note"
                   placeholder="Mülakat notunuzu buraya girin"
                   value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
+                  onChange={(e) => { setNoteText(e.target.value); setNoteReview(null); setNoteError(null); }}
                 />
                 <div className="note-actions">
                   <label className="sr-only" htmlFor="interview-note-type">Not türü</label>
-                  <select id="interview-note-type" value={noteType} onChange={(e) => setNoteType(e.target.value)}>
+                  <select id="interview-note-type" value={noteType} onChange={(e) => { setNoteType(e.target.value); setNoteReview(null); setNoteError(null); }}>
                     {NOTE_TYPES.map((type) => <option key={type}>{type}</option>)}
                   </select>
-                  <button className="btn btn-primary btn-sm" onClick={submitNote} disabled={addNote.isPending}>
-                    Not Ekle
+                  {pendingNote && <button className="btn btn-ghost btn-sm" onClick={() => setNoteReview(null)}>Notu düzelt</button>}
+                  <button className="btn btn-primary btn-sm" onClick={pendingNote ? submitNote : prepareNote} disabled={addNote.isPending}>
+                    {pendingNote ? "Notu kaydet" : "Notu kontrol et"}
                   </button>
                 </div>
               </div>
+              {noteError && <p className="form-error" role="alert">{noteError}</p>}
+              {pendingNote && <section className="ez-interview-note-review" role="region" aria-label="Mülakat notu ön kontrolü" aria-live="polite">
+                <h4>Notu kaydetmeden önce</h4>
+                <p><strong>Aday:</strong> {pendingNote.candidateName} · <strong>Görüşme türü:</strong> {pendingNote.noteType}</p>
+                <p><strong>Kaydedilecek metin:</strong> {pendingNote.text}</p>
+                <p>Bu not adayın Mülakat Notları sekmesinde görünecek ve ekleme olayı geçmişe yazılacak. Adaya mesaj gönderilmeyecek.</p>
+              </section>}
               {(candidate.notes ?? []).map((note) => (
                 <div key={note.id} className="note-item">
                   <div className="note-avatar" aria-hidden="true">{initialsOf(note.authorName)}</div>

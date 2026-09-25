@@ -649,3 +649,9 @@
 .ez-candidate-create-guide p, .ez-candidate-create-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
 .ez-candidate-create-guide strong, .ez-candidate-create-review strong { color: var(--ink); }
 @media (max-width: 640px) { .ez-candidate-create-guide, .ez-candidate-create-review { padding: 16px; } }
+.ez-interview-note-guide { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-interview-note-review { margin: 16px 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-interview-note-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-interview-note-guide p, .ez-interview-note-review p { margin: 8px 0; color: var(--text); line-height: 1.55; }
+.ez-interview-note-guide strong, .ez-interview-note-review strong { color: var(--ink); }
+@media (max-width: 640px) { .ez-interview-note-guide, .ez-interview-note-review { padding: 16px; } }
