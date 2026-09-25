@@ -561,3 +561,14 @@
 .ez-document-review p, .ez-compensation-review p { max-width: 74ch; margin: 8px 0; color: var(--text); line-height: 1.5; }
 .ez-document-review strong, .ez-compensation-review strong { color: var(--ink); }
 .ez-document-review-actions, .ez-compensation-review-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+.ez-hire-guide { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-hire-guide strong, .ez-hire-review strong, .ez-hire-outcome strong { color: var(--ink); }
+.ez-hire-guide p, .ez-hire-review p, .ez-hire-outcome p { margin: 9px 0; color: var(--text); line-height: 1.55; }
+.ez-hire-review { margin: 18px 0 0; padding: 18px 20px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-hire-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
+.ez-hire-outcome { margin: 18px 0; padding: 20px 22px; border: 1px solid var(--primary); border-radius: 10px; background: var(--primary-soft); }
+.ez-hire-outcome h3 { margin: 0 0 10px; color: var(--ink); font-size: 18px; }
+.ez-hire-outcome a { display: inline-flex; margin-top: 8px; }
+.ez-hire-status-note { margin: 14px 0; color: var(--text); }
+@media (max-width: 640px) { .ez-hire-guide, .ez-hire-review, .ez-hire-outcome { padding: 16px; } }

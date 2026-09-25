@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
+import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
-import { useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus } from "./queries";
+import { useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
 
 const TABS: [string, string][] = [
   ["cv", "Özgeçmiş"], ["notes", "Mülakat Notları"], ["eval", "Değerlendirme"], ["history", "Geçmiş"],
@@ -28,6 +30,7 @@ export function CandidateDetail({ id }: { id: number }) {
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState(NOTE_TYPES[0]);
   const [hireOpen, setHireOpen] = useState(false);
+  const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export function CandidateDetail({ id }: { id: number }) {
   if (detailQ.isError) return <PageError error={detailQ.error} />;
 
   const candidate = detailQ.data;
-  const isHired = candidate.status === "İşe Alındı";
+  const isHired = candidate.status === "İşe Alındı" || hireOutcome !== null;
   const provisioning = candidate.provisioning;
 
   const changeStatus = async (status: string) => {
@@ -112,11 +115,27 @@ export function CandidateDetail({ id }: { id: number }) {
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
-          <button className="btn btn-primary" disabled={isHired} onClick={() => setHireOpen(true)}>
+          <button className="btn btn-primary" disabled={isHired || candidate.status === "Red"} onClick={() => setHireOpen(true)}>
             <i aria-hidden="true" className="fa-solid fa-thumbs-up" /> İşe Al
           </button>
         </div>
       </div>
+
+      {candidate.status === "Red" && <p role="status" className="ez-hire-status-note">
+        Reddedilmiş aday işe alınamaz. Karar değiştiyse önce pipeline durumunu güncelleyin.
+      </p>}
+      {hireOutcome && <section className="ez-hire-outcome" aria-labelledby="hire-outcome-title" role="status">
+        <h3 id="hire-outcome-title">Personel kaydı oluşturuldu</h3>
+        <p>{hireOutcome.employeeName || candidate.name} için çalışan kaydı açıldı. Adayı işe almak, özlük belgelerini, ücret paketini veya uygulama dışındaki bildirimleri tamamlamaz.</p>
+        <p>{hireOutcome.provisioning?.status === "completed"
+          ? "Giriş hesabı hazır. Davetin teslimini ayrıca kontrol edin."
+          : hireOutcome.provisioning?.status
+            ? "Giriş hesabı hazırlanıyor; durumunu bu aday ekranından takip edin."
+            : "Giriş hesabının durumu yanıtta doğrulanamadı; aday kaydını yenileyip kontrol edin."}</p>
+        {hireOutcome.employeeId
+          ? <Link className="btn btn-secondary" to={appPath("/personnel/" + hireOutcome.employeeId + "?edit=1&guide=1&tab=tab-evrak")} state={{ guideCreated: true }}>Personel kartını ve kalan adımları aç</Link>
+          : <Link className="btn btn-secondary" to={appPath("/personnel")}>Çalışan listesini kontrol et</Link>}
+      </section>}
 
       {isHired && provisioning && provisioning.status !== "completed" && (
         <div
@@ -270,14 +289,24 @@ export function CandidateDetail({ id }: { id: number }) {
           candidateName={candidate.name ?? ""}
           appliedRole={candidate.appliedRole ?? ""}
           onClose={() => setHireOpen(false)}
+          onHired={setHireOutcome}
         />
       )}
     </>
   );
 }
 
-function HireModal({ candidateId, candidateName, appliedRole, onClose }: {
-  candidateId: number; candidateName: string; appliedRole: string; onClose: () => void;
+type HireReview = {
+  departmentId: number;
+  departmentName: string;
+  email: string;
+  title: string;
+  hireDate: string;
+};
+
+function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }: {
+  candidateId: number; candidateName: string; appliedRole: string;
+  onClose: () => void; onHired: (result: HireResultDto) => void;
 }) {
   const { showToast } = useToast();
   const hire = useHireCandidate();
@@ -285,54 +314,86 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose }: {
   const [departmentId, setDepartmentId] = useState("");
   const [email, setEmail] = useState("");
   const [title, setTitle] = useState(appliedRole);
-  const [hireDate, setHireDate] = useState(new Date().toISOString().slice(0, 10));
+  const [hireDate, setHireDate] = useState("");
+  const [contractType, setContractType] = useState("");
+  const [review, setReview] = useState<HireReview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
+  const prepareReview = () => {
     setError(null);
-    if (!departmentId) {
-      setError("Departman seçin.");
+    const department = departmentsQ.data?.find((item) => String(item.id) === departmentId);
+    if (!department?.id) {
+      setError("Departman listesini doğrulayıp bir departman seçin.");
       return;
     }
-    if (!email.trim()) {
-      setError("İş e-postası girin (personel giriş hesabı bununla açılır).");
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Geçerli bir iş e-postası girin; giriş hesabı bu adrese bağlanır.");
       return;
     }
+    if (!hireDate) {
+      setError("İşe giriş tarihini onaylı iş bilgisiyle doğrulayıp seçin.");
+      return;
+    }
+    if (!contractType) {
+      setError("İmzalı sözleşmedeki türü doğrulayıp seçin.");
+      return;
+    }
+    if (contractType !== "indefinite") {
+      setError("Bu işe alma API'si süreli sözleşmeyi kaydedemiyor. Yanlış türle personel oluşturmamak için bu akıştan devam etmeyin.");
+      return;
+    }
+    setReview({
+      departmentId: department.id,
+      departmentName: department.name ?? "Departman",
+      email: email.trim(),
+      title: title.trim() || appliedRole,
+      hireDate,
+    });
+  };
+
+  const submit = async () => {
+    if (!review || hire.isPending) return;
+    setError(null);
     try {
       const result = await hire.mutateAsync({
         id: candidateId,
-        departmentId: Number(departmentId),
-        email: email.trim(),
-        title: title.trim() || null,
-        hireDate: hireDate || null,
+        departmentId: review.departmentId,
+        email: review.email,
+        title: review.title,
+        hireDate: review.hireDate,
       });
-      const loginPending = result.provisioning?.status && result.provisioning.status !== "completed";
-      showToast(
-        loginPending
-          ? `${result.employeeName} işe alındı; giriş hesabı otomatik olarak hazırlanıyor.`
-          : `${result.employeeName} işe alındı — personel kaydı ve giriş hesabı oluşturuldu.`,
-        loginPending ? "warning" : "success",
-      );
+      onHired(result);
+      showToast(result.provisioning?.status === "completed"
+        ? "Personel kaydı oluşturuldu; giriş hesabı hazır."
+        : "Personel kaydı oluşturuldu; giriş hesabının durumunu ayrıca kontrol edin.",
+      result.provisioning?.status === "completed" ? "success" : "warning");
       onClose();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Aday işe alınamadı.");
     }
   };
-
   return (
     <div className="modal-overlay" style={{ display: "flex" }}>
       <div className="modal-card scale-in">
         <div className="modal-head">
           <div>
             <h3>İşe Al: {candidateName}</h3>
-            <p>Aday personel kaydına dönüştürülür; pozisyon kontenjanı güncellenir.</p>
+            <p>İşlem çalışan kaydı açar; bağlı pozisyon varsa kontenjanı günceller. Giriş hesabı ayrı hazırlanabilir.</p>
           </div>
-          <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="İşe alım penceresini kapat">
+          <button className="btn-icon-sm" onClick={onClose} disabled={hire.isPending} title="Kapat" aria-label="İşe alım penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
         <div className="modal-body-scroll">
           {error && <p className="form-error" role="alert">{error}</p>}
+          <section className="ez-hire-guide" aria-label="İşe alma rehberi">
+            <strong>Bu adımda ne yapıyoruz?</strong>
+            <p>Adayı çalışan kaydına dönüştürüyoruz. Adı, departmanı, iş e-postasını ve başlangıç tarihini onaylı bilgilerle karşılaştırın.</p>
+            <p><strong>Neden?</strong> Hatalı tarih ve departman personel, izin ve bordro hazırlığını etkileyebilir. Örneğin sözleşmedeki 1 Ekim başlangıcını bugünün tarihiyle değiştirmeyin.</p>
+            <p>Bu akış sözleşme türünü sunucuya göndermiyor ve çalışanı belirsiz süreli olarak açıyor. Süreli sözleşmede yanlış kayıt oluşturmamak için işlem durur. İşe alma sonrası özlük, ücret ve dış bildirim adımları ayrıca kontrol edilir.</p>
+          </section>
+          {departmentsQ.isPending && <p role="status">Departmanlar yükleniyor…</p>}
+          {departmentsQ.isError && <p className="form-error" role="alert">Departman listesi okunamadı; işe alma ön kontrolü yapılamaz.</p>}
           <div className="form-grid-2">
             <div className="input-group">
               <label className="input-label" htmlFor="hire-department">Departman</label>
@@ -340,7 +401,7 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose }: {
                 id="hire-department"
                 className="input-control"
                 value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
+                onChange={(e) => { setReview(null); setDepartmentId(e.target.value); }}
               >
                 <option value="">Seçin</option>
                 {(departmentsQ.data ?? []).map((department) => (
@@ -350,23 +411,49 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose }: {
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="hire-email">İş e-postası</label>
-              <input id="hire-email" type="email" className="input-control" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input id="hire-email" type="email" className="input-control" value={email} onChange={(e) => { setReview(null); setEmail(e.target.value); }} />
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="hire-title">Ünvan</label>
-              <input id="hire-title" className="input-control" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input id="hire-title" className="input-control" value={title} onChange={(e) => { setReview(null); setTitle(e.target.value); }} />
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="hire-date">İşe giriş tarihi</label>
-              <input id="hire-date" type="date" className="input-control" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+              <input id="hire-date" type="date" className="input-control" value={hireDate} onChange={(e) => { setReview(null); setHireDate(e.target.value); }} />
+            </div>
+            <div className="input-group">
+              <label className="input-label" htmlFor="hire-contract">İmzalı sözleşmedeki tür</label>
+              <select id="hire-contract" className="input-control" value={contractType}
+                onChange={(e) => { setReview(null); setContractType(e.target.value); }}>
+                <option value="">Belgeden doğrulayıp seçin</option>
+                <option value="indefinite">Belirsiz süreli</option>
+                <option value="fixed-term">Belirli süreli</option>
+              </select>
             </div>
           </div>
+          {review && <section className="ez-hire-review" aria-labelledby="hire-review-title" aria-live="polite">
+            <h4 id="hire-review-title">İşe almadan önce son kontrol</h4>
+            <p><strong>Aday:</strong> {candidateName}</p>
+            <p><strong>Departman:</strong> {review.departmentName} · <strong>Ünvan:</strong> {review.title}</p>
+            <p><strong>İşe giriş:</strong> {review.hireDate} · <strong>İş e-postası:</strong> {review.email}</p>
+            <p><strong>Sözleşme:</strong> Belirsiz süreli olarak kaydedilecek. Bu tür imzalı belgeyle uyuşmuyorsa devam etmeyin.</p>
+            <p>Onaydan sonra çalışan kaydı ve varsa pozisyon kontenjanı değişir. Giriş hesabı hazır olmasa bile çalışan kaydı oluşmuş olabilir; aynı işlemi tekrar göndermeden önce sonucu kontrol edin.</p>
+          </section>}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
-          <button className="btn btn-primary" onClick={submit} disabled={hire.isPending}>
-            <i aria-hidden="true" className="fa-solid fa-check" /> Onayla
-          </button>
+          {review
+            ? <>
+              <button className="btn btn-ghost" onClick={() => setReview(null)} disabled={hire.isPending}>Bilgileri düzelt</button>
+              <button className="btn btn-primary" onClick={submit} disabled={hire.isPending}>
+                <i aria-hidden="true" className="fa-solid fa-check" /> İşe almayı onayla
+              </button>
+            </>
+            : <>
+              <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
+              <button className="btn btn-primary" onClick={prepareReview} disabled={hire.isPending || departmentsQ.isPending || departmentsQ.isError}>
+                Bilgileri kontrol et
+              </button>
+            </>}
         </div>
       </div>
     </div>

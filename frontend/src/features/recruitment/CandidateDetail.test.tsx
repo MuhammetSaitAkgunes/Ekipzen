@@ -75,22 +75,78 @@ test("pipeline durumu PATCH status ucuna gider", async () => {
   });
 });
 
-test("İşe Al modalı departmanla hire ucuna gider", async () => {
+test("işe alma ön kontrolünden sonra personel kaydı oluşturur ve kalan işe giriş adımına bağlar", async () => {
+  stubApi({
+    "/api/candidates/5": detail,
+    "/api/departments": departments,
+    "/api/candidates/5/hire": {
+      candidateId: 5, employeeId: 9, employeeName: "Burak Yılmaz",
+      provisioning: { status: "pending", email: "burak.yilmaz@hrmaster.local" },
+    },
+  });
   renderDetail();
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.click(screen.getByRole("button", { name: /İşe Al/ }));
   await userEvent.selectOptions(await screen.findByLabelText("Departman"), "1");
   await userEvent.type(screen.getByLabelText("İş e-postası"), "burak.yilmaz@hrmaster.local");
-  await userEvent.click(screen.getByRole("button", { name: /Onayla/ }));
+  await userEvent.type(screen.getByLabelText("İşe giriş tarihi"), "2026-10-01");
+  await userEvent.selectOptions(screen.getByLabelText("İmzalı sözleşmedeki tür"), "indefinite");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("region", { name: "İşe almadan önce son kontrol" })).toHaveTextContent("2026-10-01");
+  expect(vi.mocked(fetch).mock.calls.some(
+    ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
+  )).toBe(false);
+
+  await userEvent.click(screen.getByRole("button", { name: "İşe almayı onayla" }));
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
     );
-    expect(posted).toBeTruthy();
-    expect(JSON.parse(String(posted![1]?.body))).toMatchObject({
-      departmentId: 1, email: "burak.yilmaz@hrmaster.local",
+    expect(JSON.parse(String(posted?.[1]?.body))).toMatchObject({
+      departmentId: 1, email: "burak.yilmaz@hrmaster.local", hireDate: "2026-10-01",
     });
   });
+  expect((await screen.findByRole("heading", { name: "Personel kaydı oluşturuldu" })).closest("section")).toHaveTextContent("Giriş hesabı hazırlanıyor");
+  expect(screen.getByRole("link", { name: "Personel kartını ve kalan adımları aç" }))
+    .toHaveAttribute("href", "/app/personnel/9?edit=1&guide=1&tab=tab-evrak");
+  expect(screen.getByRole("button", { name: /İşe Al/ })).toBeDisabled();
+});
+
+test("işe giriş tarihi açıkça seçilmeden işlem gönderilmez", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: /İşe Al/ }));
+  await userEvent.selectOptions(await screen.findByLabelText("Departman"), "1");
+  await userEvent.type(screen.getByLabelText("İş e-postası"), "burak.yilmaz@hrmaster.local");
+  await userEvent.selectOptions(screen.getByLabelText("İmzalı sözleşmedeki tür"), "indefinite");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("İşe giriş tarihini onaylı iş bilgisiyle doğrulayıp seçin.");
+  expect(vi.mocked(fetch).mock.calls.some(
+    ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
+  )).toBe(false);
+});
+
+test("belirli süreli sözleşmede hatalı varsayılanla işe alma işlemini durdurur", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: /İşe Al/ }));
+  await userEvent.selectOptions(await screen.findByLabelText("Departman"), "1");
+  await userEvent.type(screen.getByLabelText("İş e-postası"), "burak.yilmaz@hrmaster.local");
+  await userEvent.type(screen.getByLabelText("İşe giriş tarihi"), "2026-10-01");
+  await userEvent.selectOptions(screen.getByLabelText("İmzalı sözleşmedeki tür"), "fixed-term");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("süreli sözleşmeyi kaydedemiyor");
+  expect(vi.mocked(fetch).mock.calls.some(
+    ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
+  )).toBe(false);
+});
+
+test("reddedilmiş adayda işe alma yerine önce pipeline düzeltmesi ister", async () => {
+  stubApi({ "/api/candidates/5": { ...detail, status: "Red" }, "/api/departments": departments });
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  expect(screen.getByRole("button", { name: /İşe Al/ })).toBeDisabled();
+  expect(screen.getByText(/önce pipeline durumunu güncelleyin/)).toBeInTheDocument();
 });
 
 test("işe alınmış adayda durum select ve İşe Al pasiftir", async () => {
