@@ -22,6 +22,9 @@ public sealed record PayslipExportItem(string PeriodName, string ApprovalStatus)
 public sealed record GuidanceBookmarkExportItem(string ProcessKey, string StepKey, int ContentVersion);
 public sealed record EmployeeCreationEvidenceExportItem(int EmployeeId, DateTime CreatedAtUtc);
 public sealed record CandidateReviewEvidenceExportItem(int CandidateId, string DecisionStatus, DateTime CreatedAtUtc);
+public sealed record GuidanceDecisionProgressExportItem(
+    string ProcessKey, string StepKey, int ContentVersion, int AttemptCount,
+    int LastSelectedChoice, bool LastCorrect, DateTime LastAnsweredAtUtc);
 
 public sealed record MyDataExportDto(
     AccountInfo Account,
@@ -34,6 +37,7 @@ public sealed record MyDataExportDto(
     IReadOnlyList<GuidanceBookmarkExportItem> GuidanceBookmarks,
     IReadOnlyList<EmployeeCreationEvidenceExportItem> EmployeeCreationEvidences,
     IReadOnlyList<CandidateReviewEvidenceExportItem> CandidateReviewEvidences,
+    IReadOnlyList<GuidanceDecisionProgressExportItem> GuidanceDecisionProgresses,
     DateTime ExportedAtUtc);
 
 /// <summary>
@@ -78,6 +82,13 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
             .Where(item => item.UserId == userId)
             .Select(item => new CandidateReviewEvidenceExportItem(
                 item.CandidateId, item.DecisionStatus.ToString(), item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        var guidanceDecisionProgresses = await context.GuidanceDecisionProgresses.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new GuidanceDecisionProgressExportItem(
+                item.ProcessKey, item.StepKey, item.ContentVersion, item.AttemptCount,
+                item.LastSelectedChoice, item.LastCorrect, item.LastAnsweredAtUtc))
             .ToListAsync(cancellationToken);
 
         if (currentUser.EmployeeId is { } employeeId)
@@ -129,7 +140,8 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
 
         var dto = new MyDataExportDto(
             account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
-            guidanceBookmarks, employeeCreationEvidences, candidateReviewEvidences, DateTime.UtcNow);
+            guidanceBookmarks, employeeCreationEvidences, candidateReviewEvidences,
+            guidanceDecisionProgresses, DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
         var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";

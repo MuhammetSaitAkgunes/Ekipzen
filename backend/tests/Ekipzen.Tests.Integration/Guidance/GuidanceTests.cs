@@ -146,6 +146,59 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
         (await factory.CreateClient().GetAsync(url)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task DecisionChecks_SaveLastAttemptWithoutClaimingOperationEvidence()
+    {
+        const string checkUrl = "/api/guidance/employee-entry/checks/tab-is";
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var journeyBefore = await GetAsync<PersonnelEntryJourneyDto>(
+            admin, "/api/guidance/employee-entry/journey");
+
+        var initial = await GetAsync<PersonnelDecisionCheckDto>(admin, checkUrl);
+        initial.ContentVersion.Should().Be(1);
+        initial.Choices.Should().HaveCount(3);
+        initial.LastSelectedChoice.Should().BeNull();
+        initial.AttemptCount.Should().Be(0);
+
+        (await admin.PostAsJsonAsync(checkUrl + "/attempts", new { selectedChoice = 3 }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await GetAsync<PersonnelDecisionCheckDto>(admin, checkUrl)).AttemptCount.Should().Be(0);
+
+        var wrongResponse = await admin.PostAsJsonAsync(checkUrl + "/attempts",
+            new { selectedChoice = 0 });
+        wrongResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var wrong = (await wrongResponse.Content.ReadFromJsonAsync<PersonnelDecisionCheckDto>())!;
+        wrong.LastCorrect.Should().BeFalse();
+        wrong.AttemptCount.Should().Be(1);
+        wrong.Explanation.Should().NotBeNullOrWhiteSpace();
+
+        var afterWrong = await GetAsync<PersonnelEntryJourneyDto>(
+            admin, "/api/guidance/employee-entry/journey");
+        afterWrong.AnsweredChecks.Should().Be(journeyBefore.AnsweredChecks + 1);
+        afterWrong.CorrectChecks.Should().Be(journeyBefore.CorrectChecks);
+        afterWrong.VerifiedEmployeeRecords.Should().Be(journeyBefore.VerifiedEmployeeRecords);
+
+        var rightResponse = await admin.PostAsJsonAsync(checkUrl + "/attempts",
+            new { selectedChoice = 1 });
+        rightResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var right = (await rightResponse.Content.ReadFromJsonAsync<PersonnelDecisionCheckDto>())!;
+        right.LastCorrect.Should().BeTrue();
+        right.AttemptCount.Should().Be(2);
+        (await GetAsync<PersonnelDecisionCheckDto>(
+            await AuthedClientAsync("ik@hrmaster.local"), checkUrl))
+            .LastSelectedChoice.Should().Be(1, "yanıt oturum değişiminde korunur");
+
+        var afterRight = await GetAsync<PersonnelEntryJourneyDto>(
+            admin, "/api/guidance/employee-entry/journey");
+        afterRight.AnsweredChecks.Should().Be(journeyBefore.AnsweredChecks + 1);
+        afterRight.CorrectChecks.Should().Be(journeyBefore.CorrectChecks + 1);
+        afterRight.VerifiedEmployeeRecords.Should().Be(journeyBefore.VerifiedEmployeeRecords);
+
+        (await manager.GetAsync(checkUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await factory.CreateClient().GetAsync(checkUrl)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private async Task<HttpClient> AuthedClientAsync(string email)
     {
         var anonymous = factory.CreateClient();

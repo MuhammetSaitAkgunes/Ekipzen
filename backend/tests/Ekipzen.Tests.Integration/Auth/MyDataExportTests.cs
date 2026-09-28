@@ -51,6 +51,10 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
             new { stepKey = "tab-is" });
         bookmark.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        (await admin.PostAsJsonAsync(
+            "/api/guidance/employee-entry/checks/tab-is/attempts",
+            new { selectedChoice = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
+
         var departments = await admin.GetFromJsonAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
             "/api/departments");
         var created = await admin.PostAsJsonAsync("/api/employees", new
@@ -86,12 +90,18 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
             .Should().ContainSingle(item =>
                 item.GetProperty("candidateId").GetInt32() == candidate.Id &&
                 item.GetProperty("decisionStatus").GetString() == "Interview");
+        adminRoot.GetProperty("guidanceDecisionProgresses").EnumerateArray()
+            .Should().ContainSingle(item =>
+                item.GetProperty("stepKey").GetString() == "tab-is" &&
+                item.GetProperty("contentVersion").GetInt32() == 1 &&
+                item.GetProperty("lastCorrect").GetBoolean());
 
         var otherUser = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
         using var otherExport = JsonDocument.Parse(await otherUser.GetStringAsync("/api/me/data-export"));
         otherExport.RootElement.GetProperty("guidanceBookmarks").GetArrayLength().Should().Be(0);
         otherExport.RootElement.GetProperty("employeeCreationEvidences").GetArrayLength().Should().Be(0);
         otherExport.RootElement.GetProperty("candidateReviewEvidences").GetArrayLength().Should().Be(0);
+        otherExport.RootElement.GetProperty("guidanceDecisionProgresses").GetArrayLength().Should().Be(0);
     }
 
     [Fact]

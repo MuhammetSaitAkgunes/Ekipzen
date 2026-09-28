@@ -27,6 +27,20 @@ public sealed class GuidanceController(ISender sender) : ControllerBase
         SavePersonnelEntryBookmarkCommand command, CancellationToken ct) =>
         Ok(await sender.Send(command, ct));
 
+    [HttpGet("checks/{stepKey}")]
+    [ProducesResponseType<PersonnelDecisionCheckDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<PersonnelDecisionCheckDto>> GetCheck(
+        string stepKey, CancellationToken ct) =>
+        Ok(await sender.Send(new GetPersonnelDecisionCheckQuery(stepKey), ct));
+
+    [HttpPost("checks/{stepKey}/attempts")]
+    [ProducesResponseType<PersonnelDecisionCheckDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<PersonnelDecisionCheckDto>> SubmitCheck(
+        string stepKey, DecisionCheckAnswerBody body, CancellationToken ct) =>
+        Ok(await sender.Send(new SubmitPersonnelDecisionCheckCommand(stepKey, body.SelectedChoice), ct));
+
+    public sealed record DecisionCheckAnswerBody(int SelectedChoice);
+
     [HttpGet("employees/{employeeId:int}/evidence")]
     [ProducesResponseType<EmployeeCreationEvidenceDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

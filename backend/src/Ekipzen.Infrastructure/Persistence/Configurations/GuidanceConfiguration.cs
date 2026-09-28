@@ -40,3 +40,16 @@ public sealed class CandidateReviewEvidenceConfiguration : IEntityTypeConfigurat
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public sealed class GuidanceDecisionProgressConfiguration : IEntityTypeConfiguration<GuidanceDecisionProgress>
+{
+    public void Configure(EntityTypeBuilder<GuidanceDecisionProgress> builder)
+    {
+        builder.Property(item => item.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(item => item.ProcessKey).IsRequired().HasMaxLength(64);
+        builder.Property(item => item.StepKey).IsRequired().HasMaxLength(64);
+        builder.HasIndex(item => new {
+            item.TenantId, item.UserId, item.ProcessKey, item.StepKey, item.ContentVersion
+        }).IsUnique();
+    }
+}

@@ -14,7 +14,9 @@ public sealed record PersonnelEntryJourneyDto(
     bool HasSavedPosition,
     string BookmarkStepKey,
     int VerifiedEmployeeRecords,
-    DateTime? LastVerifiedAtUtc);
+    DateTime? LastVerifiedAtUtc,
+    int AnsweredChecks,
+    int CorrectChecks);
 
 public sealed record GetPersonnelEntryJourneyQuery : IRequest<PersonnelEntryJourneyDto>;
 
@@ -40,12 +42,21 @@ public sealed class GetPersonnelEntryJourneyQueryHandler(
             .Select(item => (DateTime?)item.CreatedAtUtc)
             .FirstOrDefaultAsync(ct);
 
+        var checks = await context.GuidanceDecisionProgresses.AsNoTracking()
+            .Where(item => item.UserId == userId &&
+                item.ProcessKey == PersonnelEntryGuide.ProcessKey &&
+                item.ContentVersion == PersonnelEntryGuide.ContentVersion)
+            .Select(item => item.LastCorrect)
+            .ToListAsync(ct);
+
         return new(
             PersonnelEntryGuide.ProcessKey,
             PersonnelEntryGuide.ContentVersion,
             validBookmark,
             validBookmark ? bookmark!.StepKey : PersonnelEntryGuide.FirstStep,
             count,
-            latest);
+            latest,
+            checks.Count,
+            checks.Count(correct => correct));
     }
 }
