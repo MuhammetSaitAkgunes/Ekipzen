@@ -10,7 +10,7 @@ const employees = { items: [
   { id: 1, name: "Ahmet Yılmaz", title: "Dev", departmentId: 1, department: "Yazılım", status: "active", initials: "AY", hireDate: "2021-01-01", nationalIdMasked: "1" },
 ], total: 1, page: 1, pageSize: 50, totalPages: 1 };
 const preview = { workedMinutes: 480, overtimeMinutes: 0, status: "ok", effectiveType: "Tam", canSave: true, blockReason: null, warnings: [] };
-const savedRow = { id: 33, workDate: "2026-07-14", type: "Tam", checkIn: "09:00:00", checkOut: "18:00:00", breakMinutes: 60, workedMinutes: 480, overtimeMinutes: 0, status: "ok", note: null };
+const savedRow = { id: 33, workDate: "2026-07-14", type: "Tam", checkIn: "09:00:00", checkOut: "18:00:00", breakMinutes: 60, workedMinutes: 480, overtimeMinutes: 0, status: "ok", note: null, revision: "638000000000000000" };
 
 beforeEach(() => stubApi({ "/api/employees": employees, "/api/attendance": savedRow, "/api/attendance/33": savedRow, "/api/attendance/preview": preview }));
 afterEach(() => vi.unstubAllGlobals());
@@ -75,12 +75,18 @@ test("düzenleme PUT /attendance/{id} ile gider ve alanlar dolu gelir", async ()
   expect(screen.getByLabelText("Tarih")).toHaveValue("2026-07-14");
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
   expect(await screen.findByText(/aynı çalışanın aylık puantajındaki satırı düzenleyebilirsiniz/)).toBeInTheDocument();
+  const previewPost = vi.mocked(fetch).mock.calls.find(([u, i]) => String(u) === "/api/attendance/preview" && i?.method === "POST");
+  expect(JSON.parse(String(previewPost?.[1]?.body))).toMatchObject({ entryId: 33, expectedRevision: savedRow.revision });
   await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
   await waitFor(() => {
     const put = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/attendance/33" && i?.method === "PUT",
     );
     expect(put).toBeTruthy();
+    expect(JSON.parse(String(put![1]?.body))).toMatchObject({
+      expectedRevision: savedRow.revision,
+      model: { workDate: "2026-07-14" },
+    });
   });
 });
 
@@ -146,4 +152,14 @@ test("önizleme sürerken değişen alan eski yanıtla kaydedilemez", async () =
   expect(await screen.findByRole("heading", { name: "Kaydetmeden önce kontrol edin" })).toBeInTheDocument();
   expect(screen.getByText("Düzeltildi")).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance" && i?.method === "POST")).toBe(false);
+});
+
+
+test("düzenleme için satır sürümü yoksa önizleme ve PUT gönderilmez", async () => {
+  renderModal(33, { ...savedRow, revision: "" });
+  await screen.findByText("Puantaj Kaydını Düzenle");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("satırı sürümü okunamadı");
+  expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/attendance/preview")).toBe(false);
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance/33" && i?.method === "PUT")).toBe(false);
 });

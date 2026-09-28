@@ -3,8 +3,8 @@ import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
 
 export type LiveBoardCardDto = components["schemas"]["LiveBoardCardDto"];
-export type TimesheetDto = components["schemas"]["TimesheetDto"];
-export type TimesheetRowDto = components["schemas"]["TimesheetRowDto"];
+export type TimesheetRowDto = components["schemas"]["TimesheetRowDto"] & { revision: string };
+export type TimesheetDto = Omit<components["schemas"]["TimesheetDto"], "rows"> & { rows: TimesheetRowDto[] };
 export type AttendanceSummaryDto = components["schemas"]["AttendanceSummaryDto"];
 export type AttendanceEntryModel = components["schemas"]["AttendanceEntryModel"];
 export type AttendanceEntryPreviewDto = {
@@ -18,7 +18,7 @@ export type AttendanceEntryPreviewDto = {
 };
 
 export const usePreviewAttendanceEntry = () => useMutation({
-  mutationFn: (request: { employeeId: number; entryId: number | null; model: AttendanceEntryModel }) =>
+  mutationFn: (request: { employeeId: number; entryId: number | null; model: AttendanceEntryModel; expectedRevision: string | null }) =>
     apiFetch<AttendanceEntryPreviewDto>("/attendance/preview", { method: "POST", body: JSON.stringify(request) }),
 });
 type EmployeePagedResult = components["schemas"]["EmployeeListItemDtoPagedResult"];
@@ -49,10 +49,10 @@ export const useEmployeeOptions = () =>
 export const useSaveAttendanceEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, employeeId, model }: { id: number | null; employeeId: number; model: AttendanceEntryModel }) =>
+    mutationFn: ({ id, employeeId, model, expectedRevision }: { id: number | null; employeeId: number; model: AttendanceEntryModel; expectedRevision: string | null }) =>
       id === null
         ? apiFetch<TimesheetRowDto>("/attendance", { method: "POST", body: JSON.stringify({ employeeId, model }) })
-        : apiFetch<TimesheetRowDto>(`/attendance/${id}`, { method: "PUT", body: JSON.stringify(model) }),
+        : apiFetch<TimesheetRowDto>(`/attendance/${id}`, { method: "PUT", body: JSON.stringify({ model, expectedRevision }) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance"] }),
   });
 };

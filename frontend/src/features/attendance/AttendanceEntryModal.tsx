@@ -49,6 +49,10 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
       setError("Tarih seçin.");
       return;
     }
+    if (isEdit && !initial?.revision) {
+      setError("Güncel puantaj satırı sürümü okunamadı; listeyi yeniden yükleyin.");
+      return;
+    }
     if (!isEdit && (!employeeId || !selectedEmployee)) {
       setError("Kaydın ait olduğu personeli açıkça seçin.");
       return;
@@ -76,6 +80,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
         employeeId: Number(employeeId) || 0,
         entryId: rowId,
         model: buildModel(),
+        expectedRevision: initial?.revision ?? null,
       });
       if (revision !== formRevision.current) return;
       if (!result.canSave) {
@@ -100,6 +105,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
         id: rowId,
         employeeId: Number(employeeId) || 0,
         model: buildModel(),
+        expectedRevision: initial?.revision ?? null,
       });
       showToast(isEdit ? "Puantaj kaydı güncellendi." : "Manuel giriş eklendi.", "success");
       onClose();
@@ -139,7 +145,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
               {preview && <p role="status">Sunucu hesabı: <strong>{formatMinutes(preview.workedMinutes)} net çalışma</strong>, <strong>{formatMinutes(preview.overtimeMinutes)} fazla mesai alanı</strong>; durum: {statusLabel(preview.status)}, kaydedilecek tip: {preview.effectiveType}.</p>}
               {preview?.warnings.map((warning) => <p className="ez-attendance-review-warning" key={warning}>{warning}</p>)}
               <p>Örnek: 09:00–18:00 arası ve 60 dakika mola girildiğinde uygulama 8 saat net süre hesaplar. Bu hesap tek başına yasal fazla çalışma değerlendirmesi değildir. Kaydederken sunucu kuralları yeniden uygulanır.</p>
-              <p>Yanlış gün veya çalışan seçtiyseniz düzeltin. Kaydettikten sonra aynı çalışanın aylık puantajındaki satırı düzenleyebilirsiniz. Başka biri satırı arada değiştirmiş olabilir; güncel puantajı ve oluşturulmuş bordro girdilerini ayrıca kontrol edin.</p>
+              <p>Yanlış gün veya çalışan seçtiyseniz düzeltin. Kaydettikten sonra aynı çalışanın aylık puantajındaki satırı düzenleyebilirsiniz. Başka biri satırı arada değiştirdiyse kayıt engellenir; aylık puantajı yeniden açıp farkları kontrol edin. Oluşturulmuş bordro girdilerini ayrıca kontrol edin.</p>
             </section>
           ) : <>
             {!isEdit && (
