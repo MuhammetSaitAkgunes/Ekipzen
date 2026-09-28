@@ -54,23 +54,40 @@ public static class LeaveLedgerService
         DateOnly throughDate,
         CancellationToken cancellationToken)
     {
+        var missing = await GetUnrecordedAccrualsAsync(
+            context, period, throughDate, cancellationToken);
+        context.LeaveLedgerEntries.AddRange(missing);
+        return missing.Count;
+    }
+
+    /// <summary>
+    /// Henüz yazılmamış politika hak edişlerini yalnız bellekte hesaplar.
+    /// Önizleme bu kayıtları gerçek defter hareketi gibi değerlendirir, fakat saklamaz.
+    /// </summary>
+    public static async Task<IReadOnlyList<LeaveLedgerEntry>> GetUnrecordedAccrualsAsync(
+        IApplicationDbContext context,
+        EmployeeEmploymentPeriod period,
+        DateOnly throughDate,
+        CancellationToken cancellationToken)
+    {
         var managedFrom = period.LeaveAccrualManagedFrom ?? period.StartDate;
         var effectiveThrough = period.EndDate is { } endDate && endDate < throughDate
             ? endDate
             : throughDate;
         if (effectiveThrough < managedFrom || period.AnnualLeaveEntitlementDays <= 0)
         {
-            return 0;
+            return [];
         }
 
         var existingServiceYears = await context.LeaveLedgerEntries
+            .AsNoTracking()
             .Where(item => item.EmploymentPeriodId == period.Id
                 && item.Type == LeaveLedgerEntryType.ServiceAnniversaryEntitlement
                 && item.ServiceYear != null)
             .Select(item => item.ServiceYear!.Value)
             .ToListAsync(cancellationToken);
         var existing = existingServiceYears.ToHashSet();
-        var added = 0;
+        var missing = new List<LeaveLedgerEntry>();
 
         for (var serviceYear = 1; ; serviceYear++)
         {
@@ -84,7 +101,7 @@ public static class LeaveLedgerService
                 continue;
             }
 
-            context.LeaveLedgerEntries.Add(new LeaveLedgerEntry
+            missing.Add(new LeaveLedgerEntry
             {
                 EmploymentPeriodId = period.Id,
                 OccurredOn = anniversary,
@@ -94,10 +111,9 @@ public static class LeaveLedgerService
                 SourceKey = $"service-anniversary:{period.Id}:{serviceYear}",
                 SourceReference = $"{serviceYear}. hizmet yıldönümü hak edişi",
             });
-            added++;
         }
 
-        return added;
+        return missing;
     }
 
     public static async Task EnsureCanReserveAsync(
@@ -108,11 +124,34 @@ public static class LeaveLedgerService
         int? excludeRequestId,
         CancellationToken cancellationToken)
     {
+        var conflict = await GetReservationConflictAsync(
+            context, period, requestDate, requestedDays, excludeRequestId, null, cancellationToken);
+        if (conflict is not null)
+        {
+            throw new ConflictException(conflict);
+        }
+    }
+
+    /// <summary>Gerçek kayıt ve yazılmamış hak edişlerle aynı tarih sıralamasını salt-okur değerlendirir.</summary>
+    public static async Task<string?> GetReservationConflictAsync(
+        IApplicationDbContext context,
+        EmployeeEmploymentPeriod period,
+        DateOnly requestDate,
+        int requestedDays,
+        int? excludeRequestId,
+        IReadOnlyList<LeaveLedgerEntry>? additionalAccruals,
+        CancellationToken cancellationToken)
+    {
         var ledger = await context.LeaveLedgerEntries
             .AsNoTracking()
             .Where(item => item.EmploymentPeriodId == period.Id)
             .Select(item => new DatedMovement(item.OccurredOn, item.Days, item.Days >= 0 ? 0 : 1, false))
             .ToListAsync(cancellationToken);
+        if (additionalAccruals is not null)
+        {
+            ledger.AddRange(additionalAccruals.Select(item =>
+                new DatedMovement(item.OccurredOn, item.Days, 0, false)));
+        }
 
         var pending = await context.LeaveRequests
             .AsNoTracking()
@@ -137,11 +176,12 @@ public static class LeaveLedgerService
             if (running < 0)
             {
                 var available = movement.IsCandidate ? Math.Max(0, before) : Math.Max(0, running - movement.Days);
-                throw new ConflictException(
-                    $"Yetersiz izin bakiyesi: talep {requestedDays} gün, "
-                    + $"{requestDate:yyyy-MM-dd} tarihinde kullanılabilir {available} gün.");
+                return $"Yetersiz izin bakiyesi: talep {requestedDays} gün, "
+                    + $"{requestDate:yyyy-MM-dd} tarihinde kullanılabilir {available} gün.";
             }
         }
+
+        return null;
     }
 
     public static async Task AddUsageEntriesAsync(

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Leaves;
+using Ekipzen.Application.Features.Leaves.Queries;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -297,6 +298,63 @@ public sealed class LeavesTests(EkipzenApiFactory factory)
                 item.Type == "service-anniversary" && item.ServiceYear == 5 && item.Days == 24);
             second.Count(item => item.Type == "service-anniversary" && item.ServiceYear == 5)
                 .Should().Be(1, "aynı yıldönümü idempotent olmalı");
+        }
+        finally
+        {
+            await employee.PostAsync($"/api/leaves/{request.Id}/cancel", null);
+        }
+    }
+
+    [Fact]
+    public async Task PreviewRequest_UsesServerDaysWithoutCreatingRequestOrFutureAccrual()
+    {
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        var annual = await GetTypeAsync(employee, "Yıllık");
+        var start = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1400);
+        while (start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+        {
+            start = start.AddDays(1);
+        }
+        var end = start.AddDays(4);
+        var isoStart = start.ToString("yyyy-MM-dd");
+        var isoEnd = end.ToString("yyyy-MM-dd");
+        var year = start.Year;
+        var beforeRequests = await GetAsync<List<LeaveRequestDto>>(employee, $"/api/leaves/my?year={year}");
+        var beforeLedger = await GetAsync<List<LeaveLedgerEntryDto>>(employee, $"/api/leaves/ledger?year={year}");
+
+        var previewResponse = await employee.PostAsJsonAsync("/api/leaves/preview", new
+        {
+            leaveTypeId = annual.Id,
+            startDate = isoStart,
+            endDate = isoEnd,
+        });
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = (await previewResponse.Content.ReadFromJsonAsync<LeaveRequestPreviewDto>())!;
+        preview.CanSubmit.Should().BeTrue(preview.BlockReason);
+        preview.WorkingDays.Should().BeGreaterThan(0);
+        preview.DeductsFromAnnualBalance.Should().BeTrue();
+        preview.RequiresApproval.Should().BeTrue();
+        (await GetAsync<List<LeaveRequestDto>>(employee, $"/api/leaves/my?year={year}"))
+            .Should().BeEquivalentTo(beforeRequests);
+        (await GetAsync<List<LeaveLedgerEntryDto>>(employee, $"/api/leaves/ledger?year={year}"))
+            .Should().BeEquivalentTo(beforeLedger, "önizleme gelecek hak edişi bile deftere yazmamalı");
+
+        var createResponse = await CreateAsync(employee, annual.Id, isoStart, isoEnd);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var request = (await createResponse.Content.ReadFromJsonAsync<LeaveRequestDto>())!;
+        try
+        {
+            request.Days.Should().Be(preview.WorkingDays);
+            var overlapResponse = await employee.PostAsJsonAsync("/api/leaves/preview", new
+            {
+                leaveTypeId = annual.Id,
+                startDate = isoStart,
+                endDate = isoEnd,
+            });
+            overlapResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var overlap = (await overlapResponse.Content.ReadFromJsonAsync<LeaveRequestPreviewDto>())!;
+            overlap.CanSubmit.Should().BeFalse();
+            overlap.BlockReason.Should().Contain("çakışan");
         }
         finally
         {

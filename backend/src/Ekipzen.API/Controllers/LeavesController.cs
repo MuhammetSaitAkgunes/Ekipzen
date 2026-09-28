@@ -40,6 +40,13 @@ public sealed class LeavesController(ISender sender) : ControllerBase
         [FromQuery] int? year, CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetMyLeaveRequestsQuery(year), cancellationToken));
 
+    [HttpPost("preview")]
+    [ProducesResponseType<LeaveRequestPreviewDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<LeaveRequestPreviewDto>> Preview(
+        PreviewLeaveRequestQuery query, CancellationToken cancellationToken)
+        => Ok(await sender.Send(query, cancellationToken));
+
     [HttpPost]
     [ProducesResponseType<LeaveRequestDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
