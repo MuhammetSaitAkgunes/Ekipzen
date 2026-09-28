@@ -1,3 +1,5 @@
+import { PersonnelDecisionCheck } from "./PersonnelDecisionCheck";
+
 export type PersonnelGuideStep =
   | "tab-kimlik" | "tab-iletisim" | "tab-is"
   | "tab-mali" | "tab-ozluk" | "tab-evrak";
@@ -77,6 +79,7 @@ export function PersonnelGuide({ step, index }: { step: PersonnelGuideStep; inde
       <p><strong>Örnek:</strong> {item.example}</p>
       <p><strong>Kontrol:</strong> {item.check}</p>
     </details>
+    <PersonnelDecisionCheck key={step} step={step} />
     <small>Bu açıklama işlem rehberidir. Mevzuat dayanağı incelemesi tamamlanan bilgiler ilgili adımda kaynaklarıyla yayımlanacaktır.</small>
   </section>;
 }

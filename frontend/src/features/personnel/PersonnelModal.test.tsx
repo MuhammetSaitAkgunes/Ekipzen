@@ -177,6 +177,24 @@ test("rehber konumunu sunucudan yükler ve sekme değişimini kaydeder", async (
   });
 });
 
+test("karar alıştırması yanlış yanıtı açıklar, yeniden denetir ve ilerleme kanıtı saymaz", async () => {
+  renderModal(null, false, undefined, true);
+  await screen.findByText("Ödeme hazırlığını kontrol et");
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.click(screen.getByText("Kısa karar alıştırması"));
+  expect(screen.getByText(/sözleşme türü henüz teyit edilmedi/)).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText("Varsayılan türü seçip devam ederim"));
+  expect(screen.getByRole("status")).toHaveTextContent("Bir daha düşünün.");
+  await userEvent.click(screen.getByLabelText("İmzalı iş belgesini yetkili kişiyle doğrularım"));
+  expect(screen.getByRole("status")).toHaveTextContent("Doğru karar.");
+  expect(screen.getByText(/yanıtı kaydedilmez; gerçek işlem kanıtı/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /İletişim/ }));
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.click(screen.getByText("Kısa karar alıştırması"));
+  expect(screen.getByLabelText("İmzalı iş belgesini yetkili kişiyle doğrularım")).not.toBeChecked();
+  expect(screen.queryByText("Doğru karar.")).not.toBeInTheDocument();
+});
+
 test("yeni kayıtta doğrulanmamış seçimleri varsaymaz ve sözleşme seçimini ister", async () => {
   renderModal(null);
   expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Kişiyi doğru kaydet");
