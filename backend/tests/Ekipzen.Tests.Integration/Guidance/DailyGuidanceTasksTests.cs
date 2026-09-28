@@ -7,6 +7,7 @@ using Ekipzen.Application.Features.Compliance;
 using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Leaves;
+using Ekipzen.Application.Features.Recruitment;
 using FluentAssertions;
 
 namespace Ekipzen.Tests.Integration.Guidance;
@@ -89,6 +90,44 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
         (await manager.PostAsJsonAsync($"/api/leaves/{leave.Id}/approve", new { }))
             .StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(manager, Url)).Should().NotContain(task => task.Key == key);
+    }
+
+    [Fact]
+    public async Task NewCandidateTask_FollowsPipelineStateAndStaysHrAdminOnly()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var created = await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Rehber Adayı " + Guid.NewGuid().ToString("N"),
+            appliedRole = "İK Uzmanı",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var candidate = (await created.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var key = $"candidate-review:{candidate.Id}";
+
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key)
+            .Which.Should().Match<DailyGuidanceTaskDto>(task =>
+                task.Kind == "candidate-review" &&
+                task.DueDate == null &&
+                task.TargetPath == $"/recruitment?candidateId={candidate.Id}");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key, "aynı kaynak ikinci görev oluşturmaz");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(manager, Url))
+            .Should().NotContain(task => task.Key == key, "yönetici aday aşamasını değiştiremez");
+
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Mülakat" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
+
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Yeni" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().ContainSingle(task => task.Key == key);
+
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Red" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
     }
 
     private async Task<HttpClient> AuthedClientAsync(string email)

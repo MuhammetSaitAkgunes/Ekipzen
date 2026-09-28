@@ -2,6 +2,7 @@ using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Compliance.Queries;
 using Ekipzen.Application.Features.Leaves.Queries;
 using Ekipzen.Application.Features.Payroll.Periods;
+using Ekipzen.Application.Features.Recruitment.Queries;
 using Ekipzen.Domain.Constants;
 using MediatR;
 
@@ -76,10 +77,29 @@ public sealed class GetDailyGuidanceTasksQueryHandler(ISender sender, ICurrentUs
                     "Bu dönem için kayıtlı son tarih yok; dönem ayı karar son tarihi değildir.",
                     $"/payroll?periodId={period.Id}"
                 )));
+
+            var newCandidates = await sender.Send(new GetCandidatesQuery(Status: "Yeni"), ct);
+            tasks.AddRange(newCandidates.Select(candidate => new DailyGuidanceTaskDto(
+                $"candidate-review:{candidate.Id}",
+                "candidate-review",
+                candidate.Id,
+                $"{candidate.Name} başvurusunu incele",
+                $"{candidate.AppliedRole} başvurusu Yeni aşamasında; ilk değerlendirme bekliyor.",
+                "Adayın bilgilerini ve varsa bağlı pozisyonu inceleyin; değerlendirme sonucuna göre aşamasını güncelleyin.",
+                null,
+                "Başvuru tarihi karar son tarihi değildir; kayıtlı son tarih yok.",
+                $"/recruitment?candidateId={candidate.Id}"
+            )));
         }
 
         return tasks
-            .OrderBy(task => task.Kind switch { "compliance-document" => 0, "leave-approval" => 1, _ => 2 })
+            .OrderBy(task => task.Kind switch
+            {
+                "compliance-document" => 0,
+                "leave-approval" => 1,
+                "payroll-period" => 2,
+                _ => 3,
+            })
             .ThenBy(task => task.DueDate ?? DateOnly.MaxValue)
             .ThenBy(task => task.RecordId)
             .ToList();

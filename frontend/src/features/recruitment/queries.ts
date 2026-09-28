@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
+import { dailyTasksKey } from "../guidance/queries";
 import type { components } from "../../api/schema";
 
 export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
@@ -63,7 +64,10 @@ export const useCreateCandidate = () => {
         method: "POST",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -75,7 +79,10 @@ export const useSetCandidateStatus = () => {
         method: "PATCH",
         body: JSON.stringify({ status }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -118,6 +125,7 @@ export const useHireCandidate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recruitment"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey });
     },
   });
 };

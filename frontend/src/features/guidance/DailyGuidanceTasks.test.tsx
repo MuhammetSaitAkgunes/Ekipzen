@@ -25,6 +25,14 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
         targetPath: "/payroll?periodId=3",
       },
       {
+        key: "candidate-review:6", kind: "candidate-review", recordId: 6,
+        title: "Selin Koç başvurusunu incele",
+        reason: "UI/UX Designer başvurusu Yeni aşamasında; ilk değerlendirme bekliyor.",
+        nextAction: "Adayın bilgilerini inceleyin.",
+        dueDate: null, dateNote: "Başvuru tarihi karar son tarihi değildir; kayıtlı son tarih yok.",
+        targetPath: "/recruitment?candidateId=6",
+      },
+      {
         key: "leave-approval:8", kind: "leave-approval", recordId: 8,
         title: "Ahmet Yılmaz izin talebini incele", reason: "Mazeret talebi onay bekliyor.",
         nextAction: "Talep ayrıntılarını inceleyip onay veya ret kararı verin.",
@@ -45,6 +53,11 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
   expect(within(payrollCard).getByText(/kayıtlı son tarih yok/)).toBeInTheDocument();
   expect(within(payrollCard).getByRole("link", { name: /Kaydı incele/ }))
     .toHaveAttribute("href", "/app/payroll?periodId=3");
+  const candidateCard = screen.getByText("Selin Koç başvurusunu incele").closest("article")!;
+  expect(within(candidateCard).getByText("ADAY İNCELEMESİ")).toBeInTheDocument();
+  expect(within(candidateCard).getByText(/Başvuru tarihi karar son tarihi değildir/)).toBeInTheDocument();
+  expect(within(candidateCard).getByRole("link", { name: /Kaydı incele/ }))
+    .toHaveAttribute("href", "/app/recruitment?candidateId=6");
   const leaveCard = screen.getByText("Ahmet Yılmaz izin talebini incele").closest("article")!;
   expect(within(leaveCard).getByText(/Karar için kayıtlı son tarih yok/)).toBeInTheDocument();
   expect(within(leaveCard).getByRole("link", { name: /Kaydı incele/ }))

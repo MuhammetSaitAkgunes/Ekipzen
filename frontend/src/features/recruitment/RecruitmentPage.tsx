@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageError, PageLoading } from "../shared/PageState";
 import { CandidateDetail } from "./CandidateDetail";
 import { CandidateModal } from "./CandidateModal";
@@ -19,7 +20,7 @@ export function RecruitmentPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [positionOpen, setPositionOpen] = useState(false);
 
@@ -37,7 +38,9 @@ export function RecruitmentPage() {
   if (candidatesQ.isError) return <PageError error={candidatesQ.error} />;
 
   const candidates = candidatesQ.data;
-  const activeId = candidates.find((candidate) => candidate.id === selectedId)?.id ?? candidates[0]?.id ?? null;
+  const rawCandidateId = searchParams.get("candidateId");
+  const requestedCandidateId = rawCandidateId && /^[1-9]\d*$/.test(rawCandidateId) ? Number(rawCandidateId) : null;
+  const activeId = candidates.find((candidate) => candidate.id === requestedCandidateId)?.id ?? candidates[0]?.id ?? null;
   const activeStage = STAGES.find((stage) => stage.status === statusFilter);
 
   return (
@@ -122,8 +125,8 @@ export function RecruitmentPage() {
               role="button"
               tabIndex={0}
               aria-pressed={candidate.id === activeId}
-              onClick={() => setSelectedId(candidate.id ?? null)}
-              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedId(candidate.id ?? null); } }}
+              onClick={() => setSearchParams({ candidateId: String(candidate.id) }, { replace: true })}
+              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSearchParams({ candidateId: String(candidate.id) }, { replace: true }); } }}
             >
               <div className="ci-avatar" aria-hidden="true">{candidate.initials}</div>
               <div className="ci-info">
@@ -154,7 +157,7 @@ export function RecruitmentPage() {
       </main>
 
       {createOpen && (
-        <CandidateModal onClose={() => setCreateOpen(false)} onCreated={(id) => { setStatusFilter(""); setSearch(""); setSelectedId(id); }} />
+        <CandidateModal onClose={() => setCreateOpen(false)} onCreated={(id) => { setStatusFilter(""); setSearch(""); setSearchParams({ candidateId: String(id) }, { replace: true }); }} />
       )}
       {positionOpen && <PositionModal onClose={() => setPositionOpen(false)} />}
       </div>

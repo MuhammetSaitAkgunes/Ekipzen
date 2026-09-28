@@ -38,6 +38,15 @@ test("aday listesi skor ve durum etiketleriyle dolar", async () => {
   expect(screen.getByText("Aday Havuzu")).toBeInTheDocument();
 });
 
+test("günlük görev bağlantısı ilgili adayı açar", async () => {
+  renderPage(
+    <ToastProvider><RecruitmentPage /></ToastProvider>,
+    ["/app/recruitment?candidateId=6"],
+  );
+  expect(await screen.findByRole("heading", { name: "Selin Koç", level: 2 })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Selin Koç/ })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("gerçek pozisyon listesi ve oluşturma girişi görünür", async () => {
   renderShell();
   expect(await screen.findByRole("heading", { name: "Açık pozisyonlar" })).toBeInTheDocument();

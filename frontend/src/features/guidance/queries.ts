@@ -3,7 +3,7 @@ import { apiFetch } from "../../api/client";
 
 export type DailyGuidanceTask = {
   key: string;
-  kind: "leave-approval" | "compliance-document" | "payroll-period";
+  kind: "leave-approval" | "compliance-document" | "payroll-period" | "candidate-review";
   recordId: number;
   title: string;
   reason: string;
