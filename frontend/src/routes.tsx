@@ -71,7 +71,7 @@ export const appRoutes: AppRoute[] = [
   { key: "overview", path: appPath("/overview"), title: "Genel Durum", eyebrow: "Ekipzen", navKey: "overview", roles: ALL },
   { key: "actions", path: appPath("/actions"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "inbox", roles: ALL },
   { key: "personnel", path: appPath("/personnel"), title: "Çalışanlar", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
-  { key: "guidance", path: appPath("/guidance"), title: "Öğrenme Yolculuğum", eyebrow: "İK Rehberi", navKey: "guidance", roles: ["hr-admin"] },
+  { key: "guidance", path: appPath("/guidance"), title: "Öğrenme Yolculuğum", eyebrow: "İK Rehberi", navKey: "guidance", roles: MGMT },
   { key: "recruitment", path: appPath("/recruitment"), title: "İşe Alım", eyebrow: "Ekipzen", navKey: "recruitment", roles: ["hr-admin"] },
   { key: "attendance", path: appPath("/attendance"), title: "Mesai & Puantaj", eyebrow: "Ekipzen", navKey: "attendance", roles: MGMT },
   { key: "leaves", path: appPath("/leaves"), title: "İzinler", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
@@ -199,7 +199,7 @@ export const navigation: { label: string; items: NavigationItem[] }[] = [
   ] },
   { label: "İnsan kaynakları", items: [
     { key: "personnel", path: appPath("/personnel"), label: "Çalışanlar", icon: "fa-user-group", roles: MGMT },
-    { key: "guidance", path: appPath("/guidance"), label: "Öğrenme Yolculuğum", icon: "fa-book-open", roles: ["hr-admin"] },
+    { key: "guidance", path: appPath("/guidance"), label: "Öğrenme Yolculuğum", icon: "fa-book-open", roles: MGMT },
     { key: "leaves", path: appPath("/leaves"), label: "İzinler", employeeLabel: "İzinlerim", icon: "fa-calendar-days", roles: ALL },
     { key: "attendance", path: appPath("/attendance"), label: "Mesai ve Puantaj", icon: "fa-clock", roles: MGMT },
     { key: "recruitment", path: appPath("/recruitment"), label: "İşe Alım", icon: "fa-briefcase", roles: ["hr-admin"] },

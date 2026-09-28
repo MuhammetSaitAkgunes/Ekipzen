@@ -29,6 +29,51 @@ test("günlük iş bağlantısı ilgili izin talebini listenin başında açık 
 });
 
 
+test("izin kararı alıştırması isteğe bağlı açılır ve yanıt gerçek onay göndermez", async () => {
+  const check = {
+    stepKey: "review-request", contentVersion: 1,
+    question: "İzin türü, tarihler ve talep açıklaması birbiriyle çelişiyor. Karardan önce ne yaparsınız?",
+    choices: ["Talebi hemen onaylarım", "Gerekçeyi incelemeden reddederim",
+      "Türü, tarihleri, gün sayısını ve gerekli dayanağı netleştiririm"],
+    lastSelectedChoice: null, lastCorrect: null, attemptCount: 0, explanation: null,
+  };
+  stubApi({
+    "/api/leaves/pending": [
+      { id: 8, employeeName: "Ahmet Yılmaz", leaveTypeName: "Yıllık İzin", days: 2,
+        startDate: "2026-09-30", endDate: "2026-10-01", description: "Aile ziyareti" },
+    ],
+    "/api/guidance/leave-approval/checks/review-request": check,
+  });
+  const baseFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === "/api/guidance/leave-approval/checks/review-request/attempts" &&
+        init?.method === "POST") {
+      const { selectedChoice } = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({
+        ...check, lastSelectedChoice: selectedChoice, lastCorrect: selectedChoice === 2,
+        attemptCount: 1, explanation: "Çelişkili kaydı varsayımla tamamlamayın.",
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return baseFetch(input, init);
+  }));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter initialEntries={["/app/inbox?requestId=8"]}>
+      <ToastProvider><ApprovalsList /></ToastProvider>
+    </MemoryRouter>
+  </QueryClientProvider>);
+
+  await screen.findByRole("button", { name: "Kapat" });
+  expect(vi.mocked(fetch).mock.calls.some(([url]) =>
+    String(url) === "/api/guidance/leave-approval/checks/review-request")).toBe(false);
+  await userEvent.click(screen.getByText("Kısa karar alıştırması"));
+  expect(await screen.findByText(/İzin türü, tarihler ve talep açıklaması/)).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText("Türü, tarihleri, gün sayısını ve gerekli dayanağı netleştiririm"));
+  await userEvent.click(screen.getByRole("button", { name: "Yanıtı kontrol et" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Doğru karar.");
+  expect(screen.getByText(/gerçek izin kararı kanıtı veya yeterlilik onayı değildir/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/leaves/8/approve")).toBe(false);
+});
+
 test("onay için karar özeti görülmeden işlem gönderilmez; not karar kaydına aktarılır", async () => {
   stubApi({
     "/api/leaves/pending": [

@@ -6,6 +6,7 @@ import { useToast } from "../../layout/ToastProvider";
 import { useDecideLeave, usePendingLeaves, type LeaveRequestDto } from "../leaves/queries";
 import { formatLeaveDate } from "../leaves/format";
 import { PageError, PageLoading } from "../shared/PageState";
+import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 
 function Approval({ request, selected }: { request: LeaveRequestDto; selected: boolean }) {
   const decide = useDecideLeave();
@@ -44,6 +45,8 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
       <div className="ez-leave-guide">
         <strong>Karar öncesi kontrol</strong>
         <p>Çalışanı, izin türünü, tarihleri, gün sayısını ve talep açıklamasını gözden geçirin. Eksik veya çelişkili bilgiyi ilgili kişiyle netleştirin.</p>
+        <GuidanceDecisionCheck process="leave-approval" step="review-request"
+          operationName="izin kararı" eager={false} />
       </div>
       {reviewDecision === null ? (
         <div className="toolbar-actions">
@@ -56,6 +59,8 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
           <p>{reviewDecision
             ? "Onay talebin durumunu değiştirir. Bakiyeden düşen türlerde sistem onay anında bakiyeyi yeniden kontrol eder ve kullanım hareketini kaydeder."
             : "Ret talebin durumunu değiştirir ve bekleyen onay kuyruğundan çıkarır. Bu ekranda kararı geri alma işlemi yoktur."}</p>
+          <GuidanceDecisionCheck process="leave-approval" step="decision-effect"
+            operationName="izin kararı" eager={false} />
           <label htmlFor={`decision-note-${request.id}`}>Karar notu (isteğe bağlı)</label>
           <textarea id={`decision-note-${request.id}`} className="input-control" rows={2}
             maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)}

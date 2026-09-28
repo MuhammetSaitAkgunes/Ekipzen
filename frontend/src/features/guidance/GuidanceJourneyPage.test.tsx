@@ -1,10 +1,26 @@
 import { screen, within } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
 import { GuidanceJourneyPage } from "./GuidanceJourneyPage";
+import { AuthProvider } from "../../auth/AuthContext";
+import { SESSION_KEY } from "../../api/session";
 
 afterEach(() => vi.unstubAllGlobals());
+
+const setRole = (role: string) =>
+  localStorage.setItem(SESSION_KEY, JSON.stringify({
+    token: "T", refreshToken: "R",
+    user: { id: "u", name: "X", email: "x@x", role, roleLabel: "X", initials: "XX", employeeId: null },
+  }));
+beforeEach(() => { localStorage.clear(); setRole("hr-admin"); });
+
+const renderJourney = () => renderPage(<AuthProvider><GuidanceJourneyPage /></AuthProvider>);
+
+const leaveJourney = {
+  processKey: "leave-approval", verifiedDecisions: 0, lastVerifiedAtUtc: null,
+  contentVersion: 1, answeredChecks: 0, correctChecks: 0,
+};
 
 const recruitmentJourney = {
   processKey: "recruitment", verifiedFirstReviews: 0, lastVerifiedAtUtc: null,
@@ -13,12 +29,13 @@ const recruitmentJourney = {
 
 test("konumu kaydedilmemiş rehberde gerçek işlem kanıtı sıfır görünür", async () => {
   stubApi({
+    "/api/guidance/leave-approval/journey": leaveJourney,
     "/api/guidance/recruitment/journey": recruitmentJourney,
     "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
     bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
   } });
-  renderPage(<GuidanceJourneyPage />);
+  renderJourney();
   expect(await screen.findByText("Henüz konum kaydedilmedi")).toBeInTheDocument();
   expect(screen.getByText("0 kayıt")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Gerçek bir işe girişte rehberi aç/ }))
@@ -33,7 +50,7 @@ test("doğrulanmış çalışan kartı ayrı gösterilir ve tüm sürece yeterli
     bookmarkStepKey: "tab-evrak", verifiedEmployeeRecords: 2, answeredChecks: 4, correctChecks: 3,
     lastVerifiedAtUtc: "2026-09-24T10:00:00Z",
   } });
-  renderPage(<GuidanceJourneyPage />);
+  renderJourney();
   expect(await screen.findByText("2 kayıt")).toBeInTheDocument();
   expect(screen.getByText("Belgeler")).toBeInTheDocument();
   expect(screen.getByText("4/6")).toBeInTheDocument();
@@ -55,7 +72,7 @@ test("aday kararı yalnız gerçek işlem kanıtı olarak görünür", async () 
       contentVersion: 1, answeredChecks: 2, correctChecks: 1,
     },
   });
-  renderPage(<GuidanceJourneyPage />);
+  renderJourney();
   const card = await screen.findByRole("region", { name: "Aday ilk incelemesi" });
   expect(within(card).getByText("2 aday")).toBeInTheDocument();
   expect(within(card).getByText("2/2")).toBeInTheDocument();
@@ -72,9 +89,33 @@ test("aday yolculuğu yüklenemezse çalışan kanıtı görünür kalır", asyn
       bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 1, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
     },
   });
-  renderPage(<GuidanceJourneyPage />);
+  renderJourney();
   expect(await screen.findByText("1 kayıt")).toBeInTheDocument();
   expect(await screen.findByText(/Aday yolculuğu yüklenemedi/)).toBeInTheDocument();
+});
+
+test("yönetici yalnız kendi yetkili yolculuğunu ve izin karar ilerlemesini görür", async () => {
+  setRole("manager");
+  stubApi({
+    "/api/guidance/leave-approval/journey": {
+      processKey: "leave-approval", verifiedDecisions: 3, lastVerifiedAtUtc: "2026-09-28T10:00:00Z",
+      contentVersion: 1, answeredChecks: 2, correctChecks: 1,
+    },
+  });
+  renderJourney();
+  const leaveCard = await screen.findByRole("region", { name: "İzin kararlarını öğrenme" });
+  expect(within(leaveCard).getByText("3 talep")).toBeInTheDocument();
+  expect(within(leaveCard).getByText("2/2")).toBeInTheDocument();
+  expect(within(leaveCard).getByText("1/2")).toBeInTheDocument();
+  expect(within(leaveCard).getByRole("link", { name: "Bekleyen izinleri aç" }))
+    .toHaveAttribute("href", "/app/inbox?tab=approvals");
+  expect(screen.queryByRole("region", { name: "Aday ilk incelemesi" })).not.toBeInTheDocument();
+  const map = screen.getByRole("region", { name: "İK süreç haritası" });
+  expect(within(map).getAllByRole("listitem")).toHaveLength(5);
+  expect(within(map).queryByRole("link", { name: "İşe alım ekranını aç" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) =>
+    String(url) === "/api/guidance/recruitment/journey" ||
+    String(url) === "/api/guidance/employee-entry/journey")).toBe(false);
 });
 
 test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehber sınırını gösterir", async () => {
@@ -84,7 +125,7 @@ test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehbe
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
     bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
   } });
-  renderPage(<GuidanceJourneyPage />);
+  renderJourney();
   const map = await screen.findByRole("region", { name: "İK süreç haritası" });
   expect(within(map).getAllByRole("listitem")).toHaveLength(10);
   expect(within(map).getByRole("link", { name: "Şirket hazırlığı ekranını aç" }))
@@ -105,7 +146,7 @@ test("ilerleme verisi yüklenemese de süreç haritası erişilebilir kalır", a
     JSON.stringify({ title: "Geçici hata" }),
     { status: 503, headers: { "Content-Type": "application/json" } },
   )));
-  renderPage(<GuidanceJourneyPage />);
+  renderJourney();
   expect(await screen.findByRole("region", { name: "İK süreç haritası" })).toBeInTheDocument();
   expect(await screen.findByText("Veri yüklenemedi")).toBeInTheDocument();
 });

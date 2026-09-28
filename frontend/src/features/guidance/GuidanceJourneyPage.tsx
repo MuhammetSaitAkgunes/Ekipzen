@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { appPath } from "../../paths";
+import { useAuth } from "../../auth/AuthContext";
 import { PageError, PageLoading } from "../shared/PageState";
-import { usePersonnelEntryJourney, useRecruitmentJourney, type PersonnelEntryJourney, type RecruitmentJourney } from "./journeyQueries";
+import { useLeaveApprovalJourney, usePersonnelEntryJourney, useRecruitmentJourney, type LeaveApprovalJourney, type PersonnelEntryJourney, type RecruitmentJourney } from "./journeyQueries";
 import { GuidanceProcessMap } from "./GuidanceProcessMap";
 
 const stepLabels: Record<string, string> = {
@@ -48,22 +49,45 @@ function RecruitmentEvidence({ journey }: { journey: RecruitmentJourney }) {
   </section>;
 }
 
+function LeaveApprovalEvidence({ journey }: { journey: LeaveApprovalJourney }) {
+  return <section className="ez-panel ez-journey-card" aria-labelledby="journey-leave-approval">
+    <span className="ez-overline">İZİN ONAYI · GERÇEK KARAR VE ALIŞTIRMA</span>
+    <h2 id="journey-leave-approval">İzin kararlarını öğrenme</h2>
+    <dl>
+      <div><dt>Kaydedilmiş gerçek karar</dt><dd>{journey.verifiedDecisions} talep</dd></div>
+      <div><dt>Yanıtlanan karar konusu</dt><dd>{journey.answeredChecks}/2</dd></div>
+      <div><dt>Son denemesi doğru olan konu</dt><dd>{journey.correctChecks}/2</dd></div>
+      {journey.lastVerifiedAtUtc && <div><dt>Son gerçek karar</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
+    </dl>
+    <p>Gerçek karar sayısı onay ve ret kayıtlarından gelir; kararın doğruluğunu veya bağımsız yeterliliği kanıtlamaz. Alıştırma yanıtları gerçek işlemden ayrı sayılır.</p>
+    <Link className="btn btn-secondary" to={appPath("/inbox?tab=approvals")}>Bekleyen izinleri aç</Link>
+  </section>;
+}
+
 export function GuidanceJourneyPage() {
-  const query = usePersonnelEntryJourney();
-  const recruitmentQ = useRecruitmentJourney();
+  const { user } = useAuth();
+  const isHrAdmin = user?.role === "hr-admin";
+  const query = usePersonnelEntryJourney(isHrAdmin);
+  const recruitmentQ = useRecruitmentJourney(isHrAdmin);
+  const leaveQ = useLeaveApprovalJourney();
   return <div className="ez-journey-page">
     <div className="page-header">
       <div><span className="ez-overline">İK REHBERİ</span><h1>Öğrenme yolculuğum</h1>
         <p>Gerçek işlemlerden gelen kanıtları ve rehberde kaldığınız bölümü görün.</p></div>
     </div>
-    {query.isPending ? <PageLoading /> : query.isError
+    {isHrAdmin && (query.isPending ? <PageLoading /> : query.isError
       ? <PageError error={query.error} />
-      : <JourneyEvidence journey={query.data} />}
-    {recruitmentQ.isPending
+      : <JourneyEvidence journey={query.data} />)}
+    {isHrAdmin && (recruitmentQ.isPending
       ? <p role="status">Aday yolculuğu yükleniyor.</p>
       : recruitmentQ.isError
         ? <p role="alert">Aday yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
-        : <RecruitmentEvidence journey={recruitmentQ.data} />}
-    <GuidanceProcessMap />
+        : <RecruitmentEvidence journey={recruitmentQ.data} />)}
+    {leaveQ.isPending
+      ? <p role="status">İzin onayı yolculuğu yükleniyor.</p>
+      : leaveQ.isError
+        ? <p role="alert">İzin onayı yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
+        : <LeaveApprovalEvidence journey={leaveQ.data} />}
+    <GuidanceProcessMap isHrAdmin={isHrAdmin} />
   </div>;
 }

@@ -1,19 +1,22 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   useGuidanceDecisionCheck, useSubmitGuidanceDecisionCheck,
   type GuidanceDecisionCheck as Check, type GuidanceDecisionProcess,
 } from "./decisionCheckQueries";
 
-export function GuidanceDecisionCheck({ process, step, operationName }: {
-  process: GuidanceDecisionProcess; step: string; operationName: string;
+export function GuidanceDecisionCheck({ process, step, operationName, eager = true }: {
+  process: GuidanceDecisionProcess; step: string; operationName: string; eager?: boolean;
 }) {
+  const inputName = useId();
+  const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState<Check | null>(null);
-  const query = useGuidanceDecisionCheck(process, step);
+  const query = useGuidanceDecisionCheck(process, step, eager || open);
   const submit = useSubmitGuidanceDecisionCheck();
   const shown = submitted ?? (selected === null ? query.data : null);
 
-  return <details className="ez-personnel-decision-check">
+  return <details className="ez-personnel-decision-check"
+    onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>Kısa karar alıştırması</summary>
     {query.isPending ? <p>Alıştırma yükleniyor.</p> : query.isError
       ? <p role="alert">Alıştırma yüklenemedi. Daha sonra yeniden deneyin.</p>
@@ -21,7 +24,7 @@ export function GuidanceDecisionCheck({ process, step, operationName }: {
         <fieldset>
           <legend>{query.data.question}</legend>
           {query.data.choices.map((choice, index) => <label key={choice}>
-            <input type="radio" name={`guidance-check-${process}-${step}`}
+            <input type="radio" name={`guidance-check-${process}-${step}-${inputName}`}
               checked={(selected ?? query.data.lastSelectedChoice) === index}
               onChange={() => { setSelected(index); setSubmitted(null); }} />
             {choice}

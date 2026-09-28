@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
+import { leaveApprovalJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
 
 export type LeaveBalanceDto = components["schemas"]["LeaveBalanceDto"];
@@ -44,6 +45,7 @@ export const useCreateLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: leaveApprovalJourneyKey });
     },
   });
 };

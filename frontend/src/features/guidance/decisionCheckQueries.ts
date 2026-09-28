@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
-import { personnelEntryJourneyKey, recruitmentJourneyKey } from "./journeyQueries";
+import { leaveApprovalJourneyKey, personnelEntryJourneyKey, recruitmentJourneyKey } from "./journeyQueries";
 
-export type GuidanceDecisionProcess = "employee-entry" | "recruitment";
+export type GuidanceDecisionProcess = "employee-entry" | "recruitment" | "leave-approval";
 
 export type GuidanceDecisionCheck = {
   stepKey: string;
@@ -20,10 +20,11 @@ const checkKey = (process: GuidanceDecisionProcess, step: string) =>
 const checkPath = (process: GuidanceDecisionProcess, step: string) =>
   `/guidance/${process}/checks/${step}`;
 
-export const useGuidanceDecisionCheck = (process: GuidanceDecisionProcess, step: string) =>
+export const useGuidanceDecisionCheck = (process: GuidanceDecisionProcess, step: string, enabled = true) =>
   useQuery({
     queryKey: checkKey(process, step),
     queryFn: () => apiFetch<GuidanceDecisionCheck>(checkPath(process, step)),
+    enabled,
   });
 
 export const useSubmitGuidanceDecisionCheck = () => {
@@ -39,7 +40,8 @@ export const useSubmitGuidanceDecisionCheck = () => {
     onSuccess: (result, { process, step }) => {
       queryClient.setQueryData(checkKey(process, step), result);
       void queryClient.invalidateQueries({
-        queryKey: process === "employee-entry" ? personnelEntryJourneyKey : recruitmentJourneyKey,
+        queryKey: process === "employee-entry" ? personnelEntryJourneyKey
+          : process === "recruitment" ? recruitmentJourneyKey : leaveApprovalJourneyKey,
       });
     },
   });
