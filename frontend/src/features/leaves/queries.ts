@@ -12,6 +12,22 @@ export type TeamLeaveDto = components["schemas"]["TeamLeaveDto"];
 export type CreateLeaveRequestCommand = components["schemas"]["CreateLeaveRequestCommand"];
 type EmployeePagedResult = components["schemas"]["EmployeeListItemDtoPagedResult"];
 
+export type LeaveRequestPreviewDto = {
+  workingDays: number;
+  deductsFromAnnualBalance: boolean;
+  requiresApproval: boolean;
+  canSubmit: boolean;
+  blockReason: string | null;
+  previewedAtUtc: string;
+};
+
+type PreviewLeaveRequest = Pick<CreateLeaveRequestCommand, "leaveTypeId" | "startDate" | "endDate" | "substituteEmployeeId">;
+
+export const usePreviewLeave = () => useMutation({
+  mutationFn: (request: PreviewLeaveRequest) =>
+    apiFetch<LeaveRequestPreviewDto>("/leaves/preview", { method: "POST", body: JSON.stringify(request) }),
+});
+
 export const useLeaveBalance = () =>
   useQuery({ queryKey: ["leaves", "balance"], queryFn: () => apiFetch<LeaveBalanceDto>("/leaves/balance") });
 
@@ -45,7 +61,6 @@ export const useCreateLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
-      queryClient.invalidateQueries({ queryKey: leaveApprovalJourneyKey });
     },
   });
 };
@@ -83,6 +98,7 @@ export const useDecideLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: leaveApprovalJourneyKey });
     },
   });
 };

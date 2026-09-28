@@ -4,7 +4,7 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
-import { useCreateLeave, useLeaveBalance, useLeaveTypes, useSubstituteOptions, type LeaveTypeDto } from "./queries";
+import { useCreateLeave, useLeaveBalance, useLeaveTypes, usePreviewLeave, useSubstituteOptions, type LeaveTypeDto } from "./queries";
 
 const typeCardMeta = (type: LeaveTypeDto, remaining: number): { icon: string; tone: string; small: string } => {
   const name = type.name ?? "";
@@ -27,6 +27,7 @@ type LeaveReview = {
   startDate: string;
   endDate: string;
   calendarDays: number;
+  workingDays: number;
   description: string;
   substituteId: number | null;
   substituteName: string | null;
@@ -41,6 +42,8 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
   const balanceQ = useLeaveBalance();
   const substitutesQ = useSubstituteOptions(user?.role !== "employee");
   const createLeave = useCreateLeave();
+  const previewLeave = usePreviewLeave();
+  const formRevision = useRef(0);
 
   const [typeId, setTypeId] = useState<number | null>(null);
   const [startDate, setStartDate] = useState("");
@@ -59,7 +62,8 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
     ? Math.round((Date.parse(endDate + "T00:00:00Z") - Date.parse(startDate + "T00:00:00Z")) / 86_400_000) + 1
     : null;
 
-  const prepareReview = () => {
+  const prepareReview = async () => {
+    if (previewLeave.isPending) return;
     setError(null);
     if (!selectedType?.id) {
       setError("İzin türünü kayıttaki koşullarla karşılaştırıp açıkça seçin.");
@@ -82,18 +86,37 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
       setError("Seçilen vekil doğrulanamadı; listeyi yeniden yükleyip kontrol edin.");
       return;
     }
-    setReview({
-      typeId: selectedType.id,
-      typeName: selectedType.name ?? "İzin",
-      deductsFromAnnualBalance: selectedType.deductsFromAnnualBalance === true,
-      requiresApproval: selectedType.requiresApproval === true,
-      startDate,
-      endDate,
-      calendarDays: previewDays,
-      description: description.trim(),
-      substituteId: substitute?.id ?? null,
-      substituteName: substitute?.name ?? null,
-    });
+    const revision = formRevision.current;
+    try {
+      const preview = await previewLeave.mutateAsync({
+        leaveTypeId: selectedType.id,
+        startDate,
+        endDate,
+        substituteEmployeeId: substitute?.id ?? null,
+      });
+      if (revision !== formRevision.current) return;
+      if (!preview.canSubmit) {
+        setError(preview.blockReason || "Bu talep şu an gönderilemiyor; bilgileri kontrol edin.");
+        return;
+      }
+      setReview({
+        typeId: selectedType.id,
+        typeName: selectedType.name ?? "İzin",
+        deductsFromAnnualBalance: preview.deductsFromAnnualBalance,
+        requiresApproval: preview.requiresApproval,
+        startDate,
+        endDate,
+        calendarDays: previewDays,
+        workingDays: preview.workingDays,
+        description: description.trim(),
+        substituteId: substitute?.id ?? null,
+        substituteName: substitute?.name ?? null,
+      });
+    } catch (e) {
+      if (revision === formRevision.current) {
+        setError(e instanceof ApiError ? e.message : "İzin önizlemesi alınamadı; yeniden deneyin.");
+      }
+    }
   };
 
   const submit = async () => {
@@ -126,7 +149,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             <h3 id="leave-request-title">Yeni İzin Talebi</h3>
             <p>İzin türünü ve tarihleri doğrulayın; göndermeden önce sonucu gözden geçirin.</p>
           </div>
-          <button className="btn-icon-sm" onClick={onClose} disabled={createLeave.isPending} title="Kapat" aria-label="İzin talebi penceresini kapat">
+          <button className="btn-icon-sm" onClick={onClose} disabled={createLeave.isPending || previewLeave.isPending} title="Kapat" aria-label="İzin talebi penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
@@ -137,7 +160,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             <strong>Ne yapıyoruz?</strong>
             <p>Gerçek izin talebini oluşturuyoruz. Türü, başlangıç ve bitişi; ilgili kayıt ve belgelerle karşılaştırın.</p>
             <p><strong>Neden?</strong> Tür, yıllık bakiyeden düşme ve onay gereksinimini etkiler. Örneğin “Raporlu” adını görmeniz tek başına belge koşulunu kanıtlamaz; belge ve şirket kuralını ayrıca doğrulayın.</p>
-            <p>Bu ekran yalnız sunucudaki tür adı, bakiye etkisi ve onay bilgisini gösterir. Ayrıntılı mevzuat dayanağı henüz onaylı içerik olarak sunulmuyor.</p>
+            <p>Ön kontrol, iş gününü ve talebin mevcut kayıtlara göre gönderilebilirliğini sunucudan alır. Ayrıntılı mevzuat dayanağı henüz onaylı içerik olarak sunulmuyor.</p>
           </section>
           {typesQ.isPending || balanceQ.isPending ? <PageLoading /> : typesQ.isError || balanceQ.isError ? <PageError error={typesQ.error ?? balanceQ.error} /> : <p className="ez-balance-note">Görüntülenen yıllık izin bakiyesi: <strong>{remaining} gün</strong></p>}
           <p className="input-label" id="leave-type-label">İzin Türü — açıkça seçin</p>
@@ -151,7 +174,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
                     type="radio"
                     name="leaveType"
                     checked={typeId === type.id}
-                    onChange={() => { setReview(null); setTypeId(type.id ?? null); }}
+                    onChange={() => { formRevision.current++; setReview(null); setTypeId(type.id ?? null); }}
                   />
                   <div className="tc-content">
                     <div className={`tc-icon ${meta.tone}`}><i aria-hidden="true" className={`fa-solid ${meta.icon}`} /></div>
@@ -168,11 +191,11 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
           <div className="form-grid-2 mt-4">
             <div className="input-group">
               <label className="input-label" htmlFor="start-date">Başlangıç Tarihi</label>
-              <input type="date" className="input-control" id="start-date" value={startDate} onChange={(e) => { setReview(null); setStartDate(e.target.value); }} />
+              <input type="date" className="input-control" id="start-date" value={startDate} onChange={(e) => { formRevision.current++; setReview(null); setStartDate(e.target.value); }} />
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="end-date">Bitiş Tarihi</label>
-              <input type="date" className="input-control" id="end-date" value={endDate} onChange={(e) => { setReview(null); setEndDate(e.target.value); }} />
+              <input type="date" className="input-control" id="end-date" value={endDate} onChange={(e) => { formRevision.current++; setReview(null); setEndDate(e.target.value); }} />
             </div>
           </div>
 
@@ -182,13 +205,13 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
 
           <div className="input-group mt-4">
             <label className="input-label" htmlFor="leave-desc">Açıklama / Adres</label>
-            <textarea id="leave-desc" className="input-control" rows={2} placeholder="İzin nedeni veya bulunacağınız adres" value={description} onChange={(e) => { setReview(null); setDescription(e.target.value); }} />
+            <textarea id="leave-desc" className="input-control" rows={2} placeholder="İzin nedeni veya bulunacağınız adres" value={description} onChange={(e) => { formRevision.current++; setReview(null); setDescription(e.target.value); }} />
           </div>
 
-          <p className="ez-quiet">Takvim günü, izin bakiyesinden düşecek iş günü değildir. Kesin iş günü, çakışma ve yeterli bakiye sunucuda talep gönderilirken doğrulanır. Gösterilen bakiye bugünkü kayıttır.</p>
+          <p className="ez-quiet">Takvim günü, izin bakiyesinden düşecek iş günü değildir. İş günü, çakışma ve bakiye ön kontrolde sunucudan alınır; gönderimde yeniden doğrulanır. Arada kayıtlar değişebilir. Gösterilen bakiye bugünkü kayıttır.</p>
           <div className="input-group mt-3">
             <label className="input-label" htmlFor="leave-substitute">Yerine Bakacak Kişi</label>
-            <select id="leave-substitute" className="input-control" value={substituteId} onChange={(e) => { setReview(null); setSubstituteId(e.target.value); }}>
+            <select id="leave-substitute" className="input-control" value={substituteId} onChange={(e) => { formRevision.current++; setReview(null); setSubstituteId(e.target.value); }}>
               <option value="">Seçiniz...</option>
               {(substitutesQ.data ?? []).map((emp) => (
                 <option key={emp.id} value={emp.id}>{emp.name}</option>
@@ -199,6 +222,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             <h4 id="leave-review-title">Göndermeden önce kontrol edin</h4>
             <p><strong>Tür:</strong> {review.typeName} · {review.deductsFromAnnualBalance ? "Yıllık bakiyeden düşer" : "Yıllık bakiyeden düşmez"}</p>
             <p><strong>Tarih:</strong> {review.startDate} – {review.endDate} · {review.calendarDays} takvim günü</p>
+            <p><strong>İş günü:</strong> {review.workingDays} gün (sunucu önizlemesi; gönderimde yeniden doğrulanır)</p>
             <p><strong>Onay:</strong> {review.requiresApproval ? "Yönetici onayı bekleyecek" : "Sunucu kurallarına uygunsa doğrudan onaylanabilir"}</p>
             {review.substituteName && <p><strong>Vekil:</strong> {review.substituteName}</p>}
             {review.description && <p><strong>Açıklama:</strong> {review.description}</p>}
@@ -214,8 +238,8 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             </button>
           </> : <>
             <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
-            <button className="btn btn-primary" onClick={prepareReview} disabled={createLeave.isPending || !typesQ.isSuccess || !balanceQ.isSuccess || types.length === 0}>
-              Bilgileri kontrol et
+            <button className="btn btn-primary" onClick={prepareReview} disabled={createLeave.isPending || previewLeave.isPending || !typesQ.isSuccess || !balanceQ.isSuccess || types.length === 0}>
+              {previewLeave.isPending ? "Sunucuda kontrol ediliyor..." : "Bilgileri kontrol et"}
             </button>
           </>}
         </div>

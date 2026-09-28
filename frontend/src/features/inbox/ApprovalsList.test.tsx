@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { stubApi } from "../../test/apiStub";
 import { ApprovalsList } from "./ApprovalsList";
+import { leaveApprovalJourneyKey } from "../guidance/journeyQueries";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -82,7 +83,9 @@ test("onay için karar özeti görülmeden işlem gönderilmez; not karar kaydı
     ],
     "/api/leaves/8/approve": { id: 8, status: "approved" },
   });
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(leaveApprovalJourneyKey, { verifiedDecisions: 0 });
+  render(<QueryClientProvider client={queryClient}>
     <MemoryRouter initialEntries={["/app/inbox?requestId=8"]}>
       <ToastProvider><ApprovalsList /></ToastProvider>
     </MemoryRouter>
@@ -101,6 +104,7 @@ test("onay için karar özeti görülmeden işlem gönderilmez; not karar kaydı
   await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
     String(url) === "/api/leaves/8/approve" && init?.method === "POST"
       && JSON.parse(String(init.body)).note === "Tarihler ve ekip planı kontrol edildi.")).toBe(true));
+  await waitFor(() => expect(queryClient.getQueryState(leaveApprovalJourneyKey)?.isInvalidated).toBe(true));
 });
 
 test("ret kararı da ayrı inceleme ve açık kaydetme gerektirir", async () => {
