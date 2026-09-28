@@ -5,6 +5,7 @@ using Ekipzen.Application.Common.Models;
 using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Compliance;
 using Ekipzen.Application.Features.Employees;
+using Ekipzen.Application.Features.Employees.Offboarding;
 using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Leaves;
 using Ekipzen.Application.Features.Recruitment;
@@ -182,6 +183,62 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
                 otherRegularBenefits = 0, sourceReference = "Doğrulanmış ücret kararı",
             });
         current.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().NotContain(task => task.Key == key);
+    }
+
+    [Fact]
+    public async Task DraftOffboardingTask_OpensCaseForHrAdminAndDisappearsAfterCompletion()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+        var departments = await GetAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
+            admin, "/api/departments");
+        var created = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Ayrılış", lastName = "Taslak " + Guid.NewGuid().ToString("N"),
+            title = "Uzman", departmentId = departments[0].Id,
+            hireDate = today.AddDays(-1), contractType = "indefinite",
+            profile = new { employmentType = "Tam Zamanlı" },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var employee = (await created.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+        var draftResponse = await admin.PutAsJsonAsync(
+            $"/api/employees/{employee.Id}/offboarding-draft", new
+            {
+                terminationDate = today,
+                exitCode = "TEST-03",
+                exitReason = "Kaynak durum testi",
+                terminationReason = "employee-resignation",
+                noticeHandling = "not-applicable",
+                unusedLeaveDays = 0m,
+                unusedLeavePayment = 0m,
+                severancePayment = 0m,
+                noticePayment = 0m,
+                settlementReference = "Test uzman hesap belgesi",
+            });
+        draftResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var draft = (await draftResponse.Content.ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
+        var key = $"offboarding-case:{draft.Id}";
+
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key)
+            .Which.Should().Match<DailyGuidanceTaskDto>(task =>
+                task.Kind == "offboarding-case" &&
+                task.RecordId == draft.Id &&
+                task.DueDate == null &&
+                task.DateNote.Contains("karar son tarihi değildir") &&
+                task.TargetPath == $"/personnel/{employee.Id}?offboarding=1");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key, "aynı taslak ikinci görev oluşturmaz");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(manager, Url))
+            .Should().NotContain(task => task.Key == key, "yönetici ayrılış vakasını tamamlayamaz");
+
+        var completed = await admin.PostAsJsonAsync(
+            $"/api/employees/{employee.Id}/offboarding/{draft.Id}/complete",
+            new { expectedVersion = draft.Version });
+        completed.StatusCode.Should().Be(HttpStatusCode.OK, await completed.Content.ReadAsStringAsync());
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
             .Should().NotContain(task => task.Key == key);
     }

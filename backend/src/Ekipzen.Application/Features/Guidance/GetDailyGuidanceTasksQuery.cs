@@ -92,6 +92,26 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 $"/personnel/{employee.Id}?edit=1&guide=1&tab=tab-mali"
             )));
 
+            var draftOffboardings = await context.EmployeeOffboardingCases.AsNoTracking()
+                .Where(offboarding => offboarding.Status == EmployeeOffboardingStatus.Draft &&
+                    offboarding.Employee!.Status == EmployeeStatus.Active)
+                .Select(offboarding => new {
+                    offboarding.Id, offboarding.EmployeeId, offboarding.TerminationDate,
+                    offboarding.Employee!.FirstName, offboarding.Employee.LastName
+                })
+                .ToListAsync(ct);
+            tasks.AddRange(draftOffboardings.Select(offboarding => new DailyGuidanceTaskDto(
+                $"offboarding-case:{offboarding.Id}",
+                "offboarding-case",
+                offboarding.Id,
+                $"{offboarding.FirstName} {offboarding.LastName} ayrılış taslağını incele",
+                "İşten ayrılış dosyası taslak durumunda; personel henüz pasife alınmadı.",
+                "Tarihi, fesih nedenini, ekip devrini ve uzman/harici hesap dayanağını doğrulayın. Hata varsa taslağı düzeltin; uygunsa süreci tamamlayın.",
+                null,
+                $"Taslakta kayıtlı ayrılış tarihi: {offboarding.TerminationDate:dd.MM.yyyy}. Bu tarih karar son tarihi değildir; kayıtlı son tarih yok.",
+                $"/personnel/{offboarding.EmployeeId}?offboarding=1"
+            )));
+
             var periods = await sender.Send(new GetPayrollPeriodsQuery(), ct);
             tasks.AddRange(periods
                 .Where(period => period.Status is "draft" or "control")
@@ -126,9 +146,10 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
             {
                 "compliance-document" => 0,
                 "leave-approval" => 1,
-                "employee-compensation" => 2,
-                "payroll-period" => 3,
-                _ => 4,
+                "offboarding-case" => 2,
+                "employee-compensation" => 3,
+                "payroll-period" => 4,
+                _ => 5,
             })
             .ThenBy(task => task.DueDate ?? DateOnly.MaxValue)
             .ThenBy(task => task.RecordId)
