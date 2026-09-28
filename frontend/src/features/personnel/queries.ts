@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import { personnelEntryJourneyKey } from "../guidance/journeyQueries";
+import { dailyTasksKey } from "../guidance/queries";
 import type { components } from "../../api/schema";
 
 export type EmployeeListItemDto = components["schemas"]["EmployeeListItemDto"];
@@ -105,8 +106,11 @@ export const useSaveEmployee = () => {
         ? apiFetch<EmployeeDetailDto>("/employees", { method: "POST", body: JSON.stringify(model) })
         : apiFetch<EmployeeDetailDto>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(model) }),
     onSuccess: async (_employee, { id }) => {
-      await queryClient.invalidateQueries({ queryKey: ["employees"] });
-      if (id === null) await queryClient.invalidateQueries({ queryKey: personnelEntryJourneyKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["employees"] }),
+        queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+        ...(id === null ? [queryClient.invalidateQueries({ queryKey: personnelEntryJourneyKey })] : []),
+      ]);
     },
   });
 };
@@ -119,7 +123,10 @@ export const useRehireEmployee = () => {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["employees"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -131,8 +138,10 @@ export const useSaveCompensationPackage = () => {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    onSuccess: (_foundation, { employeeId }) =>
+    onSuccess: (_foundation, { employeeId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -184,7 +193,10 @@ export const useCompleteOffboarding = () => {
       `/employees/${employeeId}/offboarding/${caseId}/complete`,
       { method: "POST", body: JSON.stringify({ expectedVersion }) },
     ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["employees"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -200,7 +212,10 @@ export const useReverseOffboarding = () => {
       `/employees/${employeeId}/offboarding/${caseId}/reverse`,
       { method: "POST", body: JSON.stringify({ expectedVersion, reason }) },
     ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["employees"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -251,6 +266,9 @@ export const useImportEmployees = () => {
   return useMutation({
     mutationFn: (file: File) =>
       apiFetch<ImportResultDto>("/employees/import", { method: "POST", body: dosyaGovdesi(file) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employees"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["employees"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };

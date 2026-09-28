@@ -17,6 +17,14 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
         targetPath: "/risk/compliance?documentId=12",
       },
       {
+        key: "employee-compensation:42", kind: "employee-compensation", recordId: 42,
+        title: "Yeni Kişi ücret hazırlığını kontrol et",
+        reason: "Açık çalışma dönemi için bugün yürürlükte ücret paketi yok.",
+        nextAction: "Tutarı, yürürlük tarihini ve kaynak referansını doğrulayın.",
+        dueDate: null, dateNote: "İşe giriş: 24.09.2026. Bu tarih karar son tarihi değildir; kayıtlı son tarih yok.",
+        targetPath: "/personnel/42?edit=1&guide=1&tab=tab-mali",
+      },
+      {
         key: "payroll-period:3", kind: "payroll-period", recordId: 3,
         title: "Temmuz 2026 bordro dönemini incele",
         reason: "Dönem taslak durumunda; henüz onaylanmadı.",
@@ -48,6 +56,11 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
   expect(within(documentCard).getByText(/Neden?/)).toBeInTheDocument();
   expect(within(documentCard).getByRole("link", { name: /Kaydı incele/ }))
     .toHaveAttribute("href", "/app/risk/compliance?documentId=12");
+  const compensationCard = screen.getByText("Yeni Kişi ücret hazırlığını kontrol et").closest("article")!;
+  expect(within(compensationCard).getByText("ÜCRET HAZIRLIĞI")).toBeInTheDocument();
+  expect(within(compensationCard).getByText(/Bu tarih karar son tarihi değildir/)).toBeInTheDocument();
+  expect(within(compensationCard).getByRole("link", { name: /Kaydı incele/ }))
+    .toHaveAttribute("href", "/app/personnel/42?edit=1&guide=1&tab=tab-mali");
   const payrollCard = screen.getByText("Temmuz 2026 bordro dönemini incele").closest("article")!;
   expect(within(payrollCard).getByText("BORDRO DÖNEMİ")).toBeInTheDocument();
   expect(within(payrollCard).getByText(/kayıtlı son tarih yok/)).toBeInTheDocument();
