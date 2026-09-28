@@ -25,6 +25,14 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
         targetPath: "/personnel/42?edit=1&guide=1&tab=tab-mali",
       },
       {
+        key: "offboarding-case:17", kind: "offboarding-case", recordId: 17,
+        title: "Yeni Kişi ayrılış taslağını incele",
+        reason: "İşten ayrılış dosyası taslak durumunda; personel henüz pasife alınmadı.",
+        nextAction: "Tarihi, fesih nedenini, ekip devrini ve uzman/harici hesap dayanağını doğrulayın.",
+        dueDate: null, dateNote: "Taslakta kayıtlı ayrılış tarihi: 24.09.2026. Bu tarih karar son tarihi değildir; kayıtlı son tarih yok.",
+        targetPath: "/personnel/42?offboarding=1",
+      },
+      {
         key: "payroll-period:3", kind: "payroll-period", recordId: 3,
         title: "Temmuz 2026 bordro dönemini incele",
         reason: "Dönem taslak durumunda; henüz onaylanmadı.",
@@ -61,6 +69,11 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
   expect(within(compensationCard).getByText(/Bu tarih karar son tarihi değildir/)).toBeInTheDocument();
   expect(within(compensationCard).getByRole("link", { name: /Kaydı incele/ }))
     .toHaveAttribute("href", "/app/personnel/42?edit=1&guide=1&tab=tab-mali");
+  const offboardingCard = screen.getByText("Yeni Kişi ayrılış taslağını incele").closest("article")!;
+  expect(within(offboardingCard).getByText("AYRILIŞ TASLAĞI")).toBeInTheDocument();
+  expect(within(offboardingCard).getByText(/Bu tarih karar son tarihi değildir/)).toBeInTheDocument();
+  expect(within(offboardingCard).getByRole("link", { name: /Kaydı incele/ }))
+    .toHaveAttribute("href", "/app/personnel/42?offboarding=1");
   const payrollCard = screen.getByText("Temmuz 2026 bordro dönemini incele").closest("article")!;
   expect(within(payrollCard).getByText("BORDRO DÖNEMİ")).toBeInTheDocument();
   expect(within(payrollCard).getByText(/kayıtlı son tarih yok/)).toBeInTheDocument();

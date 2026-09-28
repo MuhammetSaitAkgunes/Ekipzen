@@ -153,8 +153,10 @@ export const useSaveOffboardingDraft = () => {
         method: "PUT",
         body: JSON.stringify(body),
       }),
-    onSuccess: (_case, { employeeId }) =>
+    onSuccess: (_case, { employeeId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "offboarding-context"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 

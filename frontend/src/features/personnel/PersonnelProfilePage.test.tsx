@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
 import { SESSION_KEY } from "../../api/session";
@@ -28,6 +28,18 @@ beforeEach(() => {
     "/api/guidance/employee-entry/employees/42/evidence": { employeeId: 42, createdByCurrentUser: true, createdAtUtc: "2026-09-24T10:00:00Z" },
     "/api/employees/42": employee,
     "/api/employees/42/documents": [],
+    "/api/termination-calculation-rules": [],
+    "/api/employees/42/offboarding-context": {
+      employeeId: 42, employeeName: "Yeni Kişi", directReportCount: 0, pendingLeaveRequestCount: 0,
+      currentCase: {
+        id: 17, employeeId: 42, status: "draft", version: 1,
+        terminationDate: "2026-09-24", exitCode: "TEST-03", exitReason: "İstifa",
+        terminationReason: "employee-resignation", noticeHandling: "not-applicable",
+        unusedLeaveDays: 0, unusedLeavePayment: 0, severancePayment: 0, noticePayment: 0,
+        settlementSource: "external-expert", settlementReference: "Uzman kayıt örneği",
+      },
+      successors: [],
+    },
     "/api/employees/42/employment-foundation": {
       employeeId: 42, contractType: "indefinite", employmentPeriods: [], compensationPackages: [],
     },
@@ -35,6 +47,29 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.unstubAllGlobals());
+
+test("günlük görev bağlantısı taslak ayrılış dosyasını açar ve kapanınca adresi temizler", async () => {
+  function LocationProbe() {
+    const location = useLocation();
+    return <span data-testid="location">{location.pathname + location.search}</span>;
+  }
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={["/app/personnel/42?offboarding=1"]}>
+        <AuthProvider><ToastProvider><Routes>
+          <Route path="/app/personnel/:employeeId" element={<><PersonnelProfilePage /><LocationProbe /></>} />
+        </Routes></ToastProvider></AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+  expect(await screen.findByRole("dialog", { name: "İşten Çıkış ve Finansal Kapanış" })).toBeInTheDocument();
+  expect(await screen.findByText(/Yeni Kişi için denetlenebilir kapanış sürecini yönetin/)).toBeInTheDocument();
+  expect(screen.getByTestId("location")).toHaveTextContent("/app/personnel/42?offboarding=1");
+  await userEvent.click(screen.getByRole("button", { name: "İşten çıkış penceresini kapat" }));
+  expect(screen.queryByRole("dialog", { name: "İşten Çıkış ve Finansal Kapanış" })).not.toBeInTheDocument();
+  expect(screen.getByTestId("location")).toHaveTextContent("/app/personnel/42");
+});
 
 test("başarılı çalışan kaydından sonra aynı çalışanın evrak adımına geçer", async () => {
   render(
