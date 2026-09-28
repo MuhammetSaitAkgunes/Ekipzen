@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "../../api/client";
+import { dailyTasksKey } from "../guidance/queries";
 import type { components } from "../../api/schema";
 import type {
   SaveTerminationCalculationRuleBody,
@@ -40,7 +41,10 @@ export const useCreatePayrollPeriod = () => {
         method: "POST",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -52,7 +56,10 @@ export const useUpdatePayrollRow = () => {
         method: "PUT",
         body: JSON.stringify(model),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -64,7 +71,10 @@ export const useRunPayrollCheck = () => {
         method: "POST",
         body: JSON.stringify({}),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -76,7 +86,10 @@ export const useApprovePayrollRow = () => {
         method: "POST",
         body: JSON.stringify({}),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 
@@ -88,7 +101,10 @@ export const useSubmitPayrollPeriod = () => {
         method: "POST",
         body: JSON.stringify({}),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 

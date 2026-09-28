@@ -43,6 +43,16 @@ test("hr-admin sekmeleri ve dönem seçicisini görür, ilk dönem seçilir", as
   expect(screen.getByLabelText("Bordro dönemi")).toHaveValue("3");
 });
 
+test("günlük görev bağlantısı istenen bordro dönemini seçer", async () => {
+  setRole("hr-admin");
+  renderPage(
+    <AuthProvider><ToastProvider><PayrollPage tab="period" /></ToastProvider></AuthProvider>,
+    ["/app/payroll?periodId=2"],
+  );
+  expect(await screen.findByLabelText("Bordro dönemi")).toHaveValue("2");
+  expect(screen.getByText(/Haziran 2026 dönemi için/)).toBeInTheDocument();
+});
+
 test("çalışan sekme kabuğu yerine Bordrolarım görünümünü alır", async () => {
   setRole("employee");
   renderShell();

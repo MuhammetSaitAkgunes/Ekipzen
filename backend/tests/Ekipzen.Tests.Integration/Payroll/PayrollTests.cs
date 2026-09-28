@@ -2,6 +2,7 @@ using FluentAssertions;
 using Ekipzen.Application.Common.Models;
 using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Employees;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Payroll;
 using Ekipzen.Domain.Enums;
 using System.Net;
@@ -241,6 +242,18 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
 
         period.Name.Should().Be("Eylül 2026");
         period.Status.Should().Be("draft");
+        var payrollTaskKey = $"payroll-period:{period.Id}";
+        var dailyTasks = await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks");
+        dailyTasks.Should().ContainSingle(task => task.Key == payrollTaskKey)
+            .Which.Should().Match<DailyGuidanceTaskDto>(task =>
+                task.Kind == "payroll-period" && task.DueDate == null &&
+                task.TargetPath == $"/payroll?periodId={period.Id}");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
+            .Should().ContainSingle(task => task.Key == payrollTaskKey, "aynı kaynak ikinci görev oluşturmaz");
+        var managerTasks = await GetAsync<List<DailyGuidanceTaskDto>>(
+            await AuthedClientAsync("ece.arslan@hrmaster.local"), "/api/guidance/daily-tasks");
+        managerTasks.Should().NotContain(task => task.Key == payrollTaskKey,
+            "yönetici bordro dönemine erişemez");
         period.Rows.Should().NotBeEmpty("aktif personel için girdi satırları üretilir");
         period.Rows.Select(r => r.Name).Should().Contain(["Ahmet Yılmaz", "Ece Arslan", "Ayşe Demir"]);
         period.Rows.Select(r => r.Name).Should().Contain(departingEmployee.Name,
@@ -425,6 +438,9 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
             response => response.StatusCode == HttpStatusCode.OK);
         (await approvedSubmission.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!
             .Status.Should().Be("approved");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
+            .Should().NotContain(task => task.Key == payrollTaskKey,
+                "dönem onayı gerçek kaynak durumunu değiştirir");
 
         (await admin.PutAsJsonAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
         {

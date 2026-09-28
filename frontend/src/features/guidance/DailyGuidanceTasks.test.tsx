@@ -17,6 +17,14 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
         targetPath: "/risk/compliance?documentId=12",
       },
       {
+        key: "payroll-period:3", kind: "payroll-period", recordId: 3,
+        title: "Temmuz 2026 bordro dönemini incele",
+        reason: "Dönem taslak durumunda; henüz onaylanmadı.",
+        nextAction: "Satırları ve uyarıları inceleyin.",
+        dueDate: null, dateNote: "Bu dönem için kayıtlı son tarih yok.",
+        targetPath: "/payroll?periodId=3",
+      },
+      {
         key: "leave-approval:8", kind: "leave-approval", recordId: 8,
         title: "Ahmet Yılmaz izin talebini incele", reason: "Mazeret talebi onay bekliyor.",
         nextAction: "Talep ayrıntılarını inceleyip onay veya ret kararı verin.",
@@ -32,6 +40,11 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
   expect(within(documentCard).getByText(/Neden?/)).toBeInTheDocument();
   expect(within(documentCard).getByRole("link", { name: /Kaydı incele/ }))
     .toHaveAttribute("href", "/app/risk/compliance?documentId=12");
+  const payrollCard = screen.getByText("Temmuz 2026 bordro dönemini incele").closest("article")!;
+  expect(within(payrollCard).getByText("BORDRO DÖNEMİ")).toBeInTheDocument();
+  expect(within(payrollCard).getByText(/kayıtlı son tarih yok/)).toBeInTheDocument();
+  expect(within(payrollCard).getByRole("link", { name: /Kaydı incele/ }))
+    .toHaveAttribute("href", "/app/payroll?periodId=3");
   const leaveCard = screen.getByText("Ahmet Yılmaz izin talebini incele").closest("article")!;
   expect(within(leaveCard).getByText(/Karar için kayıtlı son tarih yok/)).toBeInTheDocument();
   expect(within(leaveCard).getByRole("link", { name: /Kaydı incele/ }))

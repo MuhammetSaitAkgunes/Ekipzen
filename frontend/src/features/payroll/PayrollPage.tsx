@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
@@ -27,24 +27,21 @@ export function PayrollPage({ tab }: { tab: "period" | "calculator" | "settings"
 
 function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
   const periodsQ = usePayrollPeriods(true);
   const submitPeriod = useSubmitPayrollPeriod();
-  const [periodId, setPeriodId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const periods = periodsQ.data ?? [];
+  const rawPeriodId = searchParams.get("periodId");
+  const requestedPeriodId = rawPeriodId && /^[1-9]\d*$/.test(rawPeriodId) ? Number(rawPeriodId) : null;
+  const periodId = periods.find((period) => period.id === requestedPeriodId)?.id ?? periods[0]?.id ?? null;
   const periodDetailQ = usePayrollPeriod(tab === "period" ? periodId : null);
-
-  useEffect(() => {
-    if (periodId === null && (periodsQ.data ?? []).length > 0) {
-      setPeriodId(periodsQ.data![0].id ?? null);
-    }
-  }, [periodsQ.data, periodId]);
 
   if (periodsQ.isPending) return <PageLoading />;
   if (periodsQ.isError) return <PageError error={periodsQ.error} />;
 
-  const periods = periodsQ.data;
   const selected = periods.find((p) => p.id === periodId) ?? null;
 
   const selectedDetail = periodDetailQ.data?.id === periodId ? periodDetailQ.data : null;
@@ -80,7 +77,7 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
                 id="payroll-period-select"
                 className="small-select"
                 value={periodId ?? ""}
-                onChange={(e) => { setPeriodId(Number(e.target.value)); setSubmitOpen(false); }}
+                onChange={(e) => { setSearchParams({ periodId: e.target.value }, { replace: true }); setSubmitOpen(false); }}
               >
                 {periods.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -127,7 +124,7 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
       )}
 
       {createOpen && (
-        <CreatePeriodModal latest={periods[0] ?? null} onClose={() => setCreateOpen(false)} onCreated={(id) => setPeriodId(id)} />
+        <CreatePeriodModal latest={periods[0] ?? null} onClose={() => setCreateOpen(false)} onCreated={(id) => setSearchParams({ periodId: String(id) }, { replace: true })} />
       )}
       {submitOpen && selectedDetail && (
         <SubmitPeriodModal detail={selectedDetail} pending={submitPeriod.isPending} onClose={() => setSubmitOpen(false)} onSubmit={handleSubmitPeriod} />

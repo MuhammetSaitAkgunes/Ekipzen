@@ -1,6 +1,7 @@
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Compliance.Queries;
 using Ekipzen.Application.Features.Leaves.Queries;
+using Ekipzen.Application.Features.Payroll.Periods;
 using Ekipzen.Domain.Constants;
 using MediatR;
 
@@ -60,10 +61,25 @@ public sealed class GetDailyGuidanceTasksQueryHandler(ISender sender, ICurrentUs
                     document.DueDate is null ? "Son tarih kayıtlı değil; öncelik tarihine göre değerlendirilemiyor." : "",
                     $"/risk/compliance?documentId={document.Id}"
                 )));
+
+            var periods = await sender.Send(new GetPayrollPeriodsQuery(), ct);
+            tasks.AddRange(periods
+                .Where(period => period.Status is "draft" or "control")
+                .Select(period => new DailyGuidanceTaskDto(
+                    $"payroll-period:{period.Id}",
+                    "payroll-period",
+                    period.Id,
+                    $"{period.Name} bordro dönemini incele",
+                    $"Dönem {(period.Status == "draft" ? "taslak" : "kontrol")} durumunda; henüz onaylanmadı.",
+                    "Satırları ve uyarıları inceleyin; eksikleri giderip uygun satırları ve dönemi onaylayın.",
+                    null,
+                    "Bu dönem için kayıtlı son tarih yok; dönem ayı karar son tarihi değildir.",
+                    $"/payroll?periodId={period.Id}"
+                )));
         }
 
         return tasks
-            .OrderBy(task => task.Kind == "compliance-document" ? 0 : 1)
+            .OrderBy(task => task.Kind switch { "compliance-document" => 0, "leave-approval" => 1, _ => 2 })
             .ThenBy(task => task.DueDate ?? DateOnly.MaxValue)
             .ThenBy(task => task.RecordId)
             .ToList();
