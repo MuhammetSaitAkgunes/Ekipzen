@@ -15,7 +15,7 @@ test("konumu kaydedilmemiş rehberde gerçek işlem kanıtı sıfır görünür"
     "/api/guidance/recruitment/journey": recruitmentJourney,
     "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
-    bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null,
+    bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
   } });
   renderPage(<GuidanceJourneyPage />);
   expect(await screen.findByText("Henüz konum kaydedilmedi")).toBeInTheDocument();
@@ -29,12 +29,15 @@ test("doğrulanmış çalışan kartı ayrı gösterilir ve tüm sürece yeterli
     "/api/guidance/recruitment/journey": recruitmentJourney,
     "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: true,
-    bookmarkStepKey: "tab-evrak", verifiedEmployeeRecords: 2,
+    bookmarkStepKey: "tab-evrak", verifiedEmployeeRecords: 2, answeredChecks: 4, correctChecks: 3,
     lastVerifiedAtUtc: "2026-09-24T10:00:00Z",
   } });
   renderPage(<GuidanceJourneyPage />);
   expect(await screen.findByText("2 kayıt")).toBeInTheDocument();
   expect(screen.getByText("Belgeler")).toBeInTheDocument();
+  expect(screen.getByText("4/6")).toBeInTheDocument();
+  expect(screen.getByText("3/6")).toBeInTheDocument();
+  expect(screen.getByText(/doğru yanıt tek başına bağımsız yeterlilik değildir/)).toBeInTheDocument();
   expect(screen.getByText(/bağımsız yeterlilik kazanıldığı anlamına gelmez/)).toBeInTheDocument();
   expect(screen.getByText(/form taslağı değildir/)).toBeInTheDocument();
 });
@@ -44,7 +47,7 @@ test("aday kararı yalnız gerçek işlem kanıtı olarak görünür", async () 
   stubApi({
     "/api/guidance/employee-entry/journey": {
       processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
-      bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null,
+      bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
     },
     "/api/guidance/recruitment/journey": {
       processKey: "recruitment", verifiedFirstReviews: 2, lastVerifiedAtUtc: "2026-09-28T10:00:00Z",
@@ -62,7 +65,7 @@ test("aday yolculuğu yüklenemezse çalışan kanıtı görünür kalır", asyn
   stubApi({
     "/api/guidance/employee-entry/journey": {
       processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
-      bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 1, lastVerifiedAtUtc: null,
+      bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 1, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
     },
   });
   renderPage(<GuidanceJourneyPage />);
@@ -75,7 +78,7 @@ test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehbe
     "/api/guidance/recruitment/journey": recruitmentJourney,
     "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
-    bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null,
+    bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
   } });
   renderPage(<GuidanceJourneyPage />);
   const map = await screen.findByRole("region", { name: "İK süreç haritası" });

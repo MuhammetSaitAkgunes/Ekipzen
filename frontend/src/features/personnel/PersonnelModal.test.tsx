@@ -20,6 +20,21 @@ beforeEach(() => {
   stubApi({
     "/api/departments": departments,
     "/api/guidance/employee-entry/bookmark": { processKey: "personnel-entry", stepKey: "tab-mali", contentVersion: 1 },
+    ...Object.fromEntries(
+      ["tab-kimlik", "tab-iletisim", "tab-is", "tab-mali", "tab-ozluk", "tab-evrak"].map((stepKey) => [
+        `/api/guidance/employee-entry/checks/${stepKey}`,
+        {
+          stepKey, contentVersion: 1,
+          question: stepKey === "tab-is"
+            ? "Çalışanın sözleşme türü henüz teyit edilmedi. Hangi yol doğrudur?"
+            : "Bu adımda hangi bilgi doğrulanmalı?",
+          choices: stepKey === "tab-is"
+            ? ["Varsayılan türü seçip devam ederim", "İmzalı iş belgesini yetkili kişiyle doğrularım", "Başka çalışanın türünü kopyalarım"]
+            : ["İlk seçeneği uygularım", "Kaynak belgeyi doğrularım", "Tahmin ederim"],
+          lastSelectedChoice: null, lastCorrect: null, attemptCount: 0, explanation: null,
+        },
+      ]),
+    ),
     "/api/employees/1": detail,
     "/api/employees": detail,
     "/api/employees/1/documents": [],
@@ -177,22 +192,47 @@ test("rehber konumunu sunucudan yükler ve sekme değişimini kaydeder", async (
   });
 });
 
-test("karar alıştırması yanlış yanıtı açıklar, yeniden denetir ve ilerleme kanıtı saymaz", async () => {
+test("karar alıştırması denemeyi kaydeder, düzeltir ve işlem kanıtı saymaz", async () => {
+  const baseFetch = globalThis.fetch;
+  let attemptCount = 0;
+  let lastChoice: number | null = null;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === "/api/guidance/employee-entry/checks/tab-is/attempts" && init?.method === "POST") {
+      const { selectedChoice } = JSON.parse(String(init.body));
+      attemptCount++;
+      lastChoice = selectedChoice;
+    }
+    if (String(input) === "/api/guidance/employee-entry/checks/tab-is" ||
+        String(input) === "/api/guidance/employee-entry/checks/tab-is/attempts") {
+      return new Response(JSON.stringify({
+        stepKey: "tab-is", contentVersion: 1,
+        question: "Çalışanın sözleşme türü henüz teyit edilmedi. Hangi yol doğrudur?",
+        choices: ["Varsayılan türü seçip devam ederim", "İmzalı iş belgesini yetkili kişiyle doğrularım", "Başka çalışanın türünü kopyalarım"],
+        lastSelectedChoice: lastChoice, lastCorrect: lastChoice === null ? null : lastChoice === 1, attemptCount,
+        explanation: lastChoice === null ? null : "Sözleşme türü sonraki süreçleri etkiler.",
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return baseFetch(input, init);
+  }));
   renderModal(null, false, undefined, true);
   await screen.findByText("Ödeme hazırlığını kontrol et");
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
   await userEvent.click(screen.getByText("Kısa karar alıştırması"));
-  expect(screen.getByText(/sözleşme türü henüz teyit edilmedi/)).toBeInTheDocument();
+  expect(await screen.findByText(/sözleşme türü henüz teyit edilmedi/)).toBeInTheDocument();
   await userEvent.click(screen.getByLabelText("Varsayılan türü seçip devam ederim"));
-  expect(screen.getByRole("status")).toHaveTextContent("Bir daha düşünün.");
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Yanıtı kontrol et" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Bir daha düşünün.");
   await userEvent.click(screen.getByLabelText("İmzalı iş belgesini yetkili kişiyle doğrularım"));
-  expect(screen.getByRole("status")).toHaveTextContent("Doğru karar.");
-  expect(screen.getByText(/yanıtı kaydedilmez; gerçek işlem kanıtı/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Yanıtı kontrol et" }));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Doğru karar."));
+  expect(screen.getByText(/2 kayıtlı deneme/)).toBeInTheDocument();
+  expect(screen.getByText(/gerçek personel işlemi kanıtı veya yeterlilik onayı değildir/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: /İletişim/ }));
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
   await userEvent.click(screen.getByText("Kısa karar alıştırması"));
-  expect(screen.getByLabelText("İmzalı iş belgesini yetkili kişiyle doğrularım")).not.toBeChecked();
-  expect(screen.queryByText("Doğru karar.")).not.toBeInTheDocument();
+  expect(await screen.findByRole("status")).toHaveTextContent("Doğru karar.");
+  expect(screen.getByLabelText("İmzalı iş belgesini yetkili kişiyle doğrularım")).toBeChecked();
 });
 
 test("yeni kayıtta doğrulanmamış seçimleri varsaymaz ve sözleşme seçimini ister", async () => {

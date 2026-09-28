@@ -8,6 +8,8 @@ export type PersonnelEntryJourney = {
   bookmarkStepKey: string;
   verifiedEmployeeRecords: number;
   lastVerifiedAtUtc: string | null;
+  answeredChecks: number;
+  correctChecks: number;
 };
 
 export const personnelEntryJourneyKey = ["guidance", "employee-entry", "journey"] as const;

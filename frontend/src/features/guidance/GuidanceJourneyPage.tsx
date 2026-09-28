@@ -21,9 +21,12 @@ function JourneyEvidence({ journey }: { journey: PersonnelEntryJourney }) {
     <dl>
       <div><dt>Rehber konumu</dt><dd>{journey.hasSavedPosition ? step : "Henüz konum kaydedilmedi"}</dd></div>
       <div><dt>Doğrulanmış kart oluşturma</dt><dd>{journey.verifiedEmployeeRecords} kayıt</dd></div>
+      <div><dt>Yanıtlanan karar konusu</dt><dd>{journey.answeredChecks}/6</dd></div>
+      <div><dt>Son denemesi doğru olan konu</dt><dd>{journey.correctChecks}/6</dd></div>
       {journey.lastVerifiedAtUtc && <div><dt>Son gerçek işlem</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
     </dl>
     <p>Bu kanıt yalnız çalışan kartı oluşturmayı gösterir. Evrak, ücret paketi ve uygulama dışındaki adımların tamamlandığı ya da tüm işe giriş sürecinde bağımsız yeterlilik kazanıldığı anlamına gelmez.</p>
+    <p>Karar alıştırması sayıları gerçek işlem kanıtından ayrıdır; doğru yanıt tek başına bağımsız yeterlilik değildir.</p>
     <p>Rehber konumu form taslağı değildir; kaydedilmemiş alanları yeniden girmeniz gerekebilir.</p>
     <Link className="btn btn-primary" to={appPath("/personnel/new")}>Gerçek bir işe girişte rehberi aç</Link>
   </section>;
