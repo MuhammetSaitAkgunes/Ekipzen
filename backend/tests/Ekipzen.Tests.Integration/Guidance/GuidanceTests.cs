@@ -104,6 +104,48 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task RecruitmentJourney_CountsRealFirstDecisionOnlyOnce()
+    {
+        const string url = "/api/guidance/recruitment/journey";
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var before = await GetAsync<RecruitmentJourneyDto>(admin, url);
+
+        var created = await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Yolculuk Adayı " + Guid.NewGuid().ToString("N"),
+            appliedRole = "Uzman",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var candidate = (await created.Content.ReadFromJsonAsync<
+            Ekipzen.Application.Features.Recruitment.CandidateDetailDto>())!;
+        (await GetAsync<RecruitmentJourneyDto>(admin, url)).VerifiedFirstReviews
+            .Should().Be(before.VerifiedFirstReviews, "aday kartını açmak veya oluşturmak ilk karar değildir");
+
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Yeni" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<RecruitmentJourneyDto>(admin, url)).VerifiedFirstReviews
+            .Should().Be(before.VerifiedFirstReviews, "değişmeyen durum kanıt üretmez");
+
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Mülakat" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var after = await GetAsync<RecruitmentJourneyDto>(admin, url);
+        after.ProcessKey.Should().Be("recruitment");
+        after.VerifiedFirstReviews.Should().Be(before.VerifiedFirstReviews + 1);
+        after.LastVerifiedAtUtc.Should().NotBeNull();
+
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Yeni" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Red" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<RecruitmentJourneyDto>(admin, url)).VerifiedFirstReviews
+            .Should().Be(after.VerifiedFirstReviews, "aynı aday tekrar sayılamaz");
+
+        (await manager.GetAsync(url)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await factory.CreateClient().GetAsync(url)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private async Task<HttpClient> AuthedClientAsync(string email)
     {
         var anonymous = factory.CreateClient();

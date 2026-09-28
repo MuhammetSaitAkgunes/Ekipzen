@@ -2,6 +2,7 @@ using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Recruitment.Queries;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Identity;
 using Ekipzen.Domain.Entities.Recruitment;
 using Ekipzen.Domain.Enums;
@@ -155,7 +156,7 @@ public sealed class SetCandidateStatusCommandValidator : AbstractValidator<SetCa
     }
 }
 
-public sealed class SetCandidateStatusCommandHandler(IApplicationDbContext context, ISender sender)
+public sealed class SetCandidateStatusCommandHandler(IApplicationDbContext context, ISender sender, ICurrentUser currentUser)
     : IRequestHandler<SetCandidateStatusCommand, CandidateDetailDto>
 {
     public async Task<CandidateDetailDto> Handle(
@@ -173,6 +174,23 @@ public sealed class SetCandidateStatusCommandHandler(IApplicationDbContext conte
         var newStatus = RecruitmentMappings.ParseStatus(request.Status);
         if (newStatus != candidate.Status)
         {
+            if (candidate.Status == CandidateStatus.New)
+            {
+                var userId = currentUser.UserId
+                    ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
+                var alreadyVerified = await context.CandidateReviewEvidences
+                    .AnyAsync(item => item.CandidateId == candidate.Id && item.UserId == userId, cancellationToken);
+                if (!alreadyVerified)
+                {
+                    context.CandidateReviewEvidences.Add(new CandidateReviewEvidence
+                    {
+                        CandidateId = candidate.Id,
+                        UserId = userId,
+                        DecisionStatus = newStatus,
+                    });
+                }
+            }
+
             context.CandidateHistory.Add(new Domain.Entities.Recruitment.CandidateHistory
             {
                 CandidateId = candidate.Id,

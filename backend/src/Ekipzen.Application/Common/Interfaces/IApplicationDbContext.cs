@@ -74,6 +74,7 @@ public interface IApplicationDbContext
     // Guidance
     DbSet<GuidanceBookmark> GuidanceBookmarks { get; }
     DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences { get; }
+    DbSet<CandidateReviewEvidence> CandidateReviewEvidences { get; }
 
     // Durable Identity provisioning
     DbSet<IdentityProvisioningOperation> IdentityProvisioningOperations { get; }

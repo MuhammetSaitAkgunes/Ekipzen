@@ -62,6 +62,17 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         var employee = (await created.Content.ReadFromJsonAsync<Ekipzen.Application.Features.Employees.EmployeeDetailDto>())!;
 
+        var candidateResponse = await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Dışa Aktarım Adayı " + Guid.NewGuid().ToString("N"),
+            appliedRole = "Uzman",
+        });
+        candidateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var candidate = (await candidateResponse.Content.ReadFromJsonAsync<
+            Ekipzen.Application.Features.Recruitment.CandidateDetailDto>())!;
+        (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
+            new { status = "Mülakat" })).StatusCode.Should().Be(HttpStatusCode.OK);
+
         using var adminExport = JsonDocument.Parse(await admin.GetStringAsync("/api/me/data-export"));
         var adminRoot = adminExport.RootElement;
         adminRoot.GetProperty("guidanceBookmarks").EnumerateArray()
@@ -71,10 +82,16 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
         adminRoot.GetProperty("employeeCreationEvidences").EnumerateArray()
             .Should().ContainSingle(item => item.GetProperty("employeeId").GetInt32() == employee.Id);
 
+        adminRoot.GetProperty("candidateReviewEvidences").EnumerateArray()
+            .Should().ContainSingle(item =>
+                item.GetProperty("candidateId").GetInt32() == candidate.Id &&
+                item.GetProperty("decisionStatus").GetString() == "Interview");
+
         var otherUser = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
         using var otherExport = JsonDocument.Parse(await otherUser.GetStringAsync("/api/me/data-export"));
         otherExport.RootElement.GetProperty("guidanceBookmarks").GetArrayLength().Should().Be(0);
         otherExport.RootElement.GetProperty("employeeCreationEvidences").GetArrayLength().Should().Be(0);
+        otherExport.RootElement.GetProperty("candidateReviewEvidences").GetArrayLength().Should().Be(0);
     }
 
     [Fact]

@@ -27,3 +27,16 @@ public sealed class EmployeeCreationEvidenceConfiguration : IEntityTypeConfigura
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public sealed class CandidateReviewEvidenceConfiguration : IEntityTypeConfiguration<CandidateReviewEvidence>
+{
+    public void Configure(EntityTypeBuilder<CandidateReviewEvidence> builder)
+    {
+        builder.Property(item => item.UserId).IsRequired().HasMaxLength(450);
+        builder.HasIndex(item => new { item.TenantId, item.UserId, item.CandidateId }).IsUnique();
+        builder.HasOne(item => item.Candidate)
+            .WithMany()
+            .HasForeignKey(item => item.CandidateId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

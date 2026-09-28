@@ -21,6 +21,7 @@ public sealed record ComplianceDocumentExportItem(string DocumentName, string St
 public sealed record PayslipExportItem(string PeriodName, string ApprovalStatus);
 public sealed record GuidanceBookmarkExportItem(string ProcessKey, string StepKey, int ContentVersion);
 public sealed record EmployeeCreationEvidenceExportItem(int EmployeeId, DateTime CreatedAtUtc);
+public sealed record CandidateReviewEvidenceExportItem(int CandidateId, string DecisionStatus, DateTime CreatedAtUtc);
 
 public sealed record MyDataExportDto(
     AccountInfo Account,
@@ -32,6 +33,7 @@ public sealed record MyDataExportDto(
     IReadOnlyList<PayslipExportItem> Payslips,
     IReadOnlyList<GuidanceBookmarkExportItem> GuidanceBookmarks,
     IReadOnlyList<EmployeeCreationEvidenceExportItem> EmployeeCreationEvidences,
+    IReadOnlyList<CandidateReviewEvidenceExportItem> CandidateReviewEvidences,
     DateTime ExportedAtUtc);
 
 /// <summary>
@@ -70,6 +72,12 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         var employeeCreationEvidences = await context.EmployeeCreationEvidences.AsNoTracking()
             .Where(item => item.UserId == userId)
             .Select(item => new EmployeeCreationEvidenceExportItem(item.EmployeeId, item.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        var candidateReviewEvidences = await context.CandidateReviewEvidences.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new CandidateReviewEvidenceExportItem(
+                item.CandidateId, item.DecisionStatus.ToString(), item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
         if (currentUser.EmployeeId is { } employeeId)
@@ -121,7 +129,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
 
         var dto = new MyDataExportDto(
             account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
-            guidanceBookmarks, employeeCreationEvidences, DateTime.UtcNow);
+            guidanceBookmarks, employeeCreationEvidences, candidateReviewEvidences, DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
         var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";

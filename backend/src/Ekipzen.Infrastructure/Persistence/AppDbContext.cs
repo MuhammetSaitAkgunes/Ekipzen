@@ -84,6 +84,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     // Guidance
     public DbSet<GuidanceBookmark> GuidanceBookmarks => Set<GuidanceBookmark>();
     public DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences => Set<EmployeeCreationEvidence>();
+    public DbSet<CandidateReviewEvidence> CandidateReviewEvidences => Set<CandidateReviewEvidence>();
 
     // Durable Identity provisioning
     public DbSet<IdentityProvisioningOperation> IdentityProvisioningOperations => Set<IdentityProvisioningOperation>();
