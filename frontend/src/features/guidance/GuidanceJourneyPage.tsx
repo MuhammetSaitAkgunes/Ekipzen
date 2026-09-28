@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
-import { usePersonnelEntryJourney, type PersonnelEntryJourney } from "./journeyQueries";
+import { usePersonnelEntryJourney, useRecruitmentJourney, type PersonnelEntryJourney, type RecruitmentJourney } from "./journeyQueries";
 import { GuidanceProcessMap } from "./GuidanceProcessMap";
 
 const stepLabels: Record<string, string> = {
@@ -29,8 +29,22 @@ function JourneyEvidence({ journey }: { journey: PersonnelEntryJourney }) {
   </section>;
 }
 
+function RecruitmentEvidence({ journey }: { journey: RecruitmentJourney }) {
+  return <section className="ez-panel ez-journey-card" aria-labelledby="journey-recruitment">
+    <span className="ez-overline">İŞE ALIM · GERÇEK İŞLEM KANITI</span>
+    <h2 id="journey-recruitment">Aday ilk incelemesi</h2>
+    <dl>
+      <div><dt>Doğrulanmış ilk aşama kararı</dt><dd>{journey.verifiedFirstReviews} aday</dd></div>
+      {journey.lastVerifiedAtUtc && <div><dt>Son gerçek karar</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
+    </dl>
+    <p>Bu kayıt, “Yeni” aşamasındaki bir adayın durumunu gerçekten değiştirdiğinizi gösterir. Kararın doğruluğunu, adayla iletişimi veya işe alım sürecinde bağımsız yeterliliği kanıtlamaz.</p>
+    <Link className="btn btn-secondary" to={appPath("/recruitment")}>Aday havuzunu aç</Link>
+  </section>;
+}
+
 export function GuidanceJourneyPage() {
   const query = usePersonnelEntryJourney();
+  const recruitmentQ = useRecruitmentJourney();
   return <div className="ez-journey-page">
     <div className="page-header">
       <div><span className="ez-overline">İK REHBERİ</span><h1>Öğrenme yolculuğum</h1>
@@ -39,6 +53,11 @@ export function GuidanceJourneyPage() {
     {query.isPending ? <PageLoading /> : query.isError
       ? <PageError error={query.error} />
       : <JourneyEvidence journey={query.data} />}
+    {recruitmentQ.isPending
+      ? <p role="status">Aday yolculuğu yükleniyor.</p>
+      : recruitmentQ.isError
+        ? <p role="alert">Aday yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
+        : <RecruitmentEvidence journey={recruitmentQ.data} />}
     <GuidanceProcessMap />
   </div>;
 }

@@ -6,8 +6,14 @@ import { GuidanceJourneyPage } from "./GuidanceJourneyPage";
 
 afterEach(() => vi.unstubAllGlobals());
 
+const recruitmentJourney = {
+  processKey: "recruitment", verifiedFirstReviews: 0, lastVerifiedAtUtc: null,
+};
+
 test("konumu kaydedilmemiş rehberde gerçek işlem kanıtı sıfır görünür", async () => {
-  stubApi({ "/api/guidance/employee-entry/journey": {
+  stubApi({
+    "/api/guidance/recruitment/journey": recruitmentJourney,
+    "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
     bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null,
   } });
@@ -19,7 +25,9 @@ test("konumu kaydedilmemiş rehberde gerçek işlem kanıtı sıfır görünür"
 });
 
 test("doğrulanmış çalışan kartı ayrı gösterilir ve tüm sürece yeterlilik sayılmaz", async () => {
-  stubApi({ "/api/guidance/employee-entry/journey": {
+  stubApi({
+    "/api/guidance/recruitment/journey": recruitmentJourney,
+    "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: true,
     bookmarkStepKey: "tab-evrak", verifiedEmployeeRecords: 2,
     lastVerifiedAtUtc: "2026-09-24T10:00:00Z",
@@ -32,8 +40,40 @@ test("doğrulanmış çalışan kartı ayrı gösterilir ve tüm sürece yeterli
 });
 
 
+test("aday kararı yalnız gerçek işlem kanıtı olarak görünür", async () => {
+  stubApi({
+    "/api/guidance/employee-entry/journey": {
+      processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
+      bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null,
+    },
+    "/api/guidance/recruitment/journey": {
+      processKey: "recruitment", verifiedFirstReviews: 2, lastVerifiedAtUtc: "2026-09-28T10:00:00Z",
+    },
+  });
+  renderPage(<GuidanceJourneyPage />);
+  const card = await screen.findByRole("region", { name: "Aday ilk incelemesi" });
+  expect(within(card).getByText("2 aday")).toBeInTheDocument();
+  expect(within(card).getByText(/Kararın doğruluğunu/)).toBeInTheDocument();
+  expect(within(card).getByRole("link", { name: "Aday havuzunu aç" }))
+    .toHaveAttribute("href", "/app/recruitment");
+});
+
+test("aday yolculuğu yüklenemezse çalışan kanıtı görünür kalır", async () => {
+  stubApi({
+    "/api/guidance/employee-entry/journey": {
+      processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
+      bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 1, lastVerifiedAtUtc: null,
+    },
+  });
+  renderPage(<GuidanceJourneyPage />);
+  expect(await screen.findByText("1 kayıt")).toBeInTheDocument();
+  expect(await screen.findByText(/Aday yolculuğu yüklenemedi/)).toBeInTheDocument();
+});
+
 test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehber sınırını gösterir", async () => {
-  stubApi({ "/api/guidance/employee-entry/journey": {
+  stubApi({
+    "/api/guidance/recruitment/journey": recruitmentJourney,
+    "/api/guidance/employee-entry/journey": {
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
     bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, lastVerifiedAtUtc: null,
   } });

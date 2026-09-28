@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
+import { recruitmentJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
 
 export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
@@ -82,6 +83,7 @@ export const useSetCandidateStatus = () => {
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: recruitmentJourneyKey }),
     ]),
   });
 };

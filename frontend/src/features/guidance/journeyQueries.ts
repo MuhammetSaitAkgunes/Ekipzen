@@ -17,3 +17,17 @@ export const usePersonnelEntryJourney = () =>
     queryKey: personnelEntryJourneyKey,
     queryFn: () => apiFetch<PersonnelEntryJourney>("/guidance/employee-entry/journey"),
   });
+
+export type RecruitmentJourney = {
+  processKey: string;
+  verifiedFirstReviews: number;
+  lastVerifiedAtUtc: string | null;
+};
+
+export const recruitmentJourneyKey = ["guidance", "recruitment", "journey"] as const;
+
+export const useRecruitmentJourney = () =>
+  useQuery({
+    queryKey: recruitmentJourneyKey,
+    queryFn: () => apiFetch<RecruitmentJourney>("/guidance/recruitment/journey"),
+  });
