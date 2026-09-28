@@ -715,3 +715,15 @@
 .ez-company-preparation a { color: var(--primary); font-weight: 650; }
 .ez-company-preparation a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 @media (max-width: 900px) { .ez-company-preparation ol { grid-template-columns: minmax(0, 1fr); } }
+
+.ez-personnel-record-guide { margin-bottom: 18px; padding: 20px 24px; }
+.ez-personnel-record-guide h3 { margin: 8px 0; color: var(--ink); font-size: 19px; }
+.ez-personnel-record-guide > p { max-width: 84ch; line-height: 1.55; }
+.ez-personnel-record-guide ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; padding: 0; list-style: none; counter-reset: record; }
+.ez-personnel-record-guide li { min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; line-height: 1.5; counter-increment: record; }
+.ez-personnel-record-guide li::before { content: counter(record, decimal-leading-zero); display: block; margin-bottom: 8px; color: var(--primary); font-weight: 700; }
+.ez-personnel-record-guide li strong { color: var(--ink); }
+.ez-personnel-record-guide-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ez-personnel-record-guide small { color: var(--muted); line-height: 1.5; }
+@media (max-width: 800px) { .ez-personnel-record-guide ol { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .ez-personnel-record-guide { padding: 18px; } }

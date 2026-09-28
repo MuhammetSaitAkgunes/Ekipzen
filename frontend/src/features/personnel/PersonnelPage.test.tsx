@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -74,6 +74,25 @@ test("liste temel bilgileri gösterir, kimlik ayrıntısını profile bırakır"
   expect(await screen.findByText("Ahmet Yılmaz")).toBeInTheDocument();
   expect(screen.queryByText("123*****901")).not.toBeInTheDocument();
   expect(screen.getByText("Pasif", { selector: ".badge" })).toHaveClass("badge-passive");
+});
+
+test("kayıt rehberi gerçek sonuç sayısını, rol sınırını ve filtre düzeltmesini gösterir", async () => {
+  setRole("manager");
+  stubApi({
+    "/api/employees": { ...employees, items: [employees.items[0]], total: 1 },
+    "/api/departments": departments,
+  });
+  renderPersonnel();
+  const guide = await screen.findByRole("region", { name: "Mevcut çalışan kaydını kontrol et" });
+  expect(within(guide).getByText("1 kayıt")).toBeInTheDocument();
+  expect(within(guide).getByText(/düzeltmeyi yetkili İK kullanıcısına iletin/)).toBeInTheDocument();
+  expect(within(guide).getByRole("button", { name: "Ahmet Yılmaz kartını aç" })).toBeInTheDocument();
+  await userEvent.click(within(guide).getByRole("button", { name: "Arama alanına git" }));
+  expect(screen.getByLabelText("Personel ara")).toHaveFocus();
+  await userEvent.selectOptions(screen.getByLabelText("Durum filtresi"), "active");
+  await userEvent.click(await screen.findByRole("button", { name: "Filtreleri temizle" }));
+  expect(screen.getByLabelText("Durum filtresi")).toHaveValue("");
+  expect(screen.getByLabelText("Personel ara")).toHaveValue("");
 });
 
 test("seçim çubuğu yalnız raporlama sunar, toplu işten çıkış sunmaz", async () => {

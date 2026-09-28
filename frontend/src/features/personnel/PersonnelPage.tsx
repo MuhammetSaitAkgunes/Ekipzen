@@ -7,6 +7,7 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { downloadCsv, tableToCsvLines } from "../shared/csv";
 import { ImportModal } from "./ImportModal";
 import { OffboardingModal } from "./OffboardingModal";
+import { PersonnelRecordGuide } from "./PersonnelRecordGuide";
 
 import { useDepartments, useEmployees, type EmployeeFilters } from "./queries";
 
@@ -28,6 +29,7 @@ export function PersonnelPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [offboardingId, setOffboardingId] = useState<number | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // Arama debounce: 300ms sonra server-side filtreye yansır.
   useEffect(() => {
@@ -113,12 +115,27 @@ export function PersonnelPage() {
           )}
         </div>
 
+        <PersonnelRecordGuide
+          resultCount={employeesQ.data.total ?? items.length}
+          singleMatch={employeesQ.data.total === 1 && items.length === 1 && items[0].id != null
+            ? { id: items[0].id, name: items[0].name ?? "Çalışan" } : null}
+          hasFilters={Boolean(filters.search.trim() || filters.departmentId || filters.status)}
+          isHrAdmin={isHrAdmin}
+          onFocusSearch={() => searchRef.current?.focus()}
+          onClearFilters={() => {
+            setSearchInput("");
+            setFilters({ search: "", departmentId: "", status: "", page: 1 });
+            setSelected(new Set());
+          }}
+          onOpenRecord={(id) => openProfile(id)}
+        />
         <div className="filter-bar surface">
           <div className="search-wrapper">
             <i aria-hidden="true" className="fa-solid fa-magnifying-glass" />
             <label className="sr-only" htmlFor="personnel-search">Personel ara</label>
             <input
               id="personnel-search"
+              ref={searchRef}
               type="text"
               className="search-input"
               placeholder="Ad, departman veya görev ara"

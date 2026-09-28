@@ -32,7 +32,7 @@ const processes: Process[] = [
   },
   {
     key: "personnel", title: "Personel yönetimi", purpose: "Mevcut kartları, değişiklikleri ve belgeleri izleyin.",
-    connection: "Kayıt düzeltmesinin izin ve bordro girdilerine etkisini değerlendirin.", path: "/personnel", coverage: "screen",
+    connection: "Doğru kişiyi bulup kartını belgeyle karşılaştırın; bilgi ve durum düzeltmelerini ayrı akışlarda yapın.", path: "/personnel", coverage: "decision",
   },
   {
     key: "leave", title: "İzin ve onay", purpose: "Bekleyen talepleri gerçek tür, tarih ve açıklamayla inceleyin.",
