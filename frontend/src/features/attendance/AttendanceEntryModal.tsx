@@ -1,7 +1,10 @@
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
-import { useEmployeeOptions, useSaveAttendanceEntry, type TimesheetRowDto } from "./queries";
+import { useEmployeeOptions, usePreviewAttendanceEntry, useSaveAttendanceEntry, type AttendanceEntryModel, type AttendanceEntryPreviewDto, type TimesheetRowDto } from "./queries";
+
+const formatMinutes = (minutes: number) => `${Math.floor(minutes / 60)} saat ${minutes % 60} dakika`;
+const statusLabel = (status: string) => ({ ok: "normal", late: "geç giriş", absent: "devamsız", overtime: "fazla mesai" })[status as "ok" | "late" | "absent" | "overtime"] ?? status;
 
 export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClose }: {
   rowId: number | null;
@@ -11,8 +14,10 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
 }) {
   const { showToast } = useToast();
   const actionInFlight = useRef(false);
+  const formRevision = useRef(0);
   const employeesQ = useEmployeeOptions();
   const save = useSaveAttendanceEntry();
+  const previewEntry = usePreviewAttendanceEntry();
 
   const [employeeId, setEmployeeId] = useState(String(rowId !== null ? defaultEmployeeId ?? "" : ""));
   const [workDate, setWorkDate] = useState(initial?.workDate ?? "");
@@ -23,11 +28,22 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
   const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [preview, setPreview] = useState<AttendanceEntryPreviewDto | null>(null);
 
   const isEdit = rowId !== null;
   const selectedEmployee = (employeesQ.data ?? []).find((employee) => employee.id === Number(employeeId));
 
-  const startReview = () => {
+  const buildModel = (): AttendanceEntryModel => ({
+    workDate,
+    checkIn: checkIn || null,
+    checkOut: checkOut || null,
+    breakMinutes: Number(breakMinutes),
+    type,
+    note: note || null,
+  });
+
+  const startReview = async () => {
+    if (previewEntry.isPending) return;
     setError(null);
     if (!workDate) {
       setError("Tarih seçin.");
@@ -54,25 +70,36 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
       setError("Not 500 karakteri geçemez.");
       return;
     }
-    setReviewing(true);
+    const revision = formRevision.current;
+    try {
+      const result = await previewEntry.mutateAsync({
+        employeeId: Number(employeeId) || 0,
+        entryId: rowId,
+        model: buildModel(),
+      });
+      if (revision !== formRevision.current) return;
+      if (!result.canSave) {
+        setError(result.blockReason || "Bu puantaj kaydı şu an kaydedilemiyor; bilgileri kontrol edin.");
+        return;
+      }
+      setPreview(result);
+      setReviewing(true);
+    } catch (e) {
+      if (revision === formRevision.current) {
+        setError(e instanceof ApiError ? e.message : "Puantaj önizlemesi alınamadı; yeniden deneyin.");
+      }
+    }
   };
 
   const submit = async () => {
     setError(null);
-    if (!reviewing || save.isPending || actionInFlight.current) return;
+    if (!reviewing || !preview || save.isPending || actionInFlight.current) return;
     actionInFlight.current = true;
     try {
       await save.mutateAsync({
         id: rowId,
         employeeId: Number(employeeId) || 0,
-        model: {
-          workDate,
-          checkIn: checkIn || null,
-          checkOut: checkOut || null,
-          breakMinutes: Number(breakMinutes),
-          type,
-          note: note || null,
-        },
+        model: buildModel(),
       });
       showToast(isEdit ? "Puantaj kaydı güncellendi." : "Manuel giriş eklendi.", "success");
       onClose();
@@ -91,7 +118,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
             <h3>{isEdit ? "Puantaj Kaydını Düzenle" : "Manuel Puantaj Girişi"}</h3>
             <p>Giriş-çıkış saatlerini ve gün tipini doğru girin.</p>
           </div>
-          <button className="btn-icon-sm" onClick={onClose} disabled={save.isPending} title="Kapat" aria-label="Puantaj penceresini kapat">
+          <button className="btn-icon-sm" onClick={onClose} disabled={save.isPending || previewEntry.isPending} title="Kapat" aria-label="Puantaj penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
@@ -109,15 +136,16 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
                 <div><dt>Mola</dt><dd>{breakMinutes} dakika</dd></div>
                 <div><dt>Not</dt><dd>{note || "Yok"}</dd></div>
               </dl>
-              <p>Örnek: 09:00–18:00 arası ve 60 dakika mola girildiğinde uygulama 8 saat net süre hesaplar. Bu hesap tek başına yasal fazla çalışma değerlendirmesi değildir.</p>
-              {(!checkIn || !checkOut) && <p className="ez-attendance-review-warning">Giriş veya çıkış saati eksik: sunucu bu durumda çalışılan süreyi 0 hesaplar; giriş de yoksa durum devamsızlık görünür. Boşluğun gerçek kaydı yansıttığını doğrulayın.</p>}
-              <p>Yanlış gün veya çalışan seçtiyseniz düzeltin. Kaydettikten sonra aynı çalışanın aylık puantajındaki satırı düzenleyebilirsiniz; bordro dönemi oluşturulmuşsa bordro girdilerini ayrıca kontrol edin.</p>
+              {preview && <p role="status">Sunucu hesabı: <strong>{formatMinutes(preview.workedMinutes)} net çalışma</strong>, <strong>{formatMinutes(preview.overtimeMinutes)} fazla mesai alanı</strong>; durum: {statusLabel(preview.status)}, kaydedilecek tip: {preview.effectiveType}.</p>}
+              {preview?.warnings.map((warning) => <p className="ez-attendance-review-warning" key={warning}>{warning}</p>)}
+              <p>Örnek: 09:00–18:00 arası ve 60 dakika mola girildiğinde uygulama 8 saat net süre hesaplar. Bu hesap tek başına yasal fazla çalışma değerlendirmesi değildir. Kaydederken sunucu kuralları yeniden uygulanır.</p>
+              <p>Yanlış gün veya çalışan seçtiyseniz düzeltin. Kaydettikten sonra aynı çalışanın aylık puantajındaki satırı düzenleyebilirsiniz. Başka biri satırı arada değiştirmiş olabilir; güncel puantajı ve oluşturulmuş bordro girdilerini ayrıca kontrol edin.</p>
             </section>
           ) : <>
             {!isEdit && (
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-employee">Personel</label>
-                <select id="ae-employee" className="input-control" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+                <select id="ae-employee" className="input-control" value={employeeId} onChange={(e) => { formRevision.current++; setEmployeeId(e.target.value); }}>
                   <option value="">Seçin</option>
                   {(employeesQ.data ?? []).map((emp) => (
                     <option key={emp.id} value={emp.id}>{emp.name} ({emp.department})</option>
@@ -128,11 +156,11 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
             <div className="form-grid-2 mt-3">
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-date">Tarih</label>
-                <input id="ae-date" type="date" className="input-control" value={workDate} onChange={(e) => setWorkDate(e.target.value)} disabled={isEdit} />
+                <input id="ae-date" type="date" className="input-control" value={workDate} onChange={(e) => { formRevision.current++; setWorkDate(e.target.value); }} disabled={isEdit} />
               </div>
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-type">Tip</label>
-                <select id="ae-type" className="input-control" value={type} onChange={(e) => setType(e.target.value)}>
+                <select id="ae-type" className="input-control" value={type} onChange={(e) => { formRevision.current++; setType(e.target.value); }}>
                   <option value="">Gün tipini seçin</option>
                   <option>Tam</option><option>Mesai</option><option>Rapor</option>
                 </select>
@@ -141,31 +169,31 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
             <div className="form-grid-2 mt-3">
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-in">Giriş</label>
-                <input id="ae-in" type="time" className="input-control" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+                <input id="ae-in" type="time" className="input-control" value={checkIn} onChange={(e) => { formRevision.current++; setCheckIn(e.target.value); }} />
               </div>
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-out">Çıkış</label>
-                <input id="ae-out" type="time" className="input-control" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+                <input id="ae-out" type="time" className="input-control" value={checkOut} onChange={(e) => { formRevision.current++; setCheckOut(e.target.value); }} />
               </div>
             </div>
             <div className="form-grid-2 mt-3">
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-break">Mola (dk)</label>
-                <input id="ae-break" type="number" min="0" max="480" step="1" className="input-control" value={breakMinutes} onChange={(e) => setBreakMinutes(e.target.value)} />
+                <input id="ae-break" type="number" min="0" max="480" step="1" className="input-control" value={breakMinutes} onChange={(e) => { formRevision.current++; setBreakMinutes(e.target.value); }} />
               </div>
               <div className="input-group">
                 <label className="input-label" htmlFor="ae-note">Not</label>
-                <input id="ae-note" type="text" className="input-control" value={note ?? ""} onChange={(e) => setNote(e.target.value)} />
+                <input id="ae-note" type="text" className="input-control" value={note ?? ""} onChange={(e) => { formRevision.current++; setNote(e.target.value); }} />
               </div>
             </div>
           </>}
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose} disabled={save.isPending}>Vazgeç</button>
-          {reviewing && <button className="btn btn-ghost" onClick={() => setReviewing(false)} disabled={save.isPending}>Düzelt</button>}
-          <button className="btn btn-primary" onClick={reviewing ? submit : startReview} disabled={save.isPending}>
-            <i aria-hidden="true" className="fa-solid fa-check" /> {reviewing ? "Onayla ve kaydet" : "Kaydı gözden geçir"}
+          <button className="btn btn-ghost" onClick={onClose} disabled={save.isPending || previewEntry.isPending}>Vazgeç</button>
+          {reviewing && <button className="btn btn-ghost" onClick={() => { setReviewing(false); setPreview(null); }} disabled={save.isPending || previewEntry.isPending}>Düzelt</button>}
+          <button className="btn btn-primary" onClick={reviewing ? submit : startReview} disabled={save.isPending || previewEntry.isPending}>
+            <i aria-hidden="true" className="fa-solid fa-check" /> {reviewing ? "Onayla ve kaydet" : previewEntry.isPending ? "Sunucuda kontrol ediliyor..." : "Kaydı gözden geçir"}
           </button>
         </div>
       </div>

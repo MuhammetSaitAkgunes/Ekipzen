@@ -7,6 +7,20 @@ export type TimesheetDto = components["schemas"]["TimesheetDto"];
 export type TimesheetRowDto = components["schemas"]["TimesheetRowDto"];
 export type AttendanceSummaryDto = components["schemas"]["AttendanceSummaryDto"];
 export type AttendanceEntryModel = components["schemas"]["AttendanceEntryModel"];
+export type AttendanceEntryPreviewDto = {
+  workedMinutes: number;
+  overtimeMinutes: number;
+  status: string;
+  effectiveType: string;
+  canSave: boolean;
+  blockReason: string | null;
+  warnings: string[];
+};
+
+export const usePreviewAttendanceEntry = () => useMutation({
+  mutationFn: (request: { employeeId: number; entryId: number | null; model: AttendanceEntryModel }) =>
+    apiFetch<AttendanceEntryPreviewDto>("/attendance/preview", { method: "POST", body: JSON.stringify(request) }),
+});
 type EmployeePagedResult = components["schemas"]["EmployeeListItemDtoPagedResult"];
 
 export const useLiveBoard = () =>
