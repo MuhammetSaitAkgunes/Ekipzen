@@ -689,3 +689,16 @@
 .ez-recruitment-funnel .ez-recruitment-stage-explanation { margin-top: 14px; }
 @media (max-width: 980px) { .ez-recruitment-funnel-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .ez-recruitment-funnel-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ez-daily-review-route { padding: 22px 24px; border-top: 1px solid var(--line-soft); }
+.ez-daily-review-route-head h2 { margin: 0 0 6px; color: var(--ink); font-size: 17px; }
+.ez-daily-review-route-head p { margin: 0; max-width: 80ch; color: var(--text); font-size: 13px; line-height: 1.55; }
+.ez-daily-review-route ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: daily-review; }
+.ez-daily-review-route li { min-width: 0; counter-increment: daily-review; }
+.ez-daily-review-step { height: 100%; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.ez-daily-review-step::before { content: counter(daily-review, decimal-leading-zero); color: var(--muted); font-size: 12px; font-weight: 700; }
+.ez-daily-review-step h3 { margin: 7px 0 10px; color: var(--ink); font-size: 15px; }
+.ez-daily-review-step p { margin: 7px 0; color: var(--text); font-size: 13px; line-height: 1.55; }
+.ez-daily-review-step strong { color: var(--ink); }
+.ez-daily-review-step a { display: inline-block; margin-top: 10px; color: var(--primary); font-size: 13px; font-weight: 650; }
+.ez-daily-review-step a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+@media (max-width: 720px) { .ez-daily-review-route { padding: 18px; } .ez-daily-review-route ol { grid-template-columns: minmax(0, 1fr); } }
