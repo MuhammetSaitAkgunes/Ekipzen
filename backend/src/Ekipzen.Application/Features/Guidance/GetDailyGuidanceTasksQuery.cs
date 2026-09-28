@@ -4,7 +4,9 @@ using Ekipzen.Application.Features.Leaves.Queries;
 using Ekipzen.Application.Features.Payroll.Periods;
 using Ekipzen.Application.Features.Recruitment.Queries;
 using Ekipzen.Domain.Constants;
+using Ekipzen.Domain.Enums;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ekipzen.Application.Features.Guidance;
 
@@ -25,7 +27,8 @@ public sealed record DailyGuidanceTaskDto(
 
 public sealed record GetDailyGuidanceTasksQuery : IRequest<IReadOnlyList<DailyGuidanceTaskDto>>;
 
-public sealed class GetDailyGuidanceTasksQueryHandler(ISender sender, ICurrentUser currentUser)
+public sealed class GetDailyGuidanceTasksQueryHandler(
+    ISender sender, ICurrentUser currentUser, IApplicationDbContext context)
     : IRequestHandler<GetDailyGuidanceTasksQuery, IReadOnlyList<DailyGuidanceTaskDto>>
 {
     public async Task<IReadOnlyList<DailyGuidanceTaskDto>> Handle(
@@ -63,6 +66,32 @@ public sealed class GetDailyGuidanceTasksQueryHandler(ISender sender, ICurrentUs
                     $"/risk/compliance?documentId={document.Id}"
                 )));
 
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+            var missingCompensation = await context.Employees.AsNoTracking()
+                .Where(employee =>
+                    employee.Status == EmployeeStatus.Active &&
+                    employee.HireDate <= today &&
+                    employee.EmploymentPeriods.Any(period =>
+                        period.EndDate == null && period.StartDate <= today &&
+                        !period.CompensationPackages.Any(package =>
+                            package.EffectiveFrom <= today &&
+                            (package.EffectiveTo == null || package.EffectiveTo >= today))))
+                .Select(employee => new {
+                    employee.Id, employee.FirstName, employee.LastName, employee.HireDate
+                })
+                .ToListAsync(ct);
+            tasks.AddRange(missingCompensation.Select(employee => new DailyGuidanceTaskDto(
+                $"employee-compensation:{employee.Id}",
+                "employee-compensation",
+                employee.Id,
+                $"{employee.FirstName} {employee.LastName} ücret hazırlığını kontrol et",
+                "Açık çalışma dönemi için bugün yürürlükte ücret paketi yok. Bu durumda açılan bordro döneminin ilk ücret girdisi sıfır oluşabilir.",
+                "Tutarı, yürürlük tarihini ve kaynak referansını doğrulayın. Dayanak netleşmeden ücret girmeyin; sonra paketi kaydedin.",
+                null,
+                $"İşe giriş: {employee.HireDate:dd.MM.yyyy}. Bu tarih karar son tarihi değildir; kayıtlı son tarih yok.",
+                $"/personnel/{employee.Id}?edit=1&guide=1&tab=tab-mali"
+            )));
+
             var periods = await sender.Send(new GetPayrollPeriodsQuery(), ct);
             tasks.AddRange(periods
                 .Where(period => period.Status is "draft" or "control")
@@ -97,8 +126,9 @@ public sealed class GetDailyGuidanceTasksQueryHandler(ISender sender, ICurrentUs
             {
                 "compliance-document" => 0,
                 "leave-approval" => 1,
-                "payroll-period" => 2,
-                _ => 3,
+                "employee-compensation" => 2,
+                "payroll-period" => 3,
+                _ => 4,
             })
             .ThenBy(task => task.DueDate ?? DateOnly.MaxValue)
             .ThenBy(task => task.RecordId)

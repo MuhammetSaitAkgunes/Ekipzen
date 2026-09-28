@@ -130,6 +130,62 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
     }
 
+    [Fact]
+    public async Task CompensationTask_RequiresCurrentPackageAndDisappearsAfterSavingIt()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+        var start = today.AddDays(-1);
+        var departments = await GetAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
+            admin, "/api/departments");
+        var created = await admin.PostAsJsonAsync("/api/employees", new
+        {
+            firstName = "Ücret", lastName = "Takip " + Guid.NewGuid().ToString("N"),
+            title = "Uzman", departmentId = departments[0].Id,
+            hireDate = start, contractType = "indefinite",
+            profile = new { employmentType = "Tam Zamanlı" },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var employee = (await created.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
+        var key = $"employee-compensation:{employee.Id}";
+
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key)
+            .Which.Should().Match<DailyGuidanceTaskDto>(task =>
+                task.Kind == "employee-compensation" &&
+                task.DueDate == null &&
+                task.DateNote.Contains("kayıtlı son tarih yok") &&
+                task.TargetPath == $"/personnel/{employee.Id}?edit=1&guide=1&tab=tab-mali");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key, "aynı kaynak ikinci görev oluşturmaz");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(manager, Url))
+            .Should().NotContain(task => task.Key == key);
+
+        var future = await admin.PostAsJsonAsync(
+            $"/api/employees/{employee.Id}/compensation-packages",
+            new {
+                effectiveFrom = today.AddDays(7), monthlyGrossSalary = 50000,
+                regularPremium = 0, roadAllowance = 0, mealAllowance = 0,
+                otherRegularBenefits = 0, sourceReference = "İleri tarihli ücret kararı",
+            });
+        future.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().ContainSingle(task => task.Key == key,
+                "gelecekteki paket bugün yürürlükte değildir");
+
+        var current = await admin.PostAsJsonAsync(
+            $"/api/employees/{employee.Id}/compensation-packages",
+            new {
+                effectiveFrom = start, monthlyGrossSalary = 48000,
+                regularPremium = 0, roadAllowance = 0, mealAllowance = 0,
+                otherRegularBenefits = 0, sourceReference = "Doğrulanmış ücret kararı",
+            });
+        current.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url))
+            .Should().NotContain(task => task.Key == key);
+    }
+
     private async Task<HttpClient> AuthedClientAsync(string email)
     {
         var anonymous = factory.CreateClient();
