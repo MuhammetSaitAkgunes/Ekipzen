@@ -20,7 +20,7 @@ const coverageLabels: Record<Process["coverage"], string> = {
 const processes: Process[] = [
   {
     key: "company", title: "Şirket hazırlığı", purpose: "Şirket bilgilerini ve departman yapısını hazırlayın.",
-    connection: "Çalışan kartından önce Ayarlar bölümünde departmanı oluşturun veya düzeltin.", path: "/settings", coverage: "screen",
+    connection: "Başlangıç kayıtlarını, şirket profilini ve gerçek departmanı kontrol edip çalışan kartına geçin.", path: "/settings", coverage: "entry",
   },
   {
     key: "recruitment", title: "İşe alım", purpose: "Pozisyonu ve adayları değerlendirme aşamalarında izleyin.",

@@ -44,7 +44,7 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
   if (status.isPending) return <p role="status">Başlangıç kayıtları kontrol ediliyor…</p>;
   const data = status.data;
   return (
-    <section className="set-card" aria-label="Şirket başlangıç kurulumu">
+    <section id="settings-setup" className="set-card" aria-label="Şirket başlangıç kurulumu">
       <h3>Şirket başlangıç kurulumu</h3>
       <p>{data.needsInitialization ? "Eksik başlangıç kayıtları var." : "Başlangıç kayıtları mevcut."}</p>
       <p>

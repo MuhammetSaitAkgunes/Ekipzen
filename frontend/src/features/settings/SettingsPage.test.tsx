@@ -103,6 +103,27 @@ test("desteklenmeyen haftalık rapor ve SMS 2FA yanlışlıkla etkinleştirileme
 });
 
 
+test("şirket hazırlığı eksik kayıtları ve sonraki gerçek ekranı gösterir", async () => {
+  stubApi({
+    "/api/setup": {
+      templateYear: 2026, needsInitialization: true, companyProfileExists: true,
+      missingLeaveTypeCount: 2, missingFullDayHolidayCount: 3,
+      payrollSettingsExists: false, hasEffectiveApprovedPayrollSettings: false,
+    },
+    "/api/settings": settings,
+    "/api/departments": [],
+  });
+  renderShell();
+  const guide = await screen.findByRole("region", { name: "İlk çalışan kaydından önce" });
+  expect(await within(guide).findByText(/Eksik başlangıç kayıtları var/)).toBeInTheDocument();
+  expect(await within(guide).findByText(/Henüz departman yok/)).toBeInTheDocument();
+  expect(within(guide).getByText(/Kayıtlı şirket adı: HR Master Teknoloji/)).toBeInTheDocument();
+  expect(within(guide).getByRole("link", { name: "Kurulum durumuna git" })).toHaveAttribute("href", "#settings-setup");
+  expect(within(guide).getByRole("link", { name: "Şirket bilgilerine git" })).toHaveAttribute("href", "#settings-company");
+  expect(within(guide).getByRole("link", { name: "çalışan kartı rehberine geçin" })).toHaveAttribute("href", "/app/personnel/new");
+  expect(vi.mocked(fetch).mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+});
+
 test("departman oluşturma ve ad düzeltme çalışan kartının önkoşulunu tamamlar", async () => {
   let departments = [{ id: 1, name: "Yazılım", code: "YZL", employeeCount: 2 }];
   const original = vi.mocked(fetch).getMockImplementation()!;

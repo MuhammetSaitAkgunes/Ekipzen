@@ -702,3 +702,16 @@
 .ez-daily-review-step a { display: inline-block; margin-top: 10px; color: var(--primary); font-size: 13px; font-weight: 650; }
 .ez-daily-review-step a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 @media (max-width: 720px) { .ez-daily-review-route { padding: 18px; } .ez-daily-review-route ol { grid-template-columns: minmax(0, 1fr); } }
+
+.ez-company-preparation { margin-bottom: 18px; }
+.ez-company-preparation h3 { margin: 8px 0; color: var(--ink); }
+.ez-company-preparation > p { max-width: 80ch; line-height: 1.55; }
+.ez-company-preparation ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 18px 0; padding: 0; list-style: none; counter-reset: preparation; }
+.ez-company-preparation li { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 10px; counter-increment: preparation; }
+.ez-company-preparation li::before { content: counter(preparation, decimal-leading-zero); display: block; margin-bottom: 10px; color: var(--primary); font-weight: 700; }
+.ez-company-preparation li strong { color: var(--ink); }
+.ez-company-preparation li p { line-height: 1.5; }
+.ez-company-preparation-example { color: var(--muted); }
+.ez-company-preparation a { color: var(--primary); font-weight: 650; }
+.ez-company-preparation a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+@media (max-width: 900px) { .ez-company-preparation ol { grid-template-columns: minmax(0, 1fr); } }

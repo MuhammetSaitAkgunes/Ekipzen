@@ -9,6 +9,7 @@ import {
 
 import { TenantSetupPanel } from "./TenantSetupPanel";
 import { DepartmentsPanel } from "./DepartmentsPanel";
+import { CompanyPreparationGuide } from "./CompanyPreparationGuide";
 
 const SECTIONS: [string, string, string][] = [
   ["general", "fa-building", "Şirket Bilgileri"],
@@ -150,6 +151,7 @@ export function SettingsPage() {
         </button>
       </div>
 
+      {section === "general" && <CompanyPreparationGuide companyName={data.company?.name ?? ""} />}
       <TenantSetupPanel onInitialized={() => setCompany(null)} />
       <div className="settings-layout">
         <aside className="settings-sidebar">
@@ -166,7 +168,7 @@ export function SettingsPage() {
           {section === "general" && (
             <div id="set-general" className="set-section active">
               <DepartmentsPanel />
-              <div className="set-card mt-4">
+              <div id="settings-company" className="set-card mt-4">
                 <div className="card-head">
                   <h3>Marka & Görünüm</h3>
                   <p>Sistemde görünecek şirket adı ve marka varlıkları.</p>
