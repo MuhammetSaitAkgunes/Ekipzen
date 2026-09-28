@@ -34,6 +34,13 @@ public sealed class AttendanceController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetTimesheetQuery(employeeId, year, month), cancellationToken));
 
+    [HttpPost("preview")]
+    [ProducesResponseType<AttendanceEntryPreviewDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AttendanceEntryPreviewDto>> Preview(
+        PreviewAttendanceEntryQuery query, CancellationToken cancellationToken)
+        => Ok(await sender.Send(query, cancellationToken));
+
     [HttpPost]
     [ProducesResponseType<TimesheetRowDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

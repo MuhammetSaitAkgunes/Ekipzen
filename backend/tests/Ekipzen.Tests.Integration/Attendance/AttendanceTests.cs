@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Ekipzen.Application.Features.Attendance;
+using Ekipzen.Application.Features.Attendance.Queries;
 using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Departments;
 using Ekipzen.Application.Features.Employees;
@@ -42,6 +43,57 @@ public sealed class AttendanceTests(EkipzenApiFactory factory)
         // 08:30 giriş → erken (satır durumu ok).
         var early = await CreateEntryAsync(admin, ahmetId, "2026-07-23", "08:30", "17:30");
         early.Status.Should().Be("ok");
+    }
+
+    [Fact]
+    public async Task PreviewEntry_IsReadOnlyAndMatchesSavedCalculation()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var ahmetId = await FindEmployeeIdAsync(admin, "Ahmet");
+        const string date = "2028-02-15";
+        var url = $"/api/attendance?employeeId={ahmetId}&year=2028&month=2";
+        var before = await GetAsync<TimesheetDto>(admin, url);
+        var body = new
+        {
+            employeeId = ahmetId,
+            entryId = (int?)null,
+            model = new { workDate = date, checkIn = "09:00", checkOut = "20:00", breakMinutes = 60 },
+        };
+
+        var previewResponse = await admin.PostAsJsonAsync("/api/attendance/preview", body);
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = (await previewResponse.Content.ReadFromJsonAsync<AttendanceEntryPreviewDto>())!;
+        preview.CanSave.Should().BeTrue(preview.BlockReason);
+        preview.WorkedMinutes.Should().Be(600);
+        preview.OvertimeMinutes.Should().Be(120);
+        preview.EffectiveType.Should().Be("Mesai");
+        preview.Warnings.Should().ContainSingle(message => message.Contains("fazla mesai"));
+        (await GetAsync<TimesheetDto>(admin, url)).Rows.Should().BeEquivalentTo(before.Rows,
+            "önizleme puantaj satırı oluşturmamalı");
+
+        var saved = await CreateEntryAsync(admin, ahmetId, date, "09:00", "20:00");
+        saved.WorkedMinutes.Should().Be(preview.WorkedMinutes);
+        saved.OvertimeMinutes.Should().Be(preview.OvertimeMinutes);
+        saved.Type.Should().Be(preview.EffectiveType);
+
+        var blockedResponse = await admin.PostAsJsonAsync("/api/attendance/preview", body);
+        blockedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var blocked = (await blockedResponse.Content.ReadFromJsonAsync<AttendanceEntryPreviewDto>())!;
+        blocked.CanSave.Should().BeFalse();
+        blocked.BlockReason.Should().Contain("zaten var");
+
+        var editResponse = await admin.PostAsJsonAsync("/api/attendance/preview", new
+        {
+            employeeId = ahmetId,
+            entryId = saved.Id,
+            model = new { workDate = date, checkIn = "09:00", checkOut = "21:00", breakMinutes = 60 },
+        });
+        editResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var edit = (await editResponse.Content.ReadFromJsonAsync<AttendanceEntryPreviewDto>())!;
+        edit.CanSave.Should().BeTrue();
+        edit.WorkedMinutes.Should().Be(660);
+        (await GetAsync<TimesheetDto>(admin, url)).Rows.Single(row => row.Id == saved.Id)
+            .WorkedMinutes.Should().Be(600, "düzeltme önizlemesi mevcut kaydı değiştirmemeli");
     }
 
     [Fact]
@@ -155,6 +207,13 @@ public sealed class AttendanceTests(EkipzenApiFactory factory)
 
         (await manager.GetAsync($"/api/attendance?employeeId={ayseId}&year=2026&month=7"))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await manager.PostAsJsonAsync("/api/attendance/preview", new
+        {
+            employeeId = ayseId,
+            model = new { workDate = "2026-07-30", checkIn = "09:00", checkOut = "18:00", breakMinutes = 60 },
+        })).StatusCode.Should().Be(HttpStatusCode.Forbidden,
+            "önizleme de ekip kapsamını aşmamalı");
 
         // Çalışan rolü puantaj modülüne giremez (routes.js: hr-admin+manager).
         var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
