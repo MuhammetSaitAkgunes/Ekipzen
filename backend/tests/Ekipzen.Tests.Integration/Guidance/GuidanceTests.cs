@@ -6,6 +6,7 @@ using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Departments;
 using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Application.Features.Leaves;
 using FluentAssertions;
 
 namespace Ekipzen.Tests.Integration.Guidance;
@@ -247,6 +248,75 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
         (await manager.GetAsync(createUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await factory.CreateClient().GetAsync(createUrl))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task LeaveApprovalPractice_IsPersonalAndSeparateFromRealDecisionEvidence()
+    {
+        const string journeyUrl = "/api/guidance/leave-approval/journey";
+        const string reviewUrl = "/api/guidance/leave-approval/checks/review-request";
+        const string effectUrl = "/api/guidance/leave-approval/checks/decision-effect";
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        var before = await GetAsync<LeaveApprovalJourneyDto>(manager, journeyUrl);
+
+        var initial = await GetAsync<LeaveApprovalDecisionCheckDto>(manager, reviewUrl);
+        initial.ContentVersion.Should().Be(1);
+        initial.Choices.Should().HaveCount(3);
+        initial.Explanation.Should().BeNull();
+        initial.AttemptCount.Should().Be(0);
+        (await manager.GetAsync("/api/guidance/leave-approval/checks/unknown"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await manager.PostAsJsonAsync(reviewUrl + "/attempts", new { selectedChoice = 3 }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var wrong = await manager.PostAsJsonAsync(reviewUrl + "/attempts",
+            new { selectedChoice = 0 });
+        wrong.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await wrong.Content.ReadFromJsonAsync<LeaveApprovalDecisionCheckDto>())!
+            .LastCorrect.Should().BeFalse();
+        (await manager.PostAsJsonAsync(reviewUrl + "/attempts",
+            new { selectedChoice = 2 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await manager.PostAsJsonAsync(effectUrl + "/attempts",
+            new { selectedChoice = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var saved = await GetAsync<LeaveApprovalDecisionCheckDto>(
+            await AuthedClientAsync("ece.arslan@hrmaster.local"), reviewUrl);
+        saved.LastCorrect.Should().BeTrue();
+        saved.LastSelectedChoice.Should().Be(2);
+        saved.AttemptCount.Should().Be(2);
+        (await GetAsync<LeaveApprovalDecisionCheckDto>(admin, reviewUrl))
+            .AttemptCount.Should().Be(0, "başka kullanıcının alıştırması görünmez");
+
+        var practiced = await GetAsync<LeaveApprovalJourneyDto>(manager, journeyUrl);
+        practiced.AnsweredChecks.Should().Be(before.AnsweredChecks + 2);
+        practiced.CorrectChecks.Should().Be(before.CorrectChecks + 2);
+        practiced.VerifiedDecisions.Should().Be(before.VerifiedDecisions,
+            "alıştırma gerçek onay sayılmaz");
+
+        var types = await GetAsync<List<LeaveTypeDto>>(employee, "/api/leaves/types");
+        var type = types.Single(item => item.Code == "Mazeret");
+        var start = DateOnly.FromDateTime(DateTime.UtcNow.Date).AddDays(1000);
+        while (start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            start = start.AddDays(1);
+        var created = await employee.PostAsJsonAsync("/api/leaves", new
+        {
+            leaveTypeId = type.Id,
+            startDate = start.ToString("yyyy-MM-dd"),
+            endDate = start.ToString("yyyy-MM-dd"),
+            description = "Rehber yolculuk kanıtı",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var leave = (await created.Content.ReadFromJsonAsync<LeaveRequestDto>())!;
+        (await manager.PostAsJsonAsync($"/api/leaves/{leave.Id}/approve",
+            new { note = "Talep bilgileri kontrol edildi." }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterDecision = await GetAsync<LeaveApprovalJourneyDto>(manager, journeyUrl);
+        afterDecision.VerifiedDecisions.Should().Be(practiced.VerifiedDecisions + 1);
+        afterDecision.AnsweredChecks.Should().Be(practiced.AnsweredChecks);
+
+        (await employee.GetAsync(journeyUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await factory.CreateClient().GetAsync(reviewUrl)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     private async Task<HttpClient> AuthedClientAsync(string email)
