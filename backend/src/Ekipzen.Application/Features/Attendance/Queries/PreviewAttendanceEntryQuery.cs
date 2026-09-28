@@ -11,7 +11,7 @@ namespace Ekipzen.Application.Features.Attendance.Queries;
 
 /// <summary>Manuel kaydı yazmadan mevcut kaynaklarla hesaplar; kayıt için rezervasyon oluşturmaz.</summary>
 public sealed record PreviewAttendanceEntryQuery(
-    int EmployeeId, int? EntryId, AttendanceEntryModel Model)
+    int EmployeeId, int? EntryId, AttendanceEntryModel Model, string? ExpectedRevision = null)
     : IRequest<AttendanceEntryPreviewDto>;
 
 public sealed record AttendanceEntryPreviewDto(
@@ -29,6 +29,7 @@ public sealed class PreviewAttendanceEntryQueryValidator : AbstractValidator<Pre
     {
         RuleFor(x => x.EmployeeId).GreaterThan(0);
         RuleFor(x => x.EntryId).GreaterThan(0).When(x => x.EntryId is not null);
+        RuleFor(x => x.ExpectedRevision).NotEmpty().When(x => x.EntryId is not null);
         RuleFor(x => x.Model).NotNull().SetValidator(new AttendanceEntryModelValidator());
     }
 }
@@ -43,12 +44,16 @@ public sealed class PreviewAttendanceEntryQueryHandler(
         await EmployeeAccessGuard.EnsureCanAccessAsync(
             context, currentUser, request.EmployeeId, cancellationToken);
 
-        if (request.EntryId is { } entryId &&
-            !await context.AttendanceRecords.AsNoTracking().AnyAsync(
-                row => row.Id == entryId && row.EmployeeId == request.EmployeeId,
-                cancellationToken))
+        string? revisionBlock = null;
+        if (request.EntryId is { } entryId)
         {
-            throw new NotFoundException("Puantaj kaydı", entryId);
+            var existing = await context.AttendanceRecords.AsNoTracking().SingleOrDefaultAsync(
+                row => row.Id == entryId && row.EmployeeId == request.EmployeeId,
+                cancellationToken) ?? throw new NotFoundException("Puantaj kaydı", entryId);
+            if (existing.Revision() != request.ExpectedRevision)
+            {
+                revisionBlock = "Puantaj kaydı başka biri tarafından değiştirildi. Güncel satırı yeniden yükleyip farkları kontrol edin.";
+            }
         }
 
         var model = request.Model;
@@ -71,15 +76,18 @@ public sealed class PreviewAttendanceEntryQueryHandler(
             warnings.Add("Rapor tipiyle çalışma saati birlikte girilmiş; kaynak belge ve gün tipini kontrol edin.");
         }
 
-        string? blockReason = null;
-        try
+        string? blockReason = revisionBlock;
+        if (blockReason is null)
         {
-            await EmployeeEmploymentGuard.EnsureDateIsWithinEmploymentAsync(
-                context, request.EmployeeId, model.WorkDate, cancellationToken);
-        }
-        catch (ConflictException exception)
-        {
-            blockReason = exception.Message;
+            try
+            {
+                await EmployeeEmploymentGuard.EnsureDateIsWithinEmploymentAsync(
+                    context, request.EmployeeId, model.WorkDate, cancellationToken);
+            }
+            catch (ConflictException exception)
+            {
+                blockReason = exception.Message;
+            }
         }
 
         if (blockReason is null && await context.AttendanceRecords.AsNoTracking().AnyAsync(

@@ -110,12 +110,13 @@ public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext co
         a.WorkedMinutes,
         a.OvertimeMinutes,
         AttendanceMappings.ToTimesheetStatus(a.Status, a.OvertimeMinutes),
-        a.Note);
+        a.Note,
+        a.Revision());
 }
 
 // --- satır düzenleme ---
 
-public sealed record UpdateAttendanceEntryCommand(int Id, AttendanceEntryModel Model)
+public sealed record UpdateAttendanceEntryCommand(int Id, AttendanceEntryModel Model, string ExpectedRevision)
     : IRequest<TimesheetRowDto>;
 
 public sealed class UpdateAttendanceEntryCommandValidator : AbstractValidator<UpdateAttendanceEntryCommand>
@@ -123,13 +124,20 @@ public sealed class UpdateAttendanceEntryCommandValidator : AbstractValidator<Up
     public UpdateAttendanceEntryCommandValidator()
     {
         RuleFor(x => x.Model).NotNull().SetValidator(new AttendanceEntryModelValidator());
+        RuleFor(x => x.ExpectedRevision).NotEmpty();
     }
 }
 
-public sealed class UpdateAttendanceEntryCommandHandler(IApplicationDbContext context, ICurrentUser currentUser)
+public sealed class UpdateAttendanceEntryCommandHandler(
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
     : IRequestHandler<UpdateAttendanceEntryCommand, TimesheetRowDto>
 {
-    public async Task<TimesheetRowDto> Handle(
+    public Task<TimesheetRowDto> Handle(
+        UpdateAttendanceEntryCommand request, CancellationToken cancellationToken) =>
+        databaseLock.ExecuteExclusiveAsync($"attendance-entry:{request.Id}",
+            token => UpdateAsync(request, token), cancellationToken);
+
+    private async Task<TimesheetRowDto> UpdateAsync(
         UpdateAttendanceEntryCommand request, CancellationToken cancellationToken)
     {
         var record = await context.AttendanceRecords
@@ -138,6 +146,11 @@ public sealed class UpdateAttendanceEntryCommandHandler(IApplicationDbContext co
 
         await EmployeeAccessGuard.EnsureCanAccessAsync(
             context, currentUser, record.EmployeeId, cancellationToken);
+        if (record.Revision() != request.ExpectedRevision)
+        {
+            throw new ConflictException(
+                "Puantaj kaydı başka biri tarafından değiştirildi. Güncel satırı yeniden yükleyip farkları kontrol edin.");
+        }
 
         await EmployeeEmploymentGuard.EnsureDateIsWithinEmploymentAsync(
             context, record.EmployeeId, request.Model.WorkDate, cancellationToken);

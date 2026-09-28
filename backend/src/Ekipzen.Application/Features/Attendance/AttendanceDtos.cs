@@ -1,4 +1,6 @@
 using Ekipzen.Domain.Enums;
+using Ekipzen.Domain.Entities.Attendance;
+using System.Globalization;
 
 namespace Ekipzen.Application.Features.Attendance;
 
@@ -22,7 +24,8 @@ public sealed record TimesheetRowDto(
     int WorkedMinutes,
     int OvertimeMinutes,
     string Status,
-    string? Note);
+    string? Note,
+    string Revision);
 
 /// <summary>Bir çalışanın aylık puantajı + ay toplamları.</summary>
 public sealed record TimesheetDto(
@@ -48,6 +51,10 @@ public sealed record AttendanceSummaryDto(
 
 public static class AttendanceMappings
 {
+    /// <summary>Mevcut denetim damgasının kayıpsız, istemciye taşınabilir sürümü.</summary>
+    public static string Revision(this AttendanceRecord record) =>
+        (record.UpdatedAtUtc ?? record.CreatedAtUtc).Ticks.ToString(CultureInfo.InvariantCulture);
+
     public static string ToDto(this AttendanceStatus status) => status switch
     {
         AttendanceStatus.OnTime => "ontime",

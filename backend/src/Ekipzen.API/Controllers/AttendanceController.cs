@@ -61,8 +61,9 @@ public sealed class AttendanceController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<TimesheetRowDto>> Update(
-        int id, AttendanceEntryModel model, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new UpdateAttendanceEntryCommand(id, model), cancellationToken));
+        int id, UpdateEntryBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new UpdateAttendanceEntryCommand(
+            id, body.Model, body.ExpectedRevision), cancellationToken));
 
     [HttpGet("summary")]
     [ProducesResponseType<IReadOnlyList<AttendanceSummaryDto>>(StatusCodes.Status200OK)]
@@ -72,4 +73,5 @@ public sealed class AttendanceController(ISender sender) : ControllerBase
 
     /// <summary>Manuel giriş gövdesi: personel + gün verileri.</summary>
     public sealed record CreateEntryBody(int EmployeeId, AttendanceEntryModel Model);
+    public sealed record UpdateEntryBody(AttendanceEntryModel Model, string ExpectedRevision);
 }

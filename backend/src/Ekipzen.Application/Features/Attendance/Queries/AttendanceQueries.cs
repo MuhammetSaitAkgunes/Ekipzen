@@ -99,7 +99,8 @@ public sealed class GetTimesheetQueryHandler(IApplicationDbContext context, ICur
                 a.WorkedMinutes,
                 a.OvertimeMinutes,
                 AttendanceMappings.ToTimesheetStatus(a.Status, a.OvertimeMinutes),
-                a.Note))
+                a.Note,
+                a.Revision()))
             .ToList();
 
         return new TimesheetDto(

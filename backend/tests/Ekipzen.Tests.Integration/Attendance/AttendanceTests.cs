@@ -86,6 +86,7 @@ public sealed class AttendanceTests(EkipzenApiFactory factory)
         {
             employeeId = ahmetId,
             entryId = saved.Id,
+            expectedRevision = saved.Revision,
             model = new { workDate = date, checkIn = "09:00", checkOut = "21:00", breakMinutes = 60 },
         });
         editResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -119,27 +120,76 @@ public sealed class AttendanceTests(EkipzenApiFactory factory)
 
         var updateResponse = await admin.PutAsJsonAsync($"/api/attendance/{row.Id}", new
         {
-            workDate = "2026-07-27",
-            checkIn = "09:00",
-            checkOut = "21:00",
-            breakMinutes = 60,
-            note = "Sürüm gecesi",
+            expectedRevision = row.Revision,
+            model = new
+            {
+                workDate = "2026-07-27",
+                checkIn = "09:00",
+                checkOut = "21:00",
+                breakMinutes = 60,
+                note = "Sürüm gecesi",
+            },
         });
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var updated = (await updateResponse.Content.ReadFromJsonAsync<TimesheetRowDto>())!;
         updated.WorkedMinutes.Should().Be(660);
         updated.OvertimeMinutes.Should().Be(180);
         updated.Status.Should().Be("overtime");
+        updated.Revision.Should().NotBe(row.Revision);
+
+        var stalePreviewResponse = await admin.PostAsJsonAsync("/api/attendance/preview", new
+        {
+            employeeId = ahmetId,
+            entryId = row.Id,
+            expectedRevision = row.Revision,
+            model = new { workDate = "2026-07-27", checkIn = "09:00", checkOut = "22:00", breakMinutes = 60 },
+        });
+        stalePreviewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var stalePreview = (await stalePreviewResponse.Content.ReadFromJsonAsync<AttendanceEntryPreviewDto>())!;
+        stalePreview.CanSave.Should().BeFalse();
+        stalePreview.BlockReason.Should().Contain("değiştirildi");
+
+        (await admin.PutAsJsonAsync($"/api/attendance/{row.Id}", new
+        {
+            expectedRevision = row.Revision,
+            model = new { workDate = "2026-07-27", checkIn = "09:00", checkOut = "22:00", breakMinutes = 60 },
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "eski sürüm başka birinin düzeltmesini ezmemeli");
 
         // Dolu bir güne taşıma 409: aynı test kendi çakışma gününü oluşturur.
         await CreateEntryAsync(admin, ahmetId, "2026-07-29", "09:00", "18:00");
         (await admin.PutAsJsonAsync($"/api/attendance/{row.Id}", new
         {
-            workDate = "2026-07-29",
-            checkIn = "09:00",
-            checkOut = "18:00",
-            breakMinutes = 60,
+            expectedRevision = updated.Revision,
+            model = new { workDate = "2026-07-29", checkIn = "09:00", checkOut = "18:00", breakMinutes = 60 },
         })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var current = await GetAsync<TimesheetDto>(
+            admin, $"/api/attendance?employeeId={ahmetId}&year=2026&month=7");
+        current.Rows.Single(item => item.Id == row.Id).WorkedMinutes.Should().Be(660);
+    }
+
+    [Fact]
+    public async Task ConcurrentUpdates_WithSameRevision_OnlyOneCanWin()
+    {
+        var firstClient = await AuthedClientAsync("ik@hrmaster.local");
+        var secondClient = await AuthedClientAsync("ik@hrmaster.local");
+        var ahmetId = await FindEmployeeIdAsync(firstClient, "Ahmet");
+        var row = await CreateEntryAsync(firstClient, ahmetId, "2028-02-16", "09:00", "18:00");
+
+        Task<HttpResponseMessage> UpdateAsync(HttpClient client, string checkout) =>
+            client.PutAsJsonAsync($"/api/attendance/{row.Id}", new
+            {
+                expectedRevision = row.Revision,
+                model = new { workDate = "2028-02-16", checkIn = "09:00", checkOut = checkout, breakMinutes = 60 },
+            });
+
+        var responses = await Task.WhenAll(
+            UpdateAsync(firstClient, "19:00"), UpdateAsync(secondClient, "20:00"));
+        responses.Count(response => response.StatusCode == HttpStatusCode.OK).Should().Be(1);
+        responses.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
+        var timesheet = await GetAsync<TimesheetDto>(firstClient,
+            $"/api/attendance?employeeId={ahmetId}&year=2028&month=2");
+        timesheet.Rows.Single(item => item.Id == row.Id).WorkedMinutes.Should().BeOneOf(540, 600);
     }
 
     [Fact]
@@ -259,10 +309,8 @@ public sealed class AttendanceTests(EkipzenApiFactory factory)
 
         (await admin.PutAsJsonAsync($"/api/attendance/{historical.Id}", new
         {
-            workDate = "2026-08-16",
-            checkIn = "09:00",
-            checkOut = "18:00",
-            breakMinutes = 60,
+            expectedRevision = historical.Revision,
+            model = new { workDate = "2026-08-16", checkIn = "09:00", checkOut = "18:00", breakMinutes = 60 },
         })).StatusCode.Should().Be(HttpStatusCode.Conflict,
             "mevcut bir satir istihdam araligi disina tasinamamali");
     }
