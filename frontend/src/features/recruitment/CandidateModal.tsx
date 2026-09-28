@@ -1,3 +1,4 @@
+import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -104,6 +105,7 @@ export function CandidateModal({ onClose, onCreated }: {
             <p><strong>Neden kontrol ediyoruz?</strong> Kimlik, başvurulan rol ve değerlendirme puanı sonraki aşama kararlarında görünür. Örneğin farklı bir pozisyon için yapılan başvuruyu yanlış role kaydetmek değerlendirmeyi yanıltır.</p>
             <p><strong>Puanın kaynağı:</strong> Buradaki 0-100 puanı siz girersiniz; sistem AI ile hesaplamaz. Değerlendirmeniz yoksa rastgele puan vermeyin. Mevcut kayıt sözleşmesi puansız adayı ayrı gösteremiyor.</p>
             <p>Açık pozisyon seçerseniz aday o kadroya bağlanır ve rol adı pozisyondan alınır. İlan yayımlamadan gelen başvuruyu pozisyon bağlantısı olmadan da kaydedebilirsiniz.</p>
+            <GuidanceDecisionCheck process="recruitment" step="candidate-create" operationName="aday işlemi" />
           </section>
           <div className="form-grid-2">
             <div className="input-group">

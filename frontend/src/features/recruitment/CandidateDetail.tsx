@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
+import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
 import { useAddCandidateEvaluation, useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
@@ -254,6 +255,7 @@ export function CandidateDetail({ id }: { id: number }) {
         <p><strong>Neden kontrol ediyoruz?</strong> Mülakat notları, değerlendirme ve başvuru belgeleriyle bu aşamanın gerekçesini karşılaştırın. Elle verilen aday puanı tek başına karar kanıtı değildir.</p>
         <p>Yanlış aşamayı kaydederseniz işe alınmamış adayın durumunu yeniden değiştirebilirsiniz; önceki hareket geçmişte kalır. İşe alınmış adayın aşaması bu alandan değiştirilemez.</p>
         <p>Onaydan hemen önce sunucudaki mevcut aşama yeniden okunur; başka işlem araya girerse kararınızı yeniden değerlendirin.</p>
+        {candidate.status === "Yeni" && <GuidanceDecisionCheck process="recruitment" step="first-review" operationName="aday işlemi" />}
         <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>
         <div className="ez-candidate-status-actions">
           <button className="btn btn-ghost" onClick={() => { setStatusReview(null); setStatusConfirmed(false); }}>Vazgeç</button>

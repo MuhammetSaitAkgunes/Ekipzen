@@ -27,6 +27,12 @@ beforeEach(() =>
     "/api/candidates/5/evaluations": { id: 2, criterion: "TypeScript bilgisi", score: 4, maxScore: 5 },
     "/api/candidates/5/hire": { candidateId: 5, employeeId: 9, employeeName: "Burak Yılmaz" },
     "/api/departments": departments,
+    "/api/guidance/recruitment/checks/first-review": {
+      stepKey: "first-review", contentVersion: 1,
+      question: "Yeni adayın aşamasını değiştirmeden önce hangi kontrol gerekir?",
+      choices: ["Yalnız genel aday puanına bakarım", "Başvuru, not ve değerlendirme dayanaklarını karşılaştırırım", "Aşama seçimi adaya otomatik bildirim gönderir"],
+      lastSelectedChoice: null, lastCorrect: null, attemptCount: 0, explanation: null,
+    },
   }),
 );
 afterEach(() => vi.unstubAllGlobals());
@@ -165,6 +171,24 @@ test("pipeline aşaması gerekçeli ön kontrol ve teyitten sonra değişir", as
     expect(patched).toBeTruthy();
     expect(JSON.parse(String(patched![1]?.body))).toMatchObject({ status: "Teklif" });
   });
+});
+
+test("Yeni adayın ilk aşama ön kontrolü karar alıştırmasını gösterir", async () => {
+  stubApi({
+    "/api/candidates/5": { ...detail, status: "Yeni" },
+    "/api/departments": departments,
+    "/api/guidance/recruitment/checks/first-review": {
+      stepKey: "first-review", contentVersion: 1,
+      question: "Yeni adayın aşamasını değiştirmeden önce hangi kontrol gerekir?",
+      choices: ["Yalnız genel aday puanına bakarım", "Başvuru, not ve değerlendirme dayanaklarını karşılaştırırım", "Aşama seçimi adaya otomatik bildirim gönderir"],
+      lastSelectedChoice: null, lastCorrect: null, attemptCount: 0, explanation: null,
+    },
+  });
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Mülakat");
+  expect(await screen.findByText(/Yeni adayın aşamasını değiştirmeden önce hangi kontrol gerekir/)).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Aday aşaması ön kontrolü" })).toHaveTextContent("Kısa karar alıştırması");
 });
 
 test("aşama seçimi vazgeçilince kayıt değişmez", async () => {

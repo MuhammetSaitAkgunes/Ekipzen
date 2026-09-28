@@ -24,6 +24,9 @@ export type RecruitmentJourney = {
   processKey: string;
   verifiedFirstReviews: number;
   lastVerifiedAtUtc: string | null;
+  contentVersion: number;
+  answeredChecks: number;
+  correctChecks: number;
 };
 
 export const recruitmentJourneyKey = ["guidance", "recruitment", "journey"] as const;

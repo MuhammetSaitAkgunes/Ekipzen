@@ -8,6 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const recruitmentJourney = {
   processKey: "recruitment", verifiedFirstReviews: 0, lastVerifiedAtUtc: null,
+  contentVersion: 1, answeredChecks: 0, correctChecks: 0,
 };
 
 test("konumu kaydedilmemiş rehberde gerçek işlem kanıtı sıfır görünür", async () => {
@@ -51,11 +52,14 @@ test("aday kararı yalnız gerçek işlem kanıtı olarak görünür", async () 
     },
     "/api/guidance/recruitment/journey": {
       processKey: "recruitment", verifiedFirstReviews: 2, lastVerifiedAtUtc: "2026-09-28T10:00:00Z",
+      contentVersion: 1, answeredChecks: 2, correctChecks: 1,
     },
   });
   renderPage(<GuidanceJourneyPage />);
   const card = await screen.findByRole("region", { name: "Aday ilk incelemesi" });
   expect(within(card).getByText("2 aday")).toBeInTheDocument();
+  expect(within(card).getByText("2/2")).toBeInTheDocument();
+  expect(within(card).getByText("1/2")).toBeInTheDocument();
   expect(within(card).getByText(/Kararın doğruluğunu/)).toBeInTheDocument();
   expect(within(card).getByRole("link", { name: "Aday havuzunu aç" }))
     .toHaveAttribute("href", "/app/recruitment");

@@ -38,9 +38,12 @@ function RecruitmentEvidence({ journey }: { journey: RecruitmentJourney }) {
     <h2 id="journey-recruitment">Aday ilk incelemesi</h2>
     <dl>
       <div><dt>Doğrulanmış ilk aşama kararı</dt><dd>{journey.verifiedFirstReviews} aday</dd></div>
+      <div><dt>Yanıtlanan karar konusu</dt><dd>{journey.answeredChecks}/2</dd></div>
+      <div><dt>Son denemesi doğru olan konu</dt><dd>{journey.correctChecks}/2</dd></div>
       {journey.lastVerifiedAtUtc && <div><dt>Son gerçek karar</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
     </dl>
     <p>Bu kayıt, “Yeni” aşamasındaki bir adayın durumunu gerçekten değiştirdiğinizi gösterir. Kararın doğruluğunu, adayla iletişimi veya işe alım sürecinde bağımsız yeterliliği kanıtlamaz.</p>
+    <p>Karar alıştırmaları gerçek aşama değişikliği kanıtından ayrıdır; doğru yanıt yeterlilik onayı değildir.</p>
     <Link className="btn btn-secondary" to={appPath("/recruitment")}>Aday havuzunu aç</Link>
   </section>;
 }

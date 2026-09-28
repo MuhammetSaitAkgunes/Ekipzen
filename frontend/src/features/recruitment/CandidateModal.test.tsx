@@ -10,6 +10,12 @@ beforeEach(() =>
   stubApi({
     "/api/candidates": { id: 7, name: "Zeynep Aksoy", appliedRole: "QA Engineer", status: "Yeni", score: 70, initials: "ZA" },
     "/api/positions": [],
+    "/api/guidance/recruitment/checks/candidate-create": {
+      stepKey: "candidate-create", contentVersion: 1,
+      question: "Başvuruyu kaydederken aday puanının dayanağı henüz yok. Ne yaparsınız?",
+      choices: ["Tahmini bir puan girerim", "Puanı başka adaydan kopyalarım", "Değerlendirme dayanağını netleştirmeden puan uydurmam"],
+      lastSelectedChoice: null, lastCorrect: null, attemptCount: 0, explanation: null,
+    },
   }),
 );
 afterEach(() => vi.unstubAllGlobals());
@@ -22,6 +28,39 @@ const renderModal = (onCreated = vi.fn()) => {
   );
   return onCreated;
 };
+
+test("aday puanı karar alıştırması kaydedilir ama aday oluşturulmuş sayılmaz", async () => {
+  const baseFetch = globalThis.fetch;
+  let attemptCount = 0;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === "/api/guidance/recruitment/checks/candidate-create/attempts" &&
+        init?.method === "POST") {
+      const { selectedChoice } = JSON.parse(String(init.body));
+      attemptCount++;
+      return new Response(JSON.stringify({
+        stepKey: "candidate-create", contentVersion: 1,
+        question: "Başvuruyu kaydederken aday puanının dayanağı henüz yok. Ne yaparsınız?",
+        choices: ["Tahmini bir puan girerim", "Puanı başka adaydan kopyalarım", "Değerlendirme dayanağını netleştirmeden puan uydurmam"],
+        lastSelectedChoice: selectedChoice, lastCorrect: selectedChoice === 2, attemptCount,
+        explanation: "Dayanak yoksa rastgele sayı girmeyin.",
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return baseFetch(input, init);
+  }));
+  renderModal();
+  await userEvent.click(screen.getByText("Kısa karar alıştırması"));
+  expect(await screen.findByText(/aday puanının dayanağı henüz yok/)).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText("Tahmini bir puan girerim"));
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Yanıtı kontrol et" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Bir daha düşünün.");
+  await userEvent.click(screen.getByLabelText("Değerlendirme dayanağını netleştirmeden puan uydurmam"));
+  await userEvent.click(screen.getByRole("button", { name: "Yanıtı kontrol et" }));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Doğru karar."));
+  expect(screen.getByText(/2 kayıtlı deneme/)).toBeInTheDocument();
+  expect(screen.getByText(/gerçek aday işlemi kanıtı veya yeterlilik onayı değildir/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/candidates")).toBe(false);
+});
 
 test("ön kontrolden sonra aday tam gövdeyle kaydedilir", async () => {
   const onCreated = renderModal();
