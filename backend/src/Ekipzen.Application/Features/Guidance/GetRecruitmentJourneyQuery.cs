@@ -5,11 +5,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ekipzen.Application.Features.Guidance;
 
-/// <summary>İlk aday aşama kararının kullanıcıya ait işlem kanıtı; yeterlilik düzeyi değildir.</summary>
+/// <summary>Aday yolculuğunda gerçek ilk karar kanıtı ve ayrı alıştırma ilerlemesi; yeterlilik düzeyi değildir.</summary>
 public sealed record RecruitmentJourneyDto(
     string ProcessKey,
     int VerifiedFirstReviews,
-    DateTime? LastVerifiedAtUtc);
+    DateTime? LastVerifiedAtUtc,
+    int ContentVersion,
+    int AnsweredChecks,
+    int CorrectChecks);
 
 public sealed record GetRecruitmentJourneyQuery : IRequest<RecruitmentJourneyDto>;
 
@@ -27,6 +30,13 @@ public sealed class GetRecruitmentJourneyQueryHandler(
         var latest = await evidence.OrderByDescending(item => item.CreatedAtUtc)
             .Select(item => (DateTime?)item.CreatedAtUtc)
             .FirstOrDefaultAsync(ct);
-        return new("recruitment", count, latest);
+        var checks = await context.GuidanceDecisionProgresses.AsNoTracking()
+            .Where(item => item.UserId == userId &&
+                item.ProcessKey == RecruitmentDecisionChecks.ProcessKey &&
+                item.ContentVersion == RecruitmentDecisionChecks.ContentVersion)
+            .Select(item => item.LastCorrect)
+            .ToListAsync(ct);
+        return new(RecruitmentDecisionChecks.ProcessKey, count, latest,
+            RecruitmentDecisionChecks.ContentVersion, checks.Count, checks.Count(correct => correct));
     }
 }

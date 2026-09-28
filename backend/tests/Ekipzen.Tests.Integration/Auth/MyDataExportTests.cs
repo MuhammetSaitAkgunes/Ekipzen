@@ -54,6 +54,9 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
         (await admin.PostAsJsonAsync(
             "/api/guidance/employee-entry/checks/tab-is/attempts",
             new { selectedChoice = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await admin.PostAsJsonAsync(
+            "/api/guidance/recruitment/checks/candidate-create/attempts",
+            new { selectedChoice = 2 })).StatusCode.Should().Be(HttpStatusCode.OK);
 
         var departments = await admin.GetFromJsonAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
             "/api/departments");
@@ -94,6 +97,11 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
             .Should().ContainSingle(item =>
                 item.GetProperty("stepKey").GetString() == "tab-is" &&
                 item.GetProperty("contentVersion").GetInt32() == 1 &&
+                item.GetProperty("lastCorrect").GetBoolean());
+        adminRoot.GetProperty("guidanceDecisionProgresses").EnumerateArray()
+            .Should().ContainSingle(item =>
+                item.GetProperty("processKey").GetString() == "recruitment" &&
+                item.GetProperty("stepKey").GetString() == "candidate-create" &&
                 item.GetProperty("lastCorrect").GetBoolean());
 
         var otherUser = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");

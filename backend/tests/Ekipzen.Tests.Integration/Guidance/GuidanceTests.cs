@@ -199,6 +199,56 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
         (await factory.CreateClient().GetAsync(checkUrl)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task RecruitmentChecks_SavePracticeWithoutClaimingCandidateDecision()
+    {
+        const string createUrl = "/api/guidance/recruitment/checks/candidate-create";
+        const string reviewUrl = "/api/guidance/recruitment/checks/first-review";
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var before = await GetAsync<RecruitmentJourneyDto>(
+            admin, "/api/guidance/recruitment/journey");
+
+        var initial = await GetAsync<RecruitmentDecisionCheckDto>(admin, createUrl);
+        initial.ContentVersion.Should().Be(1);
+        initial.Choices.Should().HaveCount(3);
+        initial.Explanation.Should().BeNull();
+        initial.AttemptCount.Should().Be(0);
+
+        (await admin.GetAsync("/api/guidance/recruitment/checks/unknown"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await admin.PostAsJsonAsync(createUrl + "/attempts", new { selectedChoice = 3 }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var wrong = await admin.PostAsJsonAsync(createUrl + "/attempts",
+            new { selectedChoice = 0 });
+        wrong.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await wrong.Content.ReadFromJsonAsync<RecruitmentDecisionCheckDto>())!
+            .LastCorrect.Should().BeFalse();
+
+        var right = await admin.PostAsJsonAsync(createUrl + "/attempts",
+            new { selectedChoice = 2 });
+        right.StatusCode.Should().Be(HttpStatusCode.OK);
+        var saved = await GetAsync<RecruitmentDecisionCheckDto>(
+            await AuthedClientAsync("ik@hrmaster.local"), createUrl);
+        saved.LastCorrect.Should().BeTrue();
+        saved.LastSelectedChoice.Should().Be(2);
+        saved.AttemptCount.Should().Be(2);
+
+        (await admin.PostAsJsonAsync(reviewUrl + "/attempts",
+            new { selectedChoice = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var after = await GetAsync<RecruitmentJourneyDto>(
+            admin, "/api/guidance/recruitment/journey");
+        after.ContentVersion.Should().Be(1);
+        after.AnsweredChecks.Should().Be(before.AnsweredChecks + 2);
+        after.CorrectChecks.Should().Be(before.CorrectChecks + 2);
+        after.VerifiedFirstReviews.Should().Be(before.VerifiedFirstReviews);
+
+        (await manager.GetAsync(createUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await factory.CreateClient().GetAsync(createUrl))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private async Task<HttpClient> AuthedClientAsync(string email)
     {
         var anonymous = factory.CreateClient();
