@@ -1106,6 +1106,12 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.HasKey("Id");
 
                     b.HasIndex("EmploymentPeriodId");
@@ -1114,6 +1120,57 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("EmployeeCompensationPackages");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationPackageCorrection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AfterJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BeforeJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CompensationPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CorrectedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FromVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToVersion")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompensationPackageId");
+
+                    b.HasIndex("TenantId", "CompensationPackageId", "ToVersion")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeCompensationPackageCorrections");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeDocument", b =>
@@ -3233,6 +3290,17 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("EmploymentPeriod");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationPackageCorrection", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeCompensationPackage", "CompensationPackage")
+                        .WithMany()
+                        .HasForeignKey("CompensationPackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CompensationPackage");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeDocument", b =>

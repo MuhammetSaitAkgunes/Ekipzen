@@ -12,6 +12,7 @@ using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Employees.Offboarding;
 using Ekipzen.Application.Features.Leaves;
 using Ekipzen.Domain.Entities.Leaves;
+using Ekipzen.Domain.Entities.Payroll;
 using Ekipzen.Domain.Enums;
 using Ekipzen.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -280,6 +281,10 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             client, $"/api/employees/{created.Id}/employment-foundation");
         closed.EmploymentPeriods[0].EndDate.Should().Be(new DateOnly(2025, 6, 30));
         closed.CompensationPackages[0].EffectiveTo.Should().Be(new DateOnly(2025, 6, 30));
+        var correctionUrl = $"/api/employees/{created.Id}/compensation-packages/{completed.CompensationPackageId}/correction-context";
+        var locked = await GetAsync<CompensationPackageCorrectionContextDto>(client, correctionUrl);
+        locked.CanCorrect.Should().BeFalse();
+        locked.BlockingReasons.Should().Contain(reason => reason.Contains("işten ayrılış geçmişinde"));
 
         (await client.PutAsJsonAsync($"/api/employees/{created.Id}", new
         {
@@ -305,6 +310,91 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             client, $"/api/employees/{created.Id}/employment-foundation");
         reopened.EmploymentPeriods[0].EndDate.Should().BeNull();
         reopened.CompensationPackages[0].EffectiveTo.Should().BeNull();
+        var stillLocked = await GetAsync<CompensationPackageCorrectionContextDto>(client, correctionUrl);
+        stillLocked.CanCorrect.Should().BeFalse("tamamlanan ayrılışın tarihsel ücret görüntüsü geri alma sonrasında da korunur");
+    }
+
+    [Fact]
+    public async Task CompensationCorrection_VersionsUnusedPackageAndLocksPayrollSnapshot()
+    {
+        var auth = await LoginAsync("ik@hrmaster.local");
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departmentId, "ÜcretDüzeltme", $"Deneme{Guid.NewGuid():N}");
+        var createResponse = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = "2024-01-01", monthlyGrossSalary = 40000m,
+                regularPremium = 2000m, roadAllowance = 1000m,
+                mealAllowance = 1500m, otherRegularBenefits = 500m,
+                sourceReference = "İlk ücret yazısı",
+            });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var foundation = (await createResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!;
+        var package = foundation.CompensationPackages.Single();
+        package.Version.Should().Be(1);
+        var url = $"/api/employees/{employeeId}/compensation-packages/{package.Id}";
+        var context = await GetAsync<CompensationPackageCorrectionContextDto>(admin, $"{url}/correction-context");
+        context.CanCorrect.Should().BeTrue();
+        context.History.Should().BeEmpty();
+
+        var correction = new
+        {
+            expectedVersion = 1, monthlyGrossSalary = 42000m,
+            regularPremium = 2000m, roadAllowance = 1000m,
+            mealAllowance = 1500m, otherRegularBenefits = 500m,
+            sourceReference = "Düzeltilmiş ücret yazısı", reason = "İlk brüt tutar yanlış girildi",
+        };
+        (await manager.GetAsync($"{url}/correction-context"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await manager.PutAsJsonAsync(url, correction))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var correctedResponse = await admin.PutAsJsonAsync(url, correction);
+        correctedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var corrected = (await correctedResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!;
+        corrected.CompensationPackages.Single().Version.Should().Be(2);
+        corrected.CompensationPackages.Single().EffectiveFrom.Should().Be(new DateOnly(2024, 1, 1));
+        corrected.CompensationPackages.Single().MonthlyGrossSalary.Should().Be(42000m);
+        context = await GetAsync<CompensationPackageCorrectionContextDto>(admin, $"{url}/correction-context");
+        context.History.Should().ContainSingle();
+        context.History[0].Before.MonthlyGrossSalary.Should().Be(40000m);
+        context.History[0].After.MonthlyGrossSalary.Should().Be(42000m);
+        context.History[0].Reason.Should().Be("İlk brüt tutar yanlış girildi");
+        context.History[0].ActorUserId.Should().NotBeNullOrWhiteSpace();
+        (await admin.PutAsJsonAsync(url, correction)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var settingsId = await db.PayrollSettings.Select(item => item.Id).FirstAsync();
+            var payrollPeriod = new PayrollPeriod
+            {
+                Name = $"Düzeltme kontrolü {Guid.NewGuid():N}",
+                Year = 2024, Month = 1, PayrollSettingsId = settingsId,
+            };
+            payrollPeriod.Employees.Add(new PayrollEmployee { EmployeeId = employeeId });
+            db.PayrollPeriods.Add(payrollPeriod);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+
+        context = await GetAsync<CompensationPackageCorrectionContextDto>(admin, $"{url}/correction-context");
+        context.CanCorrect.Should().BeFalse();
+        context.BlockingReasons.Should().Contain(reason => reason.Contains("bordro satırı"));
+        var blocked = await admin.PutAsJsonAsync(url, new
+        {
+            expectedVersion = 2, monthlyGrossSalary = 43000m,
+            regularPremium = 2000m, roadAllowance = 1000m,
+            mealAllowance = 1500m, otherRegularBenefits = 500m,
+            sourceReference = "Üçüncü yazı", reason = "Tekrar düzeltme",
+        });
+        blocked.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var unchanged = await GetAsync<CompensationPackageCorrectionContextDto>(admin, $"{url}/correction-context");
+        unchanged.Package.Version.Should().Be(2);
+        unchanged.History.Should().ContainSingle();
     }
 
     [Fact]

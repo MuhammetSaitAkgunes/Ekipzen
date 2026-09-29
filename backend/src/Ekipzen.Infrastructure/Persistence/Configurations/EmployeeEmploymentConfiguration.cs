@@ -30,6 +30,7 @@ public sealed class EmployeeCompensationPackageConfiguration
     {
         b.Property(item => item.Currency).IsRequired().HasMaxLength(3);
         b.Property(item => item.SourceReference).IsRequired().HasMaxLength(256);
+        b.Property(item => item.Version).HasDefaultValue(1).IsConcurrencyToken();
         b.HasIndex(item => new { item.TenantId, item.EmploymentPeriodId, item.EffectiveFrom })
             .IsUnique();
 
@@ -37,5 +38,23 @@ public sealed class EmployeeCompensationPackageConfiguration
             .WithMany(period => period.CompensationPackages)
             .HasForeignKey(item => item.EmploymentPeriodId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class EmployeeCompensationPackageCorrectionConfiguration
+    : IEntityTypeConfiguration<EmployeeCompensationPackageCorrection>
+{
+    public void Configure(EntityTypeBuilder<EmployeeCompensationPackageCorrection> b)
+    {
+        b.Property(item => item.BeforeJson).IsRequired();
+        b.Property(item => item.AfterJson).IsRequired();
+        b.Property(item => item.Reason).IsRequired().HasMaxLength(500);
+        b.Property(item => item.ActorUserId).IsRequired().HasMaxLength(450);
+        b.HasIndex(item => new { item.TenantId, item.CompensationPackageId, item.ToVersion })
+            .IsUnique();
+        b.HasOne(item => item.CompensationPackage)
+            .WithMany()
+            .HasForeignKey(item => item.CompensationPackageId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

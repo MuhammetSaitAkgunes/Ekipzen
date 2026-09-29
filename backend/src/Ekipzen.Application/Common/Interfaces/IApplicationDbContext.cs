@@ -28,6 +28,7 @@ public interface IApplicationDbContext
     DbSet<EmployeeOffboardingTeamTransfer> EmployeeOffboardingTeamTransfers { get; }
     DbSet<EmployeeEmploymentPeriod> EmployeeEmploymentPeriods { get; }
     DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages { get; }
+    DbSet<EmployeeCompensationPackageCorrection> EmployeeCompensationPackageCorrections { get; }
     DbSet<TerminationCalculationRule> TerminationCalculationRules { get; }
 
     // Leaves

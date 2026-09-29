@@ -43,6 +43,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<EmployeeOffboardingTeamTransfer> EmployeeOffboardingTeamTransfers => Set<EmployeeOffboardingTeamTransfer>();
     public DbSet<EmployeeEmploymentPeriod> EmployeeEmploymentPeriods => Set<EmployeeEmploymentPeriod>();
     public DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages => Set<EmployeeCompensationPackage>();
+    public DbSet<EmployeeCompensationPackageCorrection> EmployeeCompensationPackageCorrections
+        => Set<EmployeeCompensationPackageCorrection>();
     public DbSet<TerminationCalculationRule> TerminationCalculationRules => Set<TerminationCalculationRule>();
 
     // Leaves

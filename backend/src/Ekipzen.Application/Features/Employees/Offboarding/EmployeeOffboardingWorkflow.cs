@@ -376,6 +376,7 @@ public sealed class CompleteEmployeeOffboardingCommandHandler(
         {
             item.CompensationPackagePreviousEffectiveTo = compensation.EffectiveTo;
             compensation.EffectiveTo = item.TerminationDate;
+            compensation.Version++;
         }
 
         var directReports = await context.Employees
@@ -662,6 +663,7 @@ public sealed class ReverseEmployeeOffboardingCommandHandler(
         if (compensation is not null)
         {
             compensation.EffectiveTo = item.CompensationPackagePreviousEffectiveTo;
+            compensation.Version++;
         }
         employee.Status = EmployeeStatus.Active;
         employee.TerminationDate = null;

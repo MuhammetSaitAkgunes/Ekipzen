@@ -16,6 +16,7 @@ public sealed record EmployeeEmploymentPeriodDto(
 
 public sealed record EmployeeCompensationPackageDto(
     int Id,
+    int Version,
     int EmploymentPeriodId,
     DateOnly EffectiveFrom,
     DateOnly? EffectiveTo,
@@ -155,6 +156,7 @@ public sealed class SaveEmployeeCompensationPackageCommandHandler(
         if (previous is not null)
         {
             previous.EffectiveTo = request.EffectiveFrom.AddDays(-1);
+            previous.Version++;
         }
 
         context.EmployeeCompensationPackages.Add(new EmployeeCompensationPackage
@@ -246,6 +248,7 @@ public static class EmployeeEmploymentMappings
     public static EmployeeCompensationPackageDto ToDto(this EmployeeCompensationPackage item)
         => new(
             item.Id,
+            item.Version,
             item.EmploymentPeriodId,
             item.EffectiveFrom,
             item.EffectiveTo,

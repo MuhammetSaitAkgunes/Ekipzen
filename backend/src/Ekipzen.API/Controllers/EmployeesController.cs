@@ -134,6 +134,28 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.OtherRegularBenefits,
             body.SourceReference), cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/correction-context")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationPackageCorrectionContextDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CompensationPackageCorrectionContextDto>> GetCompensationCorrectionContext(
+        int id, int packageId, CancellationToken cancellationToken)
+        => Ok(await sender.Send(
+            new GetCompensationPackageCorrectionContextQuery(id, packageId), cancellationToken));
+
+    [HttpPut("{id:int}/compensation-packages/{packageId:int}")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeEmploymentFoundationDto>> CorrectCompensationPackage(
+        int id, int packageId, CorrectCompensationPackageBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new CorrectEmployeeCompensationPackageCommand(
+            id, packageId, body.ExpectedVersion, body.MonthlyGrossSalary,
+            body.RegularPremium, body.RoadAllowance, body.MealAllowance,
+            body.OtherRegularBenefits, body.SourceReference, body.Reason), cancellationToken));
+
     [HttpPost("{id:int}/rehire")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
@@ -314,6 +336,16 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal MealAllowance,
         decimal OtherRegularBenefits,
         string SourceReference);
+
+    public sealed record CorrectCompensationPackageBody(
+        int ExpectedVersion,
+        decimal MonthlyGrossSalary,
+        decimal RegularPremium,
+        decimal RoadAllowance,
+        decimal MealAllowance,
+        decimal OtherRegularBenefits,
+        string SourceReference,
+        string Reason);
 
     public sealed record RehireEmployeeBody(DateOnly RehireDate, string ContractType);
 

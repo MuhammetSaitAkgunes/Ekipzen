@@ -41,4 +41,19 @@ public class EmployeeCompensationPackage : AuditableEntity
     public decimal OtherRegularBenefits { get; set; }
     public string Currency { get; set; } = "TRY";
     public string SourceReference { get; set; } = string.Empty;
+    public int Version { get; set; } = 1;
+}
+
+/// <summary>Ücret paketi düzeltmesinin silinmeyen önce/sonra kaydı.</summary>
+public sealed class EmployeeCompensationPackageCorrection : BaseEntity
+{
+    public int CompensationPackageId { get; set; }
+    public EmployeeCompensationPackage? CompensationPackage { get; set; }
+    public int FromVersion { get; set; }
+    public int ToVersion { get; set; }
+    public string BeforeJson { get; set; } = string.Empty;
+    public string AfterJson { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string ActorUserId { get; set; } = string.Empty;
+    public DateTime CorrectedAtUtc { get; set; }
 }
