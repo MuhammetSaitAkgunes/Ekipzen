@@ -24,7 +24,8 @@ public sealed class DownloadEmployeeDocumentQueryHandler(
         var document = await context.EmployeeDocuments
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                d => d.Id == request.DocumentId && d.EmployeeId == request.EmployeeId, cancellationToken)
+                d => d.Id == request.DocumentId && d.EmployeeId == request.EmployeeId
+                    && d.WithdrawnAtUtc == null, cancellationToken)
             ?? throw new NotFoundException("Evrak", request.DocumentId);
 
         var stream = await fileStorage.OpenReadAsync(document.FilePath, cancellationToken);

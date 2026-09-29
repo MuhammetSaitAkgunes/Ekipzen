@@ -19,6 +19,7 @@ public sealed class GetEmployeeDocumentsQueryHandler(IApplicationDbContext conte
         return await context.EmployeeDocuments
             .AsNoTracking()
             .Where(d => d.EmployeeId == request.EmployeeId)
+            .Where(d => d.WithdrawnAtUtc == null)
             .OrderByDescending(d => d.CreatedAtUtc)
             .Select(d => new EmployeeDocumentDto(
                 d.Id, d.DocumentType, d.FileName, d.ContentType, d.SizeBytes, d.CreatedAtUtc))

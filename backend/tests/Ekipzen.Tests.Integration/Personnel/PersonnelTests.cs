@@ -862,6 +862,60 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             .Should().NotBeNullOrEmpty();
     }
 
+    [Fact]
+    public async Task Documents_WithdrawalRequiresReasonAndBlocksNormalAccessWhileKeepingAuditMetadata()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departments[0].Id, "GeriÇekme", $"Deneme{Guid.NewGuid():N}");
+        var otherEmployeeId = await CreateMinimalEmployeeAsync(
+            admin, departments[0].Id, "Başka", $"Kişi{Guid.NewGuid():N}");
+        var upload = await UploadDocumentAsync(admin, employeeId, "yanlis.pdf", "Kimlik");
+        upload.StatusCode.Should().Be(HttpStatusCode.Created);
+        var document = (await upload.Content.ReadFromJsonAsync<EmployeeDocumentDto>())!;
+        var url = $"/api/employees/{employeeId}/documents/{document.Id}";
+
+        (await manager.PostAsJsonAsync($"{url}/withdraw", new { reason = "Yanlış dosya" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync($"/api/employees/{otherEmployeeId}/documents/{document.Id}/withdraw",
+            new { reason = "Yanlış kişi" })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await admin.PostAsJsonAsync($"{url}/withdraw", new { reason = "" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var withdrawnResponse = await admin.PostAsJsonAsync($"{url}/withdraw",
+            new { reason = "  Yanlış kişiye ait belge  " });
+        withdrawnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var withdrawn = (await withdrawnResponse.Content.ReadFromJsonAsync<WithdrawnEmployeeDocumentDto>())!;
+        withdrawn.WithdrawalReason.Should().Be("Yanlış kişiye ait belge");
+        withdrawn.WithdrawnByUserId.Should().NotBeNullOrWhiteSpace();
+        withdrawn.WithdrawnAtUtc.Should().BeAfter(document.CreatedAtUtc);
+
+        (await GetAsync<List<EmployeeDocumentDto>>(admin, $"/api/employees/{employeeId}/documents"))
+            .Should().NotContain(d => d.Id == document.Id);
+        (await admin.GetAsync(url)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{employeeId}"))
+            .Documents.Should().NotContain(d => d.Id == document.Id);
+        var history = await GetAsync<List<WithdrawnEmployeeDocumentDto>>(
+            admin, $"/api/employees/{employeeId}/documents/withdrawn");
+        history.Should().ContainSingle(d => d.Id == document.Id &&
+            d.WithdrawalReason == "Yanlış kişiye ait belge");
+        (await manager.GetAsync($"/api/employees/{employeeId}/documents/withdrawn"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync($"{url}/withdraw", new { reason = "İkinci gerekçe" }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var replacementResponse = await UploadDocumentAsync(admin, employeeId, "dogru.pdf", "Kimlik");
+        replacementResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var replacement = (await replacementResponse.Content.ReadFromJsonAsync<EmployeeDocumentDto>())!;
+        (await GetAsync<List<EmployeeDocumentDto>>(admin, $"/api/employees/{employeeId}/documents"))
+            .Should().ContainSingle(d => d.Id == replacement.Id);
+        (await GetAsync<List<WithdrawnEmployeeDocumentDto>>(
+            admin, $"/api/employees/{employeeId}/documents/withdrawn"))
+            .Should().ContainSingle(d => d.Id == document.Id);
+    }
+
     // --- yardımcılar ---
 
     private static async Task<EmployeeOffboardingCaseDto> SaveOffboardingDraftAsync(

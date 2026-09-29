@@ -89,6 +89,8 @@ public class EmployeeDocumentConfiguration : IEntityTypeConfiguration<EmployeeDo
         b.Property(d => d.FileName).IsRequired().HasMaxLength(260);
         b.Property(d => d.FilePath).IsRequired().HasMaxLength(500);
         b.Property(d => d.ContentType).HasMaxLength(128);
+        b.Property(d => d.WithdrawnByUserId).HasMaxLength(450);
+        b.Property(d => d.WithdrawalReason).HasMaxLength(500);
 
         b.HasOne(d => d.Employee)
             .WithMany(e => e.Documents)

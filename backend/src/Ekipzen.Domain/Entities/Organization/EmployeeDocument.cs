@@ -16,4 +16,9 @@ public class EmployeeDocument : AuditableEntity
     public string FilePath { get; set; } = string.Empty;
     public string? ContentType { get; set; }
     public long SizeBytes { get; set; }
+
+    // Geri çekme metadata'sı denetim izidir; dosya fiziksel silinince de korunur.
+    public DateTime? WithdrawnAtUtc { get; set; }
+    public string? WithdrawnByUserId { get; set; }
+    public string? WithdrawalReason { get; set; }
 }

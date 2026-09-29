@@ -259,6 +259,13 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int id, CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetEmployeeDocumentsQuery(id), cancellationToken));
 
+    [HttpGet("{id:int}/documents/withdrawn")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<IReadOnlyList<WithdrawnEmployeeDocumentDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<WithdrawnEmployeeDocumentDto>>> GetWithdrawnDocuments(
+        int id, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetWithdrawnEmployeeDocumentsQuery(id), cancellationToken));
+
     [HttpPost("{id:int}/documents")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [RequestSizeLimit(12 * 1024 * 1024)]
@@ -285,6 +292,19 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             new DownloadEmployeeDocumentQuery(id, documentId), cancellationToken);
         return File(download.Content, download.ContentType, download.FileName);
     }
+
+    [HttpPost("{id:int}/documents/{documentId:int}/withdraw")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<WithdrawnEmployeeDocumentDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<WithdrawnEmployeeDocumentDto>> WithdrawDocument(
+        int id, int documentId, WithdrawDocumentBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(
+            new WithdrawEmployeeDocumentCommand(id, documentId, body.Reason), cancellationToken));
+
+    public sealed record WithdrawDocumentBody(string Reason);
 
     public sealed record SaveCompensationPackageBody(
         DateOnly EffectiveFrom,

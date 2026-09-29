@@ -84,6 +84,7 @@ public sealed class GetEmployeeQueryHandler(IApplicationDbContext context, ICurr
                 profile.CanLiftHeavyLoads,
                 profile.HealthNotes),
             employee.Documents
+                .Where(d => d.WithdrawnAtUtc is null)
                 .OrderByDescending(d => d.CreatedAtUtc)
                 .Select(d => new EmployeeDocumentDto(
                     d.Id, d.DocumentType, d.FileName, d.ContentType, d.SizeBytes, d.CreatedAtUtc))

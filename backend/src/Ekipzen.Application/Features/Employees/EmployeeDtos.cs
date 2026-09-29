@@ -61,6 +61,15 @@ public sealed record EmployeeDocumentDto(
     long SizeBytes,
     DateTime CreatedAtUtc);
 
+public sealed record WithdrawnEmployeeDocumentDto(
+    int Id,
+    string DocumentType,
+    string FileName,
+    DateTime CreatedAtUtc,
+    DateTime WithdrawnAtUtc,
+    string? WithdrawnByUserId,
+    string WithdrawalReason);
+
 /// <summary>Tam personel kartı. TC yalnız hr-admin için açık döner.</summary>
 public sealed record EmployeeDetailDto(
     int Id,
