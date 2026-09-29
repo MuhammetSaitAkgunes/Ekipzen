@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
+import { OffboardingExternalReconciliationPanel } from "./OffboardingExternalReconciliationPanel";
 import {
   useApproveOffboardingSettlementRevision,
   useOffboardingSettlementRevisions,
@@ -45,6 +46,8 @@ function SettlementRevisionContent({ args, context }: {
   const [reviewNotes, setReviewNotes] = useState("");
   const [financialConfirmed, setFinancialConfirmed] = useState(false);
   const [externalConfirmed, setExternalConfirmed] = useState(false);
+  const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(
+    context.history[0]?.id ?? null);
   const [error, setError] = useState<string | null>(null);
   const busy = open.isPending || save.isPending || approve.isPending;
   const amounts = [unusedLeaveDays, unusedLeavePayment, severancePayment, noticePayment]
@@ -118,6 +121,19 @@ function SettlementRevisionContent({ args, context }: {
     <p><strong>Geçerli hesap:</strong> brüt {money.format(context.effective.monthlyGrossSalarySnapshot)} · toplam {money.format(context.effective.totalPayment)}</p>
     {context.history.length > 0 && <ul>{context.history.map((item) =>
       <li key={item.id}>Parasal sürüm #{item.revisionNumber} · {money.format(item.values.totalPayment)} · {item.values.settlementReference} · onay {item.approvedAtUtc}</li>)}</ul>}
+    {context.history.length > 0 && <>
+      <div className="input-group"><label htmlFor={`settlement-${args.offboardingCaseId}-external-version`}>Dış işlem kanıtı için parasal sürüm</label>
+        <select id={`settlement-${args.offboardingCaseId}-external-version`}
+          className="input-control" value={selectedRevisionId ?? context.history[0].id}
+          onChange={(event) => setSelectedRevisionId(Number(event.target.value))}>
+          {context.history.map((item) => <option key={item.id} value={item.id}>
+            Sürüm #{item.revisionNumber}{item.id === context.history[0].id ? " · geçerli" : " · geçmiş"}
+          </option>)}
+        </select>
+      </div>
+      <OffboardingExternalReconciliationPanel key={selectedRevisionId ?? context.history[0].id}
+        {...args} revisionId={selectedRevisionId ?? context.history[0].id} />
+    </>}
     {context.blockingReasons.length > 0 && !draft && <ul>{context.blockingReasons.map((item) =>
       <li key={item}>{item}</li>)}</ul>}
     {context.canOpen && <button type="button" className="btn btn-secondary" onClick={openDraft} disabled={busy}>

@@ -121,6 +121,24 @@ export type OffboardingSettlementRevisionContext = Omit<OffboardingSettlementRev
   history: OffboardingSettlementRevision[];
   canOpen: boolean; blockingReasons: string[];
 };
+type ExternalActionSchema = components["schemas"]["OffboardingExternalActionDto"];
+export type OffboardingExternalAction = ExternalActionSchema & {
+  id: number; kind: "payment" | "notification";
+  outcome: "pending" | "completed" | "not-required"; previousRecordId: number | null;
+  responsibleName: string; evidenceReference: string; actionDate: string | null;
+  recordedAmount: number | null; notes: string;
+  recordedByUserId: string; recordedAtUtc: string;
+};
+type ExternalReconciliationSchema = components["schemas"]["OffboardingExternalReconciliationDto"];
+export type OffboardingExternalReconciliation = Omit<ExternalReconciliationSchema,
+  "payment" | "notification" | "history"> & {
+  settlementRevisionId: number; revisionNumber: number;
+  originalTotal: number; previousEffectiveTotal: number;
+  revisedTotal: number; calculationDifference: number;
+  isCurrent: boolean; payment: OffboardingExternalAction | null;
+  notification: OffboardingExternalAction | null;
+  history: OffboardingExternalAction[];
+};
 export type SaveCompensationRemediationBody = CompensationPackageValues & {
   expectedPackageVersion: number; expectedCaseVersion: number | null;
   issueDescription: string; proposedEffectiveFrom: string | null;
@@ -414,6 +432,43 @@ export const useApproveOffboardingSettlementRevision = () => {
           confirmExternalReconciliation: true,
         }) }),
     onSuccess: (_revision, args) => invalidateSettlementRevision(queryClient, args),
+  });
+};
+
+type ExternalReconciliationArgs = SettlementRevisionArgs & { revisionId: number };
+const externalReconciliationUrl = (args: ExternalReconciliationArgs) =>
+  `${settlementRevisionUrl(args.employeeId, args.packageId,
+    args.remediationCaseId, args.offboardingCaseId)}/${args.revisionId}/external-reconciliation`;
+const externalReconciliationKey = (args: ExternalReconciliationArgs) =>
+  [...settlementRevisionKey(args.employeeId, args.packageId,
+    args.remediationCaseId, args.offboardingCaseId), args.revisionId,
+  "external-reconciliation"] as const;
+
+export const useOffboardingExternalReconciliation = (args: ExternalReconciliationArgs) =>
+  useQuery({ queryKey: externalReconciliationKey(args),
+    queryFn: () => apiFetch<OffboardingExternalReconciliation>(externalReconciliationUrl(args)) });
+
+export const useRecordOffboardingExternalAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: ExternalReconciliationArgs & {
+      kind: "payment" | "notification"; outcome: "pending" | "completed" | "not-required";
+      responsibleName: string; evidenceReference: string; actionDate: string | null;
+      recordedAmount: number | null; notes: string; expectedLatestRecordId: number | null;
+    }) => apiFetch<OffboardingExternalAction>(externalReconciliationUrl(args), {
+      method: "POST", body: JSON.stringify({
+        kind: args.kind, outcome: args.outcome,
+        responsibleName: args.responsibleName,
+        evidenceReference: args.evidenceReference,
+        actionDate: args.actionDate, recordedAmount: args.recordedAmount,
+        notes: args.notes, expectedLatestRecordId: args.expectedLatestRecordId,
+        confirmRecordedStatus: true,
+      }),
+    }),
+    onSuccess: (_record, args) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: externalReconciliationKey(args) }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 

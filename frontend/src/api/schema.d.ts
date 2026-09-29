@@ -3250,6 +3250,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{remediationCaseId}/offboarding/{caseId}/settlement-revisions/{revisionId}/external-reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    remediationCaseId: number;
+                    caseId: number;
+                    revisionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingExternalReconciliationDto"];
+                        "application/json": components["schemas"]["OffboardingExternalReconciliationDto"];
+                        "text/json": components["schemas"]["OffboardingExternalReconciliationDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    remediationCaseId: number;
+                    caseId: number;
+                    revisionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RecordOffboardingExternalActionBody"];
+                    "text/json": components["schemas"]["RecordOffboardingExternalActionBody"];
+                    "application/*+json": components["schemas"]["RecordOffboardingExternalActionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingExternalActionDto"];
+                        "application/json": components["schemas"]["OffboardingExternalActionDto"];
+                        "text/json": components["schemas"]["OffboardingExternalActionDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/bulk-deactivate": {
         parameters: {
             query?: never;
@@ -8248,6 +8324,42 @@ export interface components {
             leaveRequestEmail?: boolean;
             weeklyReportEmail?: boolean;
         };
+        OffboardingExternalActionDto: {
+            /** Format: int32 */
+            id?: number;
+            kind?: string | null;
+            outcome?: string | null;
+            /** Format: int32 */
+            previousRecordId?: number | null;
+            responsibleName?: string | null;
+            evidenceReference?: string | null;
+            /** Format: date */
+            actionDate?: string | null;
+            /** Format: double */
+            recordedAmount?: number | null;
+            notes?: string | null;
+            recordedByUserId?: string | null;
+            /** Format: date-time */
+            recordedAtUtc?: string;
+        };
+        OffboardingExternalReconciliationDto: {
+            /** Format: int32 */
+            settlementRevisionId?: number;
+            /** Format: int32 */
+            revisionNumber?: number;
+            /** Format: double */
+            originalTotal?: number;
+            /** Format: double */
+            previousEffectiveTotal?: number;
+            /** Format: double */
+            revisedTotal?: number;
+            /** Format: double */
+            calculationDifference?: number;
+            isCurrent?: boolean;
+            payment?: components["schemas"]["OffboardingExternalActionDto"];
+            notification?: components["schemas"]["OffboardingExternalActionDto"];
+            history?: components["schemas"]["OffboardingExternalActionDto"][] | null;
+        };
         OffboardingSettlementRevisionContextDto: {
             /** Format: int32 */
             offboardingCaseId?: number;
@@ -8761,6 +8873,20 @@ export interface components {
             /** Format: int32 */
             yazilanKayit?: number;
             cakisanEpostalar?: string[] | null;
+        };
+        RecordOffboardingExternalActionBody: {
+            kind?: string | null;
+            outcome?: string | null;
+            responsibleName?: string | null;
+            evidenceReference?: string | null;
+            /** Format: date */
+            actionDate?: string | null;
+            /** Format: double */
+            recordedAmount?: number | null;
+            notes?: string | null;
+            /** Format: int32 */
+            expectedLatestRecordId?: number | null;
+            confirmRecordedStatus?: boolean;
         };
         RecruitmentCheckAnswerBody: {
             /** Format: int32 */
