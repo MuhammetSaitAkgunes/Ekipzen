@@ -358,6 +358,48 @@ test("onaylı telafide açık bordro satırını önizler ve açık teyitle uygu
   expect(await screen.findByText(/Bu satıra telafi uygulandı/)).toBeInTheDocument();
 });
 
+test("onaylı bordro etki dosyasında tek dönem farkını ve sonraki ayı gösterir", async () => {
+  const routes = correctionRoutes(false);
+  const remediation = routes["/api/employees/1/compensation-packages/2/remediation-case"];
+  const rowUrl = "/api/employees/1/compensation-packages/2/remediation-case/11/payroll-periods/7/rows/9";
+  const approvedImpact = { potentialPayrollRows: [{ rowId: 9, periodId: 7, year: 2026,
+    month: 9, periodStatus: "approved", rowStatus: "approved",
+    recordedGrossSalary: 50000 }], offboardingCases: [] };
+  stubApi({ ...routes,
+    "/api/employees/1/compensation-packages/2/remediation-case": {
+      ...remediation, canOpen: false,
+      currentImpact: approvedImpact,
+      case: { id: 11, version: 3, status: "approved", packageVersion: 1,
+        issueDescription: "Yanlış brüt ücret", proposedEffectiveFrom: null,
+        proposedValues: { ...compensationPackage, monthlyGrossSalary: 52000 },
+        impactSnapshot: approvedImpact,
+        openedByUserId: "ik-admin", openedAtUtc: "2026-09-29T07:00:00Z",
+        reviewedByUserId: "ik-admin", reviewedAtUtc: "2026-09-29T08:00:00Z",
+        expertReviewReference: "Uzman raporu 43", reviewNotes: "Satır doğrulandı." },
+    },
+    [`${rowUrl}/approved-impact`]: {
+      periodId: 7, rowId: 9, periodStatus: "approved", remediationCaseId: 11,
+      expertReviewReference: "Uzman raporu 43", reviewedAtUtc: "2026-09-29T08:00:00Z",
+      canEstimate: true, reviewWarnings: [],
+      recorded: { grossEarnings: 50000, incomeTaxBase: 42000,
+        incomeTax: 6300, netPay: 35000, employerCost: 61000 },
+      hypothetical: { grossEarnings: 52000, incomeTaxBase: 43700,
+        incomeTax: 6555, netPay: 36300, employerCost: 63400 },
+      laterSameYearRows: [{ periodId: 8, rowId: 10, year: 2026, month: 10,
+        status: "approved" }],
+    },
+  });
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Onaylı satırın etki dosyasını aç" }));
+  expect(await screen.findByText("GV matrahı")).toBeInTheDocument();
+  expect(screen.getByText(/2026\/10 \(#10, approved\)/)).toBeInTheDocument();
+  expect(screen.getByText(/Onaylı bordro sonucu değişmedi/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Önizlenen telafiyi uygula" })).not.toBeInTheDocument();
+});
+
 test("pasif personelde ayrılış parasal taslağına erişir ve uzman teyidiyle onaya gönderir", async () => {
   const routes = correctionRoutes(false);
   const remuneration = routes["/api/employees/1/compensation-packages/2/remediation-case"];
@@ -392,7 +434,10 @@ test("pasif personelde ayrılış parasal taslağına erişir ve uzman teyidiyle
         id: 11, version: 2, status: "approved", packageVersion: 1,
         issueDescription: "Ücret görüntüsü hatalıydı.", proposedEffectiveFrom: null,
         proposedValues: { ...compensationPackage, monthlyGrossSalary: 52000 },
-        impactSnapshot: { potentialPayrollRows: [], offboardingCases: [] },
+        impactSnapshot: { potentialPayrollRows: [], offboardingCases: [{
+          caseId: 21, status: "completed", terminationDate: "2026-09-28",
+          grossSalarySnapshot: 50000,
+        }] },
         openedByUserId: "ik-admin", openedAtUtc: "2026-09-29T07:00:00Z",
         reviewedByUserId: "ik-admin", reviewedAtUtc: "2026-09-29T08:00:00Z",
         expertReviewReference: "Ücret incelemesi 11", reviewNotes: "Doğrulandı.",

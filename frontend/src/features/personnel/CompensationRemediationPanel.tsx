@@ -4,11 +4,13 @@ import { useToast } from "../../layout/ToastProvider";
 import { OffboardingSettlementRevisionPanel } from "./OffboardingSettlementRevisionPanel";
 import {
   useApproveCompensationRemediationCase,
+  useApprovedCompensationPayrollImpact,
   useApplyCompensationPayrollApplication,
   useCompensationRemediationContext,
   usePreviewCompensationPayrollApplication,
   useSaveCompensationRemediationCase,
   type CompensationRemediationContext,
+  type ApprovedCompensationPayrollImpact,
   type CompensationPayrollApplication,
   type CompensationPayrollPreview,
   type CompensationPackageValues,
@@ -30,7 +32,7 @@ export function CompensationRemediationPanel({ employeeId, packageId }: {
   return <section aria-label="Ücret telafi incelemesi">
     <h4>Telafi inceleme dosyası</h4>
     <p>Bu dosya öneriyi ve etkilenmiş olabilecek kayıtları uzman incelemesine hazırlar. Onay, bordroyu, ayrılış hesabını veya ücret paketini değiştirmez; etkili düzeltme ayrı işlemdir.</p>
-    <p><strong>Neden ayrı işlem?</strong> Ücret farkı bordro hesabını ve yapılmış bildirimleri etkileyebilir. Bildirilmiş bir dönemde hata varsa düzeltme beyannamesi usulü ayrıca değerlendirilir (<a href="https://gib.gov.tr/mevzuat/kanun/433/teblig/6938" target="_blank" rel="noopener noreferrer">Muhtasar ve Prim Hizmet Beyannamesi Genel Tebliği, md. 12</a>). Bu ekrandaki işlem yalnız açık, onaysız bordro satırına uygulanır.</p>
+    <p><strong>Neden ayrı işlem?</strong> Ücret farkı bordro hesabını ve yapılmış bildirimleri etkileyebilir. Bildirilmiş bir dönemde hata varsa düzeltme beyannamesi usulü ayrıca değerlendirilir (<a href="https://gib.gov.tr/mevzuat/kanun/433/teblig/6938" target="_blank" rel="noopener noreferrer">Muhtasar ve Prim Hizmet Beyannamesi Genel Tebliği, md. 12</a>). Açık, onaysız satırda önizlemeli uygulama yapılabilir. Onaylı dönem için bu ekranda yalnız etki dosyası hazırlanır.</p>
     {contextQ.isPending && <p>Etkiler yükleniyor…</p>}
     {contextQ.isError && <p className="form-error">Telafi durumu yüklenemedi.</p>}
     {contextQ.data && <RemediationContent key={`${contextQ.data.case?.id ?? "new"}-${contextQ.data.case?.version ?? 0}`}
@@ -45,6 +47,7 @@ function RemediationContent({ context, employeeId, packageId }: {
   const save = useSaveCompensationRemediationCase();
   const approve = useApproveCompensationRemediationCase();
   const current = context.case;
+  const displayedImpact = current?.status === "approved" ? current.impactSnapshot : context.currentImpact;
   const initial = current?.proposedValues ?? context.package;
   const [values, setValues] = useState<CompensationPackageValues>({
     monthlyGrossSalary: initial.monthlyGrossSalary, regularPremium: initial.regularPremium,
@@ -109,13 +112,13 @@ function RemediationContent({ context, employeeId, packageId }: {
     <p><strong>Mevcut paket:</strong> {context.package.effectiveFrom} · {currency.format(context.package.monthlyGrossSalary)} · sürüm {context.package.version}</p>
     <p>Bordro satırında kaynak paket kimliği tutulmadığı için aşağıdaki bordrolar tarih aralığına göre <strong>olası etki</strong> olarak gösterilir; ilişkilerini uzman doğrulamalıdır.</p>
     <ul>
-      {context.currentImpact.potentialPayrollRows.map((row) => <li key={`payroll-${row.rowId}`}>
+      {displayedImpact.potentialPayrollRows.map((row) => <li key={`payroll-${row.rowId}`}>
         {row.year}/{String(row.month).padStart(2, "0")} bordro satırı #{row.rowId} · {row.periodStatus}/{row.rowStatus} · kayıtlı brüt {currency.format(row.recordedGrossSalary)}
         {current?.status === "approved" && <PayrollRemediationRow
           employeeId={employeeId} packageId={packageId} caseId={current.id}
-          periodId={row.periodId} rowId={row.rowId} />}
+          periodId={row.periodId} rowId={row.rowId} periodStatus={row.periodStatus} />}
       </li>)}
-      {context.currentImpact.offboardingCases.map((item) => <li key={`offboarding-${item.caseId}`}>
+      {displayedImpact.offboardingCases.map((item) => <li key={`offboarding-${item.caseId}`}>
         {item.terminationDate} ayrılış vakası #{item.caseId} · {item.status} · ücret görüntüsü {currency.format(item.grossSalarySnapshot)}
         {current?.status === "approved" && <OffboardingSettlementRevisionPanel
           employeeId={employeeId} packageId={packageId} remediationCaseId={current.id}
@@ -174,13 +177,16 @@ function RemediationContent({ context, employeeId, packageId }: {
   </>;
 }
 
-function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId }: {
+function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId, periodStatus }: {
   employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+  periodStatus: string;
 }) {
   const { showToast } = useToast();
+  const impactMutation = useApprovedCompensationPayrollImpact();
   const previewMutation = usePreviewCompensationPayrollApplication();
   const applyMutation = useApplyCompensationPayrollApplication();
   const [preview, setPreview] = useState<CompensationPayrollPreview | null>(null);
+  const [impact, setImpact] = useState<ApprovedCompensationPayrollImpact | null>(null);
   const [applied, setApplied] = useState<CompensationPayrollApplication | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +220,38 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId 
   };
 
   const application = applied ?? preview?.application;
+  if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review"
+    aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
+    <button type="button" className="btn btn-secondary"
+      disabled={impactMutation.isPending}
+      onClick={async () => {
+        setError(null);
+        try { setImpact(await impactMutation.mutateAsync(args)); }
+        catch (cause) { setError(cause instanceof ApiError ? cause.message : "Etki dosyası açılamadı."); }
+      }}>Onaylı satırın etki dosyasını aç</button>
+    {impactMutation.isPending && <p>Onaylı sonuç ve sonraki dönemler inceleniyor…</p>}
+    {impact && <>
+      <p><strong>Uzman inceleme referansı:</strong> {impact.expertReviewReference} · {impact.reviewedAtUtc}</p>
+      {impact.reviewWarnings.length > 0 && <ul>{impact.reviewWarnings.map((warning) =>
+        <li key={warning}>{warning}</li>)}</ul>}
+      {impact.hypothetical && <div className="ez-compensation-table-scroll"><table>
+        <thead><tr><th>Alan</th><th>Onaylı kayıt</th><th>Öneriyle tek dönem hesabı</th><th>Fark</th></tr></thead>
+        <tbody>{([
+          ["Brüt kazanç", "grossEarnings"], ["GV matrahı", "incomeTaxBase"],
+          ["Gelir vergisi", "incomeTax"], ["Net ödeme", "netPay"],
+          ["İşveren maliyeti", "employerCost"],
+        ] as const).map(([label, key]) => <tr key={key}><td>{label}</td>
+          <td>{currency.format(impact.recorded[key])}</td>
+          <td>{currency.format(impact.hypothetical![key])}</td>
+          <td>{currency.format(impact.hypothetical![key] - impact.recorded[key])}</td></tr>)}</tbody>
+      </table></div>}
+      <p>Bu hesap onaylı incelemedeki öneriyi güncel bordro snapshot'ıyla karşılaştırır; tek başına yeni bir uzman onayı değildir. Yalnız bu dönemin olası farkını gösterir, ödeme veya bildirim tutarı değildir. Onaylı bordro sonucu değişmedi.</p>
+      {impact.laterSameYearRows.length > 0 && <p>Aynı yıl içinde kümülatif GV matrahı açısından ayrıca incelenecek sonraki bordrolar: {impact.laterSameYearRows.map((row) =>
+        `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId}, ${row.status})`).join(", ")}.</p>}
+      <p>Sonraki dönemler, yapılmış ödeme ve bildirimler uzman tarafından ayrı değerlendirilmeden parasal düzeltme uygulanamaz.</p>
+    </>}
+    {error && <p className="form-error" role="alert">{error}</p>}
+  </div>;
   return <div className="ez-compensation-review" aria-label={`Bordro satırı ${rowId} telafi uygulaması`}>
     <button type="button" className="btn btn-secondary" onClick={loadPreview}
       disabled={previewMutation.isPending || applyMutation.isPending}>

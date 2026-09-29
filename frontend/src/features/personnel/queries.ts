@@ -94,6 +94,16 @@ export type CompensationPayrollPreview = components["schemas"]["CompensationPayr
   before: CompensationPayrollRow; after: CompensationPayrollRow | null;
   application: CompensationPayrollApplication | null;
 };
+export type ApprovedCompensationPayrollImpact = {
+  periodId: number; rowId: number; periodStatus: string; remediationCaseId: number;
+  expertReviewReference: string; reviewedAtUtc: string; canEstimate: boolean;
+  reviewWarnings: string[];
+  recorded: { grossEarnings: number; incomeTaxBase: number; incomeTax: number;
+    netPay: number; employerCost: number };
+  hypothetical: ApprovedCompensationPayrollImpact["recorded"] | null;
+  laterSameYearRows: Array<{ periodId: number; rowId: number; year: number;
+    month: number; status: string }>;
+};
 type OffboardingSettlementValuesSchema = components["schemas"]["OffboardingSettlementValuesDto"];
 export type OffboardingSettlementValues = OffboardingSettlementValuesSchema & {
   monthlyGrossSalarySnapshot: number; regularPremiumSnapshot: number;
@@ -330,6 +340,13 @@ export const usePreviewCompensationPayrollApplication = () => useMutation({
     employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
   }) => apiFetch<CompensationPayrollPreview>(
     `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/preview`),
+});
+
+export const useApprovedCompensationPayrollImpact = () => useMutation({
+  mutationFn: ({ employeeId, packageId, caseId, periodId, rowId }: {
+    employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+  }) => apiFetch<ApprovedCompensationPayrollImpact>(
+    `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact`),
 });
 
 export const useApplyCompensationPayrollApplication = () => {
