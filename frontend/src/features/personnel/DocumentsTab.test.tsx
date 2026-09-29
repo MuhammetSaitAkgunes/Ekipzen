@@ -10,7 +10,14 @@ const documents = [
   { id: 9, documentType: "Kimlik", fileName: "kimlik.pdf", contentType: "application/pdf", sizeBytes: 1024, createdAtUtc: "2026-07-14T10:00:00Z" },
 ];
 
-beforeEach(() => stubApi({ "/api/employees/1/documents": documents }));
+beforeEach(() => stubApi({
+  "/api/employees/1/documents": documents,
+  "/api/employees/1/documents/withdrawn": [],
+  "/api/employees/1/documents/9/withdraw": {
+    id: 9, documentType: "Kimlik", fileName: "kimlik.pdf",
+    withdrawnAtUtc: "2026-07-15T10:00:00Z", withdrawalReason: "Yanlış kişi",
+  },
+}));
 afterEach(() => vi.unstubAllGlobals());
 
 const renderTab = (employeeId: number | null, readOnly = false) =>
@@ -68,6 +75,32 @@ test("belge listesi okunamazsa boş kayıt olarak gösterilmez", async () => {
     { status: 503, headers: { "Content-Type": "application/json" } },
   )));
   renderTab(1);
-  expect(await screen.findByRole("alert")).toHaveTextContent("Evrak listesi okunamadı");
+  expect(await screen.findByText(/Evrak listesi okunamadı/)).toBeInTheDocument();
   expect(screen.queryByText("Henüz evrak yok")).not.toBeInTheDocument();
+});
+
+test("evrak gerekçe ve son kontrol olmadan geri çekilmez", async () => {
+  renderTab(1);
+  await screen.findByText("kimlik.pdf");
+  await userEvent.click(screen.getByRole("button", { name: "kimlik.pdf dosyasını geri çek" }));
+  expect(screen.getByRole("heading", { name: "Evrakı geri çekmeden önce kontrol edin" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Geri çekmeyi onayla" })).toBeDisabled();
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
+    String(url) === "/api/employees/1/documents/9/withdraw" && init?.method === "POST")).toBe(false);
+  await userEvent.type(screen.getByLabelText("Geri çekme gerekçesi"), "Yanlış kişi");
+  await userEvent.click(screen.getByRole("button", { name: "Geri çekmeyi onayla" }));
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(([url, init]) =>
+      String(url) === "/api/employees/1/documents/9/withdraw" && init?.method === "POST");
+    expect(JSON.parse(String(posted?.[1]?.body))).toEqual({ reason: "Yanlış kişi" });
+  });
+});
+
+test("salt okur kullanıcıya geri çekme ve geçmiş işlemi açılmaz", async () => {
+  renderTab(1, true);
+  await screen.findByText("kimlik.pdf");
+  expect(screen.queryByRole("button", { name: "kimlik.pdf dosyasını geri çek" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Geri çekilen evraklar" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) =>
+    String(url) === "/api/employees/1/documents/withdrawn")).toBe(false);
 });

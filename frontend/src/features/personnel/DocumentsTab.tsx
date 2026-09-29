@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { ApiError, apiDownload } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
-import { useEmployeeDocuments, useUploadDocument } from "./queries";
+import { useEmployeeDocuments, useUploadDocument, useWithdrawDocument, useWithdrawnEmployeeDocuments } from "./queries";
+import type { EmployeeDocumentDto } from "./queries";
 
 const formatSize = (bytes?: number): string =>
   bytes === undefined ? "" : bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -9,9 +10,13 @@ const formatSize = (bytes?: number): string =>
 export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | null; readOnly: boolean }) {
   const { showToast } = useToast();
   const documentsQ = useEmployeeDocuments(employeeId);
+  const withdrawnQ = useWithdrawnEmployeeDocuments(employeeId, !readOnly);
   const upload = useUploadDocument();
+  const withdraw = useWithdrawDocument();
   const [documentType, setDocumentType] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<EmployeeDocumentDto | null>(null);
+  const [withdrawReason, setWithdrawReason] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (employeeId === null) {
@@ -53,6 +58,20 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
       URL.revokeObjectURL(link.href);
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Evrak indirilemedi.", "error");
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!withdrawTarget?.id || !withdrawReason.trim() || withdraw.isPending) return;
+    try {
+      await withdraw.mutateAsync({
+        id: employeeId, documentId: withdrawTarget.id, reason: withdrawReason.trim(),
+      });
+      setWithdrawTarget(null);
+      setWithdrawReason("");
+      showToast("Evrak geri çekildi. Doğru dosyayı ayrıca yükleyebilirsiniz.", "success");
+    } catch (e) {
+      showToast(e instanceof ApiError ? e.message : "Evrak geri çekilemedi; listeyi yenileyip tekrar kontrol edin.", "error");
     }
   };
 
@@ -99,7 +118,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
         <p><strong>Dosya:</strong> {selectedFile.name} · {formatSize(selectedFile.size)}</p>
         <p><strong>Evrak türü:</strong> {documentType.trim() || "Girilmedi"}</p>
         <p>Doğru çalışanın kartında olduğunuzu ve dosyanın gerçekten bu belgeye ait olduğunu doğrulayın. Gereksiz hassas bilgi yüklemeyin.</p>
-        <p>Bu ekranda yüklenen dosyayı silme veya değiştirme işlemi henüz yok. Yanlış dosya yüklediyseniz erişimi ve düzeltme ihtiyacını yetkili İK yöneticisiyle değerlendirin.</p>
+        <p>Yanlış yüklediğiniz evrakı gerekçeyle geri çekip doğru dosyayı ayrıca yükleyebilirsiniz. Geri çekme geçmişte görünür; dosyayı kalıcı olarak silmez.</p>
         <div className="ez-document-review-actions">
           <button className="btn btn-ghost" onClick={() => {
             setSelectedFile(null);
@@ -130,6 +149,10 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
                   <button className="btn-icon-sm" title="İndir" aria-label={`${doc.fileName} dosyasını indir`} onClick={() => handleDownload(doc.id ?? 0, doc.fileName ?? "evrak")}>
                     <i aria-hidden="true" className="fa-solid fa-download" />
                   </button>
+                  {!readOnly && <button className="btn-icon-sm" title="Geri çek" aria-label={`${doc.fileName} dosyasını geri çek`}
+                    onClick={() => { setWithdrawTarget(doc); setWithdrawReason(""); }}>
+                    <i aria-hidden="true" className="fa-solid fa-rotate-left" />
+                  </button>}
                 </td>
               </tr>
             ))}
@@ -143,6 +166,27 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
           </div>
         )}
       </div>}
+      {!readOnly && withdrawTarget && <section className="ez-document-review" aria-labelledby="document-withdraw-title">
+        <h4 id="document-withdraw-title">Evrakı geri çekmeden önce kontrol edin</h4>
+        <p><strong>Dosya:</strong> {withdrawTarget.fileName} · <strong>Tür:</strong> {withdrawTarget.documentType}</p>
+        <p>Bu evrak normal listeden ve indirmeden çıkar; gerekçe ve işlem geçmişi korunur. Geri çekme dosyayı kalıcı olarak silmez. Doğru dosyayı daha sonra yükleyin.</p>
+        <label className="input-label" htmlFor="document-withdraw-reason">Geri çekme gerekçesi</label>
+        <textarea id="document-withdraw-reason" className="input-control" maxLength={500}
+          value={withdrawReason} onChange={(e) => setWithdrawReason(e.target.value)} />
+        <div className="ez-document-review-actions">
+          <button className="btn btn-ghost" onClick={() => { setWithdrawTarget(null); setWithdrawReason(""); }} disabled={withdraw.isPending}>Vazgeç</button>
+          <button className="btn btn-primary" onClick={handleWithdraw} disabled={withdraw.isPending || !withdrawReason.trim()}>Geri çekmeyi onayla</button>
+        </div>
+      </section>}
+      {!readOnly && <section aria-label="Geri çekilen evraklar">
+        <h4>Geri çekilen evraklar</h4>
+        {withdrawnQ.isPending && <p role="status">Geri çekme geçmişi yükleniyor…</p>}
+        {withdrawnQ.isError && <p role="alert">Geri çekme geçmişi okunamadı; daha sonra tekrar kontrol edin.</p>}
+        {withdrawnQ.data?.length === 0 && <p>Geri çekilmiş evrak yok.</p>}
+        {(withdrawnQ.data ?? []).map((doc) => <p key={doc.id}>
+          <strong>{doc.fileName}</strong> ({doc.documentType}) · {doc.withdrawnAtUtc ? new Date(doc.withdrawnAtUtc).toLocaleDateString("tr-TR") : ""}: {doc.withdrawalReason}
+        </p>)}
+      </section>}
     </>
   );
 }

@@ -476,6 +476,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/attendance/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PreviewAttendanceEntryQuery"];
+                    "text/json": components["schemas"]["PreviewAttendanceEntryQuery"];
+                    "application/*+json": components["schemas"]["PreviewAttendanceEntryQuery"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AttendanceEntryPreviewDto"];
+                        "application/json": components["schemas"]["AttendanceEntryPreviewDto"];
+                        "text/json": components["schemas"]["AttendanceEntryPreviewDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/attendance/{id}": {
         parameters: {
             query?: never;
@@ -495,9 +549,9 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["AttendanceEntryModel"];
-                    "text/json": components["schemas"]["AttendanceEntryModel"];
-                    "application/*+json": components["schemas"]["AttendanceEntryModel"];
+                    "application/json": components["schemas"]["UpdateEntryBody"];
+                    "text/json": components["schemas"]["UpdateEntryBody"];
+                    "application/*+json": components["schemas"]["UpdateEntryBody"];
                 };
             };
             responses: {
@@ -1204,6 +1258,43 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/guidance/daily-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DailyGuidanceTaskDto"][];
+                        "application/json": components["schemas"]["DailyGuidanceTaskDto"][];
+                        "text/json": components["schemas"]["DailyGuidanceTaskDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/dashboard/metrics": {
@@ -2679,6 +2770,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/documents/withdrawn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WithdrawnEmployeeDocumentDto"][];
+                        "application/json": components["schemas"]["WithdrawnEmployeeDocumentDto"][];
+                        "text/json": components["schemas"]["WithdrawnEmployeeDocumentDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -2720,6 +2850,441 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/documents/{documentId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    documentId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["WithdrawDocumentBody"];
+                    "text/json": components["schemas"]["WithdrawDocumentBody"];
+                    "application/*+json": components["schemas"]["WithdrawDocumentBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WithdrawnEmployeeDocumentDto"];
+                        "application/json": components["schemas"]["WithdrawnEmployeeDocumentDto"];
+                        "text/json": components["schemas"]["WithdrawnEmployeeDocumentDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/employee-entry/journey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PersonnelEntryJourneyDto"];
+                        "application/json": components["schemas"]["PersonnelEntryJourneyDto"];
+                        "text/json": components["schemas"]["PersonnelEntryJourneyDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/employee-entry/bookmark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceBookmarkDto"];
+                        "application/json": components["schemas"]["GuidanceBookmarkDto"];
+                        "text/json": components["schemas"]["GuidanceBookmarkDto"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SavePersonnelEntryBookmarkCommand"];
+                    "text/json": components["schemas"]["SavePersonnelEntryBookmarkCommand"];
+                    "application/*+json": components["schemas"]["SavePersonnelEntryBookmarkCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceBookmarkDto"];
+                        "application/json": components["schemas"]["GuidanceBookmarkDto"];
+                        "text/json": components["schemas"]["GuidanceBookmarkDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/employee-entry/checks/{stepKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PersonnelDecisionCheckDto"];
+                        "application/json": components["schemas"]["PersonnelDecisionCheckDto"];
+                        "text/json": components["schemas"]["PersonnelDecisionCheckDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/employee-entry/checks/{stepKey}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["DecisionCheckAnswerBody"];
+                    "text/json": components["schemas"]["DecisionCheckAnswerBody"];
+                    "application/*+json": components["schemas"]["DecisionCheckAnswerBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PersonnelDecisionCheckDto"];
+                        "application/json": components["schemas"]["PersonnelDecisionCheckDto"];
+                        "text/json": components["schemas"]["PersonnelDecisionCheckDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/employee-entry/employees/{employeeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    employeeId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeCreationEvidenceDto"];
+                        "application/json": components["schemas"]["EmployeeCreationEvidenceDto"];
+                        "text/json": components["schemas"]["EmployeeCreationEvidenceDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/leave-approval/journey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LeaveApprovalJourneyDto"];
+                        "application/json": components["schemas"]["LeaveApprovalJourneyDto"];
+                        "text/json": components["schemas"]["LeaveApprovalJourneyDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/leave-approval/checks/{stepKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LeaveApprovalDecisionCheckDto"];
+                        "application/json": components["schemas"]["LeaveApprovalDecisionCheckDto"];
+                        "text/json": components["schemas"]["LeaveApprovalDecisionCheckDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/leave-approval/checks/{stepKey}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["LeaveApprovalCheckAnswerBody"];
+                    "text/json": components["schemas"]["LeaveApprovalCheckAnswerBody"];
+                    "application/*+json": components["schemas"]["LeaveApprovalCheckAnswerBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LeaveApprovalDecisionCheckDto"];
+                        "application/json": components["schemas"]["LeaveApprovalDecisionCheckDto"];
+                        "text/json": components["schemas"]["LeaveApprovalDecisionCheckDto"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2874,6 +3439,60 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leaves/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PreviewLeaveRequestQuery"];
+                    "text/json": components["schemas"]["PreviewLeaveRequestQuery"];
+                    "application/*+json": components["schemas"]["PreviewLeaveRequestQuery"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LeaveRequestPreviewDto"];
+                        "application/json": components["schemas"]["LeaveRequestPreviewDto"];
+                        "text/json": components["schemas"]["LeaveRequestPreviewDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4360,6 +4979,17 @@ export interface paths {
                         "text/json": components["schemas"]["HireResultDto"];
                     };
                 };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
                 /** @description Conflict */
                 409: {
                     headers: {
@@ -4541,6 +5171,127 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/recruitment/journey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecruitmentJourneyDto"];
+                        "application/json": components["schemas"]["RecruitmentJourneyDto"];
+                        "text/json": components["schemas"]["RecruitmentJourneyDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/recruitment/checks/{stepKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecruitmentDecisionCheckDto"];
+                        "application/json": components["schemas"]["RecruitmentDecisionCheckDto"];
+                        "text/json": components["schemas"]["RecruitmentDecisionCheckDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/recruitment/checks/{stepKey}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RecruitmentCheckAnswerBody"];
+                    "text/json": components["schemas"]["RecruitmentCheckAnswerBody"];
+                    "application/*+json": components["schemas"]["RecruitmentCheckAnswerBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecruitmentDecisionCheckDto"];
+                        "application/json": components["schemas"]["RecruitmentDecisionCheckDto"];
+                        "text/json": components["schemas"]["RecruitmentDecisionCheckDto"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -5684,6 +6435,17 @@ export interface components {
             type?: string | null;
             note?: string | null;
         };
+        AttendanceEntryPreviewDto: {
+            /** Format: int32 */
+            workedMinutes?: number;
+            /** Format: int32 */
+            overtimeMinutes?: number;
+            status?: string | null;
+            effectiveType?: string | null;
+            canSave?: boolean;
+            blockReason?: string | null;
+            warnings?: string[] | null;
+        };
         AttendanceSummaryDto: {
             /** Format: int32 */
             employeeId?: number;
@@ -5791,6 +6553,7 @@ export interface components {
             /** Format: int32 */
             departmentId?: number;
             email?: string | null;
+            contractType?: string | null;
             title?: string | null;
             /** Format: date */
             hireDate?: string | null;
@@ -5989,6 +6752,19 @@ export interface components {
             /** Format: int32 */
             openCount?: number;
         };
+        DailyGuidanceTaskDto: {
+            key?: string | null;
+            kind?: string | null;
+            /** Format: int32 */
+            recordId?: number;
+            title?: string | null;
+            reason?: string | null;
+            nextAction?: string | null;
+            /** Format: date */
+            dueDate?: string | null;
+            dateNote?: string | null;
+            targetPath?: string | null;
+        };
         DashboardMetricsDto: {
             /** Format: int32 */
             riskScore?: number;
@@ -6015,6 +6791,10 @@ export interface components {
         };
         DecisionBody: {
             note?: string | null;
+        };
+        DecisionCheckAnswerBody: {
+            /** Format: int32 */
+            selectedChoice?: number;
         };
         DepartmentCountDto: {
             dept?: string | null;
@@ -6065,6 +6845,13 @@ export interface components {
             monthlyRecurringTotal?: number;
             currency?: string | null;
             sourceReference?: string | null;
+        };
+        EmployeeCreationEvidenceDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            createdByCurrentUser?: boolean;
+            /** Format: date-time */
+            createdAtUtc?: string | null;
         };
         EmployeeDetailDto: {
             /** Format: int32 */
@@ -6322,6 +7109,12 @@ export interface components {
             status?: string | null;
             action?: string | null;
         };
+        GuidanceBookmarkDto: {
+            processKey?: string | null;
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+        };
         HireResultDto: {
             /** Format: int32 */
             candidateId?: number;
@@ -6370,6 +7163,36 @@ export interface components {
             text?: string | null;
             /** Format: date-time */
             createdAtUtc?: string;
+        };
+        LeaveApprovalCheckAnswerBody: {
+            /** Format: int32 */
+            selectedChoice?: number;
+        };
+        LeaveApprovalDecisionCheckDto: {
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            question?: string | null;
+            choices?: string[] | null;
+            /** Format: int32 */
+            lastSelectedChoice?: number | null;
+            lastCorrect?: boolean | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            explanation?: string | null;
+        };
+        LeaveApprovalJourneyDto: {
+            processKey?: string | null;
+            /** Format: int32 */
+            verifiedDecisions?: number;
+            /** Format: date-time */
+            lastVerifiedAtUtc?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            /** Format: int32 */
+            answeredChecks?: number;
+            /** Format: int32 */
+            correctChecks?: number;
         };
         LeaveBalanceDto: {
             /** Format: int32 */
@@ -6431,6 +7254,16 @@ export interface components {
             decisionAtUtc?: string | null;
             /** Format: date-time */
             createdAtUtc?: string;
+        };
+        LeaveRequestPreviewDto: {
+            /** Format: int32 */
+            workingDays?: number;
+            deductsFromAnnualBalance?: boolean;
+            requiresApproval?: boolean;
+            canSubmit?: boolean;
+            blockReason?: string | null;
+            /** Format: date-time */
+            previewedAtUtc?: string;
         };
         LeaveTypeDto: {
             /** Format: int32 */
@@ -6838,6 +7671,34 @@ export interface components {
             /** Format: double */
             deductions?: number;
         };
+        PersonnelDecisionCheckDto: {
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            question?: string | null;
+            choices?: string[] | null;
+            /** Format: int32 */
+            lastSelectedChoice?: number | null;
+            lastCorrect?: boolean | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            explanation?: string | null;
+        };
+        PersonnelEntryJourneyDto: {
+            processKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            hasSavedPosition?: boolean;
+            bookmarkStepKey?: string | null;
+            /** Format: int32 */
+            verifiedEmployeeRecords?: number;
+            /** Format: date-time */
+            lastVerifiedAtUtc?: string | null;
+            /** Format: int32 */
+            answeredChecks?: number;
+            /** Format: int32 */
+            correctChecks?: number;
+        };
         PositionDto: {
             /** Format: int32 */
             id?: number;
@@ -6850,6 +7711,24 @@ export interface components {
             openCount?: number;
             /** Format: int32 */
             candidateCount?: number;
+        };
+        PreviewAttendanceEntryQuery: {
+            /** Format: int32 */
+            employeeId?: number;
+            /** Format: int32 */
+            entryId?: number | null;
+            model?: components["schemas"]["AttendanceEntryModel"];
+            expectedRevision?: string | null;
+        };
+        PreviewLeaveRequestQuery: {
+            /** Format: int32 */
+            leaveTypeId?: number;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** Format: int32 */
+            substituteEmployeeId?: number | null;
         };
         PreviewPayrollCommand: {
             /** Format: double */
@@ -6918,6 +7797,23 @@ export interface components {
             yazilanKayit?: number;
             cakisanEpostalar?: string[] | null;
         };
+        RecruitmentCheckAnswerBody: {
+            /** Format: int32 */
+            selectedChoice?: number;
+        };
+        RecruitmentDecisionCheckDto: {
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            question?: string | null;
+            choices?: string[] | null;
+            /** Format: int32 */
+            lastSelectedChoice?: number | null;
+            lastCorrect?: boolean | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            explanation?: string | null;
+        };
         RecruitmentFunnelDto: {
             /** Format: int32 */
             total?: number;
@@ -6945,6 +7841,19 @@ export interface components {
             rejected?: number;
             /** Format: int32 */
             hired?: number;
+        };
+        RecruitmentJourneyDto: {
+            processKey?: string | null;
+            /** Format: int32 */
+            verifiedFirstReviews?: number;
+            /** Format: date-time */
+            lastVerifiedAtUtc?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            /** Format: int32 */
+            answeredChecks?: number;
+            /** Format: int32 */
+            correctChecks?: number;
         };
         RefreshTokenCommand: {
             refreshToken?: string | null;
@@ -7045,6 +7954,9 @@ export interface components {
             noticePayment?: number;
             settlementReference?: string | null;
             settlementNotes?: string | null;
+        };
+        SavePersonnelEntryBookmarkCommand: {
+            stepKey?: string | null;
         };
         SaveTerminationCalculationRuleBody: {
             /** Format: int32 */
@@ -7278,6 +8190,7 @@ export interface components {
             overtimeMinutes?: number;
             status?: string | null;
             note?: string | null;
+            revision?: string | null;
         };
         UpdateCompanyProfileCommand: {
             name?: string | null;
@@ -7290,6 +8203,10 @@ export interface components {
         UpdateDepartmentBody: {
             name?: string | null;
             code?: string | null;
+        };
+        UpdateEntryBody: {
+            model?: components["schemas"]["AttendanceEntryModel"];
+            expectedRevision?: string | null;
         };
         UpdateNotificationSettingsCommand: {
             newPersonnelEmail?: boolean;
@@ -7374,6 +8291,21 @@ export interface components {
             mood?: string | null;
             driver?: string | null;
             level?: string | null;
+        };
+        WithdrawDocumentBody: {
+            reason?: string | null;
+        };
+        WithdrawnEmployeeDocumentDto: {
+            /** Format: int32 */
+            id?: number;
+            documentType?: string | null;
+            fileName?: string | null;
+            /** Format: date-time */
+            createdAtUtc?: string;
+            /** Format: date-time */
+            withdrawnAtUtc?: string;
+            withdrawnByUserId?: string | null;
+            withdrawalReason?: string | null;
         };
     };
     responses: never;

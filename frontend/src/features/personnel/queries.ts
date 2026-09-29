@@ -10,6 +10,7 @@ export type EmployeeDetailDto = components["schemas"]["EmployeeDetailDto"];
 export type EmployeeUpsertModel = components["schemas"]["EmployeeUpsertModel"];
 export type DepartmentDto = components["schemas"]["DepartmentDto"];
 export type EmployeeDocumentDto = components["schemas"]["EmployeeDocumentDto"];
+export type WithdrawnEmployeeDocumentDto = components["schemas"]["WithdrawnEmployeeDocumentDto"];
 export type EmployeeOffboardingContextDto = components["schemas"]["EmployeeOffboardingContextDto"];
 export type EmployeeOffboardingCaseDto = components["schemas"]["EmployeeOffboardingCaseDto"] & {
   calculationRuleId?: number | null;
@@ -96,6 +97,13 @@ export const useEmployeeDocuments = (id: number | null) =>
     queryKey: ["employees", id, "documents"],
     queryFn: () => apiFetch<EmployeeDocumentDto[]>(`/employees/${id}/documents`),
     enabled: id !== null,
+  });
+
+export const useWithdrawnEmployeeDocuments = (id: number | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ["employees", id, "documents", "withdrawn"],
+    queryFn: () => apiFetch<WithdrawnEmployeeDocumentDto[]>(`/employees/${id}/documents/withdrawn`),
+    enabled: id !== null && enabled,
   });
 
 export const useSaveEmployee = () => {
@@ -240,6 +248,18 @@ export const useUploadDocument = () => {
       return apiFetch<EmployeeDocumentDto>(`/employees/${id}/documents`, { method: "POST", body: form });
     },
     onSuccess: (_data, { id }) =>
+      queryClient.invalidateQueries({ queryKey: ["employees", id, "documents"] }),
+  });
+};
+
+export const useWithdrawDocument = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, documentId, reason }: { id: number; documentId: number; reason: string }) =>
+      apiFetch<WithdrawnEmployeeDocumentDto>(`/employees/${id}/documents/${documentId}/withdraw`, {
+        method: "POST", body: JSON.stringify({ reason }),
+      }),
+    onSuccess: (_result, { id }) =>
       queryClient.invalidateQueries({ queryKey: ["employees", id, "documents"] }),
   });
 };
