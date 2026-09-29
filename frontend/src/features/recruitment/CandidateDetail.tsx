@@ -492,6 +492,7 @@ type HireReview = {
   email: string;
   title: string;
   hireDate: string;
+  contractType: "indefinite" | "fixed-term";
 };
 
 function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }: {
@@ -524,12 +525,8 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
       setError("İşe giriş tarihini onaylı iş bilgisiyle doğrulayıp seçin.");
       return;
     }
-    if (!contractType) {
+    if (contractType !== "indefinite" && contractType !== "fixed-term") {
       setError("İmzalı sözleşmedeki türü doğrulayıp seçin.");
-      return;
-    }
-    if (contractType !== "indefinite") {
-      setError("Bu işe alma API'si süreli sözleşmeyi kaydedemiyor. Yanlış türle personel oluşturmamak için bu akıştan devam etmeyin.");
       return;
     }
     setReview({
@@ -538,6 +535,7 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
       email: email.trim(),
       title: title.trim() || appliedRole,
       hireDate,
+      contractType,
     });
   };
 
@@ -551,6 +549,7 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
         email: review.email,
         title: review.title,
         hireDate: review.hireDate,
+        contractType: review.contractType,
       });
       onHired(result);
       showToast(result.provisioning?.status === "completed"
@@ -580,7 +579,7 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
             <strong>Bu adımda ne yapıyoruz?</strong>
             <p>Adayı çalışan kaydına dönüştürüyoruz. Adı, departmanı, iş e-postasını ve başlangıç tarihini onaylı bilgilerle karşılaştırın.</p>
             <p><strong>Neden?</strong> Hatalı tarih ve departman personel, izin ve bordro hazırlığını etkileyebilir. Örneğin sözleşmedeki 1 Ekim başlangıcını bugünün tarihiyle değiştirmeyin.</p>
-            <p>Bu akış sözleşme türünü sunucuya göndermiyor ve çalışanı belirsiz süreli olarak açıyor. Süreli sözleşmede yanlış kayıt oluşturmamak için işlem durur. İşe alma sonrası özlük, ücret ve dış bildirim adımları ayrıca kontrol edilir.</p>
+            <p>İmzalı belgedeki sözleşme türünü seçin; seçiminiz çalışan kaydına ve ilk istihdam dönemine birlikte yazılır. Örneğin belirli süreli sözleşmeyi belirsiz süreli seçmeyin. İşe alma sonrası özlük, ücret ve dış bildirim adımları ayrıca kontrol edilir.</p>
           </section>
           {departmentsQ.isPending && <p role="status">Departmanlar yükleniyor…</p>}
           {departmentsQ.isError && <p className="form-error" role="alert">Departman listesi okunamadı; işe alma ön kontrolü yapılamaz.</p>}
@@ -626,7 +625,7 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
             <p><strong>Aday:</strong> {candidateName}</p>
             <p><strong>Departman:</strong> {review.departmentName} · <strong>Ünvan:</strong> {review.title}</p>
             <p><strong>İşe giriş:</strong> {review.hireDate} · <strong>İş e-postası:</strong> {review.email}</p>
-            <p><strong>Sözleşme:</strong> Belirsiz süreli olarak kaydedilecek. Bu tür imzalı belgeyle uyuşmuyorsa devam etmeyin.</p>
+            <p><strong>Sözleşme:</strong> {review.contractType === "fixed-term" ? "Belirli süreli" : "Belirsiz süreli"} olarak kaydedilecek. Bu tür imzalı belgeyle uyuşmuyorsa devam etmeyin.</p>
             <p>Onaydan sonra çalışan kaydı ve varsa pozisyon kontenjanı değişir. Giriş hesabı hazır olmasa bile çalışan kaydı oluşmuş olabilir; aynı işlemi tekrar göndermeden önce sonucu kontrol edin.</p>
           </section>}
         </div>

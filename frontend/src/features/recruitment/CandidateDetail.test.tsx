@@ -244,7 +244,7 @@ test("işe alma ön kontrolünden sonra personel kaydı oluşturur ve kalan işe
       ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
     );
     expect(JSON.parse(String(posted?.[1]?.body))).toMatchObject({
-      departmentId: 1, email: "burak.yilmaz@hrmaster.local", hireDate: "2026-10-01",
+      departmentId: 1, email: "burak.yilmaz@hrmaster.local", hireDate: "2026-10-01", contractType: "indefinite",
     });
   });
   expect((await screen.findByRole("heading", { name: "Personel kaydı oluşturuldu" })).closest("section")).toHaveTextContent("Giriş hesabı hazırlanıyor");
@@ -267,7 +267,7 @@ test("işe giriş tarihi açıkça seçilmeden işlem gönderilmez", async () =>
   )).toBe(false);
 });
 
-test("belirli süreli sözleşmede hatalı varsayılanla işe alma işlemini durdurur", async () => {
+test("belirli süreli sözleşmeyi ön kontrolde gösterip aynı türle işe alır", async () => {
   renderDetail();
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.click(screen.getByRole("button", { name: /İşe Al/ }));
@@ -276,10 +276,18 @@ test("belirli süreli sözleşmede hatalı varsayılanla işe alma işlemini dur
   await userEvent.type(screen.getByLabelText("İşe giriş tarihi"), "2026-10-01");
   await userEvent.selectOptions(screen.getByLabelText("İmzalı sözleşmedeki tür"), "fixed-term");
   await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
-  expect(screen.getByRole("alert")).toHaveTextContent("süreli sözleşmeyi kaydedemiyor");
+  expect(screen.getByRole("region", { name: "İşe almadan önce son kontrol" }))
+    .toHaveTextContent("Belirli süreli olarak kaydedilecek");
   expect(vi.mocked(fetch).mock.calls.some(
     ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
   )).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "İşe almayı onayla" }));
+  await waitFor(() => {
+    const posted = vi.mocked(fetch).mock.calls.find(
+      ([u, i]) => String(u) === "/api/candidates/5/hire" && i?.method === "POST",
+    );
+    expect(JSON.parse(String(posted?.[1]?.body))).toMatchObject({ contractType: "fixed-term" });
+  });
 });
 
 test("reddedilmiş adayda işe alma yerine önce pipeline düzeltmesi ister", async () => {

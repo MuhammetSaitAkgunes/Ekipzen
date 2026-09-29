@@ -117,12 +117,13 @@ export const useAddCandidateEvaluation = () => {
 export const useHireCandidate = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, departmentId, email, title, hireDate }: {
-      id: number; departmentId: number; email: string; title?: string | null; hireDate?: string | null;
+    mutationFn: ({ id, departmentId, email, contractType, title, hireDate }: {
+      id: number; departmentId: number; email: string; contractType: "indefinite" | "fixed-term";
+      title?: string | null; hireDate?: string | null;
     }) =>
       apiFetch<HireResultDto>(`/candidates/${id}/hire`, {
         method: "POST",
-        body: JSON.stringify({ departmentId, email, title: title || null, hireDate: hireDate || null }),
+        body: JSON.stringify({ departmentId, email, contractType, title: title || null, hireDate: hireDate || null }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recruitment"] });
