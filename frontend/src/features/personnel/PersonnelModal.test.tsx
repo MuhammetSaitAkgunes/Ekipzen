@@ -14,6 +14,26 @@ const detail = {
   profile: { birthDate: "1990-01-01", gender: "Erkek", maritalStatus: "Evli", bloodType: "0 Rh+", mobilePhone: "(532) 111 11 11", personalEmail: "a@a", homeAddress: "İstanbul", emergencyContactName: "Ayşe Yılmaz", emergencyContactRelation: null, emergencyContactPhone: "0533", employmentType: "Tam Zamanlı", rehireEligibility: null, exitCode: null, iban: "TR11", bankName: "Banka", salaryType: "Net Maaş", pensionStatus: "Otomatik Katılım", mealCard: "Multinet", tshirtSize: "L", pantsSize: "32", coatSize: "L", shoeSize: "42", canWorkAtHeight: true, canWorkNightShift: false, canLiftHeavyLoads: false, healthNotes: "" },
   documents: [],
 };
+const compensationPackage = {
+  id: 2, version: 1, employmentPeriodId: 1, effectiveFrom: "2026-09-01", effectiveTo: null,
+  monthlyGrossSalary: 50000, regularPremium: 0, roadAllowance: 0, mealAllowance: 0,
+  otherRegularBenefits: 0, monthlyRecurringTotal: 50000, sourceReference: "Eski karar",
+};
+const correctionRoutes = (canCorrect: boolean) => ({
+  "/api/departments": departments,
+  "/api/employees/1": detail,
+  "/api/employees/1/employment-foundation": {
+    employeeId: 1, contractType: "indefinite",
+    employmentPeriods: [{ id: 1, startDate: "2021-03-12", endDate: null, contractType: "indefinite" }],
+    compensationPackages: [compensationPackage],
+  },
+  "/api/employees/1/compensation-packages/2/correction-context": {
+    package: compensationPackage, canCorrect,
+    blockingReasons: canCorrect ? [] : ["Bu yürürlük aralığında çalışanın bordro satırı var; paket doğrudan düzeltilemez."],
+    history: [],
+  },
+  "/api/employees/1/compensation-packages/2": { employeeId: 1, compensationPackages: [compensationPackage] },
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -126,6 +146,39 @@ test("aynı yürürlük tarihindeki paketi yeni kayıtla düzeltmeye izin vermez
   expect(vi.mocked(fetch).mock.calls.some(
     ([u, i]) => String(u) === "/api/employees/1/compensation-packages" && i?.method === "POST",
   )).toBe(false);
+});
+
+test("kullanılmamış pakette düzeltmeyi gerekçe ve sürümle onaya sunar", async () => {
+  stubApi(correctionRoutes(true));
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  const gross = await screen.findByLabelText("Aylık brüt maaş", { selector: "#pm-correct-monthlyGrossSalary" });
+  await userEvent.clear(gross);
+  await userEvent.type(gross, "55000");
+  await userEvent.type(screen.getByLabelText("Düzeltme gerekçesi"), "Kaynak yazıdaki rakam yanlış okunmuştu.");
+  await userEvent.click(screen.getByRole("button", { name: "Düzeltmeyi kontrol et" }));
+  expect(screen.getByRole("region", { name: "Düzeltme ön kontrolü" })).toHaveTextContent("55.000");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u).endsWith("/compensation-packages/2") && i?.method === "PUT")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Düzeltmeyi onayla ve kaydet" }));
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([u, i]) => String(u).endsWith("/compensation-packages/2") && i?.method === "PUT");
+    expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+      expectedVersion: 1, monthlyGrossSalary: 55000, sourceReference: "Eski karar",
+      reason: "Kaynak yazıdaki rakam yanlış okunmuştu.",
+    });
+  });
+});
+
+test("bordroda kullanılmış paketin düzeltme nedenini gösterir ve kaydı kapatır", async () => {
+  stubApi(correctionRoutes(false));
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  expect(await screen.findByText(/bordro satırı var; paket doğrudan düzeltilemez/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Düzeltmeyi kontrol et" })).not.toBeInTheDocument();
 });
 
 test("ön kontrol form değişince geçersizleşir ve iptal edilebilir", async () => {

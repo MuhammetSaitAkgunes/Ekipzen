@@ -5,6 +5,7 @@ import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { DocumentsTab } from "./DocumentsTab";
+import { CompensationCorrectionPanel } from "./CompensationCorrectionPanel";
 import { PersonnelGuide } from "./PersonnelGuide";
 import { usePersonnelEntryBookmark, useSavePersonnelEntryBookmark } from "./guidanceQueries";
 import {
@@ -158,6 +159,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
   const [compensationReview, setCompensationReview] = useState<CompensationForm | null>(null);
+  const [correctionPackageId, setCorrectionPackageId] = useState<number | null>(null);
   const [rehireDate, setRehireDate] = useState("");
   const [rehireContractType, setRehireContractType] = useState("indefinite");
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -533,7 +535,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                 </select>
               </div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-meal">Yemek Kartı</label><input id="pm-meal" type="text" className="input-control" value={form.mealCard} disabled={readOnly} onChange={(e) => set("mealCard", e.target.value)} /></div>
-              {isEdit && !readOnly && detailQ.data?.status === "active" && (
+              {isEdit && !readOnly && (
                 <div className="notice-card col-12">
                   <strong>Yürürlük tarihli ücret paketleri</strong>
                   <p>
@@ -543,15 +545,25 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   {foundationQ.isPending && <p>Ücret geçmişi yükleniyor…</p>}
                   {foundationQ.isError && <p className="form-error">Ücret geçmişi yüklenemedi.</p>}
                   {(foundationQ.data?.compensationPackages ?? []).map((item) => (
-                    <p key={item.id}>
-                      <strong>{item.effectiveFrom}</strong>
-                      {item.effectiveTo ? ` – ${item.effectiveTo}` : " – güncel"}
-                      {` · ${currency.format(item.monthlyRecurringTotal ?? 0)} · ${item.sourceReference ?? "Referans yok"}`}
-                    </p>
+                    <div key={item.id}>
+                      <p><strong>{item.effectiveFrom}</strong>
+                        {item.effectiveTo ? ` – ${item.effectiveTo}` : " – güncel"}
+                        {` · ${currency.format(item.monthlyRecurringTotal ?? 0)} · ${item.sourceReference ?? "Referans yok"}`}
+                        {` · sürüm ${item.version ?? 1}`}
+                      </p>
+                      <button type="button" className="btn btn-ghost" disabled={item.id == null}
+                        onClick={() => setCorrectionPackageId(item.id ?? null)}>
+                        {item.effectiveFrom} paketinin düzeltme durumunu aç
+                      </button>
+                    </div>
                   ))}
+                  {employeeId !== null && correctionPackageId !== null &&
+                    <CompensationCorrectionPanel key={`${employeeId}-${correctionPackageId}`} employeeId={employeeId}
+                      packageId={correctionPackageId} onClose={() => setCorrectionPackageId(null)} />}
                   {foundationQ.data?.compensationPackages?.length === 0 && <p>Henüz ücret paketi yok.</p>}
+                  {detailQ.data?.status === "active" && <>
                   <p>Yeni paketin yürürlük tarihini ve tutarını ücret kararınızla karşılaştırın. Örneğin 1 Ekim tarihli değişikliği 1 Eylül olarak girerseniz farklı bordro dönemleri etkilenebilir.</p>
-                  <p>Yanlış kaydedilmiş bir paketi bu ekrandan düzenleme veya silme işlemi henüz yok; göndermeden önce bilgileri kontrol edin.</p>
+                  <p>Yanlış tutar veya kaynak kaydedildiyse ilgili paketin düzeltme durumunu açın. Yürürlük tarihini değiştirmek için ayrı işlem gerekir.</p>
                   <div className="form-grid-2">
                     <div className="input-group">
                       <label className="input-label" htmlFor="pm-comp-effective">Yürürlük başlangıcı</label>
@@ -608,6 +620,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                       <button type="button" className="btn btn-primary" onClick={handleCompensationSave} disabled={saveCompensation.isPending}>Ücret paketini onayla ve kaydet</button>
                     </div>
                   </section>}
+                  </>}
                 </div>
               )}
             </div>

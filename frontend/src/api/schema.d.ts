@@ -2157,6 +2157,136 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/correction-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationPackageCorrectionContextDto"];
+                        "application/json": components["schemas"]["CompensationPackageCorrectionContextDto"];
+                        "text/json": components["schemas"]["CompensationPackageCorrectionContextDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CorrectCompensationPackageBody"];
+                    "text/json": components["schemas"]["CorrectCompensationPackageBody"];
+                    "application/*+json": components["schemas"]["CorrectCompensationPackageBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "application/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "text/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/rehire": {
         parameters: {
             query?: never;
@@ -6605,6 +6735,37 @@ export interface components {
             headquartersAddress?: string | null;
             logoPath?: string | null;
         };
+        CompensationPackageCorrectionContextDto: {
+            package?: components["schemas"]["EmployeeCompensationPackageDto"];
+            canCorrect?: boolean;
+            blockingReasons?: string[] | null;
+            history?: components["schemas"]["CompensationPackageCorrectionDto"][] | null;
+        };
+        CompensationPackageCorrectionDto: {
+            /** Format: int32 */
+            fromVersion?: number;
+            /** Format: int32 */
+            toVersion?: number;
+            before?: components["schemas"]["CompensationPackageValuesDto"];
+            after?: components["schemas"]["CompensationPackageValuesDto"];
+            reason?: string | null;
+            actorUserId?: string | null;
+            /** Format: date-time */
+            correctedAtUtc?: string;
+        };
+        CompensationPackageValuesDto: {
+            /** Format: double */
+            monthlyGrossSalary?: number;
+            /** Format: double */
+            regularPremium?: number;
+            /** Format: double */
+            roadAllowance?: number;
+            /** Format: double */
+            mealAllowance?: number;
+            /** Format: double */
+            otherRegularBenefits?: number;
+            sourceReference?: string | null;
+        };
         ComplianceDeadlineDto: {
             title?: string | null;
             /** Format: int32 */
@@ -6684,6 +6845,22 @@ export interface components {
             /** Format: date */
             dueDate?: string | null;
             level?: string | null;
+        };
+        CorrectCompensationPackageBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
+            /** Format: double */
+            monthlyGrossSalary?: number;
+            /** Format: double */
+            regularPremium?: number;
+            /** Format: double */
+            roadAllowance?: number;
+            /** Format: double */
+            mealAllowance?: number;
+            /** Format: double */
+            otherRegularBenefits?: number;
+            sourceReference?: string | null;
+            reason?: string | null;
         };
         CreateCandidateCommand: {
             name?: string | null;
@@ -6825,6 +7002,8 @@ export interface components {
         EmployeeCompensationPackageDto: {
             /** Format: int32 */
             id?: number;
+            /** Format: int32 */
+            version?: number;
             /** Format: int32 */
             employmentPeriodId?: number;
             /** Format: date */

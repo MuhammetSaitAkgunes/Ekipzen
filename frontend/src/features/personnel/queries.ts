@@ -50,6 +50,18 @@ export type SaveOffboardingDraftBody = components["schemas"]["SaveOffboardingDra
 export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
 export type EmployeeEmploymentFoundationDto = components["schemas"]["EmployeeEmploymentFoundationDto"];
 export type SaveCompensationPackageBody = components["schemas"]["SaveCompensationPackageBody"];
+export type CompensationPackageValues = {
+  monthlyGrossSalary: number; regularPremium: number; roadAllowance: number;
+  mealAllowance: number; otherRegularBenefits: number; sourceReference: string;
+};
+export type CompensationCorrectionContext = {
+  package: CompensationPackageValues & { id: number; version: number; effectiveFrom: string; effectiveTo: string | null };
+  canCorrect: boolean;
+  blockingReasons: string[];
+  history: Array<{ fromVersion: number; toVersion: number; before: CompensationPackageValues;
+    after: CompensationPackageValues; reason: string; actorUserId: string; correctedAtUtc: string }>;
+};
+export type CorrectCompensationPackageBody = CompensationPackageValues & { expectedVersion: number; reason: string };
 export type RehireEmployeeBody = components["schemas"]["RehireEmployeeBody"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string; page?: number };
@@ -148,6 +160,28 @@ export const useSaveCompensationPackage = () => {
       }),
     onSuccess: (_foundation, { employeeId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+  });
+};
+
+export const useCompensationCorrectionContext = (employeeId: number, packageId: number) =>
+  useQuery({
+    queryKey: ["employees", employeeId, "compensation-packages", packageId, "correction-context"],
+    queryFn: () => apiFetch<CompensationCorrectionContext>(
+      `/employees/${employeeId}/compensation-packages/${packageId}/correction-context`),
+  });
+
+export const useCorrectCompensationPackage = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, body }: {
+      employeeId: number; packageId: number; body: CorrectCompensationPackageBody;
+    }) => apiFetch<EmployeeEmploymentFoundationDto>(`/employees/${employeeId}/compensation-packages/${packageId}`,
+      { method: "PUT", body: JSON.stringify(body) }),
+    onSuccess: (_foundation, { employeeId, packageId }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "compensation-packages", packageId, "correction-context"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
   });
