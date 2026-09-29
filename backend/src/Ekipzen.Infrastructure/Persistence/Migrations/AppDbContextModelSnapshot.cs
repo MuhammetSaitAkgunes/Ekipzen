@@ -1233,6 +1233,51 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeCompensationPackageCorrections");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationPayrollApplication", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AfterJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("AppliedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BeforeJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PayrollRowId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RemediationCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollRowId");
+
+                    b.HasIndex("RemediationCaseId");
+
+                    b.HasIndex("TenantId", "RemediationCaseId", "PayrollRowId")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeCompensationPayrollApplications");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", b =>
                 {
                     b.Property<int>("Id")
@@ -3459,6 +3504,25 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("CompensationPackage");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationPayrollApplication", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollEmployee", "PayrollRow")
+                        .WithMany()
+                        .HasForeignKey("PayrollRowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", "RemediationCase")
+                        .WithMany()
+                        .HasForeignKey("RemediationCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PayrollRow");
+
+                    b.Navigation("RemediationCase");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", b =>

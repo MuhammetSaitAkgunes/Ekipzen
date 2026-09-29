@@ -30,6 +30,7 @@ public interface IApplicationDbContext
     DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages { get; }
     DbSet<EmployeeCompensationPackageCorrection> EmployeeCompensationPackageCorrections { get; }
     DbSet<EmployeeCompensationRemediationCase> EmployeeCompensationRemediationCases { get; }
+    DbSet<EmployeeCompensationPayrollApplication> EmployeeCompensationPayrollApplications { get; }
     DbSet<EmployeeCompensationDateCorrection> EmployeeCompensationDateCorrections { get; }
     DbSet<TerminationCalculationRule> TerminationCalculationRules { get; }
 

@@ -81,6 +81,22 @@ public sealed class EmployeeCompensationRemediationCaseConfiguration
     }
 }
 
+public sealed class EmployeeCompensationPayrollApplicationConfiguration
+    : IEntityTypeConfiguration<EmployeeCompensationPayrollApplication>
+{
+    public void Configure(EntityTypeBuilder<EmployeeCompensationPayrollApplication> b)
+    {
+        b.Property(item => item.BeforeJson).IsRequired();
+        b.Property(item => item.AfterJson).IsRequired();
+        b.Property(item => item.ActorUserId).IsRequired().HasMaxLength(450);
+        b.HasIndex(item => new { item.TenantId, item.RemediationCaseId, item.PayrollRowId }).IsUnique();
+        b.HasOne(item => item.RemediationCase).WithMany()
+            .HasForeignKey(item => item.RemediationCaseId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(item => item.PayrollRow).WithMany()
+            .HasForeignKey(item => item.PayrollRowId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class EmployeeCompensationDateCorrectionConfiguration
     : IEntityTypeConfiguration<EmployeeCompensationDateCorrection>
 {

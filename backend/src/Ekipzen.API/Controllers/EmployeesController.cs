@@ -191,6 +191,26 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             id, packageId, caseId, body.ExpectedCaseVersion,
             body.ExpertReviewReference, body.ReviewNotes, body.ConfirmExpertReview), cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/preview")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationPayrollPreviewDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CompensationPayrollPreviewDto>> PreviewCompensationPayrollApplication(
+        int id, int packageId, int caseId, int periodId, int rowId,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new PreviewCompensationPayrollApplicationQuery(
+            id, packageId, caseId, periodId, rowId), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/apply")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationPayrollApplicationDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CompensationPayrollApplicationDto>> ApplyCompensationPayrollApplication(
+        int id, int packageId, int caseId, int periodId, int rowId,
+        ApplyCompensationPayrollBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApplyCompensationRemediationToPayrollCommand(
+            id, packageId, caseId, periodId, rowId, body.ExpectedPreviewToken,
+            body.ConfirmSourceLink), cancellationToken));
+
     private static SaveCompensationRemediationCaseCommand ToRemediationCommand(
         int employeeId, int packageId, int? caseId, SaveCompensationRemediationBody body)
         => new(employeeId, packageId, caseId, body.ExpectedPackageVersion,
@@ -419,6 +439,9 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record ApproveCompensationRemediationBody(
         int ExpectedCaseVersion, string ExpertReviewReference, string ReviewNotes,
         bool ConfirmExpertReview);
+
+    public sealed record ApplyCompensationPayrollBody(
+        string ExpectedPreviewToken, bool ConfirmSourceLink);
 
     public sealed record PreviewCompensationDateCorrectionBody(DateOnly ProposedEffectiveFrom);
 

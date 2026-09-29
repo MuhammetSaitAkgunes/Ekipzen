@@ -80,6 +80,19 @@ public sealed class EmployeeCompensationRemediationCase : BaseEntity
     public string? ReviewNotes { get; set; }
 }
 
+/// <summary>Onaylı telafi dosyasının açık bordro satırına uygulanmış, silinmeyen kaydı.</summary>
+public sealed class EmployeeCompensationPayrollApplication : BaseEntity
+{
+    public int RemediationCaseId { get; set; }
+    public EmployeeCompensationRemediationCase? RemediationCase { get; set; }
+    public int PayrollRowId { get; set; }
+    public Ekipzen.Domain.Entities.Payroll.PayrollEmployee? PayrollRow { get; set; }
+    public string BeforeJson { get; set; } = string.Empty;
+    public string AfterJson { get; set; } = string.Empty;
+    public string ActorUserId { get; set; } = string.Empty;
+    public DateTime AppliedAtUtc { get; set; }
+}
+
 /// <summary>Son ücret paketinin yürürlük tarihi değişikliğine ait kalıcı geçmiş.</summary>
 public sealed class EmployeeCompensationDateCorrection : BaseEntity
 {
