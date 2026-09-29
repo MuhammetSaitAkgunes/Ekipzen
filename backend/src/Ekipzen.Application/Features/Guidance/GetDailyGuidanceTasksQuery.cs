@@ -112,6 +112,53 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 $"/personnel/{offboarding.EmployeeId}?offboarding=1"
             )));
 
+            var currentSettlements = await context.EmployeeOffboardingSettlementRevisions
+                .AsNoTracking()
+                .Where(revision => revision.Status == "approved"
+                    && revision.OffboardingCase!.Status == EmployeeOffboardingStatus.Completed
+                    && revision.OffboardingCase.Employee!.Status == EmployeeStatus.Passive
+                    && !context.EmployeeOffboardingSettlementRevisions.Any(newer =>
+                        newer.OffboardingCaseId == revision.OffboardingCaseId
+                        && newer.Status == "approved"
+                        && newer.RevisionNumber > revision.RevisionNumber))
+                .Select(revision => new {
+                    revision.Id, revision.RevisionNumber, revision.OffboardingCaseId,
+                    revision.OffboardingCase!.EmployeeId,
+                    revision.OffboardingCase.Employee!.FirstName,
+                    revision.OffboardingCase.Employee.LastName,
+                })
+                .ToListAsync(ct);
+            var currentIds = currentSettlements.Select(revision => revision.Id).ToList();
+            var completedExternalKinds = await context.EmployeeOffboardingExternalActionRecords
+                .AsNoTracking()
+                .Where(record => currentIds.Contains(record.SettlementRevisionId))
+                .Select(record => new { record.Id, record.SettlementRevisionId,
+                    record.Kind, record.Outcome })
+                .ToListAsync(ct);
+            var completedKeys = completedExternalKinds
+                .GroupBy(record => new { record.SettlementRevisionId, record.Kind })
+                .Select(group => group.MaxBy(record => record.Id)!)
+                .Where(record => record.Outcome != "pending")
+                .Select(record => $"{record.SettlementRevisionId}:{record.Kind}")
+                .ToHashSet();
+            foreach (var settlement in currentSettlements)
+            {
+                foreach (var kind in new[] { "payment", "notification" })
+                {
+                    if (completedKeys.Contains($"{settlement.Id}:{kind}")) continue;
+                    var label = kind == "payment" ? "ödeme" : "bildirim";
+                    tasks.Add(new DailyGuidanceTaskDto(
+                        $"offboarding-external-{kind}:{settlement.Id}",
+                        $"offboarding-external-{kind}", settlement.Id,
+                        $"{settlement.FirstName} {settlement.LastName} ayrılış {label} kanıtını incele",
+                        $"Ayrılışın geçerli parasal sürüm #{settlement.RevisionNumber} hesabında dış {label} sonucu kayıtlı değil.",
+                        $"Mali bilgilerden ilgili ücret paketi ve ayrılış sürümünü açın; dış {label} sonucunu sorumlu ve dayanak referansıyla doğrulayın.",
+                        null,
+                        "Bu dış işlem için uygulamada güvenilir son tarih kayıtlı değil.",
+                        $"/personnel/{settlement.EmployeeId}?tab=tab-mali"));
+                }
+            }
+
             var periods = await sender.Send(new GetPayrollPeriodsQuery(), ct);
             tasks.AddRange(periods
                 .Where(period => period.Status is "draft" or "control")
@@ -147,9 +194,10 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 "compliance-document" => 0,
                 "leave-approval" => 1,
                 "offboarding-case" => 2,
-                "employee-compensation" => 3,
-                "payroll-period" => 4,
-                _ => 5,
+                "offboarding-external-payment" or "offboarding-external-notification" => 3,
+                "employee-compensation" => 4,
+                "payroll-period" => 5,
+                _ => 6,
             })
             .ThenBy(task => task.DueDate ?? DateOnly.MaxValue)
             .ThenBy(task => task.RecordId)

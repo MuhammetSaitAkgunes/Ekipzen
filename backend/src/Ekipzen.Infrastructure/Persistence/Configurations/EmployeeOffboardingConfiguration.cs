@@ -61,6 +61,24 @@ public sealed class EmployeeOffboardingSettlementRevisionConfiguration
     }
 }
 
+public sealed class EmployeeOffboardingExternalActionRecordConfiguration
+    : IEntityTypeConfiguration<EmployeeOffboardingExternalActionRecord>
+{
+    public void Configure(EntityTypeBuilder<EmployeeOffboardingExternalActionRecord> builder)
+    {
+        builder.Property(item => item.Kind).IsRequired().HasMaxLength(24);
+        builder.Property(item => item.Outcome).IsRequired().HasMaxLength(24);
+        builder.Property(item => item.ResponsibleName).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.EvidenceReference).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.Notes).IsRequired().HasMaxLength(2000);
+        builder.Property(item => item.RecordedByUserId).IsRequired().HasMaxLength(450);
+        builder.Property(item => item.RecordedAmount).HasPrecision(18, 4);
+        builder.HasIndex(item => new { item.TenantId, item.SettlementRevisionId, item.Kind, item.Id });
+        builder.HasOne(item => item.SettlementRevision).WithMany()
+            .HasForeignKey(item => item.SettlementRevisionId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class EmployeeOffboardingTeamTransferConfiguration
     : IEntityTypeConfiguration<EmployeeOffboardingTeamTransfer>
 {

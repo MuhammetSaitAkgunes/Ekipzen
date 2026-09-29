@@ -12,6 +12,7 @@ using Ekipzen.Application.Features.Departments;
 using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Employees.Offboarding;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Leaves;
 using Ekipzen.Domain.Entities.Leaves;
 using Ekipzen.Domain.Entities.Payroll;
@@ -805,6 +806,128 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         var employee = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{employeeId}");
         employee.Status.Should().Be("passive");
         employee.TerminationDate.Should().Be(new DateOnly(2025, 6, 30));
+        var reconciliationUrl = $"{revisionUrl}/{approved.Id}/external-reconciliation";
+        var pending = await GetAsync<OffboardingExternalReconciliationDto>(admin, reconciliationUrl);
+        pending.Payment.Should().BeNull();
+        pending.Notification.Should().BeNull();
+        pending.CalculationDifference.Should().Be(500m);
+        pending.PreviousEffectiveTotal.Should().Be(1500m);
+        var pendingTasks = await GetAsync<List<DailyGuidanceTaskDto>>(
+            admin, "/api/guidance/daily-tasks");
+        pendingTasks.Should().Contain(item => item.Key == $"offboarding-external-payment:{approved.Id}");
+        pendingTasks.Should().Contain(item => item.Key == $"offboarding-external-notification:{approved.Id}");
+        (await manager.GetAsync(reconciliationUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var assignmentResponse = await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "payment", outcome = "pending", responsibleName = "Bordro uzmanı",
+            evidenceReference = "", notes = "Ödeme belgesi bekleniyor.",
+            expectedLatestRecordId = (int?)null, confirmRecordedStatus = true,
+        });
+        assignmentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var assignment = (await assignmentResponse.Content.ReadFromJsonAsync<OffboardingExternalActionDto>())!;
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
+            .Should().Contain(item => item.Key == $"offboarding-external-payment:{approved.Id}");
+        var paymentResponse = await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "payment", outcome = "completed", responsibleName = "Bordro uzmanı",
+            evidenceReference = "Banka dekontu 123", actionDate = "2025-07-02",
+            recordedAmount = 420m, notes = "Net ödeme belgesi; hesap farkıyla aynı bazda değildir.",
+            expectedLatestRecordId = assignment.Id, confirmRecordedStatus = true,
+        });
+        paymentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var payment = (await paymentResponse.Content.ReadFromJsonAsync<OffboardingExternalActionDto>())!;
+        (await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "payment", outcome = "not-required", responsibleName = "Bordro uzmanı",
+            evidenceReference = "Eski önizleme", notes = "Hatalı tekrar",
+            expectedLatestRecordId = (int?)null, confirmRecordedStatus = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var notificationResponse = await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "notification", outcome = "not-required", responsibleName = "İK yöneticisi",
+            evidenceReference = "SGK inceleme notu 55", notes = "Düzeltme bildirimi gerekmiyor.",
+            expectedLatestRecordId = (int?)null, confirmRecordedStatus = true,
+        });
+        notificationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var correctedPaymentResponse = await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "payment", outcome = "completed", responsibleName = "Bordro uzmanı",
+            evidenceReference = "Düzeltilmiş banka dekontu 124", actionDate = "2025-07-03",
+            recordedAmount = 425m, notes = "Dekont referansı düzeltildi.",
+            expectedLatestRecordId = payment.Id, confirmRecordedStatus = true,
+        });
+        correctedPaymentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var correctedPayment = (await correctedPaymentResponse.Content
+            .ReadFromJsonAsync<OffboardingExternalActionDto>())!;
+        var reconciled = await GetAsync<OffboardingExternalReconciliationDto>(admin, reconciliationUrl);
+        reconciled.Payment!.PreviousRecordId.Should().Be(payment.Id);
+        reconciled.Payment.RecordedAmount.Should().Be(425m);
+        reconciled.Notification!.Outcome.Should().Be("not-required");
+        reconciled.History.Should().HaveCount(4);
+        reconciled.History.Should().Contain(item => item.Id == payment.Id);
+        reconciled.IsCurrent.Should().BeTrue();
+        var closedTasks = await GetAsync<List<DailyGuidanceTaskDto>>(
+            admin, "/api/guidance/daily-tasks");
+        closedTasks.Should().NotContain(item => item.Key == $"offboarding-external-payment:{approved.Id}");
+        closedTasks.Should().NotContain(item => item.Key == $"offboarding-external-notification:{approved.Id}");
+        var reopenResponse = await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "payment", outcome = "pending", responsibleName = "Bordro uzmanı",
+            evidenceReference = "", notes = "Dekont bankaca geri çevrildi; yeni işlem bekleniyor.",
+            expectedLatestRecordId = correctedPayment.Id, confirmRecordedStatus = true,
+        });
+        reopenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
+            .Should().Contain(item => item.Key == $"offboarding-external-payment:{approved.Id}");
+        var secondDraftResponse = await admin.PostAsJsonAsync(revisionUrl,
+            new { expectedOffboardingVersion = completed.Version });
+        secondDraftResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var secondDraft = (await secondDraftResponse.Content
+            .ReadFromJsonAsync<OffboardingSettlementRevisionDto>())!;
+        secondDraft.BasedOnApprovedRevisionId.Should().Be(approved.Id);
+        var secondSavedResponse = await admin.PutAsJsonAsync($"{revisionUrl}/{secondDraft.Id}", new
+        {
+            expectedRevisionVersion = secondDraft.Version,
+            unusedLeaveDays = 4m, unusedLeavePayment = 800m,
+            severancePayment = 1400m, noticePayment = 0m,
+            reason = "Sonradan bulunan ek ücret farkı",
+            settlementReference = "Mali müşavir ek hesap 45",
+        });
+        secondSavedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var secondSaved = (await secondSavedResponse.Content
+            .ReadFromJsonAsync<OffboardingSettlementRevisionDto>())!;
+        var secondApproval = await admin.PostAsJsonAsync(
+            $"{revisionUrl}/{secondSaved.Id}/approve", new
+            {
+                expectedRevisionVersion = secondSaved.Version,
+                expertReviewReference = "Ek uzman kontrolü",
+                reviewNotes = "İkinci fark doğrulandı.",
+                confirmFinancialReview = true,
+                confirmExternalReconciliation = true,
+            });
+        secondApproval.StatusCode.Should().Be(HttpStatusCode.OK);
+        var oldEvidence = await GetAsync<OffboardingExternalReconciliationDto>(
+            admin, reconciliationUrl);
+        oldEvidence.IsCurrent.Should().BeFalse();
+        oldEvidence.History.Should().HaveCount(5);
+        (await admin.PostAsJsonAsync(reconciliationUrl, new
+        {
+            kind = "payment", outcome = "not-required", responsibleName = "İK yöneticisi",
+            evidenceReference = "Eski sürüm", notes = "Eski sürüme kayıt denemesi",
+            expectedLatestRecordId = oldEvidence.Payment?.Id,
+            confirmRecordedStatus = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var currentEvidence = await GetAsync<OffboardingExternalReconciliationDto>(
+            admin, $"{revisionUrl}/{secondSaved.Id}/external-reconciliation");
+        currentEvidence.IsCurrent.Should().BeTrue();
+        currentEvidence.PreviousEffectiveTotal.Should().Be(2000m);
+        currentEvidence.CalculationDifference.Should().Be(200m);
+        currentEvidence.Payment.Should().BeNull();
+        currentEvidence.Notification.Should().BeNull();
+        var renewedTasks = await GetAsync<List<DailyGuidanceTaskDto>>(
+            admin, "/api/guidance/daily-tasks");
+        renewedTasks.Should().Contain(item => item.Key == $"offboarding-external-payment:{secondSaved.Id}");
+        renewedTasks.Should().Contain(item => item.Key == $"offboarding-external-notification:{secondSaved.Id}");
         (await admin.PostAsJsonAsync($"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
             new { expectedVersion = completed.Version, reason = "Yanlış geri alma" }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);

@@ -1660,6 +1660,72 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeOffboardingCases");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingExternalActionRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly?>("ActionDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("EvidenceReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<int?>("PreviousRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("RecordedAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecordedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ResponsibleName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("SettlementRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SettlementRevisionId");
+
+                    b.HasIndex("TenantId", "SettlementRevisionId", "Kind", "Id");
+
+                    b.ToTable("EmployeeOffboardingExternalActionRecords");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingSettlementRevision", b =>
                 {
                     b.Property<int>("Id")
@@ -3705,6 +3771,17 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Navigation("CalculationRule");
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingExternalActionRecord", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingSettlementRevision", "SettlementRevision")
+                        .WithMany()
+                        .HasForeignKey("SettlementRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SettlementRevision");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingSettlementRevision", b =>

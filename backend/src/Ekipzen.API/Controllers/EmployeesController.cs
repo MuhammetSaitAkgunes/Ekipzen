@@ -360,6 +360,27 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.ExpectedRevisionVersion, body.ExpertReviewReference, body.ReviewNotes,
             body.ConfirmFinancialReview, body.ConfirmExternalReconciliation), cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<OffboardingExternalReconciliationDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OffboardingExternalReconciliationDto>> GetOffboardingExternalReconciliation(
+        int id, int packageId, int remediationCaseId, int caseId, int revisionId,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetOffboardingExternalReconciliationQuery(
+            id, packageId, remediationCaseId, caseId, revisionId), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<OffboardingExternalActionDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OffboardingExternalActionDto>> RecordOffboardingExternalAction(
+        int id, int packageId, int remediationCaseId, int caseId, int revisionId,
+        RecordOffboardingExternalActionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new RecordOffboardingExternalActionCommand(
+            id, packageId, remediationCaseId, caseId, revisionId,
+            body.Kind, body.Outcome, body.ResponsibleName, body.EvidenceReference,
+            body.ActionDate, body.RecordedAmount, body.Notes,
+            body.ExpectedLatestRecordId, body.ConfirmRecordedStatus), cancellationToken));
+
 
     [HttpPost("bulk-deactivate")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -527,6 +548,10 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record ApproveOffboardingSettlementRevisionBody(
         int ExpectedRevisionVersion, string ExpertReviewReference, string ReviewNotes,
         bool ConfirmFinancialReview, bool ConfirmExternalReconciliation);
+    public sealed record RecordOffboardingExternalActionBody(
+        string Kind, string Outcome, string ResponsibleName, string EvidenceReference,
+        DateOnly? ActionDate, decimal? RecordedAmount, string Notes,
+        int? ExpectedLatestRecordId, bool ConfirmRecordedStatus);
 
     public sealed record SetStatusBody(
         string Status,

@@ -103,3 +103,23 @@ public sealed class EmployeeOffboardingSettlementRevision : BaseEntity
     public string? ExpertReviewReference { get; set; }
     public string? ReviewNotes { get; set; }
 }
+
+/// <summary>
+/// Onaylı parasal sürümün uygulama dışı ödeme/bildirim sonucuna ilişkin değişmez kanıt olayı.
+/// Yeni kayıt önceki sonucu geçersiz kılar; eski kanıt silinmez.
+/// </summary>
+public sealed class EmployeeOffboardingExternalActionRecord : BaseEntity
+{
+    public int SettlementRevisionId { get; set; }
+    public EmployeeOffboardingSettlementRevision? SettlementRevision { get; set; }
+    public string Kind { get; set; } = string.Empty;
+    public string Outcome { get; set; } = string.Empty;
+    public int? PreviousRecordId { get; set; }
+    public string ResponsibleName { get; set; } = string.Empty;
+    public string EvidenceReference { get; set; } = string.Empty;
+    public DateOnly? ActionDate { get; set; }
+    public decimal? RecordedAmount { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string RecordedByUserId { get; set; } = string.Empty;
+    public DateTime RecordedAtUtc { get; set; }
+}
