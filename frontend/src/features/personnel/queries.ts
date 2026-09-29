@@ -62,6 +62,29 @@ export type CompensationCorrectionContext = {
     after: CompensationPackageValues; reason: string; actorUserId: string; correctedAtUtc: string }>;
 };
 export type CorrectCompensationPackageBody = CompensationPackageValues & { expectedVersion: number; reason: string };
+export type CompensationRemediationImpact = {
+  potentialPayrollRows: Array<{ rowId: number; periodId: number; year: number; month: number;
+    periodStatus: string; rowStatus: string; recordedGrossSalary: number }>;
+  offboardingCases: Array<{ caseId: number; status: string; terminationDate: string;
+    grossSalarySnapshot: number }>;
+};
+export type CompensationRemediationCase = {
+  id: number; version: number; status: "draft" | "approved"; packageVersion: number;
+  issueDescription: string; proposedEffectiveFrom: string | null;
+  proposedValues: CompensationPackageValues; impactSnapshot: CompensationRemediationImpact;
+  openedByUserId: string; openedAtUtc: string; reviewedByUserId: string | null;
+  reviewedAtUtc: string | null; expertReviewReference: string | null; reviewNotes: string | null;
+};
+export type CompensationRemediationContext = {
+  package: CompensationCorrectionContext["package"];
+  currentImpact: CompensationRemediationImpact;
+  canOpen: boolean;
+  case: CompensationRemediationCase | null;
+};
+export type SaveCompensationRemediationBody = CompensationPackageValues & {
+  expectedPackageVersion: number; expectedCaseVersion: number | null;
+  issueDescription: string; proposedEffectiveFrom: string | null;
+};
 export type RehireEmployeeBody = components["schemas"]["RehireEmployeeBody"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string; page?: number };
@@ -184,6 +207,46 @@ export const useCorrectCompensationPackage = () => {
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "compensation-packages", packageId, "correction-context"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
+  });
+};
+
+const remediationKey = (employeeId: number, packageId: number) =>
+  ["employees", employeeId, "compensation-packages", packageId, "remediation-case"] as const;
+
+export const useCompensationRemediationContext = (employeeId: number, packageId: number) =>
+  useQuery({
+    queryKey: remediationKey(employeeId, packageId),
+    queryFn: () => apiFetch<CompensationRemediationContext>(
+      `/employees/${employeeId}/compensation-packages/${packageId}/remediation-case`),
+  });
+
+export const useSaveCompensationRemediationCase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, caseId, body }: {
+      employeeId: number; packageId: number; caseId: number | null;
+      body: SaveCompensationRemediationBody;
+    }) => apiFetch<CompensationRemediationCase>(
+      `/employees/${employeeId}/compensation-packages/${packageId}/remediation-case${caseId === null ? "" : `/${caseId}`}`,
+      { method: caseId === null ? "POST" : "PUT", body: JSON.stringify(body) }),
+    onSuccess: (_case, { employeeId, packageId }) =>
+      queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
+  });
+};
+
+export const useApproveCompensationRemediationCase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, caseId, expectedCaseVersion,
+      expertReviewReference, reviewNotes }: {
+      employeeId: number; packageId: number; caseId: number; expectedCaseVersion: number;
+      expertReviewReference: string; reviewNotes: string;
+    }) => apiFetch<CompensationRemediationCase>(
+      `/employees/${employeeId}/compensation-packages/${packageId}/remediation-case/${caseId}/approve`,
+      { method: "POST", body: JSON.stringify({ expectedCaseVersion, expertReviewReference,
+        reviewNotes, confirmExpertReview: true }) }),
+    onSuccess: (_case, { employeeId, packageId }) =>
+      queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
   });
 };
 

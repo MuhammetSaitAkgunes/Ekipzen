@@ -32,6 +32,12 @@ const correctionRoutes = (canCorrect: boolean) => ({
     blockingReasons: canCorrect ? [] : ["Bu yürürlük aralığında çalışanın bordro satırı var; paket doğrudan düzeltilemez."],
     history: [],
   },
+  "/api/employees/1/compensation-packages/2/remediation-case": {
+    package: compensationPackage, canOpen: !canCorrect, case: null,
+    currentImpact: { potentialPayrollRows: !canCorrect ? [{ rowId: 9, periodId: 7,
+      year: 2026, month: 9, periodStatus: "draft", rowStatus: "precalc",
+      recordedGrossSalary: 50000 }] : [], offboardingCases: [] },
+  },
   "/api/employees/1/compensation-packages/2": { employeeId: 1, compensationPackages: [compensationPackage] },
 });
 
@@ -179,6 +185,68 @@ test("bordroda kullanılmış paketin düzeltme nedenini gösterir ve kaydı kap
   await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
   expect(await screen.findByText(/bordro satırı var; paket doğrudan düzeltilemez/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Düzeltmeyi kontrol et" })).not.toBeInTheDocument();
+});
+
+test("kilitli pakette telafi inceleme dosyası açar; finansal düzeltme yapmaz", async () => {
+  stubApi(correctionRoutes(false));
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  expect(await screen.findByText(/olası etki/)).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Hatanın açıklaması ve kaynağı"), "Ücret yazısı yanlış okunmuş.");
+  await userEvent.clear(screen.getByLabelText("Önerilen aylık brüt maaş"));
+  await userEvent.type(screen.getByLabelText("Önerilen aylık brüt maaş"), "52000");
+  await userEvent.click(screen.getByRole("button", { name: "İnceleme dosyasını aç" }));
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([u, i]) =>
+      String(u).endsWith("/compensation-packages/2/remediation-case") && i?.method === "POST");
+    expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+      expectedPackageVersion: 1, monthlyGrossSalary: 52000,
+      issueDescription: "Ücret yazısı yanlış okunmuş.",
+    });
+  });
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) =>
+    String(u).endsWith("/compensation-packages/2") && i?.method === "PUT")).toBe(false);
+});
+
+test("aynı İK yöneticisi uzman referansıyla telafi incelemesini onaylar", async () => {
+  const routes = correctionRoutes(false);
+  const remediation = routes["/api/employees/1/compensation-packages/2/remediation-case"];
+  stubApi({ ...routes,
+    "/api/employees/1/compensation-packages/2/remediation-case": {
+      ...remediation, canOpen: false,
+      case: {
+        id: 11, version: 2, status: "draft", packageVersion: 1,
+        issueDescription: "Yanlış kaynak", proposedEffectiveFrom: null,
+        proposedValues: compensationPackage, impactSnapshot: remediation.currentImpact,
+        openedByUserId: "ik-admin", openedAtUtc: "2026-09-29T07:00:00Z",
+        reviewedByUserId: null, reviewedAtUtc: null,
+        expertReviewReference: null, reviewNotes: null,
+      },
+    },
+    "/api/employees/1/compensation-packages/2/remediation-case/11/approve": { id: 11, status: "approved" },
+  });
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  await userEvent.type(await screen.findByLabelText("Hatanın açıklaması ve kaynağı"), " ek");
+  expect(screen.getByRole("button", { name: "İnceleme dosyasını onayla" })).toBeDisabled();
+  await userEvent.clear(screen.getByLabelText("Hatanın açıklaması ve kaynağı"));
+  await userEvent.type(screen.getByLabelText("Hatanın açıklaması ve kaynağı"), "Yanlış kaynak");
+  await userEvent.type(await screen.findByLabelText("Uzman inceleme referansı"), "Uzman raporu 42");
+  await userEvent.type(screen.getByLabelText("Uzman inceleme notu"), "Kaynak ve bordro karşılaştırıldı.");
+  await userEvent.click(screen.getByRole("checkbox", { name: /Kaynakları ve olası etkileri inceledim/ }));
+  await userEvent.click(screen.getByRole("button", { name: "İnceleme dosyasını onayla" }));
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([u, i]) =>
+      String(u).endsWith("/remediation-case/11/approve") && i?.method === "POST");
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      expectedCaseVersion: 2, expertReviewReference: "Uzman raporu 42",
+      reviewNotes: "Kaynak ve bordro karşılaştırıldı.", confirmExpertReview: true,
+    });
+  });
 });
 
 test("ön kontrol form değişince geçersizleşir ve iptal edilebilir", async () => {

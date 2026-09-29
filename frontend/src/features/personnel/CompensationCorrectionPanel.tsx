@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
+import { CompensationRemediationPanel } from "./CompensationRemediationPanel";
 import {
   useCompensationCorrectionContext,
   useCorrectCompensationPackage,
@@ -84,6 +85,7 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
     <p><strong>Yürürlük:</strong> {context.package.effectiveFrom}{context.package.effectiveTo ? ` – ${context.package.effectiveTo}` : " – güncel"} · <strong>Sürüm:</strong> {context.package.version}</p>
     <p>Bu işlem yalnızca tutarları ve kaynak referansını düzeltir. Yürürlük tarihi ayrı bir işlemdir. Bordro veya ayrılışta kullanılan değerler kayıt geçmişi olduğu için doğrudan değiştirilemez; böyle bir durumda telafi akışı gerekir.</p>
     {!context.canCorrect && <div role="alert"><strong>Doğrudan düzeltme kilitli.</strong><ul>{context.blockingReasons.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+    {!context.canCorrect && <CompensationRemediationPanel employeeId={employeeId} packageId={packageId} />}
     {context.canCorrect && <>
       <div className="form-grid-2">
         {fields.map(({ key, label }) => <div className="input-group" key={key}>

@@ -2287,6 +2287,203 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationRemediationContextDto"];
+                        "application/json": components["schemas"]["CompensationRemediationContextDto"];
+                        "text/json": components["schemas"]["CompensationRemediationContextDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveCompensationRemediationBody"];
+                    "text/json": components["schemas"]["SaveCompensationRemediationBody"];
+                    "application/*+json": components["schemas"]["SaveCompensationRemediationBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationRemediationCaseDto"];
+                        "application/json": components["schemas"]["CompensationRemediationCaseDto"];
+                        "text/json": components["schemas"]["CompensationRemediationCaseDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveCompensationRemediationBody"];
+                    "text/json": components["schemas"]["SaveCompensationRemediationBody"];
+                    "application/*+json": components["schemas"]["SaveCompensationRemediationBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationRemediationCaseDto"];
+                        "application/json": components["schemas"]["CompensationRemediationCaseDto"];
+                        "text/json": components["schemas"]["CompensationRemediationCaseDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApproveCompensationRemediationBody"];
+                    "text/json": components["schemas"]["ApproveCompensationRemediationBody"];
+                    "application/*+json": components["schemas"]["ApproveCompensationRemediationBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationRemediationCaseDto"];
+                        "application/json": components["schemas"]["CompensationRemediationCaseDto"];
+                        "text/json": components["schemas"]["CompensationRemediationCaseDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/rehire": {
         parameters: {
             query?: never;
@@ -6543,6 +6740,13 @@ export interface components {
             priority?: string | null;
             recommendedAction?: string | null;
         };
+        ApproveCompensationRemediationBody: {
+            /** Format: int32 */
+            expectedCaseVersion?: number;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            confirmExpertReview?: boolean;
+        };
         ApprovePayrollSettingsCommand: {
             /** Format: int32 */
             id?: number;
@@ -6735,6 +6939,15 @@ export interface components {
             headquartersAddress?: string | null;
             logoPath?: string | null;
         };
+        CompensationOffboardingImpactDto: {
+            /** Format: int32 */
+            caseId?: number;
+            status?: string | null;
+            /** Format: date */
+            terminationDate?: string;
+            /** Format: double */
+            grossSalarySnapshot?: number;
+        };
         CompensationPackageCorrectionContextDto: {
             package?: components["schemas"]["EmployeeCompensationPackageDto"];
             canCorrect?: boolean;
@@ -6765,6 +6978,52 @@ export interface components {
             /** Format: double */
             otherRegularBenefits?: number;
             sourceReference?: string | null;
+        };
+        CompensationPayrollImpactDto: {
+            /** Format: int32 */
+            rowId?: number;
+            /** Format: int32 */
+            periodId?: number;
+            /** Format: int32 */
+            year?: number;
+            /** Format: int32 */
+            month?: number;
+            periodStatus?: string | null;
+            rowStatus?: string | null;
+            /** Format: double */
+            recordedGrossSalary?: number;
+        };
+        CompensationRemediationCaseDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            version?: number;
+            status?: string | null;
+            /** Format: int32 */
+            packageVersion?: number;
+            issueDescription?: string | null;
+            /** Format: date */
+            proposedEffectiveFrom?: string | null;
+            proposedValues?: components["schemas"]["CompensationPackageValuesDto"];
+            impactSnapshot?: components["schemas"]["CompensationRemediationImpactDto"];
+            openedByUserId?: string | null;
+            /** Format: date-time */
+            openedAtUtc?: string;
+            reviewedByUserId?: string | null;
+            /** Format: date-time */
+            reviewedAtUtc?: string | null;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+        };
+        CompensationRemediationContextDto: {
+            package?: components["schemas"]["EmployeeCompensationPackageDto"];
+            currentImpact?: components["schemas"]["CompensationRemediationImpactDto"];
+            canOpen?: boolean;
+            case?: components["schemas"]["CompensationRemediationCaseDto"];
+        };
+        CompensationRemediationImpactDto: {
+            potentialPayrollRows?: components["schemas"]["CompensationPayrollImpactDto"][] | null;
+            offboardingCases?: components["schemas"]["CompensationOffboardingImpactDto"][] | null;
         };
         ComplianceDeadlineDto: {
             title?: string | null;
@@ -8100,6 +8359,26 @@ export interface components {
         SaveCompensationPackageBody: {
             /** Format: date */
             effectiveFrom?: string;
+            /** Format: double */
+            monthlyGrossSalary?: number;
+            /** Format: double */
+            regularPremium?: number;
+            /** Format: double */
+            roadAllowance?: number;
+            /** Format: double */
+            mealAllowance?: number;
+            /** Format: double */
+            otherRegularBenefits?: number;
+            sourceReference?: string | null;
+        };
+        SaveCompensationRemediationBody: {
+            /** Format: int32 */
+            expectedPackageVersion?: number;
+            /** Format: int32 */
+            expectedCaseVersion?: number | null;
+            issueDescription?: string | null;
+            /** Format: date */
+            proposedEffectiveFrom?: string | null;
             /** Format: double */
             monthlyGrossSalary?: number;
             /** Format: double */
