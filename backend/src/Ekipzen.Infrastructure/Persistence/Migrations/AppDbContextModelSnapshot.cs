@@ -2189,6 +2189,81 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("IncomeTaxBrackets");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRowRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AfterJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BeforeJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExpertReviewReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("PayrollRowId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("RemediationCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewNotes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollRowId");
+
+                    b.HasIndex("RemediationCaseId");
+
+                    b.HasIndex("TenantId", "PayrollRowId", "RevisionNumber")
+                        .IsUnique();
+
+                    b.ToTable("PayrollApprovedRowRevisions");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollEmployee", b =>
                 {
                     b.Property<int>("Id")
@@ -3842,6 +3917,25 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Settings");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRowRevision", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollEmployee", "PayrollRow")
+                        .WithMany()
+                        .HasForeignKey("PayrollRowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", "RemediationCase")
+                        .WithMany()
+                        .HasForeignKey("RemediationCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PayrollRow");
+
+                    b.Navigation("RemediationCase");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollEmployee", b =>

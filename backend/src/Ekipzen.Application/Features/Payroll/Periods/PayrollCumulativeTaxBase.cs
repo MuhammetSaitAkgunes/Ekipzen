@@ -1,4 +1,5 @@
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Domain.Entities.Payroll;
 using Ekipzen.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -35,17 +36,28 @@ public static class PayrollCumulativeTaxBase
                           && row.Result != null)
             .Select(row => new
             {
-                row.EmployeeId,
+                row.Id, row.EmployeeId,
                 row.Period!.Month,
-                CumulativeAfter = row.PreviousTaxBase + row.Result!.IncomeTaxBase,
+                row.PreviousTaxBase,
+                IncomeTaxBase = row.Result!.IncomeTaxBase,
             })
             .ToListAsync(cancellationToken);
+
+        var revisions = await ApprovedPayrollRevisionRules.LatestByRowAsync(
+            context, priorRows.Select(row => row.Id).ToArray(), cancellationToken);
 
         var cumulativeByEmployee = priorRows
             .GroupBy(row => row.EmployeeId)
             .ToDictionary(
                 group => group.Key,
-                group => group.OrderByDescending(row => row.Month).First().CumulativeAfter);
+                group =>
+                {
+                    var latest = group.OrderByDescending(row => row.Month).First();
+                    var taxBase = revisions.TryGetValue(latest.Id, out var revision)
+                        ? ApprovedPayrollRevisionRules.EffectiveRow(revision).IncomeTaxBase
+                        : latest.IncomeTaxBase;
+                    return latest.PreviousTaxBase + taxBase;
+                });
 
         foreach (var row in rows)
         {

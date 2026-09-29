@@ -52,6 +52,7 @@ public interface IApplicationDbContext
     DbSet<IncomeTaxBracket> IncomeTaxBrackets { get; }
     DbSet<PayrollEmployee> PayrollEmployees { get; }
     DbSet<PayrollResult> PayrollResults { get; }
+    DbSet<PayrollApprovedRowRevision> PayrollApprovedRowRevisions { get; }
     DbSet<Domain.ReadModels.PayrollPeriodSummary> PayrollPeriodSummaries { get; }
 
     // Recruitment

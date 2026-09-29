@@ -84,3 +84,23 @@ public class PayrollEmployeeConfiguration : IEntityTypeConfiguration<PayrollEmpl
         b.HasIndex(p => new { p.PayrollPeriodId, p.EmployeeId }).IsUnique();
     }
 }
+
+public sealed class PayrollApprovedRowRevisionConfiguration
+    : IEntityTypeConfiguration<PayrollApprovedRowRevision>
+{
+    public void Configure(EntityTypeBuilder<PayrollApprovedRowRevision> builder)
+    {
+        builder.Property(item => item.BeforeJson).IsRequired();
+        builder.Property(item => item.AfterJson).IsRequired();
+        builder.Property(item => item.Reason).IsRequired().HasMaxLength(1000);
+        builder.Property(item => item.ExpertReviewReference).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.ReviewNotes).IsRequired().HasMaxLength(2000);
+        builder.Property(item => item.ApprovedByUserId).IsRequired().HasMaxLength(450);
+        builder.HasIndex(item => new { item.TenantId, item.PayrollRowId, item.RevisionNumber })
+            .IsUnique();
+        builder.HasOne(item => item.PayrollRow).WithMany()
+            .HasForeignKey(item => item.PayrollRowId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(item => item.RemediationCase).WithMany()
+            .HasForeignKey(item => item.RemediationCaseId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

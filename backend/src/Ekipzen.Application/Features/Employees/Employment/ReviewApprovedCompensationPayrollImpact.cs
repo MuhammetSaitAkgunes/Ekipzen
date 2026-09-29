@@ -1,7 +1,10 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Payroll;
+using Ekipzen.Application.Features.Payroll.Periods;
 using Ekipzen.Domain.Enums;
 using Ekipzen.Domain.Services;
 using MediatR;
@@ -17,7 +20,10 @@ public sealed record ApprovedCompensationPayrollImpactDto(
     string ExpertReviewReference, DateTime ReviewedAtUtc,
     bool CanEstimate, IReadOnlyList<string> ReviewWarnings,
     ApprovedPayrollAmountDto Recorded, ApprovedPayrollAmountDto? Hypothetical,
-    IReadOnlyList<ApprovedPayrollImpactPeriodDto> LaterSameYearRows);
+    IReadOnlyList<ApprovedPayrollImpactPeriodDto> LaterSameYearRows,
+    IReadOnlyList<ApprovedPayrollImpactPeriodDto> LaterApprovedRows,
+    bool CanApply, IReadOnlyList<string> BlockingReasons, string PreviewToken,
+    ApprovedPayrollRevisionDto? Revision);
 
 public sealed record ReviewApprovedCompensationPayrollImpactQuery(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId)
@@ -87,30 +93,68 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
                 && item.Period.Month > row.Period.Month)
             .OrderBy(item => item.Period!.Month)
             .Select(item => new { item.PayrollPeriodId, item.Id, item.Period!.Year,
-                item.Period.Month, item.Period.Status })
+                item.Period.Month, item.Period.Status, item.ApprovalStatus })
             .ToListAsync(cancellationToken);
         var laterRows = laterRowData.Select(item => new ApprovedPayrollImpactPeriodDto(
             item.PayrollPeriodId, item.Id, item.Year, item.Month,
             item.Status.ToString().ToLowerInvariant())).ToList();
+        var laterApprovedData = await context.PayrollEmployees.AsNoTracking()
+            .Where(item => item.EmployeeId == request.EmployeeId
+                && (item.Period!.Year > row.Period.Year
+                    || (item.Period.Year == row.Period.Year
+                        && item.Period.Month > row.Period.Month))
+                && item.ApprovalStatus == PayrollApprovalStatus.Approved)
+            .OrderBy(item => item.Period!.Year).ThenBy(item => item.Period!.Month)
+            .Select(item => new { item.PayrollPeriodId, item.Id, item.Period!.Year,
+                item.Period.Month, item.Period.Status })
+            .ToListAsync(cancellationToken);
+        var laterApprovedRows = laterApprovedData.Select(item => new ApprovedPayrollImpactPeriodDto(
+            item.PayrollPeriodId, item.Id, item.Year, item.Month,
+            item.Status.ToString().ToLowerInvariant())).ToList();
 
         var result = row.Result;
+        var sourceUpdatedAt = row.UpdatedAtUtc;
         var recorded = new ApprovedPayrollAmountDto(result.GrossEarnings, result.IncomeTaxBase,
             result.IncomeTax, result.NetPay, result.EmployerCost);
         ApprovedPayrollAmountDto? hypothetical = null;
+        var blocking = new List<string>(warnings);
         if (warnings.Count == 0)
         {
             var values = JsonSerializer.Deserialize<CompensationPackageValuesDto>(
                 remediation.ProposedValuesJson)!;
+            if (row.GrossSalary == values.MonthlyGrossSalary
+                && row.PremiumPay == values.RegularPremium
+                && row.RoadAllowance == values.RoadAllowance
+                && row.MealAllowance == values.MealAllowance
+                && row.BenefitPay == values.OtherRegularBenefits)
+                blocking.Add("Önerilen ücret tutarları onaylı satırla aynı.");
             CompensationPayrollApplicationRules.SetAmounts(row, values);
             var calculation = engine.Calculate(
                 row.ToEngineInput(row.Period.MinimumWageIncomeTaxBaseBefore),
                 row.Period.Settings!.ToEngineParameters());
             hypothetical = new(calculation.GrossEarnings, calculation.IncomeTaxBase,
                 calculation.IncomeTax, calculation.NetPay, calculation.EmployerCost);
+            blocking.AddRange(PayrollRowReadiness.GetBlockingReasons(row, calculation));
         }
+        if (laterApprovedRows.Count > 0)
+            blocking.Add("Aynı çalışanın sonraki onaylı bordro satırı var; zincirleme vergi etkisi ayrı telafi gerektirir.");
+        var revision = await context.PayrollApprovedRowRevisions.AsNoTracking()
+            .Where(item => item.PayrollRowId == request.RowId)
+            .OrderByDescending(item => item.RevisionNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (revision is not null)
+            blocking.Add("Bu satır için onaylı parasal sürüm zaten var; sonraki düzeltme ayrı inceleme gerektirir.");
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { recorded, hypothetical, laterRowData, laterApprovedData,
+                sourceUpdatedAt, result.CalculatedAtUtc,
+                CaseVersion = remediation.Version, PackageVersion = package.Version,
+                remediation.ProposedValuesJson, RevisionId = revision?.Id }))));
         return new(request.PeriodId, request.RowId,
             row.Period.Status.ToString().ToLowerInvariant(), request.CaseId,
             remediation.ExpertReviewReference, remediation.ReviewedAtUtc.Value,
-            hypothetical is not null, warnings, recorded, hypothetical, laterRows);
+            hypothetical is not null, warnings, recorded, hypothetical, laterRows,
+            laterApprovedRows,
+            blocking.Count == 0, blocking, token,
+            revision is null ? null : ApprovedPayrollRevisionRules.ToDto(revision));
     }
 }

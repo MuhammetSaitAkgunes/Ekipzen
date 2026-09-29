@@ -142,9 +142,10 @@ public sealed class PayrollController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> GetPayslip(int id, int rowId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPayslip(int id, int rowId,
+        [FromQuery] bool original, CancellationToken cancellationToken)
     {
-        var (content, fileName) = await sender.Send(new GetPayslipPdfQuery(id, rowId), cancellationToken);
+        var (content, fileName) = await sender.Send(new GetPayslipPdfQuery(id, rowId, original), cancellationToken);
         return File(content, "application/pdf", fileName);
     }
 }

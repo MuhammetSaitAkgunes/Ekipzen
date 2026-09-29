@@ -99,7 +99,8 @@ public sealed record PayrollRowDto(
     decimal MinimumWageStampTaxExemption,
     decimal AppliedEmployerSgkRate,
     decimal DisabilityIncomeTaxBaseDeduction,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    int RevisionNumber = 0);
 
 public sealed record PayrollTotalsDto(decimal Gross, decimal Net, decimal EmployerCost, decimal Deductions);
 
@@ -125,7 +126,8 @@ public sealed record MyPayslipDto(
     decimal GrossEarnings,
     decimal TotalDeductions,
     decimal NetPay,
-    string ApprovalStatus);
+    string ApprovalStatus,
+    bool HasRevision);
 
 public static class PayrollMappings
 {

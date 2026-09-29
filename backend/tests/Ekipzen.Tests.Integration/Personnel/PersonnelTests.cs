@@ -14,9 +14,11 @@ using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Employees.Offboarding;
 using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Leaves;
+using Ekipzen.Application.Features.Payroll;
 using Ekipzen.Domain.Entities.Leaves;
 using Ekipzen.Domain.Entities.Payroll;
 using Ekipzen.Domain.Enums;
+using Ekipzen.Domain.ReadModels;
 using Ekipzen.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -742,6 +744,168 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             (await db.EmployeeCompensationPackages.SingleAsync(item => item.Id == packageId))
                 .MonthlyGrossSalary.Should().Be(40000m);
         }
+    }
+
+    [Fact]
+    public async Task ApprovedPayrollRevision_PreservesOriginalAndBlocksLaterApprovedRows()
+    {
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
+        var auth = await LoginAsync("ik@hrmaster.local");
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departmentId, "Revizyon", $"Bordro{Guid.NewGuid():N}");
+        var packageResponse = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = "2039-01-01", monthlyGrossSalary = 50000m,
+                regularPremium = 0m, roadAllowance = 0m, mealAllowance = 0m,
+                otherRegularBenefits = 0m, sourceReference = "İlk ücret kararı",
+            });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var packageId = (await packageResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!
+            .CompensationPackages.Single().Id;
+
+        int periodId, rowId, laterPeriodId, laterRowId;
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var settings = await db.PayrollSettings
+                .FirstAsync(item => item.Status == PayrollSettingsStatus.Approved);
+            var period = new PayrollPeriod
+            {
+                Name = $"Revizyon bordro {Guid.NewGuid():N}", Year = 2041, Month = 8,
+                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Approved,
+            };
+            var row = new PayrollEmployee
+            {
+                EmployeeId = employeeId, GrossSalary = 50000m,
+                StatutoryProfile = PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA,
+                WorkedDays = settings.DefaultWorkedDays, SgkPremiumDaysConfirmed = true,
+                IbanComplete = true, TimesheetComplete = true,
+                DisabilityReliefType = PayrollDisabilityReliefType.None,
+                OtherIncomeTaxBaseDeductionsConfirmedNone = true,
+                CumulativeIncomeTaxBaseConfirmed = true,
+                ApprovalStatus = PayrollApprovalStatus.Approved,
+                Result = new PayrollResult
+                {
+                    GrossEarnings = 50000m, IncomeTaxBase = 42500m,
+                    IncomeTax = 6375m, TotalDeductions = 13000m,
+                    NetPay = 37000m, EmployerCost = 61000m,
+                    CalculatedAtUtc = DateTime.UtcNow,
+                },
+            };
+            period.Employees.Add(row);
+            db.PayrollPeriods.Add(period);
+            var later = new PayrollPeriod
+            {
+                Name = $"Revizyon sonrası {Guid.NewGuid():N}", Year = 2041, Month = 9,
+                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Draft,
+            };
+            var laterRow = new PayrollEmployee
+            {
+                EmployeeId = employeeId, GrossSalary = 50000m,
+                ApprovalStatus = PayrollApprovalStatus.Approved,
+            };
+            later.Employees.Add(laterRow);
+            db.PayrollPeriods.Add(later);
+            await db.SaveChangesAsync(CancellationToken.None);
+            periodId = period.Id;
+            rowId = row.Id;
+            laterPeriodId = later.Id;
+            laterRowId = laterRow.Id;
+        }
+        var caseUrl = $"/api/employees/{employeeId}/compensation-packages/{packageId}/remediation-case";
+        var openedResponse = await admin.PostAsJsonAsync(caseUrl, new
+        {
+            expectedPackageVersion = 1, expectedCaseVersion = (int?)null,
+            issueDescription = "Onaylı bordro brütü hatalıydı.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 52000m, regularPremium = 0m,
+            roadAllowance = 0m, mealAllowance = 0m,
+            otherRegularBenefits = 0m, sourceReference = "Uzman ücret kararı",
+        });
+        openedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var opened = (await openedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        var approval = await admin.PostAsJsonAsync($"{caseUrl}/{opened.Id}/approve", new
+        {
+            expectedCaseVersion = opened.Version, expertReviewReference = "Uzman raporu 51",
+            reviewNotes = "Kaynak ücret belgesi karşılaştırıldı.", confirmExpertReview = true,
+        });
+        approval.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impactUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{periodId}/rows/{rowId}/approved-impact";
+        var blocked = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        blocked.CanApply.Should().BeFalse();
+        blocked.BlockingReasons.Should().Contain(reason => reason.Contains("sonraki onaylı"));
+        (await manager.GetAsync(impactUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var later = await db.PayrollEmployees.SingleAsync(item => item.Id == laterRowId);
+            later.ApprovalStatus = PayrollApprovalStatus.PreCalc;
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        var preview = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        preview.CanApply.Should().BeTrue();
+        (await admin.PostAsJsonAsync($"{impactUrl}/apply", new
+        {
+            expectedPreviewToken = blocked.PreviewToken,
+            expertReviewReference = "Uzman sonuç 52", reviewNotes = "Hesap kontrol edildi.",
+            confirmSourceLink = true, confirmExternalReconciliation = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var applyResponse = await admin.PostAsJsonAsync($"{impactUrl}/apply", new
+        {
+            expectedPreviewToken = preview.PreviewToken,
+            expertReviewReference = "Uzman sonuç 52", reviewNotes = "Hesap kontrol edildi.",
+            confirmSourceLink = true, confirmExternalReconciliation = true,
+        });
+        applyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var revision = (await applyResponse.Content.ReadFromJsonAsync<ApprovedPayrollRevisionDto>(
+            jsonOptions))!;
+        revision.Before.GrossSalary.Should().Be(50000m);
+        revision.After.GrossSalary.Should().Be(52000m);
+        revision.After.NetPay.Should().NotBe(revision.Before.NetPay);
+        (await admin.PostAsJsonAsync($"{impactUrl}/apply", new
+        {
+            expectedPreviewToken = preview.PreviewToken,
+            expertReviewReference = "Uzman sonuç 52", reviewNotes = "Tekrar",
+            confirmSourceLink = true, confirmExternalReconciliation = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var current = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        current.Revision!.Id.Should().Be(revision.Id);
+        current.CanApply.Should().BeFalse();
+        var detail = (await admin.GetFromJsonAsync<PayrollPeriodDetailDto>(
+            $"/api/payroll/periods/{periodId}", jsonOptions))!;
+        detail.Rows.Single(item => item.Id == rowId).NetPay.Should().Be(revision.After.NetPay);
+        detail.Rows.Single(item => item.Id == rowId).RevisionNumber.Should().Be(1);
+        var summary = (await admin.GetFromJsonAsync<PayrollPeriodSummary>(
+            $"/api/payroll/periods/{periodId}/summary", jsonOptions))!;
+        summary.TotalNet.Should().Be(revision.After.NetPay);
+        var laterDetail = (await admin.GetFromJsonAsync<PayrollPeriodDetailDto>(
+            $"/api/payroll/periods/{laterPeriodId}", jsonOptions))!;
+        laterDetail.Rows.Single(item => item.Id == laterRowId).PreviousTaxBase
+            .Should().Be(revision.After.IncomeTaxBase);
+        var originalPdf = await admin.GetAsync($"/api/payroll/periods/{periodId}/rows/{rowId}/payslip?original=true");
+        originalPdf.StatusCode.Should().Be(HttpStatusCode.OK);
+        originalPdf.Content.Headers.ContentDisposition!.FileName.Should().Contain("ilk-onay");
+        (await admin.GetAsync($"/api/payroll/periods/{periodId}/rows/{rowId}/payslip"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        using var verifyScope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+            .Create(auth.User.TenantId);
+        var verifyDb = verifyScope.Services.GetRequiredService<IApplicationDbContext>();
+        (await verifyDb.PayrollEmployees.Include(item => item.Result)
+            .SingleAsync(item => item.Id == rowId)).Result!.NetPay.Should().Be(37000m);
+        (await verifyDb.PayrollApprovedRowRevisions.CountAsync(item => item.PayrollRowId == rowId))
+            .Should().Be(1);
     }
 
     [Fact]

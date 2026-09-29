@@ -1,6 +1,7 @@
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Payroll.Settings;
 using Ekipzen.Domain.Entities.Payroll;
 using Ekipzen.Domain.Enums;
@@ -224,10 +225,15 @@ public static class PayrollPeriodProjector
 
         var parameters = period.Settings!.ToEngineParameters();
 
+        var revisions = await ApprovedPayrollRevisionRules.LatestByRowAsync(
+            context, employeeRows.Select(row => row.Id).ToArray(), cancellationToken);
+
         var rows = employeeRows
             .OrderBy(pe => pe.Employee!.FirstName).ThenBy(pe => pe.Employee!.LastName)
-            .Select(pe => ToRow(
-                pe, engine, parameters, period.MinimumWageIncomeTaxBaseBefore))
+            .Select(pe => revisions.TryGetValue(pe.Id, out var revision)
+                ? ApprovedPayrollRevisionRules.EffectiveRow(revision)
+                    with { RevisionNumber = revision.RevisionNumber }
+                : ToRow(pe, engine, parameters, period.MinimumWageIncomeTaxBaseBefore))
             .ToList();
 
         var totals = new PayrollTotalsDto(

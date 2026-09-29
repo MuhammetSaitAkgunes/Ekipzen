@@ -1,5 +1,6 @@
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Domain.Constants;
 using Ekipzen.Domain.Enums;
 using MediatR;
@@ -20,19 +21,27 @@ public sealed class GetMyPayslipsQueryHandler(IApplicationDbContext context, ICu
         var employeeId = currentUser.EmployeeId
             ?? throw new ForbiddenAccessException("Hesabınıza bağlı personel kaydı yok.");
 
-        return await context.PayrollEmployees
+        var rows = await context.PayrollEmployees
             .AsNoTracking()
             .Where(pe => pe.EmployeeId == employeeId && pe.Result != null)
             .OrderByDescending(pe => pe.Period!.Year).ThenByDescending(pe => pe.Period!.Month)
-            .Select(pe => new MyPayslipDto(
-                pe.PayrollPeriodId,
-                pe.Id,
-                pe.Period!.Name,
-                pe.Result!.GrossEarnings,
-                pe.Result.TotalDeductions,
-                pe.Result.NetPay,
-                pe.ApprovalStatus == PayrollApprovalStatus.Approved ? "Onaylandı" : "Kontrol"))
+            .Select(pe => new { pe.PayrollPeriodId, pe.Id, PeriodName = pe.Period!.Name,
+                pe.ApprovalStatus, pe.Result!.GrossEarnings, pe.Result.TotalDeductions,
+                pe.Result.NetPay })
             .ToListAsync(cancellationToken);
+        var revisions = await ApprovedPayrollRevisionRules.LatestByRowAsync(
+            context, rows.Select(row => row.Id).ToArray(), cancellationToken);
+        return rows.Select(row =>
+        {
+            var revised = revisions.TryGetValue(row.Id, out var revision);
+            var effective = revised ? ApprovedPayrollRevisionRules.EffectiveRow(revision!) : null;
+            return new MyPayslipDto(row.PayrollPeriodId, row.Id, row.PeriodName,
+                effective?.GrossEarnings ?? row.GrossEarnings,
+                effective?.TotalDeductions ?? row.TotalDeductions,
+                effective?.NetPay ?? row.NetPay,
+                row.ApprovalStatus == PayrollApprovalStatus.Approved ? "Onaylandı" : "Kontrol",
+                revised);
+        }).ToList();
     }
 }
 
@@ -86,7 +95,7 @@ public interface IPayslipGenerator
 /// Pusula PDF'i. hr-admin herkesinkini, çalışan yalnız kendisininkini indirebilir;
 /// sonuç (onay snapshot'ı) olmayan satır için 409.
 /// </summary>
-public sealed record GetPayslipPdfQuery(int PeriodId, int RowId)
+public sealed record GetPayslipPdfQuery(int PeriodId, int RowId, bool Original = false)
     : IRequest<(byte[] Content, string FileName)>;
 
 public sealed class GetPayslipPdfQueryHandler(
@@ -114,6 +123,12 @@ public sealed class GetPayslipPdfQueryHandler(
 
         var result = row.Result
             ?? throw new ConflictException("Bu satır için onaylanmış bordro sonucu yok.");
+
+        var revisions = await ApprovedPayrollRevisionRules.LatestByRowAsync(
+            context, [row.Id], cancellationToken);
+        var revised = !request.Original && revisions.TryGetValue(row.Id, out var revision)
+            ? ApprovedPayrollRevisionRules.EffectiveRow(revision)
+            : null;
 
         var model = new PayslipModel(
             row.Period!.Name,
@@ -163,8 +178,32 @@ public sealed class GetPayslipPdfQueryHandler(
             row.Period.Settings.EffectiveFrom,
             row.Period.Settings.SourceReference);
 
+        if (revised is not null)
+            model = model with
+            {
+                BaseGross = revised.BaseGross, PremiumPay = revised.PremiumPay,
+                RoadAllowance = revised.RoadAllowance, MealAllowance = revised.MealAllowance,
+                BenefitPay = revised.BenefitPay, GrossEarnings = revised.GrossEarnings,
+                OvertimePay = revised.OvertimePay, SgkEmployee = revised.SgkEmployee,
+                UnemploymentEmployee = revised.UnemploymentEmployee,
+                IncomeTax = revised.IncomeTax, StampTax = revised.StampTax,
+                SpecialDeductions = revised.SpecialDeductions,
+                TotalDeductions = revised.TotalDeductions, NetPay = revised.NetPay,
+                SgkBase = revised.SgkBase, IncomeTaxBase = revised.IncomeTaxBase,
+                DisabilityIncomeTaxBaseDeduction = revised.DisabilityIncomeTaxBaseDeduction,
+                PreviousTaxBase = revised.PreviousTaxBase,
+                SgkExemptMealAllowance = revised.SgkExemptMealAllowance,
+                IncomeTaxExemptMealAllowance = revised.IncomeTaxExemptMealAllowance,
+                MinimumWageIncomeTaxExemption = revised.MinimumWageIncomeTaxExemption,
+                MinimumWageStampTaxExemption = revised.MinimumWageStampTaxExemption,
+                AppliedEmployerSgkRate = revised.AppliedEmployerSgkRate,
+            };
+
         var fileName = $"bordro-{row.Period.Year}-{row.Period.Month:00}-{row.Employee.FullName
             .Replace(' ', '-').ToLowerInvariant()}.pdf";
+
+        if (request.Original && revisions.Count > 0)
+            fileName = fileName.Replace(".pdf", "-ilk-onay.pdf", StringComparison.Ordinal);
 
         return (generator.Generate(model), fileName);
     }

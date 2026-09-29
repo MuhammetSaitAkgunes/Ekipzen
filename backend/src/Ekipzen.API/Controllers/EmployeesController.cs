@@ -210,6 +210,18 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new ReviewApprovedCompensationPayrollImpactQuery(
             id, packageId, caseId, periodId, rowId), cancellationToken));
 
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact/apply")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<ApprovedPayrollRevisionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApprovedPayrollRevisionDto>> ApplyApprovedCompensationPayrollRevision(
+        int id, int packageId, int caseId, int periodId, int rowId,
+        ApplyApprovedPayrollRevisionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApplyApprovedCompensationPayrollRevisionCommand(
+            id, packageId, caseId, periodId, rowId, body.ExpectedPreviewToken,
+            body.ExpertReviewReference, body.ReviewNotes,
+            body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
+
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/apply")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<CompensationPayrollApplicationDto>(StatusCodes.Status200OK)]
@@ -515,6 +527,10 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
 
     public sealed record ApplyCompensationPayrollBody(
         string ExpectedPreviewToken, bool ConfirmSourceLink);
+
+    public sealed record ApplyApprovedPayrollRevisionBody(
+        string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
+        bool ConfirmSourceLink, bool ConfirmExternalReconciliation);
 
     public sealed record PreviewCompensationDateCorrectionBody(DateOnly ProposedEffectiveFrom);
 

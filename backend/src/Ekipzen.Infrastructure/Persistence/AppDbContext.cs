@@ -72,6 +72,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<IncomeTaxBracket> IncomeTaxBrackets => Set<IncomeTaxBracket>();
     public DbSet<PayrollEmployee> PayrollEmployees => Set<PayrollEmployee>();
     public DbSet<PayrollResult> PayrollResults => Set<PayrollResult>();
+    public DbSet<PayrollApprovedRowRevision> PayrollApprovedRowRevisions => Set<PayrollApprovedRowRevision>();
 
     // Recruitment
     public DbSet<Position> Positions => Set<Position>();
