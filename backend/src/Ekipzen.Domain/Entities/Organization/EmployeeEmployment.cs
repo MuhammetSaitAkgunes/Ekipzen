@@ -57,3 +57,25 @@ public sealed class EmployeeCompensationPackageCorrection : BaseEntity
     public string ActorUserId { get; set; } = string.Empty;
     public DateTime CorrectedAtUtc { get; set; }
 }
+
+/// <summary>Geçmiş bordro/ayrılış kaydını değiştirmeyen, ayrı uzman inceleme dosyası.</summary>
+public sealed class EmployeeCompensationRemediationCase : BaseEntity
+{
+    public int EmployeeId { get; set; }
+    public Employee? Employee { get; set; }
+    public int CompensationPackageId { get; set; }
+    public EmployeeCompensationPackage? CompensationPackage { get; set; }
+    public int PackageVersion { get; set; }
+    public int Version { get; set; } = 1;
+    public string Status { get; set; } = "draft";
+    public string IssueDescription { get; set; } = string.Empty;
+    public DateOnly? ProposedEffectiveFrom { get; set; }
+    public string ProposedValuesJson { get; set; } = string.Empty;
+    public string ImpactSnapshotJson { get; set; } = string.Empty;
+    public string OpenedByUserId { get; set; } = string.Empty;
+    public DateTime OpenedAtUtc { get; set; }
+    public string? ReviewedByUserId { get; set; }
+    public DateTime? ReviewedAtUtc { get; set; }
+    public string? ExpertReviewReference { get; set; }
+    public string? ReviewNotes { get; set; }
+}

@@ -156,6 +156,48 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.RegularPremium, body.RoadAllowance, body.MealAllowance,
             body.OtherRegularBenefits, body.SourceReference, body.Reason), cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationRemediationContextDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CompensationRemediationContextDto>> GetCompensationRemediation(
+        int id, int packageId, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetCompensationRemediationContextQuery(id, packageId), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationRemediationCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CompensationRemediationCaseDto>> CreateCompensationRemediation(
+        int id, int packageId, SaveCompensationRemediationBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(ToRemediationCommand(id, packageId, null, body), cancellationToken));
+
+    [HttpPut("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationRemediationCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CompensationRemediationCaseDto>> UpdateCompensationRemediation(
+        int id, int packageId, int caseId, SaveCompensationRemediationBody body,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(ToRemediationCommand(id, packageId, caseId, body), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/approve")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationRemediationCaseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CompensationRemediationCaseDto>> ApproveCompensationRemediation(
+        int id, int packageId, int caseId, ApproveCompensationRemediationBody body,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApproveCompensationRemediationCaseCommand(
+            id, packageId, caseId, body.ExpectedCaseVersion,
+            body.ExpertReviewReference, body.ReviewNotes, body.ConfirmExpertReview), cancellationToken));
+
+    private static SaveCompensationRemediationCaseCommand ToRemediationCommand(
+        int employeeId, int packageId, int? caseId, SaveCompensationRemediationBody body)
+        => new(employeeId, packageId, caseId, body.ExpectedPackageVersion,
+            body.ExpectedCaseVersion, body.IssueDescription, body.ProposedEffectiveFrom,
+            body.MonthlyGrossSalary, body.RegularPremium, body.RoadAllowance,
+            body.MealAllowance, body.OtherRegularBenefits, body.SourceReference);
+
     [HttpPost("{id:int}/rehire")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
@@ -346,6 +388,16 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal OtherRegularBenefits,
         string SourceReference,
         string Reason);
+
+    public sealed record SaveCompensationRemediationBody(
+        int ExpectedPackageVersion, int? ExpectedCaseVersion, string IssueDescription,
+        DateOnly? ProposedEffectiveFrom, decimal MonthlyGrossSalary, decimal RegularPremium,
+        decimal RoadAllowance, decimal MealAllowance, decimal OtherRegularBenefits,
+        string SourceReference);
+
+    public sealed record ApproveCompensationRemediationBody(
+        int ExpectedCaseVersion, string ExpertReviewReference, string ReviewNotes,
+        bool ConfirmExpertReview);
 
     public sealed record RehireEmployeeBody(DateOnly RehireDate, string ContractType);
 

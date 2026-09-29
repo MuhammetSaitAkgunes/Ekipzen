@@ -45,6 +45,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages => Set<EmployeeCompensationPackage>();
     public DbSet<EmployeeCompensationPackageCorrection> EmployeeCompensationPackageCorrections
         => Set<EmployeeCompensationPackageCorrection>();
+    public DbSet<EmployeeCompensationRemediationCase> EmployeeCompensationRemediationCases
+        => Set<EmployeeCompensationRemediationCase>();
     public DbSet<TerminationCalculationRule> TerminationCalculationRules => Set<TerminationCalculationRule>();
 
     // Leaves

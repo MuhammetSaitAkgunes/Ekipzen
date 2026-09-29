@@ -29,6 +29,7 @@ public interface IApplicationDbContext
     DbSet<EmployeeEmploymentPeriod> EmployeeEmploymentPeriods { get; }
     DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages { get; }
     DbSet<EmployeeCompensationPackageCorrection> EmployeeCompensationPackageCorrections { get; }
+    DbSet<EmployeeCompensationRemediationCase> EmployeeCompensationRemediationCases { get; }
     DbSet<TerminationCalculationRule> TerminationCalculationRules { get; }
 
     // Leaves

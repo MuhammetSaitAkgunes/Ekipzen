@@ -1173,6 +1173,88 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeCompensationPackageCorrections");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompensationPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExpertReviewReference")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ImpactSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IssueDescription")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("OpenedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OpenedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("PackageVersion")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("ProposedEffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ProposedValuesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompensationPackageId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "CompensationPackageId")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeCompensationRemediationCases");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -3301,6 +3383,25 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("CompensationPackage");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeCompensationPackage", "CompensationPackage")
+                        .WithMany()
+                        .HasForeignKey("CompensationPackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CompensationPackage");
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeDocument", b =>

@@ -398,6 +398,134 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     }
 
     [Fact]
+    public async Task CompensationRemediation_ReviewsImpactsWithoutChangingHistoricalPayroll()
+    {
+        var auth = await LoginAsync("ik@hrmaster.local");
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departmentId, "Telafi", $"Inceleme{Guid.NewGuid():N}");
+        var createPackage = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = "2039-01-01", monthlyGrossSalary = 40000m,
+                regularPremium = 1000m, roadAllowance = 0m, mealAllowance = 0m,
+                otherRegularBenefits = 0m, sourceReference = "İlk karar",
+            });
+        createPackage.StatusCode.Should().Be(HttpStatusCode.OK);
+        var packageId = (await createPackage.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!
+            .CompensationPackages.Single().Id;
+        int payrollRowId;
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var settingsId = await db.PayrollSettings.Select(item => item.Id).FirstAsync();
+            var period = new PayrollPeriod
+            {
+                Name = $"Telafi inceleme {Guid.NewGuid():N}",
+                Year = 2040, Month = 1, PayrollSettingsId = settingsId,
+            };
+            var row = new PayrollEmployee { EmployeeId = employeeId, GrossSalary = 40000m };
+            period.Employees.Add(row);
+            db.PayrollPeriods.Add(period);
+            await db.SaveChangesAsync(CancellationToken.None);
+            payrollRowId = row.Id;
+        }
+
+        var url = $"/api/employees/{employeeId}/compensation-packages/{packageId}/remediation-case";
+        (await manager.GetAsync(url)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var before = await GetAsync<CompensationRemediationContextDto>(admin, url);
+        before.CanOpen.Should().BeTrue();
+        before.CurrentImpact.PotentialPayrollRows.Should().ContainSingle(row => row.RowId == payrollRowId);
+        var proposal = new
+        {
+            expectedPackageVersion = 1, expectedCaseVersion = (int?)null,
+            issueDescription = "İlk ücret kararındaki brüt tutar yanlış okundu.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 42000m, regularPremium = 1000m,
+            roadAllowance = 0m, mealAllowance = 0m, otherRegularBenefits = 0m,
+            sourceReference = "Uzman inceleme belgesi",
+        };
+        var openedResponse = await admin.PostAsJsonAsync(url, proposal);
+        openedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var opened = (await openedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        opened.Status.Should().Be("draft");
+        opened.ImpactSnapshot.PotentialPayrollRows.Should().ContainSingle();
+        (await admin.PostAsJsonAsync(url, proposal)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await manager.PostAsJsonAsync(url, proposal)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var updatedResponse = await admin.PutAsJsonAsync($"{url}/{opened.Id}", new
+        {
+            expectedPackageVersion = 1, expectedCaseVersion = (int?)opened.Version,
+            issueDescription = "Kaynak belgeyle karşılaştırılan brüt tutar hatası.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 43000m, regularPremium = 1000m,
+            roadAllowance = 0m, mealAllowance = 0m, otherRegularBenefits = 0m,
+            sourceReference = "Uzman inceleme belgesi 2",
+        });
+        updatedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = (await updatedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        updated.Version.Should().Be(2);
+        updated.ProposedValues.MonthlyGrossSalary.Should().Be(43000m);
+        (await admin.PostAsJsonAsync($"{url}/{updated.Id}/approve", new
+        {
+            expectedCaseVersion = updated.Version, expertReviewReference = "Uzman raporu 42",
+            reviewNotes = "Kaynak ve bordro satırı incelendi.", confirmExpertReview = false,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var row = await db.PayrollEmployees.SingleAsync(item => item.Id == payrollRowId);
+            row.GrossSalary = 41000m;
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        (await admin.PostAsJsonAsync($"{url}/{updated.Id}/approve", new
+        {
+            expectedCaseVersion = updated.Version, expertReviewReference = "Uzman raporu 42",
+            reviewNotes = "Kaynak ve bordro satırı incelendi.", confirmExpertReview = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict,
+            "etki görüntüsü değişirse uzman incelemesi yenilenmelidir");
+        var refreshedResponse = await admin.PutAsJsonAsync($"{url}/{updated.Id}", new
+        {
+            expectedPackageVersion = 1, expectedCaseVersion = (int?)updated.Version,
+            issueDescription = updated.IssueDescription, proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 43000m, regularPremium = 1000m,
+            roadAllowance = 0m, mealAllowance = 0m, otherRegularBenefits = 0m,
+            sourceReference = "Uzman inceleme belgesi 2",
+        });
+        refreshedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var refreshed = (await refreshedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        refreshed.ImpactSnapshot.PotentialPayrollRows.Single().RecordedGrossSalary.Should().Be(41000m);
+        var approvedResponse = await admin.PostAsJsonAsync($"{url}/{updated.Id}/approve", new
+        {
+            expectedCaseVersion = refreshed.Version, expertReviewReference = "Uzman raporu 42",
+            reviewNotes = "Kaynak ve bordro satırı incelendi.", confirmExpertReview = true,
+        });
+        approvedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var approved = (await approvedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        approved.Status.Should().Be("approved");
+        approved.ReviewedByUserId.Should().Be(opened.OpenedByUserId,
+            "kullanıcı kararı aynı İK yöneticisinin uzman referansıyla onayına izin verir");
+        (await admin.PutAsJsonAsync($"{url}/{approved.Id}", proposal))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var foundation = await GetAsync<EmployeeEmploymentFoundationDto>(
+            admin, $"/api/employees/{employeeId}/employment-foundation");
+        foundation.CompensationPackages.Single().MonthlyGrossSalary.Should().Be(40000m);
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            (await db.PayrollEmployees.SingleAsync(row => row.Id == payrollRowId))
+                .GrossSalary.Should().Be(41000m);
+        }
+    }
+
+    [Fact]
     public async Task Rehire_StartsNewEmploymentPeriodWithoutOldLeaveBalanceLeak()
     {
         var adminAuth = await LoginAsync("ik@hrmaster.local");

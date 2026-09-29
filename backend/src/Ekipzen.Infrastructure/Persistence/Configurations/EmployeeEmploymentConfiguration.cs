@@ -58,3 +58,25 @@ public sealed class EmployeeCompensationPackageCorrectionConfiguration
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public sealed class EmployeeCompensationRemediationCaseConfiguration
+    : IEntityTypeConfiguration<EmployeeCompensationRemediationCase>
+{
+    public void Configure(EntityTypeBuilder<EmployeeCompensationRemediationCase> b)
+    {
+        b.Property(item => item.Version).HasDefaultValue(1).IsConcurrencyToken();
+        b.Property(item => item.Status).IsRequired().HasMaxLength(24);
+        b.Property(item => item.IssueDescription).IsRequired().HasMaxLength(2000);
+        b.Property(item => item.ProposedValuesJson).IsRequired();
+        b.Property(item => item.ImpactSnapshotJson).IsRequired();
+        b.Property(item => item.OpenedByUserId).IsRequired().HasMaxLength(450);
+        b.Property(item => item.ReviewedByUserId).HasMaxLength(450);
+        b.Property(item => item.ExpertReviewReference).HasMaxLength(256);
+        b.Property(item => item.ReviewNotes).HasMaxLength(2000);
+        b.HasIndex(item => new { item.TenantId, item.CompensationPackageId }).IsUnique();
+        b.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(item => item.CompensationPackage).WithMany()
+            .HasForeignKey(item => item.CompensationPackageId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
