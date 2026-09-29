@@ -3078,6 +3078,178 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{remediationCaseId}/offboarding/{caseId}/settlement-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    remediationCaseId: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingSettlementRevisionContextDto"];
+                        "application/json": components["schemas"]["OffboardingSettlementRevisionContextDto"];
+                        "text/json": components["schemas"]["OffboardingSettlementRevisionContextDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    remediationCaseId: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["OpenOffboardingSettlementRevisionBody"];
+                    "text/json": components["schemas"]["OpenOffboardingSettlementRevisionBody"];
+                    "application/*+json": components["schemas"]["OpenOffboardingSettlementRevisionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingSettlementRevisionDto"];
+                        "application/json": components["schemas"]["OffboardingSettlementRevisionDto"];
+                        "text/json": components["schemas"]["OffboardingSettlementRevisionDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{remediationCaseId}/offboarding/{caseId}/settlement-revisions/{revisionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    remediationCaseId: number;
+                    caseId: number;
+                    revisionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SaveOffboardingSettlementRevisionBody"];
+                    "text/json": components["schemas"]["SaveOffboardingSettlementRevisionBody"];
+                    "application/*+json": components["schemas"]["SaveOffboardingSettlementRevisionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingSettlementRevisionDto"];
+                        "application/json": components["schemas"]["OffboardingSettlementRevisionDto"];
+                        "text/json": components["schemas"]["OffboardingSettlementRevisionDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{remediationCaseId}/offboarding/{caseId}/settlement-revisions/{revisionId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    remediationCaseId: number;
+                    caseId: number;
+                    revisionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApproveOffboardingSettlementRevisionBody"];
+                    "text/json": components["schemas"]["ApproveOffboardingSettlementRevisionBody"];
+                    "application/*+json": components["schemas"]["ApproveOffboardingSettlementRevisionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingSettlementRevisionDto"];
+                        "application/json": components["schemas"]["OffboardingSettlementRevisionDto"];
+                        "text/json": components["schemas"]["OffboardingSettlementRevisionDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/bulk-deactivate": {
         parameters: {
             query?: never;
@@ -6957,6 +7129,14 @@ export interface components {
             reviewNotes?: string | null;
             confirmExpertReview?: boolean;
         };
+        ApproveOffboardingSettlementRevisionBody: {
+            /** Format: int32 */
+            expectedRevisionVersion?: number;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            confirmFinancialReview?: boolean;
+            confirmExternalReconciliation?: boolean;
+        };
         ApprovePayrollSettingsCommand: {
             /** Format: int32 */
             id?: number;
@@ -7712,6 +7892,8 @@ export interface components {
             pendingLeaveRequestCount?: number;
             currentCase?: components["schemas"]["EmployeeOffboardingCaseDto"];
             successors?: components["schemas"]["ManagerSuccessorDto"][] | null;
+            effectiveSettlementRevision?: components["schemas"]["OffboardingSettlementRevisionDto"];
+            hasSettlementRevisions?: boolean;
         };
         EmployeeProfileDto: {
             /** Format: date */
@@ -8066,9 +8248,75 @@ export interface components {
             leaveRequestEmail?: boolean;
             weeklyReportEmail?: boolean;
         };
+        OffboardingSettlementRevisionContextDto: {
+            /** Format: int32 */
+            offboardingCaseId?: number;
+            /** Format: int32 */
+            offboardingCaseVersion?: number;
+            /** Format: int32 */
+            remediationCaseId?: number;
+            original?: components["schemas"]["OffboardingSettlementValuesDto"];
+            effective?: components["schemas"]["OffboardingSettlementValuesDto"];
+            draft?: components["schemas"]["OffboardingSettlementRevisionDto"];
+            history?: components["schemas"]["OffboardingSettlementRevisionDto"][] | null;
+            canOpen?: boolean;
+            blockingReasons?: string[] | null;
+        };
+        OffboardingSettlementRevisionDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            revisionNumber?: number;
+            /** Format: int32 */
+            version?: number;
+            status?: string | null;
+            /** Format: int32 */
+            remediationCaseId?: number;
+            /** Format: int32 */
+            basedOnApprovedRevisionId?: number | null;
+            values?: components["schemas"]["OffboardingSettlementValuesDto"];
+            reason?: string | null;
+            openedByUserId?: string | null;
+            /** Format: date-time */
+            openedAtUtc?: string;
+            approvedByUserId?: string | null;
+            /** Format: date-time */
+            approvedAtUtc?: string | null;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+        };
+        OffboardingSettlementValuesDto: {
+            /** Format: double */
+            monthlyGrossSalarySnapshot?: number;
+            /** Format: double */
+            regularPremiumSnapshot?: number;
+            /** Format: double */
+            roadAllowanceSnapshot?: number;
+            /** Format: double */
+            mealAllowanceSnapshot?: number;
+            /** Format: double */
+            otherRegularBenefitsSnapshot?: number;
+            /** Format: double */
+            unusedLeaveDays?: number;
+            /** Format: double */
+            unusedLeavePayment?: number;
+            /** Format: double */
+            severancePayment?: number;
+            /** Format: double */
+            noticePayment?: number;
+            /** Format: double */
+            totalPayment?: number;
+            settlementSource?: string | null;
+            settlementReference?: string | null;
+            settlementNotes?: string | null;
+        };
         OffboardingVersionBody: {
             /** Format: int32 */
             expectedVersion?: number;
+        };
+        OpenOffboardingSettlementRevisionBody: {
+            /** Format: int32 */
+            expectedOffboardingVersion?: number;
         };
         OverviewDto: {
             /** Format: int32 */
@@ -8689,6 +8937,21 @@ export interface components {
             severancePayment?: number;
             /** Format: double */
             noticePayment?: number;
+            settlementReference?: string | null;
+            settlementNotes?: string | null;
+        };
+        SaveOffboardingSettlementRevisionBody: {
+            /** Format: int32 */
+            expectedRevisionVersion?: number;
+            /** Format: double */
+            unusedLeaveDays?: number;
+            /** Format: double */
+            unusedLeavePayment?: number;
+            /** Format: double */
+            severancePayment?: number;
+            /** Format: double */
+            noticePayment?: number;
+            reason?: string | null;
             settlementReference?: string | null;
             settlementNotes?: string | null;
         };

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
+import { OffboardingSettlementRevisionPanel } from "./OffboardingSettlementRevisionPanel";
 import {
   useApproveCompensationRemediationCase,
   useApplyCompensationPayrollApplication,
@@ -116,6 +117,9 @@ function RemediationContent({ context, employeeId, packageId }: {
       </li>)}
       {context.currentImpact.offboardingCases.map((item) => <li key={`offboarding-${item.caseId}`}>
         {item.terminationDate} ayrılış vakası #{item.caseId} · {item.status} · ücret görüntüsü {currency.format(item.grossSalarySnapshot)}
+        {current?.status === "approved" && <OffboardingSettlementRevisionPanel
+          employeeId={employeeId} packageId={packageId} remediationCaseId={current.id}
+          offboardingCaseId={item.caseId} />}
       </li>)}
     </ul>
     {!context.canOpen && !current && <p>Bu paket için bordro veya ayrılış etkisi bulunmadı. Doğrudan düzeltme durumunu kullanın.</p>}

@@ -166,7 +166,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
 
   const detailQ = useEmployee(employeeId);
   const departmentsQ = useDepartments();
-  const foundationQ = useEmployeeEmploymentFoundation(employeeId, !readOnly);
+  const foundationQ = useEmployeeEmploymentFoundation(employeeId);
   const save = useSaveEmployee();
   const bookmarkQ = usePersonnelEntryBookmark(guided && employeeId === null && !readOnly);
   const saveBookmark = useSavePersonnelEntryBookmark();
@@ -535,7 +535,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                 </select>
               </div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-meal">Yemek Kartı</label><input id="pm-meal" type="text" className="input-control" value={form.mealCard} disabled={readOnly} onChange={(e) => set("mealCard", e.target.value)} /></div>
-              {isEdit && !readOnly && (
+              {isEdit && (
                 <div className="notice-card col-12">
                   <strong>Yürürlük tarihli ücret paketleri</strong>
                   <p>
@@ -561,7 +561,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                     <CompensationCorrectionPanel key={`${employeeId}-${correctionPackageId}`} employeeId={employeeId}
                       packageId={correctionPackageId} onClose={() => setCorrectionPackageId(null)} />}
                   {foundationQ.data?.compensationPackages?.length === 0 && <p>Henüz ücret paketi yok.</p>}
-                  {detailQ.data?.status === "active" && <>
+                  {!readOnly && detailQ.data?.status === "active" && <>
                   <p>Yeni paketin yürürlük tarihini ve tutarını ücret kararınızla karşılaştırın. Örneğin 1 Ekim tarihli değişikliği 1 Eylül olarak girerseniz farklı bordro dönemleri etkilenebilir.</p>
                   <p>Yanlış tutar veya kaynak kaydedildiyse ilgili paketin düzeltme durumunu açın. Yürürlük tarihini değiştirmek için ayrı işlem gerekir.</p>
                   <div className="form-grid-2">

@@ -94,6 +94,33 @@ export type CompensationPayrollPreview = components["schemas"]["CompensationPayr
   before: CompensationPayrollRow; after: CompensationPayrollRow | null;
   application: CompensationPayrollApplication | null;
 };
+type OffboardingSettlementValuesSchema = components["schemas"]["OffboardingSettlementValuesDto"];
+export type OffboardingSettlementValues = OffboardingSettlementValuesSchema & {
+  monthlyGrossSalarySnapshot: number; regularPremiumSnapshot: number;
+  roadAllowanceSnapshot: number; mealAllowanceSnapshot: number;
+  otherRegularBenefitsSnapshot: number; unusedLeaveDays: number;
+  unusedLeavePayment: number; severancePayment: number; noticePayment: number;
+  totalPayment: number; settlementSource: string; settlementReference: string;
+  settlementNotes: string | null;
+};
+type OffboardingSettlementRevisionSchema = components["schemas"]["OffboardingSettlementRevisionDto"];
+export type OffboardingSettlementRevision = OffboardingSettlementRevisionSchema & {
+  id: number; revisionNumber: number; version: number; status: "draft" | "approved";
+  remediationCaseId: number; basedOnApprovedRevisionId: number | null;
+  values: OffboardingSettlementValues; reason: string;
+  openedByUserId: string; openedAtUtc: string; approvedByUserId: string | null;
+  approvedAtUtc: string | null; expertReviewReference: string | null;
+  reviewNotes: string | null;
+};
+type OffboardingSettlementRevisionContextSchema = components["schemas"]["OffboardingSettlementRevisionContextDto"];
+export type OffboardingSettlementRevisionContext = Omit<OffboardingSettlementRevisionContextSchema,
+  "original" | "effective" | "draft" | "history"> & {
+  offboardingCaseId: number; offboardingCaseVersion: number; remediationCaseId: number;
+  original: OffboardingSettlementValues; effective: OffboardingSettlementValues;
+  draft: OffboardingSettlementRevision | null;
+  history: OffboardingSettlementRevision[];
+  canOpen: boolean; blockingReasons: string[];
+};
 export type SaveCompensationRemediationBody = CompensationPackageValues & {
   expectedPackageVersion: number; expectedCaseVersion: number | null;
   issueDescription: string; proposedEffectiveFrom: string | null;
@@ -301,6 +328,92 @@ export const useApplyCompensationPayrollApplication = () => {
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
+  });
+};
+
+const settlementRevisionUrl = (employeeId: number, packageId: number,
+  remediationCaseId: number, offboardingCaseId: number) =>
+  `/employees/${employeeId}/compensation-packages/${packageId}`
+  + `/remediation-case/${remediationCaseId}/offboarding/${offboardingCaseId}/settlement-revisions`;
+const settlementRevisionKey = (employeeId: number, packageId: number,
+  remediationCaseId: number, offboardingCaseId: number) =>
+  ["employees", employeeId, "compensation-packages", packageId,
+    "remediation-case", remediationCaseId, "offboarding", offboardingCaseId,
+    "settlement-revisions"] as const;
+type SettlementRevisionArgs = {
+  employeeId: number; packageId: number; remediationCaseId: number;
+  offboardingCaseId: number;
+};
+
+export const useOffboardingSettlementRevisions = (args: SettlementRevisionArgs) =>
+  useQuery({
+    queryKey: settlementRevisionKey(args.employeeId, args.packageId,
+      args.remediationCaseId, args.offboardingCaseId),
+    queryFn: () => apiFetch<OffboardingSettlementRevisionContext>(
+      settlementRevisionUrl(args.employeeId, args.packageId,
+        args.remediationCaseId, args.offboardingCaseId)),
+  });
+
+const invalidateSettlementRevision = (queryClient: ReturnType<typeof useQueryClient>,
+  args: SettlementRevisionArgs) => Promise.all([
+  queryClient.invalidateQueries({ queryKey: settlementRevisionKey(args.employeeId,
+    args.packageId, args.remediationCaseId, args.offboardingCaseId) }),
+  queryClient.invalidateQueries({ queryKey: ["employees", args.employeeId, "offboarding-context"] }),
+]);
+
+export const useOpenOffboardingSettlementRevision = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: SettlementRevisionArgs & { expectedOffboardingVersion: number }) =>
+      apiFetch<OffboardingSettlementRevision>(settlementRevisionUrl(args.employeeId,
+        args.packageId, args.remediationCaseId, args.offboardingCaseId),
+      { method: "POST", body: JSON.stringify({
+        expectedOffboardingVersion: args.expectedOffboardingVersion }) }),
+    onSuccess: (_revision, args) => invalidateSettlementRevision(queryClient, args),
+  });
+};
+
+export const useSaveOffboardingSettlementRevision = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: SettlementRevisionArgs & { revisionId: number;
+      expectedRevisionVersion: number; unusedLeaveDays: number;
+      unusedLeavePayment: number; severancePayment: number; noticePayment: number;
+      reason: string; settlementReference: string; settlementNotes: string | null }) =>
+      apiFetch<OffboardingSettlementRevision>(
+        `${settlementRevisionUrl(args.employeeId, args.packageId,
+          args.remediationCaseId, args.offboardingCaseId)}/${args.revisionId}`,
+        { method: "PUT", body: JSON.stringify({
+          expectedRevisionVersion: args.expectedRevisionVersion,
+          unusedLeaveDays: args.unusedLeaveDays,
+          unusedLeavePayment: args.unusedLeavePayment,
+          severancePayment: args.severancePayment,
+          noticePayment: args.noticePayment,
+          reason: args.reason,
+          settlementReference: args.settlementReference,
+          settlementNotes: args.settlementNotes,
+        }) }),
+    onSuccess: (_revision, args) => invalidateSettlementRevision(queryClient, args),
+  });
+};
+
+export const useApproveOffboardingSettlementRevision = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: SettlementRevisionArgs & { revisionId: number;
+      expectedRevisionVersion: number; expertReviewReference: string;
+      reviewNotes: string }) =>
+      apiFetch<OffboardingSettlementRevision>(
+        `${settlementRevisionUrl(args.employeeId, args.packageId,
+          args.remediationCaseId, args.offboardingCaseId)}/${args.revisionId}/approve`,
+        { method: "POST", body: JSON.stringify({
+          expectedRevisionVersion: args.expectedRevisionVersion,
+          expertReviewReference: args.expertReviewReference,
+          reviewNotes: args.reviewNotes,
+          confirmFinancialReview: true,
+          confirmExternalReconciliation: true,
+        }) }),
+    onSuccess: (_revision, args) => invalidateSettlementRevision(queryClient, args),
   });
 };
 

@@ -358,6 +358,77 @@ test("onaylı telafide açık bordro satırını önizler ve açık teyitle uygu
   expect(await screen.findByText(/Bu satıra telafi uygulandı/)).toBeInTheDocument();
 });
 
+test("pasif personelde ayrılış parasal taslağına erişir ve uzman teyidiyle onaya gönderir", async () => {
+  const routes = correctionRoutes(false);
+  const remuneration = routes["/api/employees/1/compensation-packages/2/remediation-case"];
+  const revisionUrl = "/api/employees/1/compensation-packages/2/remediation-case/11/offboarding/21/settlement-revisions";
+  const original = {
+    monthlyGrossSalarySnapshot: 50000, regularPremiumSnapshot: 0,
+    roadAllowanceSnapshot: 0, mealAllowanceSnapshot: 0,
+    otherRegularBenefitsSnapshot: 0, unusedLeaveDays: 2,
+    unusedLeavePayment: 1500, severancePayment: 0, noticePayment: 0,
+    totalPayment: 1500, settlementSource: "external-expert",
+    settlementReference: "İlk hesap", settlementNotes: null,
+  };
+  const draft = {
+    id: 31, revisionNumber: 1, version: 1, status: "draft",
+    remediationCaseId: 11, basedOnApprovedRevisionId: null,
+    values: { ...original, monthlyGrossSalarySnapshot: 52000,
+      unusedLeavePayment: 2000, totalPayment: 2000,
+      settlementReference: "Uzman hesap 31" },
+    reason: "Ücret görüntüsü hatalıydı.", openedByUserId: "ik-admin",
+    openedAtUtc: "2026-09-29T09:00:00Z", approvedByUserId: null,
+    approvedAtUtc: null, expertReviewReference: null, reviewNotes: null,
+  };
+  stubApi({ ...routes,
+    "/api/employees/1": { ...detail, status: "passive", terminationDate: "2026-09-28" },
+    "/api/employees/1/compensation-packages/2/remediation-case": {
+      ...remuneration, canOpen: false,
+      currentImpact: { potentialPayrollRows: [], offboardingCases: [{
+        caseId: 21, status: "completed", terminationDate: "2026-09-28",
+        grossSalarySnapshot: 50000,
+      }] },
+      case: {
+        id: 11, version: 2, status: "approved", packageVersion: 1,
+        issueDescription: "Ücret görüntüsü hatalıydı.", proposedEffectiveFrom: null,
+        proposedValues: { ...compensationPackage, monthlyGrossSalary: 52000 },
+        impactSnapshot: { potentialPayrollRows: [], offboardingCases: [] },
+        openedByUserId: "ik-admin", openedAtUtc: "2026-09-29T07:00:00Z",
+        reviewedByUserId: "ik-admin", reviewedAtUtc: "2026-09-29T08:00:00Z",
+        expertReviewReference: "Ücret incelemesi 11", reviewNotes: "Doğrulandı.",
+      },
+    },
+    [revisionUrl]: {
+      offboardingCaseId: 21, offboardingCaseVersion: 2, remediationCaseId: 11,
+      original, effective: original, draft, history: [], canOpen: false,
+      blockingReasons: ["Açık parasal düzeltme taslağını tamamlayın."],
+    },
+    [`${revisionUrl}/31/approve`]: { ...draft, status: "approved" },
+  });
+  renderModal(1, true);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  expect(await screen.findByRole("region", { name: "Parasal düzeltme taslağı" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Kaydetmeden önce kontrol et" })).not.toBeInTheDocument();
+  const approve = screen.getByRole("button", { name: "Yeni geçerli parasal sürümü onayla" });
+  expect(approve).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("Uzman son inceleme referansı"), "Son kontrol 31");
+  await userEvent.type(screen.getByLabelText("Uzman inceleme notu"), "Ödeme farkı ayrıca izlenecek.");
+  await userEvent.click(screen.getByRole("checkbox", { name: /Tutarları, hak edişi/ }));
+  await userEvent.click(screen.getByRole("checkbox", { name: /Dış ödeme ve bildirim farkını/ }));
+  await userEvent.click(approve);
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([url, init]) =>
+      String(url) === `${revisionUrl}/31/approve` && init?.method === "POST");
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      expectedRevisionVersion: 1, expertReviewReference: "Son kontrol 31",
+      reviewNotes: "Ödeme farkı ayrıca izlenecek.",
+      confirmFinancialReview: true, confirmExternalReconciliation: true,
+    });
+  });
+});
+
 test("ön kontrol form değişince geçersizleşir ve iptal edilebilir", async () => {
   renderModal(1);
   await screen.findByText("Personel Kartı — Ahmet Yılmaz");

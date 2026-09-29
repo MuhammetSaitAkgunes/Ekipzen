@@ -81,6 +81,7 @@ export function OffboardingModal({ employeeId, onClose }: {
   const context = contextQ.data;
   const currentCase = context?.currentCase as EmployeeOffboardingCaseDto | null | undefined;
   const completedCase = currentCase?.status === "completed" ? currentCase : null;
+  const effectiveSettlementRevision = context?.effectiveSettlementRevision;
   const directReportCount = context?.directReportCount ?? 0;
   const pendingLeaveCount = context?.pendingLeaveRequestCount ?? 0;
   const successors = context?.successors ?? [];
@@ -329,7 +330,7 @@ export function OffboardingModal({ employeeId, onClose }: {
           {context && completedCase && (
             <>
               <div className="notice-card">
-                <strong>Tamamlanmış süreç kaydı</strong>
+                <strong>İlk tamamlanan süreç ve hesap kaydı</strong>
                 <p>
                   {completedCase.settlementSource === "approved-rule-draft"
                     ? "Tutarlar onaylı kural sürümüyle taslaklandı ve insan onayıyla tamamlandı."
@@ -351,7 +352,24 @@ export function OffboardingModal({ employeeId, onClose }: {
                 <div><dt>Hesap referansı</dt><dd>{completedCase.settlementReference}</dd></div>
                 <div><dt>Hesap kaynağı</dt><dd>{completedCase.settlementSource}</dd></div>
               </dl>
+              {effectiveSettlementRevision?.values && <section className="ez-offboarding-review" aria-label="Geçerli düzeltilmiş parasal hesap">
+                <h4>Geçerli parasal hesap · sürüm #{effectiveSettlementRevision.revisionNumber}</h4>
+                <p>İlk tamamlanan hesap yukarıda korunur. Bu onaylı sürüm yalnız parasal tutarlarda geçerlidir; ayrılış tarihi, çıkış kodu ve personelin pasif durumu değişmedi.</p>
+                <dl className="offboarding-summary">
+                  <div><dt>Düzeltilmiş brüt ücret</dt><dd>{money.format(effectiveSettlementRevision.values.monthlyGrossSalarySnapshot ?? 0)}</dd></div>
+                  <div><dt>Kalan izin</dt><dd>{effectiveSettlementRevision.values.unusedLeaveDays} gün</dd></div>
+                  <div><dt>İzin ödemesi</dt><dd>{money.format(effectiveSettlementRevision.values.unusedLeavePayment ?? 0)}</dd></div>
+                  <div><dt>Kıdem</dt><dd>{money.format(effectiveSettlementRevision.values.severancePayment ?? 0)}</dd></div>
+                  <div><dt>İhbar</dt><dd>{money.format(effectiveSettlementRevision.values.noticePayment ?? 0)}</dd></div>
+                  <div><dt>Geçerli toplam</dt><dd>{money.format(effectiveSettlementRevision.values.totalPayment ?? 0)}</dd></div>
+                  <div><dt>Uzman hesap referansı</dt><dd>{effectiveSettlementRevision.values.settlementReference}</dd></div>
+                </dl>
+                <p>Dış ödeme ve bildirim farkı bu uygulama kaydıyla otomatik uzlaştırılmaz.</p>
+              </section>}
               <p><strong>Çıkış gerekçesi:</strong> {completedCase.exitReason}</p>
+              {context.hasSettlementRevisions && <p className="form-warning" role="status">
+                Parasal düzeltme geçmişi bulunduğu için otomatik işten çıkış geri alma kapalıdır.
+              </p>}
               {completedCase.identityProvisioningPending && (
                 <p className="form-warning" role="status">
                   Identity erişim/rol işlemlerinin bir bölümü yeniden deneme kuyruğunda.
@@ -360,7 +378,7 @@ export function OffboardingModal({ employeeId, onClose }: {
                     : ""}
                 </p>
               )}
-              <div className="input-group">
+              {!context.hasSettlementRevisions && <div className="input-group">
                 <label htmlFor="offboarding-reversal-reason">Geri alma gerekçesi</label>
                 <textarea
                   id="offboarding-reversal-reason"
@@ -370,8 +388,8 @@ export function OffboardingModal({ employeeId, onClose }: {
                   onChange={(event) => { setReversalReason(event.target.value); setReverseReview(false); }}
                   placeholder="Hatalı tarih, yanlış personel veya onay düzeltmesi"
                 />
-              </div>
-              {reverseReview && <section className="ez-offboarding-review" role="region" aria-label="Geri almadan önce kontrol edin">
+              </div>}
+              {!context.hasSettlementRevisions && reverseReview && <section className="ez-offboarding-review" role="region" aria-label="Geri almadan önce kontrol edin">
                 <h4>Geri almadan önce kontrol edin</h4>
                 <p><strong>Personel:</strong> {context.employeeName} · <strong>Dosya:</strong> #{completedCase.id} · <strong>Gerekçe:</strong> {reversalReason.trim()}</p>
                 <p>Sunucu, personel durumunu ve kapanan istihdam/ücret dönemini geri açmayı, değişmeyen ekip bağlarını geri kurmayı ve erişim işlemlerini kuyruğa almayı dener. Arada değişmiş kayıt varsa güvenli geri almayı reddeder.</p>
@@ -538,7 +556,7 @@ export function OffboardingModal({ employeeId, onClose }: {
 
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose} disabled={isBusy}>Vazgeç</button>
-          {completedCase ? (
+          {completedCase && !context?.hasSettlementRevisions ? (
             reverseReview ? <>
               <button className="btn btn-ghost" onClick={() => setReverseReview(false)} disabled={isBusy}>Bilgileri düzelt</button>
               <button className="btn btn-danger" onClick={reverseCompleted} disabled={isBusy}>
@@ -547,7 +565,7 @@ export function OffboardingModal({ employeeId, onClose }: {
             </> : <button className="btn btn-danger" onClick={prepareReverse} disabled={isBusy}>
               İşten çıkışı geri almayı gözden geçir
             </button>
-          ) : (
+          ) : completedCase ? null : (
             <>
               {!completionReview && !calculationLocked && activeRule && (
                 <button className="btn btn-secondary" onClick={calculateDraft}
