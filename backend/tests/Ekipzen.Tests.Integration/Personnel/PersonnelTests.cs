@@ -526,6 +526,90 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     }
 
     [Fact]
+    public async Task CompensationDateCorrection_UpdatesLastPackageAndBlocksAffectedHistory()
+    {
+        var auth = await LoginAsync("ik@hrmaster.local");
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departmentId, "Tarih", $"Duzeltme{Guid.NewGuid():N}");
+        foreach (var (date, gross) in new[] { ("2038-01-01", 40000m), ("2038-07-01", 50000m) })
+        {
+            (await admin.PostAsJsonAsync($"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = date, monthlyGrossSalary = gross,
+                regularPremium = 0m, roadAllowance = 0m, mealAllowance = 0m,
+                otherRegularBenefits = 0m, sourceReference = $"Karar {date}",
+            })).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        var foundation = await GetAsync<EmployeeEmploymentFoundationDto>(
+            admin, $"/api/employees/{employeeId}/employment-foundation");
+        var latest = foundation.CompensationPackages.Single(item => item.EffectiveFrom == new DateOnly(2038, 7, 1));
+        var previous = foundation.CompensationPackages.Single(item => item.EffectiveFrom == new DateOnly(2038, 1, 1));
+        previous.Version.Should().Be(2);
+        var previewUrl = $"/api/employees/{employeeId}/compensation-packages/{latest.Id}/date-correction-preview";
+        var correctionUrl = $"/api/employees/{employeeId}/compensation-packages/{latest.Id}/effective-date";
+        (await manager.PostAsJsonAsync(previewUrl, new { proposedEffectiveFrom = "2038-08-01" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var previewResponse = await admin.PostAsJsonAsync(previewUrl,
+            new { proposedEffectiveFrom = "2038-08-01" });
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = (await previewResponse.Content.ReadFromJsonAsync<CompensationDateCorrectionPreviewDto>())!;
+        preview.CanApply.Should().BeTrue();
+        preview.ProposedPreviousEffectiveTo.Should().Be(new DateOnly(2038, 7, 31));
+        var body = new
+        {
+            proposedEffectiveFrom = "2038-08-01", expectedPackageVersion = latest.Version,
+            expectedPreviousPackageId = (int?)previous.Id,
+            expectedPreviousPackageVersion = (int?)previous.Version,
+            reason = "Karardaki başlangıç ayı yanlış kaydedildi",
+        };
+        (await manager.PutAsJsonAsync(correctionUrl, body)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var correctedResponse = await admin.PutAsJsonAsync(correctionUrl, body);
+        correctedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var corrected = (await correctedResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!;
+        corrected.CompensationPackages.Single(item => item.Id == latest.Id)
+            .EffectiveFrom.Should().Be(new DateOnly(2038, 8, 1));
+        corrected.CompensationPackages.Single(item => item.Id == previous.Id)
+            .EffectiveTo.Should().Be(new DateOnly(2038, 7, 31));
+        corrected.CompensationPackages.Single(item => item.Id == latest.Id).Version.Should().Be(latest.Version + 1);
+        corrected.CompensationPackages.Single(item => item.Id == previous.Id).Version.Should().Be(previous.Version + 1);
+        (await admin.PutAsJsonAsync(correctionUrl, body)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        preview = (await (await admin.PostAsJsonAsync(previewUrl,
+            new { proposedEffectiveFrom = "2038-07-01" }))
+            .Content.ReadFromJsonAsync<CompensationDateCorrectionPreviewDto>())!;
+        preview.History.Should().ContainSingle(item => item.Reason == body.reason
+            && item.OldEffectiveFrom == new DateOnly(2038, 7, 1)
+            && item.NewEffectiveFrom == new DateOnly(2038, 8, 1));
+
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var settingsId = await db.PayrollSettings.Select(item => item.Id).FirstAsync();
+            foreach (var month in new[] { 7, 8 })
+            {
+                var period = new PayrollPeriod
+                {
+                    Name = $"Tarih düzeltme kontrol {month} {Guid.NewGuid():N}",
+                    Year = 2038, Month = month, PayrollSettingsId = settingsId,
+                };
+                period.Employees.Add(new PayrollEmployee { EmployeeId = employeeId });
+                db.PayrollPeriods.Add(period);
+            }
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        preview = (await (await admin.PostAsJsonAsync(previewUrl,
+            new { proposedEffectiveFrom = "2038-07-01" }))
+            .Content.ReadFromJsonAsync<CompensationDateCorrectionPreviewDto>())!;
+        preview.CanApply.Should().BeFalse();
+        preview.BlockingReasons.Should().Contain(reason => reason.Contains("Değişecek yürürlük aralığında bordro"));
+        preview.BlockingReasons.Should().Contain(reason => reason.Contains("Son paket bordro"));
+    }
+
+    [Fact]
     public async Task Rehire_StartsNewEmploymentPeriodWithoutOldLeaveBalanceLeak()
     {
         var adminAuth = await LoginAsync("ik@hrmaster.local");

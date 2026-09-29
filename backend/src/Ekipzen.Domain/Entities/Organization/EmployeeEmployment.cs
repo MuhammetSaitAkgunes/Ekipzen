@@ -79,3 +79,20 @@ public sealed class EmployeeCompensationRemediationCase : BaseEntity
     public string? ExpertReviewReference { get; set; }
     public string? ReviewNotes { get; set; }
 }
+
+/// <summary>Son ücret paketinin yürürlük tarihi değişikliğine ait kalıcı geçmiş.</summary>
+public sealed class EmployeeCompensationDateCorrection : BaseEntity
+{
+    public int CompensationPackageId { get; set; }
+    public EmployeeCompensationPackage? CompensationPackage { get; set; }
+    public int? PreviousPackageId { get; set; }
+    public DateOnly OldEffectiveFrom { get; set; }
+    public DateOnly NewEffectiveFrom { get; set; }
+    public DateOnly? OldPreviousEffectiveTo { get; set; }
+    public DateOnly? NewPreviousEffectiveTo { get; set; }
+    public int FromVersion { get; set; }
+    public int ToVersion { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public string ActorUserId { get; set; } = string.Empty;
+    public DateTime CorrectedAtUtc { get; set; }
+}

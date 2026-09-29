@@ -80,3 +80,19 @@ public sealed class EmployeeCompensationRemediationCaseConfiguration
             .HasForeignKey(item => item.CompensationPackageId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public sealed class EmployeeCompensationDateCorrectionConfiguration
+    : IEntityTypeConfiguration<EmployeeCompensationDateCorrection>
+{
+    public void Configure(EntityTypeBuilder<EmployeeCompensationDateCorrection> b)
+    {
+        b.Property(item => item.Reason).IsRequired().HasMaxLength(500);
+        b.Property(item => item.ActorUserId).IsRequired().HasMaxLength(450);
+        b.HasIndex(item => new { item.TenantId, item.CompensationPackageId, item.ToVersion })
+            .IsUnique();
+        b.HasOne(item => item.CompensationPackage).WithMany()
+            .HasForeignKey(item => item.CompensationPackageId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<EmployeeCompensationPackage>().WithMany()
+            .HasForeignKey(item => item.PreviousPackageId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

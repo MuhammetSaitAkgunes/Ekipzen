@@ -198,6 +198,27 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.MonthlyGrossSalary, body.RegularPremium, body.RoadAllowance,
             body.MealAllowance, body.OtherRegularBenefits, body.SourceReference);
 
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/date-correction-preview")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<CompensationDateCorrectionPreviewDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CompensationDateCorrectionPreviewDto>> PreviewCompensationDateCorrection(
+        int id, int packageId, PreviewCompensationDateCorrectionBody body,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new PreviewCompensationDateCorrectionQuery(
+            id, packageId, body.ProposedEffectiveFrom), cancellationToken));
+
+    [HttpPut("{id:int}/compensation-packages/{packageId:int}/effective-date")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<EmployeeEmploymentFoundationDto>> CorrectCompensationDate(
+        int id, int packageId, CorrectCompensationDateBody body,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new CorrectEmployeeCompensationDateCommand(
+            id, packageId, body.ProposedEffectiveFrom,
+            body.ExpectedPackageVersion, body.ExpectedPreviousPackageId,
+            body.ExpectedPreviousPackageVersion, body.Reason), cancellationToken));
+
     [HttpPost("{id:int}/rehire")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeEmploymentFoundationDto>(StatusCodes.Status200OK)]
@@ -398,6 +419,13 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record ApproveCompensationRemediationBody(
         int ExpectedCaseVersion, string ExpertReviewReference, string ReviewNotes,
         bool ConfirmExpertReview);
+
+    public sealed record PreviewCompensationDateCorrectionBody(DateOnly ProposedEffectiveFrom);
+
+    public sealed record CorrectCompensationDateBody(
+        DateOnly ProposedEffectiveFrom, int ExpectedPackageVersion,
+        int? ExpectedPreviousPackageId, int? ExpectedPreviousPackageVersion,
+        string Reason);
 
     public sealed record RehireEmployeeBody(DateOnly RehireDate, string ContractType);
 
