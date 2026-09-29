@@ -200,6 +200,16 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new PreviewCompensationPayrollApplicationQuery(
             id, packageId, caseId, periodId, rowId), cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<ApprovedCompensationPayrollImpactDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApprovedCompensationPayrollImpactDto>> GetApprovedCompensationPayrollImpact(
+        int id, int packageId, int caseId, int periodId, int rowId,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ReviewApprovedCompensationPayrollImpactQuery(
+            id, packageId, caseId, periodId, rowId), cancellationToken));
+
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/apply")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<CompensationPayrollApplicationDto>(StatusCodes.Status200OK)]

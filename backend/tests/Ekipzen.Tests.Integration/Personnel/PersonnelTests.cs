@@ -578,9 +578,27 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
                 EmployeeId = employeeId, GrossSalary = 40000m, PremiumPay = 1000m,
                 RoadAllowance = 200m, MealAllowance = 300m, BenefitPay = 400m,
                 ApprovalStatus = PayrollApprovalStatus.Approved,
+                StatutoryProfile = PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA,
+                Result = new PayrollResult
+                {
+                    GrossEarnings = 41900m, IncomeTaxBase = 35000m,
+                    IncomeTax = 5250m, NetPay = 30000m, EmployerCost = 51000m,
+                    CalculatedAtUtc = DateTime.UtcNow,
+                },
             };
             approvedPeriod.Employees.Add(approvedRow);
             db.PayrollPeriods.Add(approvedPeriod);
+            var laterPeriod = new PayrollPeriod
+            {
+                Name = $"Sonraki telafi bordro {Guid.NewGuid():N}", Year = 2040, Month = 4,
+                PayrollSettingsId = settingsId, Status = PayrollPeriodStatus.Approved,
+            };
+            laterPeriod.Employees.Add(new PayrollEmployee
+            {
+                EmployeeId = employeeId, GrossSalary = 40000m,
+                ApprovalStatus = PayrollApprovalStatus.Approved,
+            });
+            db.PayrollPeriods.Add(laterPeriod);
             await db.SaveChangesAsync(CancellationToken.None);
             periodId = period.Id;
             rowId = row.Id;
@@ -600,6 +618,9 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         openedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var opened = (await openedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
         var rowUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{periodId}/rows/{rowId}";
+        var approvedRowUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{approvedPeriodId}/rows/{approvedRowId}";
+        (await admin.GetAsync($"{approvedRowUrl}/approved-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
         var draftPreview = (await admin.GetFromJsonAsync<CompensationPayrollPreviewDto>(
             $"{rowUrl}/preview", payrollJsonOptions))!;
         draftPreview.CanApply.Should().BeFalse();
@@ -611,7 +632,29 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         });
         approvalResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var approvedRowUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{approvedPeriodId}/rows/{approvedRowId}";
+        var impact = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            $"{approvedRowUrl}/approved-impact", payrollJsonOptions))!;
+        impact.CanEstimate.Should().BeTrue();
+        impact.Recorded.NetPay.Should().Be(30000m);
+        impact.Hypothetical.Should().NotBeNull();
+        impact.LaterSameYearRows.Should().ContainSingle(item => item.Month == 4);
+        (await manager.GetAsync($"{approvedRowUrl}/approved-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var stored = await db.PayrollEmployees.Include(item => item.Result)
+                .SingleAsync(item => item.Id == approvedRowId);
+            stored.GrossSalary.Should().Be(40000m);
+            stored.Result!.NetPay.Should().Be(30000m);
+            stored.GrossSalary = 41000m;
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        var changedImpact = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            $"{approvedRowUrl}/approved-impact", payrollJsonOptions))!;
+        changedImpact.CanEstimate.Should().BeFalse();
+        changedImpact.ReviewWarnings.Should().Contain(reason => reason.Contains("değişti"));
         var approvedPreview = (await admin.GetFromJsonAsync<CompensationPayrollPreviewDto>(
             $"{approvedRowUrl}/preview", payrollJsonOptions))!;
         approvedPreview.CanApply.Should().BeFalse();
