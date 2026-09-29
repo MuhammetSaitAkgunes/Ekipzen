@@ -81,6 +81,19 @@ export type CompensationRemediationContext = {
   canOpen: boolean;
   case: CompensationRemediationCase | null;
 };
+type PayrollRowSchema = components["schemas"]["PayrollRowDto"];
+export type CompensationPayrollRow = PayrollRowSchema & Required<Pick<PayrollRowSchema,
+  "grossSalary" | "premiumPay" | "roadAllowance" | "mealAllowance" |
+  "benefitPay" | "grossEarnings" | "netPay">>;
+export type CompensationPayrollApplication = components["schemas"]["CompensationPayrollApplicationDto"] & {
+  id: number; before: CompensationPayrollRow; after: CompensationPayrollRow;
+  appliedAtUtc: string;
+};
+export type CompensationPayrollPreview = components["schemas"]["CompensationPayrollPreviewDto"] & {
+  canApply: boolean; blockingReasons: string[]; previewToken: string;
+  before: CompensationPayrollRow; after: CompensationPayrollRow | null;
+  application: CompensationPayrollApplication | null;
+};
 export type SaveCompensationRemediationBody = CompensationPackageValues & {
   expectedPackageVersion: number; expectedCaseVersion: number | null;
   issueDescription: string; proposedEffectiveFrom: string | null;
@@ -259,6 +272,35 @@ export const useApproveCompensationRemediationCase = () => {
         reviewNotes, confirmExpertReview: true }) }),
     onSuccess: (_case, { employeeId, packageId }) =>
       queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
+  });
+};
+
+const payrollRemediationUrl = (employeeId: number, packageId: number, caseId: number,
+  periodId: number, rowId: number) =>
+  `/employees/${employeeId}/compensation-packages/${packageId}/remediation-case/${caseId}`
+  + `/payroll-periods/${periodId}/rows/${rowId}`;
+
+export const usePreviewCompensationPayrollApplication = () => useMutation({
+  mutationFn: ({ employeeId, packageId, caseId, periodId, rowId }: {
+    employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+  }) => apiFetch<CompensationPayrollPreview>(
+    `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/preview`),
+});
+
+export const useApplyCompensationPayrollApplication = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId, expectedPreviewToken }: {
+      employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+      expectedPreviewToken: string;
+    }) => apiFetch<CompensationPayrollApplication>(
+      `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/apply`,
+      { method: "POST", body: JSON.stringify({ expectedPreviewToken, confirmSourceLink: true }) }),
+    onSuccess: (_application, { employeeId, packageId }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 

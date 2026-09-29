@@ -3,9 +3,13 @@ import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
   useApproveCompensationRemediationCase,
+  useApplyCompensationPayrollApplication,
   useCompensationRemediationContext,
+  usePreviewCompensationPayrollApplication,
   useSaveCompensationRemediationCase,
   type CompensationRemediationContext,
+  type CompensationPayrollApplication,
+  type CompensationPayrollPreview,
   type CompensationPackageValues,
 } from "./queries";
 
@@ -25,6 +29,7 @@ export function CompensationRemediationPanel({ employeeId, packageId }: {
   return <section aria-label="Ücret telafi incelemesi">
     <h4>Telafi inceleme dosyası</h4>
     <p>Bu dosya öneriyi ve etkilenmiş olabilecek kayıtları uzman incelemesine hazırlar. Onay, bordroyu, ayrılış hesabını veya ücret paketini değiştirmez; etkili düzeltme ayrı işlemdir.</p>
+    <p><strong>Neden ayrı işlem?</strong> Ücret farkı bordro hesabını ve yapılmış bildirimleri etkileyebilir. Bildirilmiş bir dönemde hata varsa düzeltme beyannamesi usulü ayrıca değerlendirilir (<a href="https://gib.gov.tr/mevzuat/kanun/433/teblig/6938" target="_blank" rel="noopener noreferrer">Muhtasar ve Prim Hizmet Beyannamesi Genel Tebliği, md. 12</a>). Bu ekrandaki işlem yalnız açık, onaysız bordro satırına uygulanır.</p>
     {contextQ.isPending && <p>Etkiler yükleniyor…</p>}
     {contextQ.isError && <p className="form-error">Telafi durumu yüklenemedi.</p>}
     {contextQ.data && <RemediationContent key={`${contextQ.data.case?.id ?? "new"}-${contextQ.data.case?.version ?? 0}`}
@@ -105,6 +110,9 @@ function RemediationContent({ context, employeeId, packageId }: {
     <ul>
       {context.currentImpact.potentialPayrollRows.map((row) => <li key={`payroll-${row.rowId}`}>
         {row.year}/{String(row.month).padStart(2, "0")} bordro satırı #{row.rowId} · {row.periodStatus}/{row.rowStatus} · kayıtlı brüt {currency.format(row.recordedGrossSalary)}
+        {current?.status === "approved" && <PayrollRemediationRow
+          employeeId={employeeId} packageId={packageId} caseId={current.id}
+          periodId={row.periodId} rowId={row.rowId} />}
       </li>)}
       {context.currentImpact.offboardingCases.map((item) => <li key={`offboarding-${item.caseId}`}>
         {item.terminationDate} ayrılış vakası #{item.caseId} · {item.status} · ücret görüntüsü {currency.format(item.grossSalarySnapshot)}
@@ -114,7 +122,7 @@ function RemediationContent({ context, employeeId, packageId }: {
     {current?.status === "approved" && <div role="status">
       <strong>Uzman incelemesi onaylandı.</strong> Referans: {current.expertReviewReference} · Onaylayan: {current.reviewedByUserId}
       <p>{current.reviewNotes}</p>
-      <p>Önerilen tutar ve tarih uygulanmadı; etkili düzeltme ayrı bir işlem olarak bekliyor.</p>
+      <p>İnceleme onayı finansal kayıtları tek başına değiştirmez. Uygun açık bordro satırı aşağıda ayrıca önizlenip uygulanabilir.</p>
     </div>}
     {(context.canOpen || current?.status === "draft") && current?.status !== "approved" && <>
       <div className="form-grid-2">
@@ -160,4 +168,77 @@ function RemediationContent({ context, employeeId, packageId }: {
     </>}
     {error && <p className="form-error" role="alert">{error}</p>}
   </>;
+}
+
+function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId }: {
+  employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+}) {
+  const { showToast } = useToast();
+  const previewMutation = usePreviewCompensationPayrollApplication();
+  const applyMutation = useApplyCompensationPayrollApplication();
+  const [preview, setPreview] = useState<CompensationPayrollPreview | null>(null);
+  const [applied, setApplied] = useState<CompensationPayrollApplication | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const args = { employeeId, packageId, caseId, periodId, rowId };
+
+  const loadPreview = async () => {
+    setError(null);
+    setConfirmed(false);
+    setPreview(null);
+    try {
+      setPreview(await previewMutation.mutateAsync(args));
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "Bordro telafisi önizlenemedi.");
+    }
+  };
+
+  const apply = async () => {
+    if (!preview?.canApply || !confirmed) return;
+    setError(null);
+    try {
+      const result = await applyMutation.mutateAsync({ ...args,
+        expectedPreviewToken: preview.previewToken });
+      setApplied(result);
+      setPreview(null);
+      showToast("Açık bordro satırına telafi uygulandı; satır tekrar kontrol ve onay bekliyor.", "success");
+    } catch (cause) {
+      setPreview(null);
+      setConfirmed(false);
+      setError(cause instanceof ApiError ? cause.message : "Bordro değişti; yeniden önizleyin.");
+    }
+  };
+
+  const application = applied ?? preview?.application;
+  return <div className="ez-compensation-review" aria-label={`Bordro satırı ${rowId} telafi uygulaması`}>
+    <button type="button" className="btn btn-secondary" onClick={loadPreview}
+      disabled={previewMutation.isPending || applyMutation.isPending}>
+      Satır #{rowId} için telafiyi önizle
+    </button>
+    {previewMutation.isPending && <p>Güncel bordro hesaplanıyor…</p>}
+    {preview && <>
+      {preview.blockingReasons.length > 0 && <ul>{preview.blockingReasons.map((reason) =>
+        <li key={reason}>{reason}</li>)}</ul>}
+      {preview.canApply && preview.after && <>
+        <p>Bu satır kaynak ücret paketinin düzenli tutarlarıyla eşleşiyor. Yalnız bu beş tutar değişecek; diğer bordro girdileri korunacak.</p>
+        <div className="ez-compensation-table-scroll"><table><thead><tr><th>Alan</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>
+          {([
+            ["Brüt maaş", "grossSalary"], ["Düzenli prim", "premiumPay"],
+            ["Yol yardımı", "roadAllowance"], ["Yemek yardımı", "mealAllowance"],
+            ["Diğer düzenli yan hak", "benefitPay"], ["Brüt kazanç", "grossEarnings"],
+            ["Net ödeme", "netPay"],
+          ] as const).map(([label, key]) => <tr key={key}><td>{label}</td>
+            <td>{currency.format(preview.before[key])}</td>
+            <td>{currency.format(preview.after![key])}</td></tr>)}
+        </tbody></table></div>
+        <p>Uygulamadan sonra bordro satırı yeniden kontrol ve onay sürecinden geçer. Ücret paketinin kendisi ve onaylı geçmiş kayıtlar değişmez.</p>
+        <label><input type="checkbox" checked={confirmed}
+          onChange={(event) => setConfirmed(event.target.checked)} /> Kaynak belgeyle bu bordro satırının bu ücret paketinden üretildiğini doğruladım; önizlenen tutarları uyguluyorum.</label>
+        <button type="button" className="btn btn-primary" onClick={apply}
+          disabled={!confirmed || applyMutation.isPending}>Önizlenen telafiyi uygula</button>
+      </>}
+    </>}
+    {application && <p role="status">Bu satıra telafi uygulandı: kayıt #{application.id} · {application.appliedAtUtc}</p>}
+    {error && <p className="form-error" role="alert">{error}</p>}
+  </div>;
 }

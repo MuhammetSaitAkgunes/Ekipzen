@@ -2484,6 +2484,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationPayrollPreviewDto"];
+                        "application/json": components["schemas"]["CompensationPayrollPreviewDto"];
+                        "text/json": components["schemas"]["CompensationPayrollPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApplyCompensationPayrollBody"];
+                    "text/json": components["schemas"]["ApplyCompensationPayrollBody"];
+                    "application/*+json": components["schemas"]["ApplyCompensationPayrollBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationPayrollApplicationDto"];
+                        "application/json": components["schemas"]["CompensationPayrollApplicationDto"];
+                        "text/json": components["schemas"]["CompensationPayrollApplicationDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/compensation-packages/{packageId}/date-correction-preview": {
         parameters: {
             query?: never;
@@ -6843,6 +6946,10 @@ export interface components {
             priority?: string | null;
             recommendedAction?: string | null;
         };
+        ApplyCompensationPayrollBody: {
+            expectedPreviewToken?: string | null;
+            confirmSourceLink?: boolean;
+        };
         ApproveCompensationRemediationBody: {
             /** Format: int32 */
             expectedCaseVersion?: number;
@@ -7111,6 +7218,19 @@ export interface components {
             otherRegularBenefits?: number;
             sourceReference?: string | null;
         };
+        CompensationPayrollApplicationDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            remediationCaseId?: number;
+            /** Format: int32 */
+            payrollRowId?: number;
+            before?: components["schemas"]["PayrollRowDto"];
+            after?: components["schemas"]["PayrollRowDto"];
+            actorUserId?: string | null;
+            /** Format: date-time */
+            appliedAtUtc?: string;
+        };
         CompensationPayrollImpactDto: {
             /** Format: int32 */
             rowId?: number;
@@ -7124,6 +7244,18 @@ export interface components {
             rowStatus?: string | null;
             /** Format: double */
             recordedGrossSalary?: number;
+        };
+        CompensationPayrollPreviewDto: {
+            /** Format: int32 */
+            rowId?: number;
+            /** Format: int32 */
+            periodId?: number;
+            canApply?: boolean;
+            blockingReasons?: string[] | null;
+            previewToken?: string | null;
+            before?: components["schemas"]["PayrollRowDto"];
+            after?: components["schemas"]["PayrollRowDto"];
+            application?: components["schemas"]["CompensationPayrollApplicationDto"];
         };
         CompensationRemediationCaseDto: {
             /** Format: int32 */

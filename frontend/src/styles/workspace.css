@@ -560,6 +560,10 @@
 .ez-document-review h4, .ez-compensation-review h4 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
 .ez-document-review p, .ez-compensation-review p { max-width: 74ch; margin: 8px 0; color: var(--text); line-height: 1.5; }
 .ez-document-review strong, .ez-compensation-review strong { color: var(--ink); }
+.ez-compensation-table-scroll { overflow-x: auto; }
+.ez-compensation-table-scroll table { width: 100%; min-width: 420px; border-collapse: collapse; margin: 12px 0; }
+.ez-compensation-table-scroll th, .ez-compensation-table-scroll td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+.ez-compensation-table-scroll th:first-child, .ez-compensation-table-scroll td:first-child { text-align: left; }
 .ez-document-review-actions, .ez-compensation-review-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
 .ez-hire-guide { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }

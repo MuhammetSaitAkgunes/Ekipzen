@@ -308,6 +308,56 @@ test("aynı İK yöneticisi uzman referansıyla telafi incelemesini onaylar", as
   });
 });
 
+test("onaylı telafide açık bordro satırını önizler ve açık teyitle uygular", async () => {
+  const routes = correctionRoutes(false);
+  const remediation = routes["/api/employees/1/compensation-packages/2/remediation-case"];
+  const rowUrl = "/api/employees/1/compensation-packages/2/remediation-case/11/payroll-periods/7/rows/9";
+  const before = { grossSalary: 50000, premiumPay: 0, roadAllowance: 0,
+    mealAllowance: 0, benefitPay: 0, grossEarnings: 50000, netPay: 35000,
+    approvalStatus: "precalc" };
+  const after = { ...before, grossSalary: 52000, grossEarnings: 52000, netPay: 36300 };
+  stubApi({ ...routes,
+    "/api/employees/1/compensation-packages/2/remediation-case": {
+      ...remediation, canOpen: false,
+      case: {
+        id: 11, version: 3, status: "approved", packageVersion: 1,
+        issueDescription: "Yanlış brüt ücret", proposedEffectiveFrom: null,
+        proposedValues: { ...compensationPackage, monthlyGrossSalary: 52000 },
+        impactSnapshot: remediation.currentImpact,
+        openedByUserId: "ik-admin", openedAtUtc: "2026-09-29T07:00:00Z",
+        reviewedByUserId: "ik-admin", reviewedAtUtc: "2026-09-29T08:00:00Z",
+        expertReviewReference: "Uzman raporu 43", reviewNotes: "Satır doğrulandı.",
+      },
+    },
+    [`${rowUrl}/preview`]: {
+      rowId: 9, periodId: 7, canApply: true, blockingReasons: [],
+      previewToken: "a".repeat(64), before, after, application: null,
+    },
+    [`${rowUrl}/apply`]: {
+      id: 12, remediationCaseId: 11, payrollRowId: 9, before, after,
+      actorUserId: "ik-admin", appliedAtUtc: "2026-09-29T09:00:00Z",
+    },
+  });
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  await userEvent.click(await screen.findByRole("button", { name: "Satır #9 için telafiyi önizle" }));
+  expect(await screen.findByText("Net ödeme")).toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Önizlenen telafiyi uygula" });
+  expect(apply).toBeDisabled();
+  await userEvent.click(screen.getByRole("checkbox", { name: /Kaynak belgeyle bu bordro satırının/ }));
+  await userEvent.click(apply);
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([u, i]) =>
+      String(u).endsWith(`${rowUrl}/apply`) && i?.method === "POST");
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      expectedPreviewToken: "a".repeat(64), confirmSourceLink: true,
+    });
+  });
+  expect(await screen.findByText(/Bu satıra telafi uygulandı/)).toBeInTheDocument();
+});
+
 test("ön kontrol form değişince geçersizleşir ve iptal edilebilir", async () => {
   renderModal(1);
   await screen.findByText("Personel Kartı — Ahmet Yılmaz");
