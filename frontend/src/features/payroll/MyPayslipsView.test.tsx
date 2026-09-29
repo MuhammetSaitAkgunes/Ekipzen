@@ -45,7 +45,7 @@ test("düzeltme sürümünde ilk onaylı pusula da indirilebilir", async () => {
     "/api/payroll/periods/1/rows/11/payslip?original=true": {} });
   vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() });
   renderView();
-  expect(await screen.findByText("Geçerli düzeltme sürümü")).toBeInTheDocument();
+  expect(await screen.findByText(/Geçerli düzeltme sürümü · dış ödeme ve bildirim/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", {
     name: "Haziran 2026 ilk onaylı bordro pusulasını indir",
   }));

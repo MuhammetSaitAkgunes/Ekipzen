@@ -57,7 +57,7 @@ export function MyPayslipsView() {
           <tbody>
             {slips.map((slip) => (
               <tr key={slip.rowId}>
-                <td><strong>{slip.periodName}</strong>{slip.hasRevision && <small>Geçerli düzeltme sürümü</small>}</td>
+                <td><strong>{slip.periodName}</strong>{slip.hasRevision && <small>Geçerli düzeltme sürümü · dış ödeme ve bildirim bu ekranda doğrulanmaz</small>}</td>
                 <td>{formatPayrollMoney(slip.grossEarnings)}</td>
                 <td>{formatPayrollMoney(slip.totalDeductions)}</td>
                 <td><strong>{formatPayrollMoney(slip.netPay)}</strong></td>
