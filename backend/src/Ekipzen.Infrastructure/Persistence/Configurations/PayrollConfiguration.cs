@@ -104,3 +104,21 @@ public sealed class PayrollApprovedRowRevisionConfiguration
             .HasForeignKey(item => item.RemediationCaseId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public sealed class PayrollApprovedRowExternalActionRecordConfiguration
+    : IEntityTypeConfiguration<PayrollApprovedRowExternalActionRecord>
+{
+    public void Configure(EntityTypeBuilder<PayrollApprovedRowExternalActionRecord> builder)
+    {
+        builder.Property(item => item.Kind).IsRequired().HasMaxLength(24);
+        builder.Property(item => item.Outcome).IsRequired().HasMaxLength(24);
+        builder.Property(item => item.ResponsibleName).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.EvidenceReference).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.Notes).IsRequired().HasMaxLength(2000);
+        builder.Property(item => item.RecordedByUserId).IsRequired().HasMaxLength(450);
+        builder.Property(item => item.RecordedAmount).HasPrecision(18, 4);
+        builder.HasIndex(item => new { item.TenantId, item.RevisionId, item.Kind, item.Id });
+        builder.HasOne(item => item.Revision).WithMany()
+            .HasForeignKey(item => item.RevisionId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

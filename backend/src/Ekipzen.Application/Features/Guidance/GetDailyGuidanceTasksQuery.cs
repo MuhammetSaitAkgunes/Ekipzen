@@ -159,6 +159,51 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 }
             }
 
+            var currentPayrollRevisions = await context.PayrollApprovedRowRevisions.AsNoTracking()
+                .Where(revision => revision.PayrollRow!.ApprovalStatus == PayrollApprovalStatus.Approved
+                    && (revision.PayrollRow.Period!.Status == PayrollPeriodStatus.Approved
+                        || revision.PayrollRow.Period.Status == PayrollPeriodStatus.Closed)
+                    && !context.PayrollApprovedRowRevisions.Any(newer =>
+                        newer.PayrollRowId == revision.PayrollRowId
+                        && newer.RevisionNumber > revision.RevisionNumber))
+                .Select(revision => new {
+                    revision.Id, revision.RevisionNumber, revision.PayrollRowId,
+                    revision.PayrollRow!.EmployeeId,
+                    revision.PayrollRow.Employee!.FirstName,
+                    revision.PayrollRow.Employee.LastName,
+                    revision.PayrollRow.Period!.Year,
+                    revision.PayrollRow.Period.Month,
+                }).ToListAsync(ct);
+            var payrollRevisionIds = currentPayrollRevisions.Select(revision => revision.Id).ToList();
+            var payrollExternalRecords = await context.PayrollApprovedRowExternalActionRecords
+                .AsNoTracking()
+                .Where(record => payrollRevisionIds.Contains(record.RevisionId))
+                .Select(record => new { record.Id, record.RevisionId, record.Kind, record.Outcome })
+                .ToListAsync(ct);
+            var closedPayrollKinds = payrollExternalRecords
+                .GroupBy(record => new { record.RevisionId, record.Kind })
+                .Select(group => group.MaxBy(record => record.Id)!)
+                .Where(record => record.Outcome is "completed" or "not-required")
+                .Select(record => $"{record.RevisionId}:{record.Kind}")
+                .ToHashSet();
+            foreach (var revision in currentPayrollRevisions)
+            {
+                foreach (var kind in new[] { "payment", "notification" })
+                {
+                    if (closedPayrollKinds.Contains($"{revision.Id}:{kind}")) continue;
+                    var label = kind == "payment" ? "ödeme" : "bildirim";
+                    tasks.Add(new DailyGuidanceTaskDto(
+                        $"payroll-revision-external-{kind}:{revision.Id}",
+                        $"payroll-revision-external-{kind}", revision.Id,
+                        $"{revision.FirstName} {revision.LastName} bordro düzeltmesi {label} kanıtını incele",
+                        $"{revision.Year}/{revision.Month:00} bordrosunun parasal sürüm #{revision.RevisionNumber} için dış {label} sonucu henüz kanıtla kapatılmadı.",
+                        $"Personelin mali bilgilerindeki bordro etki dosyasını açın; dış {label} sonucunu sorumlu ve belge referansıyla kaydedin.",
+                        null,
+                        "Bu dış işlem için uygulamada güvenilir son tarih kayıtlı değil.",
+                        $"/personnel/{revision.EmployeeId}?tab=tab-mali"));
+                }
+            }
+
             var periods = await sender.Send(new GetPayrollPeriodsQuery(), ct);
             tasks.AddRange(periods
                 .Where(period => period.Status is "draft" or "control")
@@ -194,7 +239,8 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 "compliance-document" => 0,
                 "leave-approval" => 1,
                 "offboarding-case" => 2,
-                "offboarding-external-payment" or "offboarding-external-notification" => 3,
+                "offboarding-external-payment" or "offboarding-external-notification"
+                    or "payroll-revision-external-payment" or "payroll-revision-external-notification" => 3,
                 "employee-compensation" => 4,
                 "payroll-period" => 5,
                 _ => 6,

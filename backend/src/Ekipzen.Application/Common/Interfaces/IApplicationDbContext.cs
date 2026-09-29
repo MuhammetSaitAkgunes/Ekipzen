@@ -53,6 +53,7 @@ public interface IApplicationDbContext
     DbSet<PayrollEmployee> PayrollEmployees { get; }
     DbSet<PayrollResult> PayrollResults { get; }
     DbSet<PayrollApprovedRowRevision> PayrollApprovedRowRevisions { get; }
+    DbSet<PayrollApprovedRowExternalActionRecord> PayrollApprovedRowExternalActionRecords { get; }
     DbSet<Domain.ReadModels.PayrollPeriodSummary> PayrollPeriodSummaries { get; }
 
     // Recruitment

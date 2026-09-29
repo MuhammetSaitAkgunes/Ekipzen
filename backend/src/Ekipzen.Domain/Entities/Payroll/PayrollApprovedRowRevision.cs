@@ -19,3 +19,20 @@ public sealed class PayrollApprovedRowRevision : AuditableEntity
     public string ApprovedByUserId { get; set; } = string.Empty;
     public DateTime ApprovedAtUtc { get; set; }
 }
+
+/// <summary>Onaylı bordro parasal sürümüne ilişkin dış işlem kanıtı; geçmiş kayıtlar değişmez.</summary>
+public sealed class PayrollApprovedRowExternalActionRecord : BaseEntity
+{
+    public int RevisionId { get; set; }
+    public PayrollApprovedRowRevision? Revision { get; set; }
+    public string Kind { get; set; } = string.Empty;
+    public string Outcome { get; set; } = string.Empty;
+    public int? PreviousRecordId { get; set; }
+    public string ResponsibleName { get; set; } = string.Empty;
+    public string EvidenceReference { get; set; } = string.Empty;
+    public DateOnly? ActionDate { get; set; }
+    public decimal? RecordedAmount { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string RecordedByUserId { get; set; } = string.Empty;
+    public DateTime RecordedAtUtc { get; set; }
+}

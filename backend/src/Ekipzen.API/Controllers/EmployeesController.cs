@@ -222,6 +222,27 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.ExpertReviewReference, body.ReviewNotes,
             body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/revisions/{revisionId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<PayrollRevisionExternalReconciliationDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<PayrollRevisionExternalReconciliationDto>> GetPayrollRevisionExternalReconciliation(
+        int id, int packageId, int caseId, int periodId, int rowId, int revisionId,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetPayrollRevisionExternalReconciliationQuery(
+            id, packageId, caseId, periodId, rowId, revisionId), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/revisions/{revisionId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<PayrollRevisionExternalActionDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<PayrollRevisionExternalActionDto>> RecordPayrollRevisionExternalAction(
+        int id, int packageId, int caseId, int periodId, int rowId, int revisionId,
+        RecordOffboardingExternalActionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new RecordPayrollRevisionExternalActionCommand(
+            id, packageId, caseId, periodId, rowId, revisionId,
+            body.Kind, body.Outcome, body.ResponsibleName, body.EvidenceReference,
+            body.ActionDate, body.RecordedAmount, body.Notes,
+            body.ExpectedLatestRecordId, body.ConfirmRecordedStatus), cancellationToken));
+
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/apply")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<CompensationPayrollApplicationDto>(StatusCodes.Status200OK)]

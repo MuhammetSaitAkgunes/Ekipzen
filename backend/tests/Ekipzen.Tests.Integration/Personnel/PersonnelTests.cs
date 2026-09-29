@@ -899,6 +899,71 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         originalPdf.Content.Headers.ContentDisposition!.FileName.Should().Contain("ilk-onay");
         (await admin.GetAsync($"/api/payroll/periods/{periodId}/rows/{rowId}/payslip"))
             .StatusCode.Should().Be(HttpStatusCode.OK);
+        var externalUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{periodId}/rows/{rowId}"
+            + $"/revisions/{revision.Id}/external-reconciliation";
+        (await manager.GetAsync(externalUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.GetAsync(externalUrl.Replace($"/rows/{rowId}/", "/rows/999999/")))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var initialExternal = await GetAsync<PayrollRevisionExternalReconciliationDto>(admin, externalUrl);
+        initialExternal.Payment.Should().BeNull();
+        initialExternal.Notification.Should().BeNull();
+        initialExternal.CalculatedNetDifference.Should().Be(revision.After.NetPay - revision.Before.NetPay);
+        var paymentKey = $"payroll-revision-external-payment:{revision.Id}";
+        var notificationKey = $"payroll-revision-external-notification:{revision.Id}";
+        var tasks = await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks");
+        tasks.Should().ContainSingle(item => item.Key == paymentKey);
+        tasks.Should().ContainSingle(item => item.Key == notificationKey);
+        (await GetAsync<List<DailyGuidanceTaskDto>>(manager, "/api/guidance/daily-tasks"))
+            .Should().NotContain(item => item.Key == paymentKey || item.Key == notificationKey);
+
+        var invalid = await admin.PostAsJsonAsync(externalUrl, new {
+            kind = "payment", outcome = "completed", responsibleName = "Muhasebe",
+            evidenceReference = "", actionDate = "2041-09-01", recordedAmount = 1200m,
+            notes = "Ödeme kontrolü", expectedLatestRecordId = (int?)null,
+            confirmRecordedStatus = true,
+        });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var pendingResponse = await admin.PostAsJsonAsync(externalUrl, new {
+            kind = "payment", outcome = "pending", responsibleName = "Muhasebe",
+            evidenceReference = "", actionDate = (string?)null, recordedAmount = (decimal?)null,
+            notes = "Banka teyidi bekleniyor", expectedLatestRecordId = (int?)null,
+            confirmRecordedStatus = true,
+        });
+        pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pending = (await pendingResponse.Content.ReadFromJsonAsync<PayrollRevisionExternalActionDto>())!;
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
+            .Should().Contain(item => item.Key == paymentKey);
+        var completedResponse = await admin.PostAsJsonAsync(externalUrl, new {
+            kind = "payment", outcome = "completed", responsibleName = "Muhasebe",
+            evidenceReference = "Banka-2041-08", actionDate = "2041-09-01",
+            recordedAmount = 1200m, notes = "Gerçek ödeme bankada teyit edildi",
+            expectedLatestRecordId = pending.Id, confirmRecordedStatus = true,
+        });
+        completedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var completed = (await completedResponse.Content.ReadFromJsonAsync<PayrollRevisionExternalActionDto>())!;
+        completed.PreviousRecordId.Should().Be(pending.Id);
+        (await admin.PostAsJsonAsync(externalUrl, new {
+            kind = "payment", outcome = "pending", responsibleName = "Muhasebe",
+            evidenceReference = "", actionDate = (string?)null, recordedAmount = (decimal?)null,
+            notes = "Eski ekran", expectedLatestRecordId = pending.Id,
+            confirmRecordedStatus = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var afterPayment = await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks");
+        afterPayment.Should().NotContain(item => item.Key == paymentKey);
+        afterPayment.Should().ContainSingle(item => item.Key == notificationKey);
+        var notificationResponse = await admin.PostAsJsonAsync(externalUrl, new {
+            kind = "notification", outcome = "not-required", responsibleName = "Mali müşavir",
+            evidenceReference = "Uzman görüşü-2041-08", actionDate = (string?)null,
+            recordedAmount = (decimal?)null, notes = "Bildirim gerekmeme gerekçesi incelendi",
+            expectedLatestRecordId = (int?)null, confirmRecordedStatus = true,
+        });
+        notificationResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var reconciled = await GetAsync<PayrollRevisionExternalReconciliationDto>(admin, externalUrl);
+        reconciled.History.Should().HaveCount(3);
+        reconciled.Payment!.Id.Should().Be(completed.Id);
+        reconciled.Notification!.Outcome.Should().Be("not-required");
+        (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
+            .Should().NotContain(item => item.Key == paymentKey || item.Key == notificationKey);
         using var verifyScope = factory.Services.GetRequiredService<ITenantScopeFactory>()
             .Create(auth.User.TenantId);
         var verifyDb = verifyScope.Services.GetRequiredService<IApplicationDbContext>();
