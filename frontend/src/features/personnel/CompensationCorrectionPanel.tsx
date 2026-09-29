@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { CompensationRemediationPanel } from "./CompensationRemediationPanel";
+import { CompensationDateCorrectionPanel } from "./CompensationDateCorrectionPanel";
 import {
   useCompensationCorrectionContext,
   useCorrectCompensationPackage,
@@ -124,5 +125,7 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
         <br />Kaynak: {item.before.sourceReference} → {item.after.sourceReference}
       </p>)}
     </details>
+    <CompensationDateCorrectionPanel employeeId={employeeId} packageId={packageId}
+      currentPackage={context.package} onSaved={onClose} />
   </>;
 }

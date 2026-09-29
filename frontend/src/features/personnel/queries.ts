@@ -85,6 +85,18 @@ export type SaveCompensationRemediationBody = CompensationPackageValues & {
   expectedPackageVersion: number; expectedCaseVersion: number | null;
   issueDescription: string; proposedEffectiveFrom: string | null;
 };
+export type CompensationDateCorrectionPreview = {
+  package: CompensationCorrectionContext["package"];
+  previousPackage: (CompensationCorrectionContext["package"] & { effectiveTo: string | null }) | null;
+  proposedEffectiveFrom: string;
+  proposedPreviousEffectiveTo: string | null;
+  canApply: boolean;
+  blockingReasons: string[];
+  history: Array<{ oldEffectiveFrom: string; newEffectiveFrom: string;
+    oldPreviousEffectiveTo: string | null; newPreviousEffectiveTo: string | null;
+    fromVersion: number; toVersion: number; reason: string;
+    actorUserId: string; correctedAtUtc: string }>;
+};
 export type RehireEmployeeBody = components["schemas"]["RehireEmployeeBody"];
 
 export type EmployeeFilters = { search: string; departmentId: string; status: string; page?: number };
@@ -247,6 +259,35 @@ export const useApproveCompensationRemediationCase = () => {
         reviewNotes, confirmExpertReview: true }) }),
     onSuccess: (_case, { employeeId, packageId }) =>
       queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
+  });
+};
+
+export const usePreviewCompensationDateCorrection = () =>
+  useMutation({
+    mutationFn: ({ employeeId, packageId, proposedEffectiveFrom }: {
+      employeeId: number; packageId: number; proposedEffectiveFrom: string;
+    }) => apiFetch<CompensationDateCorrectionPreview>(
+      `/employees/${employeeId}/compensation-packages/${packageId}/date-correction-preview`,
+      { method: "POST", body: JSON.stringify({ proposedEffectiveFrom }) }),
+  });
+
+export const useCorrectCompensationDate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, proposedEffectiveFrom, expectedPackageVersion,
+      expectedPreviousPackageId, expectedPreviousPackageVersion, reason }: {
+      employeeId: number; packageId: number; proposedEffectiveFrom: string;
+      expectedPackageVersion: number; expectedPreviousPackageId: number | null;
+      expectedPreviousPackageVersion: number | null; reason: string;
+    }) => apiFetch<EmployeeEmploymentFoundationDto>(
+      `/employees/${employeeId}/compensation-packages/${packageId}/effective-date`,
+      { method: "PUT", body: JSON.stringify({ proposedEffectiveFrom, expectedPackageVersion,
+        expectedPreviousPackageId, expectedPreviousPackageVersion, reason }) }),
+    onSuccess: (_foundation, { employeeId }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "compensation-packages"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
   });
 };
 

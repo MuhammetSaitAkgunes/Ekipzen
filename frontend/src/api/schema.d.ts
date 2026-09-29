@@ -2484,6 +2484,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/date-correction-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PreviewCompensationDateCorrectionBody"];
+                    "text/json": components["schemas"]["PreviewCompensationDateCorrectionBody"];
+                    "application/*+json": components["schemas"]["PreviewCompensationDateCorrectionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CompensationDateCorrectionPreviewDto"];
+                        "application/json": components["schemas"]["CompensationDateCorrectionPreviewDto"];
+                        "text/json": components["schemas"]["CompensationDateCorrectionPreviewDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/effective-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CorrectCompensationDateBody"];
+                    "text/json": components["schemas"]["CorrectCompensationDateBody"];
+                    "application/*+json": components["schemas"]["CorrectCompensationDateBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "application/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                        "text/json": components["schemas"]["EmployeeEmploymentFoundationDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/rehire": {
         parameters: {
             query?: never;
@@ -6939,6 +7042,35 @@ export interface components {
             headquartersAddress?: string | null;
             logoPath?: string | null;
         };
+        CompensationDateCorrectionDto: {
+            /** Format: date */
+            oldEffectiveFrom?: string;
+            /** Format: date */
+            newEffectiveFrom?: string;
+            /** Format: date */
+            oldPreviousEffectiveTo?: string | null;
+            /** Format: date */
+            newPreviousEffectiveTo?: string | null;
+            /** Format: int32 */
+            fromVersion?: number;
+            /** Format: int32 */
+            toVersion?: number;
+            reason?: string | null;
+            actorUserId?: string | null;
+            /** Format: date-time */
+            correctedAtUtc?: string;
+        };
+        CompensationDateCorrectionPreviewDto: {
+            package?: components["schemas"]["EmployeeCompensationPackageDto"];
+            previousPackage?: components["schemas"]["EmployeeCompensationPackageDto"];
+            /** Format: date */
+            proposedEffectiveFrom?: string;
+            /** Format: date */
+            proposedPreviousEffectiveTo?: string | null;
+            canApply?: boolean;
+            blockingReasons?: string[] | null;
+            history?: components["schemas"]["CompensationDateCorrectionDto"][] | null;
+        };
         CompensationOffboardingImpactDto: {
             /** Format: int32 */
             caseId?: number;
@@ -7104,6 +7236,17 @@ export interface components {
             /** Format: date */
             dueDate?: string | null;
             level?: string | null;
+        };
+        CorrectCompensationDateBody: {
+            /** Format: date */
+            proposedEffectiveFrom?: string;
+            /** Format: int32 */
+            expectedPackageVersion?: number;
+            /** Format: int32 */
+            expectedPreviousPackageId?: number | null;
+            /** Format: int32 */
+            expectedPreviousPackageVersion?: number | null;
+            reason?: string | null;
         };
         CorrectCompensationPackageBody: {
             /** Format: int32 */
@@ -8157,6 +8300,10 @@ export interface components {
             entryId?: number | null;
             model?: components["schemas"]["AttendanceEntryModel"];
             expectedRevision?: string | null;
+        };
+        PreviewCompensationDateCorrectionBody: {
+            /** Format: date */
+            proposedEffectiveFrom?: string;
         };
         PreviewLeaveRequestQuery: {
             /** Format: int32 */

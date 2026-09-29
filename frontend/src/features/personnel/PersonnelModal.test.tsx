@@ -39,6 +39,17 @@ const correctionRoutes = (canCorrect: boolean) => ({
       recordedGrossSalary: 50000 }] : [], offboardingCases: [] },
   },
   "/api/employees/1/compensation-packages/2": { employeeId: 1, compensationPackages: [compensationPackage] },
+  "/api/employees/1/compensation-packages/2/date-correction-preview": {
+    package: compensationPackage, previousPackage: {
+      ...compensationPackage, id: 1, version: 2,
+      effectiveFrom: "2026-01-01", effectiveTo: "2026-08-31",
+    },
+    proposedEffectiveFrom: "2026-10-01", proposedPreviousEffectiveTo: "2026-09-30",
+    canApply: true, blockingReasons: [], history: [],
+  },
+  "/api/employees/1/compensation-packages/2/effective-date": {
+    employeeId: 1, compensationPackages: [{ ...compensationPackage, effectiveFrom: "2026-10-01" }],
+  },
 });
 
 beforeEach(() => {
@@ -175,6 +186,54 @@ test("kullanılmamış pakette düzeltmeyi gerekçe ve sürümle onaya sunar", a
       reason: "Kaynak yazıdaki rakam yanlış okunmuştu.",
     });
   });
+});
+
+test("son paketin tarih düzeltmesini sunucu önizlemesinden sonra gönderir", async () => {
+  stubApi(correctionRoutes(true));
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  const date = await screen.findByLabelText("Önerilen yeni yürürlük tarihi");
+  await userEvent.clear(date);
+  await userEvent.type(date, "2026-10-01");
+  await userEvent.type(screen.getByLabelText("Tarih düzeltme gerekçesi"), "Karardaki ay yanlış girildi.");
+  await userEvent.click(screen.getByRole("button", { name: "Tarih etkisini önizle" }));
+  expect(await screen.findByRole("region", { name: "Tarih düzeltme önizlemesi" })).toHaveTextContent("2026-09-30");
+  expect(vi.mocked(fetch).mock.calls.some(([u, i]) =>
+    String(u).endsWith("/effective-date") && i?.method === "PUT")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Tarih düzeltmesini onayla ve kaydet" }));
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([u, i]) =>
+      String(u).endsWith("/effective-date") && i?.method === "PUT");
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      proposedEffectiveFrom: "2026-10-01", expectedPackageVersion: 1,
+      expectedPreviousPackageId: 1, expectedPreviousPackageVersion: 2,
+      reason: "Karardaki ay yanlış girildi.",
+    });
+  });
+});
+
+test("tarih önizlemesi bordro etkisini kilitlerse kaydetme sunmaz", async () => {
+  const routes = correctionRoutes(false);
+  stubApi({ ...routes,
+    "/api/employees/1/compensation-packages/2/date-correction-preview": {
+      ...routes["/api/employees/1/compensation-packages/2/date-correction-preview"],
+      canApply: false,
+      blockingReasons: ["Değişecek yürürlük aralığında bordro satırı var; tarih doğrudan düzeltilemez."],
+    },
+  });
+  renderModal(1);
+  await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Mali Bilgiler/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
+  const date = await screen.findByLabelText("Önerilen yeni yürürlük tarihi");
+  await userEvent.clear(date);
+  await userEvent.type(date, "2026-10-01");
+  await userEvent.type(screen.getByLabelText("Tarih düzeltme gerekçesi"), "Karardaki ay yanlış girildi.");
+  await userEvent.click(screen.getByRole("button", { name: "Tarih etkisini önizle" }));
+  expect(await screen.findByText(/Değişecek yürürlük aralığında bordro satırı var/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Tarih düzeltmesini onayla ve kaydet" })).not.toBeInTheDocument();
 });
 
 test("bordroda kullanılmış paketin düzeltme nedenini gösterir ve kaydı kapatır", async () => {
