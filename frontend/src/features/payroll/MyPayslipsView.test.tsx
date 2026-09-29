@@ -40,6 +40,19 @@ test("pusula PDF'i indirme ucuna gider", async () => {
   });
 });
 
+test("düzeltme sürümünde ilk onaylı pusula da indirilebilir", async () => {
+  stubApi({ "/api/payroll/my": [{ ...slips[0], hasRevision: true }],
+    "/api/payroll/periods/1/rows/11/payslip?original=true": {} });
+  vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() });
+  renderView();
+  expect(await screen.findByText("Geçerli düzeltme sürümü")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", {
+    name: "Haziran 2026 ilk onaylı bordro pusulasını indir",
+  }));
+  await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([u]) =>
+    String(u) === "/api/payroll/periods/1/rows/11/payslip?original=true")).toBe(true));
+});
+
 test("boş listede bilgi metni görünür", async () => {
   stubApi({ "/api/payroll/my": [] });
   renderView();

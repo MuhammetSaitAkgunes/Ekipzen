@@ -5,6 +5,7 @@ import { OffboardingSettlementRevisionPanel } from "./OffboardingSettlementRevis
 import {
   useApproveCompensationRemediationCase,
   useApprovedCompensationPayrollImpact,
+  useApplyApprovedCompensationPayrollRevision,
   useApplyCompensationPayrollApplication,
   useCompensationRemediationContext,
   usePreviewCompensationPayrollApplication,
@@ -183,10 +184,15 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
 }) {
   const { showToast } = useToast();
   const impactMutation = useApprovedCompensationPayrollImpact();
+  const approvedApply = useApplyApprovedCompensationPayrollRevision();
   const previewMutation = usePreviewCompensationPayrollApplication();
   const applyMutation = useApplyCompensationPayrollApplication();
   const [preview, setPreview] = useState<CompensationPayrollPreview | null>(null);
   const [impact, setImpact] = useState<ApprovedCompensationPayrollImpact | null>(null);
+  const [expertReference, setExpertReference] = useState("");
+  const [approvedNotes, setApprovedNotes] = useState("");
+  const [sourceConfirmed, setSourceConfirmed] = useState(false);
+  const [externalConfirmed, setExternalConfirmed] = useState(false);
   const [applied, setApplied] = useState<CompensationPayrollApplication | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -220,6 +226,24 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   };
 
   const application = applied ?? preview?.application;
+  const applyApproved = async () => {
+    if (!impact?.canApply || !sourceConfirmed || !externalConfirmed
+      || !expertReference.trim() || !approvedNotes.trim()) return;
+    setError(null);
+    try {
+      const revision = await approvedApply.mutateAsync({ ...args,
+        expectedPreviewToken: impact.previewToken,
+        expertReviewReference: expertReference.trim(), reviewNotes: approvedNotes.trim() });
+      setImpact({ ...impact, revision, canApply: false,
+        blockingReasons: ["Bu satır için parasal sürüm onaylandı."] });
+      showToast("Yeni parasal bordro sürümü kaydedildi; dış ödeme ve bildirim ayrıca uzlaştırılmalı.", "success");
+    } catch (cause) {
+      setImpact(null);
+      setSourceConfirmed(false);
+      setExternalConfirmed(false);
+      setError(cause instanceof ApiError ? cause.message : "Bordro değişti; etki dosyasını yeniden açın.");
+    }
+  };
   if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review"
     aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
     <button type="button" className="btn btn-secondary"
@@ -234,6 +258,8 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       <p><strong>Uzman inceleme referansı:</strong> {impact.expertReviewReference} · {impact.reviewedAtUtc}</p>
       {impact.reviewWarnings.length > 0 && <ul>{impact.reviewWarnings.map((warning) =>
         <li key={warning}>{warning}</li>)}</ul>}
+      {impact.blockingReasons?.length > 0 && <ul>{impact.blockingReasons.map((reason) =>
+        <li key={reason}>{reason}</li>)}</ul>}
       {impact.hypothetical && <div className="ez-compensation-table-scroll"><table>
         <thead><tr><th>Alan</th><th>Onaylı kayıt</th><th>Öneriyle tek dönem hesabı</th><th>Fark</th></tr></thead>
         <tbody>{([
@@ -248,7 +274,27 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       <p>Bu hesap onaylı incelemedeki öneriyi güncel bordro snapshot'ıyla karşılaştırır; tek başına yeni bir uzman onayı değildir. Yalnız bu dönemin olası farkını gösterir, ödeme veya bildirim tutarı değildir. Onaylı bordro sonucu değişmedi.</p>
       {impact.laterSameYearRows.length > 0 && <p>Aynı yıl içinde kümülatif GV matrahı açısından ayrıca incelenecek sonraki bordrolar: {impact.laterSameYearRows.map((row) =>
         `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId}, ${row.status})`).join(", ")}.</p>}
-      <p>Sonraki dönemler, yapılmış ödeme ve bildirimler uzman tarafından ayrı değerlendirilmeden parasal düzeltme uygulanamaz.</p>
+      {impact.laterApprovedRows?.length > 0 && <p>Parasal uygulamayı kilitleyen sonraki onaylı satırlar: {impact.laterApprovedRows.map((row) =>
+        `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId})`).join(", ")}.</p>}
+      <p>Sonraki onaylı satır varsa uygulama kilitlenir. Dış ödeme ve bildirim uygulama tarafından gerçekleştirilmez; farklar ayrıca uzlaştırılmalıdır.</p>
+      {impact.revision && <p role="status">Geçerli parasal sürüm #{impact.revision.revisionNumber} · {impact.revision.approvedAtUtc} · önceki onaylı sonuç geçmişte korunuyor.</p>}
+      {impact.canApply && <section aria-label="Onaylı bordro parasal revizyonu">
+        <h5>Parasal sürümü onayla</h5>
+        <p>Onaylı uzman dosyasındaki öneri yalnız bu satıra uygulanır. Eski hesap geçmişte kalır; yeni sonuç dönem ve pusulada geçerli olur.</p>
+        <div className="input-group"><label className="input-label" htmlFor={`payroll-expert-${rowId}`}>Son uzman inceleme referansı</label>
+          <input id={`payroll-expert-${rowId}`} className="input-control" value={expertReference}
+            onChange={(event) => setExpertReference(event.target.value)} /></div>
+        <div className="input-group"><label className="input-label" htmlFor={`payroll-notes-${rowId}`}>Uzman inceleme notu</label>
+          <textarea id={`payroll-notes-${rowId}`} className="input-control" value={approvedNotes}
+            onChange={(event) => setApprovedNotes(event.target.value)} /></div>
+        <label><input type="checkbox" checked={sourceConfirmed}
+          onChange={(event) => setSourceConfirmed(event.target.checked)} /> Kaynak ücret paketi ile bu onaylı bordro satırının ilişkisini doğruladım.</label>
+        <label><input type="checkbox" checked={externalConfirmed}
+          onChange={(event) => setExternalConfirmed(event.target.checked)} /> Dış ödeme ve bildirim farklarının ayrıca incelenip kanıtlanacağını anlıyorum.</label>
+        <button type="button" className="btn btn-primary" onClick={applyApproved}
+          disabled={approvedApply.isPending || !sourceConfirmed || !externalConfirmed
+            || !expertReference.trim() || !approvedNotes.trim()}>Yeni parasal sürümü onayla</button>
+      </section>}
     </>}
     {error && <p className="form-error" role="alert">{error}</p>}
   </div>;

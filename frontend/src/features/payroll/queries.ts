@@ -9,7 +9,7 @@ import type {
 
 export type PayrollPeriodListItemDto = components["schemas"]["PayrollPeriodListItemDto"];
 export type PayrollPeriodDetailDto = components["schemas"]["PayrollPeriodDetailDto"];
-export type PayrollRowDto = components["schemas"]["PayrollRowDto"];
+export type PayrollRowDto = components["schemas"]["PayrollRowDto"] & { revisionNumber?: number };
 export type PayrollControlDto = components["schemas"]["PayrollControlDto"];
 export type PayrollRowInputModel = components["schemas"]["PayrollRowInputModel"];
 export type PayrollCalculation = components["schemas"]["PayrollCalculation"];
@@ -17,7 +17,7 @@ export type PreviewPayrollCommand = components["schemas"]["PreviewPayrollCommand
 export type PayrollSettingsDto = components["schemas"]["PayrollSettingsDto"];
 export type UpdatePayrollSettingsCommand = components["schemas"]["UpdatePayrollSettingsCommand"];
 export type ApprovePayrollSettingsCommand = components["schemas"]["ApprovePayrollSettingsCommand"];
-export type MyPayslipDto = components["schemas"]["MyPayslipDto"];
+export type MyPayslipDto = components["schemas"]["MyPayslipDto"] & { hasRevision?: boolean };
 
 export const usePayrollPeriods = (enabled: boolean) =>
   useQuery({

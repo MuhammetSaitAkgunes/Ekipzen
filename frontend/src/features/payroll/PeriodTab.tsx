@@ -207,7 +207,8 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
                 <td>{formatPayrollMoney(r.sgkBase)}</td>
                 <td>{formatPayrollMoney(r.incomeTaxBase)}</td>
                 <td><strong>{formatPayrollMoney(r.netPay)}</strong></td>
-                <td><span className={`status-pill ${payrollStatusClass(r.approvalStatus)}`}>{r.approvalStatus}</span></td>
+                <td><span className={`status-pill ${payrollStatusClass(r.approvalStatus)}`}>{r.approvalStatus}</span>
+                  {(r as PayrollRowDto).revisionNumber ? <small>Parasal sürüm #{(r as PayrollRowDto).revisionNumber}</small> : null}</td>
                 <td>
                   <button className="btn btn-secondary btn-sm" onClick={() => setDetailRow(r)}>Detay</button>
                 </td>

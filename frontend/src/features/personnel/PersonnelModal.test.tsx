@@ -386,7 +386,17 @@ test("onaylı bordro etki dosyasında tek dönem farkını ve sonraki ayı göst
       hypothetical: { grossEarnings: 52000, incomeTaxBase: 43700,
         incomeTax: 6555, netPay: 36300, employerCost: 63400 },
       laterSameYearRows: [{ periodId: 8, rowId: 10, year: 2026, month: 10,
-        status: "approved" }],
+        status: "draft" }],
+      laterApprovedRows: [],
+      canApply: true, blockingReasons: [], previewToken: "b".repeat(64), revision: null,
+    },
+    [`${rowUrl}/approved-impact/apply`]: {
+      id: 12, revisionNumber: 1, payrollRowId: 9, remediationCaseId: 11,
+      before: { grossSalary: 50000, netPay: 35000 },
+      after: { grossSalary: 52000, netPay: 36300 },
+      reason: "Yanlış brüt ücret", expertReviewReference: "Uzman sonuç 52",
+      reviewNotes: "Teyit edildi", approvedByUserId: "ik-admin",
+      approvedAtUtc: "2026-09-29T10:00:00Z",
     },
   });
   renderModal(1);
@@ -395,9 +405,26 @@ test("onaylı bordro etki dosyasında tek dönem farkını ve sonraki ayı göst
   await userEvent.click(await screen.findByRole("button", { name: "2026-09-01 paketinin düzeltme durumunu aç" }));
   await userEvent.click(await screen.findByRole("button", { name: "Onaylı satırın etki dosyasını aç" }));
   expect(await screen.findByText("GV matrahı")).toBeInTheDocument();
-  expect(screen.getByText(/2026\/10 \(#10, approved\)/)).toBeInTheDocument();
+  expect(screen.getByText(/2026\/10 \(#10, draft\)/)).toBeInTheDocument();
   expect(screen.getByText(/Onaylı bordro sonucu değişmedi/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Önizlenen telafiyi uygula" })).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Yeni parasal sürümü onayla" });
+  expect(apply).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("Son uzman inceleme referansı"), "Uzman sonuç 52");
+  await userEvent.type(screen.getByLabelText("Uzman inceleme notu"), "Teyit edildi");
+  await userEvent.click(screen.getByRole("checkbox", { name: /Kaynak ücret paketi ile/ }));
+  await userEvent.click(screen.getByRole("checkbox", { name: /Dış ödeme ve bildirim farklarının/ }));
+  await userEvent.click(apply);
+  await waitFor(() => {
+    const request = vi.mocked(fetch).mock.calls.find(([u, i]) =>
+      String(u).endsWith(`${rowUrl}/approved-impact/apply`) && i?.method === "POST");
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      expectedPreviewToken: "b".repeat(64), expertReviewReference: "Uzman sonuç 52",
+      reviewNotes: "Teyit edildi", confirmSourceLink: true,
+      confirmExternalReconciliation: true,
+    });
+  });
+  expect(await screen.findByText(/Geçerli parasal sürüm #1/)).toBeInTheDocument();
 });
 
 test("pasif personelde ayrılış parasal taslağına erişir ve uzman teyidiyle onaya gönderir", async () => {

@@ -201,6 +201,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           <span className={`status-pill ${payrollStatusClass(row.approvalStatus)}`}>{row.approvalStatus}</span>
           <h3>{row.name}</h3>
           <p>{row.title} · {row.department} · {periodName}</p>
+          {row.revisionNumber ? <p>Geçerli parasal düzeltme sürümü #{row.revisionNumber}; ilk onaylı sonuç geçmişte korunuyor.</p> : null}
         </div>
         <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="Bordro detayını kapat"><i aria-hidden="true" className="fa-solid fa-xmark" /></button>
       </div>

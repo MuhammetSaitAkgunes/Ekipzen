@@ -13,10 +13,12 @@ export function MyPayslipsView() {
 
   const slips = slipsQ.data;
 
-  const handleDownload = async (periodId: number | undefined, rowId: number | undefined, periodName: string) => {
+  const handleDownload = async (periodId: number | undefined, rowId: number | undefined,
+    periodName: string, original = false) => {
     if (periodId === undefined || rowId === undefined) return;
     try {
-      const { blob, fileName } = await apiDownload(`/payroll/periods/${periodId}/rows/${rowId}/payslip`);
+      const { blob, fileName } = await apiDownload(
+        `/payroll/periods/${periodId}/rows/${rowId}/payslip${original ? "?original=true" : ""}`);
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = fileName ?? `bordro-${periodName}.pdf`;
@@ -24,7 +26,7 @@ export function MyPayslipsView() {
       link.click();
       link.remove();
       URL.revokeObjectURL(link.href);
-      showToast("Bordro pusulası indirildi.", "success");
+      showToast(original ? "İlk onaylı pusula indirildi." : "Bordro pusulası indirildi.", "success");
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Pusula indirilemedi.", "error");
     }
@@ -55,7 +57,7 @@ export function MyPayslipsView() {
           <tbody>
             {slips.map((slip) => (
               <tr key={slip.rowId}>
-                <td><strong>{slip.periodName}</strong></td>
+                <td><strong>{slip.periodName}</strong>{slip.hasRevision && <small>Geçerli düzeltme sürümü</small>}</td>
                 <td>{formatPayrollMoney(slip.grossEarnings)}</td>
                 <td>{formatPayrollMoney(slip.totalDeductions)}</td>
                 <td><strong>{formatPayrollMoney(slip.netPay)}</strong></td>
@@ -73,6 +75,11 @@ export function MyPayslipsView() {
                   >
                     <i aria-hidden="true" className="fa-solid fa-file-pdf" /> PDF
                   </button>
+                  {slip.hasRevision && <button className="btn btn-secondary btn-sm"
+                    aria-label={`${slip.periodName} ilk onaylı bordro pusulasını indir`}
+                    onClick={() => handleDownload(slip.periodId, slip.rowId, slip.periodName ?? "", true)}>
+                    İlk onay PDF
+                  </button>}
                 </td>
               </tr>
             ))}

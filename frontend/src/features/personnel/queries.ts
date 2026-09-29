@@ -103,6 +103,16 @@ export type ApprovedCompensationPayrollImpact = {
   hypothetical: ApprovedCompensationPayrollImpact["recorded"] | null;
   laterSameYearRows: Array<{ periodId: number; rowId: number; year: number;
     month: number; status: string }>;
+  laterApprovedRows: Array<{ periodId: number; rowId: number; year: number;
+    month: number; status: string }>;
+  canApply: boolean; blockingReasons: string[]; previewToken: string;
+  revision: ApprovedPayrollRevision | null;
+};
+export type ApprovedPayrollRevision = {
+  id: number; revisionNumber: number; payrollRowId: number; remediationCaseId: number;
+  before: CompensationPayrollRow; after: CompensationPayrollRow;
+  reason: string; expertReviewReference: string; reviewNotes: string;
+  approvedByUserId: string; approvedAtUtc: string;
 };
 type OffboardingSettlementValuesSchema = components["schemas"]["OffboardingSettlementValuesDto"];
 export type OffboardingSettlementValues = OffboardingSettlementValuesSchema & {
@@ -348,6 +358,24 @@ export const useApprovedCompensationPayrollImpact = () => useMutation({
   }) => apiFetch<ApprovedCompensationPayrollImpact>(
     `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact`),
 });
+
+export const useApplyApprovedCompensationPayrollRevision = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId,
+      expectedPreviewToken, expertReviewReference, reviewNotes }: {
+      employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+      expectedPreviewToken: string; expertReviewReference: string; reviewNotes: string;
+    }) => apiFetch<ApprovedPayrollRevision>(
+      `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact/apply`,
+      { method: "POST", body: JSON.stringify({ expectedPreviewToken, expertReviewReference,
+        reviewNotes, confirmSourceLink: true, confirmExternalReconciliation: true }) }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+  });
+};
 
 export const useApplyCompensationPayrollApplication = () => {
   const queryClient = useQueryClient();
