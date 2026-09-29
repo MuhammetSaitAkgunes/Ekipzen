@@ -1,6 +1,7 @@
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Recruitment.Queries;
 using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Identity;
@@ -304,6 +305,7 @@ public sealed record HireCandidateCommand(
     int CandidateId,
     int DepartmentId,
     string Email,
+    string ContractType,
     string? Title = null,
     DateOnly? HireDate = null) : IRequest<HireResultDto>;
 
@@ -316,6 +318,9 @@ public sealed class HireCandidateCommandValidator : AbstractValidator<HireCandid
     {
         RuleFor(x => x.DepartmentId).GreaterThan(0);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.ContractType)
+            .Must(value => value is "indefinite" or "fixed-term")
+            .WithMessage("Sözleşme türü 'indefinite' veya 'fixed-term' olmalı.");
         RuleFor(x => x.Title).MaximumLength(128);
     }
 }
@@ -366,6 +371,7 @@ public sealed class HireCandidateCommandHandler(
             Title = request.Title ?? candidate.AppliedRole,
             DepartmentId = request.DepartmentId,
             HireDate = hireDate,
+            ContractType = EmployeeEmploymentMappings.ParseContractType(request.ContractType),
             Status = EmployeeStatus.Active,
             Profile = new Domain.Entities.Organization.EmployeeProfile(),
         };

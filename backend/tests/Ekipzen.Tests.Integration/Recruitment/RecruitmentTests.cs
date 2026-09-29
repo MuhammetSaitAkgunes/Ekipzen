@@ -6,6 +6,7 @@ using Ekipzen.Infrastructure.Email;
 using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Departments;
 using Ekipzen.Application.Features.Employees;
+using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Leaves;
 using Ekipzen.Application.Features.Recruitment;
 using Ekipzen.Application.Features.Recruitment.Commands;
@@ -100,14 +101,36 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
 
         // --- hire → Employee dönüşümü (tam provizyon: login + çalışma dönemi) ---
         var hireEmail = $"burak.yilmaz-{Guid.NewGuid():N}@hrmaster.local";
+        (await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
+        {
+            departmentId = yazilim.Id,
+            email = hireEmail,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest, "eski istemcinin eksik sözleşme türü varsayılmamalı");
+        (await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
+        {
+            departmentId = yazilim.Id,
+            email = hireEmail,
+            contractType = "unknown",
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}"))
+            .Status.Should().Be("Teklif", "geçersiz istek adayı işe alınmış saymamalı");
+
         var hireResponse = await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
         {
             departmentId = yazilim.Id,
             email = hireEmail,
+            contractType = "fixed-term",
         });
         hireResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var hired = (await hireResponse.Content.ReadFromJsonAsync<HireResultDto>())!;
         hired.EmployeeName.Should().Be("Burak Yılmaz");
+        var employee = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{hired.EmployeeId}");
+        employee.ContractType.Should().Be("fixed-term");
+        var foundation = await GetAsync<EmployeeEmploymentFoundationDto>(
+            admin, $"/api/employees/{hired.EmployeeId}/employment-foundation");
+        foundation.ContractType.Should().Be("fixed-term");
+        foundation.EmploymentPeriods.Should().ContainSingle()
+            .Which.ContractType.Should().Be("fixed-term");
 
         // İşe alınan kişi davetini kabul eder (şifre belirler), login olur.
         // Yeni dönemde peşin bakiye verilmez; ilk hak ediş çalışma yıldönümündedir.
@@ -131,7 +154,7 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status", new { status = "Yeni" }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire",
-                new { departmentId = yazilim.Id, email = $"tekrar-{Guid.NewGuid():N}@hrmaster.local" }))
+                new { departmentId = yazilim.Id, email = $"tekrar-{Guid.NewGuid():N}@hrmaster.local", contractType = "fixed-term" }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var positions = await GetAsync<List<PositionDto>>(admin, "/api/positions");
@@ -157,7 +180,7 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
         await PatchStatusAsync(admin, candidate.Id, "Red");
 
         (await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire",
-                new { departmentId = departments[0].Id, email = $"red-{Guid.NewGuid():N}@hrmaster.local" }))
+                new { departmentId = departments[0].Id, email = $"red-{Guid.NewGuid():N}@hrmaster.local", contractType = "indefinite" }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
@@ -200,6 +223,7 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
         {
             departmentId = departments[0].Id,
             email = hireEmail,
+            contractType = "indefinite",
         });
         hireResponse.StatusCode.Should().Be(HttpStatusCode.OK,
             "gecici e-posta hatasi atomik ise alim kaydini kaybettirmemeli");

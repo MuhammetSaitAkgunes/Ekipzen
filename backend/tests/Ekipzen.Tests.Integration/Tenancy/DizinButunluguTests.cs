@@ -39,6 +39,7 @@ public class DizinButunluguTests(EkipzenApiFactory factory) : TenancyTestBase(fa
         {
             departmentId = departmanId,
             email = personelEpostasi,
+            contractType = "indefinite",
             title = "Uzman",
             hireDate = "2024-01-01",
         });
@@ -85,6 +86,7 @@ public class DizinButunluguTests(EkipzenApiFactory factory) : TenancyTestBase(fa
         {
             departmentId = departmanId,
             email = personelEpostasi,
+            contractType = "indefinite",
             title = "Uzman",
             hireDate = "2024-01-01",
         });
