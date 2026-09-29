@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { OffboardingSettlementRevisionPanel } from "./OffboardingSettlementRevisionPanel";
+import { PayrollRevisionExternalReconciliationPanel } from "./PayrollRevisionExternalReconciliationPanel";
 import {
   useApproveCompensationRemediationCase,
   useApprovedCompensationPayrollImpact,
@@ -33,7 +34,7 @@ export function CompensationRemediationPanel({ employeeId, packageId }: {
   return <section aria-label="Ücret telafi incelemesi">
     <h4>Telafi inceleme dosyası</h4>
     <p>Bu dosya öneriyi ve etkilenmiş olabilecek kayıtları uzman incelemesine hazırlar. Onay, bordroyu, ayrılış hesabını veya ücret paketini değiştirmez; etkili düzeltme ayrı işlemdir.</p>
-    <p><strong>Neden ayrı işlem?</strong> Ücret farkı bordro hesabını ve yapılmış bildirimleri etkileyebilir. Bildirilmiş bir dönemde hata varsa düzeltme beyannamesi usulü ayrıca değerlendirilir (<a href="https://gib.gov.tr/mevzuat/kanun/433/teblig/6938" target="_blank" rel="noopener noreferrer">Muhtasar ve Prim Hizmet Beyannamesi Genel Tebliği, md. 12</a>). Açık, onaysız satırda önizlemeli uygulama yapılabilir. Onaylı dönem için bu ekranda yalnız etki dosyası hazırlanır.</p>
+    <p><strong>Neden ayrı işlem?</strong> Ücret farkı bordro hesabını ve yapılmış bildirimleri etkileyebilir. Bildirilmiş bir dönemde hata varsa düzeltme beyannamesi usulü ayrıca değerlendirilir (<a href="https://gib.gov.tr/mevzuat/kanun/433/teblig/6938" target="_blank" rel="noopener noreferrer">Muhtasar ve Prim Hizmet Beyannamesi Genel Tebliği, md. 12</a>). Açık, onaysız satırda önizlemeli uygulama yapılabilir. Onaylı dönemde etki dosyası incelenir; güvenli kapsamdaysa parasal sürüm ayrıca onaylanır.</p>
     {contextQ.isPending && <p>Etkiler yükleniyor…</p>}
     {contextQ.isError && <p className="form-error">Telafi durumu yüklenemedi.</p>}
     {contextQ.data && <RemediationContent key={`${contextQ.data.case?.id ?? "new"}-${contextQ.data.case?.version ?? 0}`}
@@ -278,6 +279,8 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
         `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId})`).join(", ")}.</p>}
       <p>Sonraki onaylı satır varsa uygulama kilitlenir. Dış ödeme ve bildirim uygulama tarafından gerçekleştirilmez; farklar ayrıca uzlaştırılmalıdır.</p>
       {impact.revision && <p role="status">Geçerli parasal sürüm #{impact.revision.revisionNumber} · {impact.revision.approvedAtUtc} · önceki onaylı sonuç geçmişte korunuyor.</p>}
+      {impact.revision && <PayrollRevisionExternalReconciliationPanel {...args}
+        revisionId={impact.revision.id} />}
       {impact.canApply && <section aria-label="Onaylı bordro parasal revizyonu">
         <h5>Parasal sürümü onayla</h5>
         <p>Onaylı uzman dosyasındaki öneri yalnız bu satıra uygulanır. Eski hesap geçmişte kalır; yeni sonuç dönem ve pusulada geçerli olur.</p>

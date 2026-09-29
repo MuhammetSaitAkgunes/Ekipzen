@@ -114,6 +114,20 @@ export type ApprovedPayrollRevision = {
   reason: string; expertReviewReference: string; reviewNotes: string;
   approvedByUserId: string; approvedAtUtc: string;
 };
+export type PayrollRevisionExternalAction = {
+  id: number; kind: "payment" | "notification";
+  outcome: "pending" | "completed" | "not-required"; previousRecordId: number | null;
+  responsibleName: string; evidenceReference: string; actionDate: string | null;
+  recordedAmount: number | null; notes: string; recordedByUserId: string;
+  recordedAtUtc: string;
+};
+export type PayrollRevisionExternalReconciliation = {
+  revisionId: number; revisionNumber: number; originalNetPay: number;
+  revisedNetPay: number; calculatedNetDifference: number; isCurrent: boolean;
+  payment: PayrollRevisionExternalAction | null;
+  notification: PayrollRevisionExternalAction | null;
+  history: PayrollRevisionExternalAction[];
+};
 type OffboardingSettlementValuesSchema = components["schemas"]["OffboardingSettlementValuesDto"];
 export type OffboardingSettlementValues = OffboardingSettlementValuesSchema & {
   monthlyGrossSalarySnapshot: number; regularPremiumSnapshot: number;
@@ -344,6 +358,47 @@ const payrollRemediationUrl = (employeeId: number, packageId: number, caseId: nu
   periodId: number, rowId: number) =>
   `/employees/${employeeId}/compensation-packages/${packageId}/remediation-case/${caseId}`
   + `/payroll-periods/${periodId}/rows/${rowId}`;
+
+export type PayrollRevisionExternalArgs = {
+  employeeId: number; packageId: number; caseId: number; periodId: number;
+  rowId: number; revisionId: number;
+};
+const payrollRevisionExternalUrl = (args: PayrollRevisionExternalArgs) =>
+  `${payrollRemediationUrl(args.employeeId, args.packageId, args.caseId,
+    args.periodId, args.rowId)}/revisions/${args.revisionId}/external-reconciliation`;
+const payrollRevisionExternalKey = (args: PayrollRevisionExternalArgs) =>
+  ["employees", args.employeeId, "payroll-revision", args.revisionId,
+    "external-reconciliation"] as const;
+
+export const usePayrollRevisionExternalReconciliation = (args: PayrollRevisionExternalArgs) =>
+  useQuery({ queryKey: payrollRevisionExternalKey(args),
+    queryFn: () => apiFetch<PayrollRevisionExternalReconciliation>(
+      payrollRevisionExternalUrl(args)) });
+
+export const useRecordPayrollRevisionExternalAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: PayrollRevisionExternalArgs & {
+      kind: "payment" | "notification";
+      outcome: "pending" | "completed" | "not-required";
+      responsibleName: string; evidenceReference: string; actionDate: string | null;
+      recordedAmount: number | null; notes: string; expectedLatestRecordId: number | null;
+    }) => apiFetch<PayrollRevisionExternalAction>(payrollRevisionExternalUrl(args), {
+      method: "POST", body: JSON.stringify({
+        kind: args.kind, outcome: args.outcome,
+        responsibleName: args.responsibleName,
+        evidenceReference: args.evidenceReference,
+        actionDate: args.actionDate, recordedAmount: args.recordedAmount,
+        notes: args.notes, expectedLatestRecordId: args.expectedLatestRecordId,
+        confirmRecordedStatus: true,
+      }),
+    }),
+    onSuccess: (_record, args) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: payrollRevisionExternalKey(args) }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+  });
+};
 
 export const usePreviewCompensationPayrollApplication = () => useMutation({
   mutationFn: ({ employeeId, packageId, caseId, periodId, rowId }: {
