@@ -18,7 +18,9 @@ public sealed record EmployeeOffboardingContextDto(
     int DirectReportCount,
     int PendingLeaveRequestCount,
     EmployeeOffboardingCaseDto? CurrentCase,
-    IReadOnlyList<ManagerSuccessorDto> Successors);
+    IReadOnlyList<ManagerSuccessorDto> Successors,
+    OffboardingSettlementRevisionDto? EffectiveSettlementRevision,
+    bool HasSettlementRevisions);
 
 public sealed record GetEmployeeOffboardingContextQuery(int EmployeeId)
     : IRequest<EmployeeOffboardingContextDto>;
@@ -94,6 +96,8 @@ public sealed class GetEmployeeOffboardingContextQueryHandler(IApplicationDbCont
             .FirstOrDefaultAsync(cancellationToken);
 
         EmployeeOffboardingCaseDto? currentCaseDto = null;
+        OffboardingSettlementRevisionDto? effectiveSettlementRevision = null;
+        var hasSettlementRevisions = false;
         if (currentCase is not null)
         {
             var operations = context.IdentityProvisioningOperations
@@ -108,6 +112,18 @@ public sealed class GetEmployeeOffboardingContextQueryHandler(IApplicationDbCont
                 .Select(operation => operation.LastError)
                 .FirstOrDefaultAsync(cancellationToken);
             currentCaseDto = currentCase.ToDto(pendingIdentity, lastError);
+            hasSettlementRevisions = await context.EmployeeOffboardingSettlementRevisions.AsNoTracking()
+                .AnyAsync(item => item.OffboardingCaseId == currentCase.Id, cancellationToken);
+            if (currentCase.Status == EmployeeOffboardingStatus.Completed)
+            {
+                var latest = await context.EmployeeOffboardingSettlementRevisions.AsNoTracking()
+                    .Where(item => item.OffboardingCaseId == currentCase.Id
+                        && item.Status == "approved")
+                    .OrderByDescending(item => item.RevisionNumber)
+                    .FirstOrDefaultAsync(cancellationToken);
+                effectiveSettlementRevision = latest is null
+                    ? null : OffboardingSettlementRevisionRules.ToDto(latest);
+            }
         }
 
 
@@ -117,6 +133,8 @@ public sealed class GetEmployeeOffboardingContextQueryHandler(IApplicationDbCont
             directReportIds.Count,
             pendingLeaveRequestCount,
             currentCaseDto,
-            successors);
+            successors,
+            effectiveSettlementRevision,
+            hasSettlementRevisions);
     }
 }

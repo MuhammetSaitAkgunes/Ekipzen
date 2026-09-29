@@ -1660,6 +1660,129 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeOffboardingCases");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingSettlementRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("BasedOnApprovedRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExpertReviewReference")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("MealAllowanceSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MonthlyGrossSalarySnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("NoticePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("OffboardingCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OpenedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OpenedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("OtherRegularBenefitsSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("RegularPremiumSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("RemediationCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RoadAllowanceSnapshot")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("SettlementNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("SettlementReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("SeverancePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnusedLeaveDays")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("UnusedLeavePayment")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OffboardingCaseId");
+
+                    b.HasIndex("RemediationCaseId");
+
+                    b.HasIndex("TenantId", "OffboardingCaseId", "RevisionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "OffboardingCaseId", "Status")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'draft'");
+
+                    b.ToTable("EmployeeOffboardingSettlementRevisions");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingTeamTransfer", b =>
                 {
                     b.Property<int>("Id")
@@ -3582,6 +3705,25 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Navigation("CalculationRule");
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingSettlementRevision", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingCase", "OffboardingCase")
+                        .WithMany()
+                        .HasForeignKey("OffboardingCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeCompensationRemediationCase", "RemediationCase")
+                        .WithMany()
+                        .HasForeignKey("RemediationCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OffboardingCase");
+
+                    b.Navigation("RemediationCase");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingTeamTransfer", b =>

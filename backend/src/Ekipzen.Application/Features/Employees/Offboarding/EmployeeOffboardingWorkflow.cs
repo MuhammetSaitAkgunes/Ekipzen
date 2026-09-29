@@ -605,6 +605,13 @@ public sealed class ReverseEmployeeOffboardingCommandHandler(
             throw new ConflictException("İşten çıkış dosyası değişti; ekranı yenileyin.");
         }
 
+        if (await context.EmployeeOffboardingSettlementRevisions.AnyAsync(
+                revision => revision.OffboardingCaseId == item.Id, cancellationToken))
+        {
+            throw new ConflictException(
+                "Parasal düzeltme geçmişi bulunan ayrılış otomatik geri alınamaz; düzeltme etkilerini uzmanla değerlendirin.");
+        }
+
         var employee = item.Employee!;
         if (employee.Status != EmployeeStatus.Passive
             || employee.TerminationDate != item.TerminationDate)

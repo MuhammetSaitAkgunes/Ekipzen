@@ -701,6 +701,116 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     }
 
     [Fact]
+    public async Task CompletedOffboarding_SettlementRevisionPreservesExitAndOriginalCalculation()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var employeeId = await CreateMinimalEmployeeAsync(
+            admin, departmentId, "Ayrilis", $"Hesap{Guid.NewGuid():N}");
+        var packageResponse = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = "2025-01-01", monthlyGrossSalary = 50000m,
+                regularPremium = 1000m, roadAllowance = 100m, mealAllowance = 200m,
+                otherRegularBenefits = 300m, sourceReference = "İlk ücret kararı",
+            });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var packageId = (await packageResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!
+            .CompensationPackages.Single().Id;
+        var draft = await SaveOffboardingDraftAsync(admin, employeeId,
+            new DateOnly(2025, 6, 30), unusedLeaveDays: 4m,
+            unusedLeavePayment: 500m, severancePayment: 1000m, noticePayment: 0m);
+        var completed = await CompleteOffboardingAsync(admin, employeeId, draft);
+        var caseUrl = $"/api/employees/{employeeId}/compensation-packages/{packageId}/remediation-case";
+        var context = await GetAsync<CompensationRemediationContextDto>(admin, caseUrl);
+        context.CurrentImpact.OffboardingCases.Should().ContainSingle(item => item.CaseId == completed.Id);
+        var openedResponse = await admin.PostAsJsonAsync(caseUrl, new
+        {
+            expectedPackageVersion = context.Package.Version, expectedCaseVersion = (int?)null,
+            issueDescription = "Ayrılışta kullanılan aylık brüt ücret yanlış.",
+            proposedEffectiveFrom = (string?)null, monthlyGrossSalary = 52000m,
+            regularPremium = 1000m, roadAllowance = 100m, mealAllowance = 200m,
+            otherRegularBenefits = 300m, sourceReference = "Düzeltilmiş ücret kararı",
+        });
+        openedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var review = (await openedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        var revisionUrl = $"{caseUrl}/{review.Id}/offboarding/{completed.Id}/settlement-revisions";
+        var beforeApproval = await GetAsync<OffboardingSettlementRevisionContextDto>(admin, revisionUrl);
+        beforeApproval.CanOpen.Should().BeFalse();
+        (await manager.GetAsync(revisionUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var approval = await admin.PostAsJsonAsync($"{caseUrl}/{review.Id}/approve", new
+        {
+            expectedCaseVersion = review.Version, expertReviewReference = "Uzman ücret raporu",
+            reviewNotes = "Ayrılış ve kaynak ücret belgesi karşılaştırıldı.",
+            confirmExpertReview = true,
+        });
+        approval.StatusCode.Should().Be(HttpStatusCode.OK);
+        var openResponse = await admin.PostAsJsonAsync(revisionUrl,
+            new { expectedOffboardingVersion = completed.Version });
+        openResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var financialDraft = (await openResponse.Content
+            .ReadFromJsonAsync<OffboardingSettlementRevisionDto>())!;
+        financialDraft.Status.Should().Be("draft");
+        financialDraft.Values.MonthlyGrossSalarySnapshot.Should().Be(52000m);
+        financialDraft.Values.UnusedLeavePayment.Should().Be(500m);
+        (await admin.PostAsJsonAsync(revisionUrl,
+            new { expectedOffboardingVersion = completed.Version }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var saveResponse = await admin.PutAsJsonAsync($"{revisionUrl}/{financialDraft.Id}", new
+        {
+            expectedRevisionVersion = financialDraft.Version,
+            unusedLeaveDays = 4m, unusedLeavePayment = 700m,
+            severancePayment = 1300m, noticePayment = 0m,
+            reason = "Düzeltilmiş ücretle uzman hesaplaması",
+            settlementReference = "Mali müşavir hesap belgesi 44",
+            settlementNotes = "Dış ödeme farkı ayrıca uzlaştırılacak.",
+        });
+        saveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var saved = (await saveResponse.Content.ReadFromJsonAsync<OffboardingSettlementRevisionDto>())!;
+        (await admin.PutAsJsonAsync($"{revisionUrl}/{saved.Id}", new
+        {
+            expectedRevisionVersion = financialDraft.Version,
+            unusedLeaveDays = 4m, unusedLeavePayment = 701m,
+            severancePayment = 1300m, noticePayment = 0m,
+            reason = "Eski sürüm", settlementReference = "Kaynak",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync($"{revisionUrl}/{saved.Id}/approve", new
+        {
+            expectedRevisionVersion = saved.Version,
+            expertReviewReference = "Uzman son kontrolü", reviewNotes = "Tutar farkı incelendi.",
+            confirmFinancialReview = true, confirmExternalReconciliation = false,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var approveResponse = await admin.PostAsJsonAsync($"{revisionUrl}/{saved.Id}/approve", new
+        {
+            expectedRevisionVersion = saved.Version,
+            expertReviewReference = "Uzman son kontrolü", reviewNotes = "Tutar farkı incelendi.",
+            confirmFinancialReview = true, confirmExternalReconciliation = true,
+        });
+        approveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var approved = (await approveResponse.Content
+            .ReadFromJsonAsync<OffboardingSettlementRevisionDto>())!;
+        approved.Status.Should().Be("approved");
+        var after = await GetAsync<OffboardingSettlementRevisionContextDto>(admin, revisionUrl);
+        after.Original.MonthlyGrossSalarySnapshot.Should().Be(50000m);
+        after.Original.TotalPayment.Should().Be(1500m);
+        after.Effective.MonthlyGrossSalarySnapshot.Should().Be(52000m);
+        after.Effective.TotalPayment.Should().Be(2000m);
+        after.History.Should().ContainSingle(item => item.Id == approved.Id);
+        var offboardingContext = await GetAsync<EmployeeOffboardingContextDto>(
+            admin, $"/api/employees/{employeeId}/offboarding-context");
+        offboardingContext.CurrentCase!.Status.Should().Be("completed");
+        offboardingContext.CurrentCase.TotalPayment.Should().Be(1500m);
+        offboardingContext.EffectiveSettlementRevision!.Values.TotalPayment.Should().Be(2000m);
+        var employee = await GetAsync<EmployeeDetailDto>(admin, $"/api/employees/{employeeId}");
+        employee.Status.Should().Be("passive");
+        employee.TerminationDate.Should().Be(new DateOnly(2025, 6, 30));
+        (await admin.PostAsJsonAsync($"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
+            new { expectedVersion = completed.Version, reason = "Yanlış geri alma" }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
     public async Task CompensationDateCorrection_UpdatesLastPackageAndBlocksAffectedHistory()
     {
         var auth = await LoginAsync("ik@hrmaster.local");

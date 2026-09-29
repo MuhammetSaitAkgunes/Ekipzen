@@ -72,3 +72,34 @@ public sealed class EmployeeOffboardingTeamTransfer : BaseEntity
     public int? PreviousManagerId { get; set; }
     public int? AssignedManagerId { get; set; }
 }
+
+/// <summary>Tamamlanmış ayrılışın tarihsel kaydını değiştirmeden geçerli parasal hesabı sürümler.</summary>
+public sealed class EmployeeOffboardingSettlementRevision : BaseEntity
+{
+    public int OffboardingCaseId { get; set; }
+    public EmployeeOffboardingCase? OffboardingCase { get; set; }
+    public int RemediationCaseId { get; set; }
+    public EmployeeCompensationRemediationCase? RemediationCase { get; set; }
+    public int RevisionNumber { get; set; }
+    public int Version { get; set; } = 1;
+    public string Status { get; set; } = "draft";
+    public int? BasedOnApprovedRevisionId { get; set; }
+    public decimal MonthlyGrossSalarySnapshot { get; set; }
+    public decimal RegularPremiumSnapshot { get; set; }
+    public decimal RoadAllowanceSnapshot { get; set; }
+    public decimal MealAllowanceSnapshot { get; set; }
+    public decimal OtherRegularBenefitsSnapshot { get; set; }
+    public decimal UnusedLeaveDays { get; set; }
+    public decimal UnusedLeavePayment { get; set; }
+    public decimal SeverancePayment { get; set; }
+    public decimal NoticePayment { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public string SettlementReference { get; set; } = string.Empty;
+    public string? SettlementNotes { get; set; }
+    public string OpenedByUserId { get; set; } = string.Empty;
+    public DateTime OpenedAtUtc { get; set; }
+    public string? ApprovedByUserId { get; set; }
+    public DateTime? ApprovedAtUtc { get; set; }
+    public string? ExpertReviewReference { get; set; }
+    public string? ReviewNotes { get; set; }
+}

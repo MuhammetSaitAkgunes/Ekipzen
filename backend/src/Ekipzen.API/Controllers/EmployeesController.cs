@@ -318,6 +318,48 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
                 id, caseId, body.ExpectedVersion, body.Reason),
             cancellationToken));
 
+    [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<OffboardingSettlementRevisionContextDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OffboardingSettlementRevisionContextDto>> GetOffboardingSettlementRevisions(
+        int id, int packageId, int remediationCaseId, int caseId,
+        CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetOffboardingSettlementRevisionContextQuery(
+            id, packageId, remediationCaseId, caseId), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<OffboardingSettlementRevisionDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OffboardingSettlementRevisionDto>> OpenOffboardingSettlementRevision(
+        int id, int packageId, int remediationCaseId, int caseId,
+        OpenOffboardingSettlementRevisionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new OpenOffboardingSettlementRevisionCommand(
+            id, packageId, remediationCaseId, caseId, body.ExpectedOffboardingVersion),
+            cancellationToken));
+
+    [HttpPut("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<OffboardingSettlementRevisionDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OffboardingSettlementRevisionDto>> SaveOffboardingSettlementRevision(
+        int id, int packageId, int remediationCaseId, int caseId, int revisionId,
+        SaveOffboardingSettlementRevisionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new SaveOffboardingSettlementRevisionCommand(
+            id, packageId, remediationCaseId, caseId, revisionId,
+            body.ExpectedRevisionVersion, body.UnusedLeaveDays,
+            body.UnusedLeavePayment, body.SeverancePayment, body.NoticePayment,
+            body.Reason, body.SettlementReference, body.SettlementNotes), cancellationToken));
+
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}/approve")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<OffboardingSettlementRevisionDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<OffboardingSettlementRevisionDto>> ApproveOffboardingSettlementRevision(
+        int id, int packageId, int remediationCaseId, int caseId, int revisionId,
+        ApproveOffboardingSettlementRevisionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApproveOffboardingSettlementRevisionCommand(
+            id, packageId, remediationCaseId, caseId, revisionId,
+            body.ExpectedRevisionVersion, body.ExpertReviewReference, body.ReviewNotes,
+            body.ConfirmFinancialReview, body.ConfirmExternalReconciliation), cancellationToken));
+
 
     [HttpPost("bulk-deactivate")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -476,6 +518,15 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record OffboardingVersionBody(int ExpectedVersion);
 
     public sealed record ReverseOffboardingBody(int ExpectedVersion, string Reason);
+
+    public sealed record OpenOffboardingSettlementRevisionBody(int ExpectedOffboardingVersion);
+    public sealed record SaveOffboardingSettlementRevisionBody(
+        int ExpectedRevisionVersion, decimal UnusedLeaveDays, decimal UnusedLeavePayment,
+        decimal SeverancePayment, decimal NoticePayment, string Reason,
+        string SettlementReference, string? SettlementNotes);
+    public sealed record ApproveOffboardingSettlementRevisionBody(
+        int ExpectedRevisionVersion, string ExpertReviewReference, string ReviewNotes,
+        bool ConfirmFinancialReview, bool ConfirmExternalReconciliation);
 
     public sealed record SetStatusBody(
         string Status,

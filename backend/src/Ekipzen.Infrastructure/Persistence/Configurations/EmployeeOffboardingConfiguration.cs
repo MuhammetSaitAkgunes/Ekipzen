@@ -36,6 +36,31 @@ public sealed class EmployeeOffboardingCaseConfiguration
     }
 }
 
+public sealed class EmployeeOffboardingSettlementRevisionConfiguration
+    : IEntityTypeConfiguration<EmployeeOffboardingSettlementRevision>
+{
+    public void Configure(EntityTypeBuilder<EmployeeOffboardingSettlementRevision> builder)
+    {
+        builder.Property(item => item.Version).HasDefaultValue(1).IsConcurrencyToken();
+        builder.Property(item => item.Status).IsRequired().HasMaxLength(24);
+        builder.Property(item => item.Reason).IsRequired().HasMaxLength(1000);
+        builder.Property(item => item.SettlementReference).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.SettlementNotes).HasMaxLength(2000);
+        builder.Property(item => item.OpenedByUserId).IsRequired().HasMaxLength(450);
+        builder.Property(item => item.ApprovedByUserId).HasMaxLength(450);
+        builder.Property(item => item.ExpertReviewReference).HasMaxLength(256);
+        builder.Property(item => item.ReviewNotes).HasMaxLength(2000);
+        builder.HasIndex(item => new { item.TenantId, item.OffboardingCaseId, item.RevisionNumber })
+            .IsUnique();
+        builder.HasIndex(item => new { item.TenantId, item.OffboardingCaseId, item.Status })
+            .IsUnique().HasFilter("[Status] = 'draft'");
+        builder.HasOne(item => item.OffboardingCase).WithMany()
+            .HasForeignKey(item => item.OffboardingCaseId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(item => item.RemediationCase).WithMany()
+            .HasForeignKey(item => item.RemediationCaseId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class EmployeeOffboardingTeamTransferConfiguration
     : IEntityTypeConfiguration<EmployeeOffboardingTeamTransfer>
 {

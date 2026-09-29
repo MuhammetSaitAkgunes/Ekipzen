@@ -25,6 +25,7 @@ public interface IApplicationDbContext
     DbSet<EmployeeProfile> EmployeeProfiles { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
     DbSet<EmployeeOffboardingCase> EmployeeOffboardingCases { get; }
+    DbSet<EmployeeOffboardingSettlementRevision> EmployeeOffboardingSettlementRevisions { get; }
     DbSet<EmployeeOffboardingTeamTransfer> EmployeeOffboardingTeamTransfers { get; }
     DbSet<EmployeeEmploymentPeriod> EmployeeEmploymentPeriods { get; }
     DbSet<EmployeeCompensationPackage> EmployeeCompensationPackages { get; }
