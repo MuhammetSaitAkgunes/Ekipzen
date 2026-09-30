@@ -161,7 +161,7 @@ export function CandidateModal({ onClose, onCreated }: {
             <p><strong>Yetenekler:</strong> {review.skills?.length ? review.skills.join(", ") : "Belirtilmedi"}</p>
             <p><strong>Başvuru özeti:</strong> {review.summary || "Belirtilmedi"}</p>
             <p><strong>Sonuç:</strong> Aday “Yeni” aşamasında açılacak. Pozisyon bağlantısını ve aynı kişinin zaten kayıtlı olup olmadığını kontrol edin.</p>
-            <p>Mevcut API aday kaydını düzenleme veya silme sunmuyor. Hatalı bilgiyi bu aşamada düzeltin.</p>
+            <p>İşe alınmamış adayın temel bilgileri sonradan gerekçeli düzeltmeyle değiştirilebilir. İşe alınmış başvuru kilitlidir; çalışan kartı ayrı düzeltilir. Aday silme işlemi sunulmuyor.</p>
           </section>}
         </div>
         <div className="modal-footer">

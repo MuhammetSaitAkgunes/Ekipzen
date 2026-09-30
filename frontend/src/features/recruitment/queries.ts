@@ -5,7 +5,22 @@ import { recruitmentJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
 
 export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
-export type CandidateDetailDto = components["schemas"]["CandidateDetailDto"];
+export type CandidateDetailDto = components["schemas"]["CandidateDetailDto"] & { id: number; version: number };
+export type CandidateState = {
+  name: string; appliedRole: string; positionId: number | null; positionTitle: string | null;
+  score: number; location: string | null; experienceYears: number; summary: string | null; status: string;
+};
+export type CandidateCorrectionDto = {
+  id: number; candidateId: number; fromVersion: number; toVersion: number;
+  before: CandidateState; after: CandidateState; reason: string; evidenceReviewConfirmed: boolean;
+  changedByUserId: string; changedByName: string; changedAtUtc: string;
+};
+export type CandidateCorrectionInput = {
+  id: number; expectedVersion: number; name: string; appliedRole: string;
+  positionId: number | null; expectedPositionVersion: number | null; score: number;
+  location: string | null; experienceYears: number; summary: string | null;
+  reason: string; confirmExistingEvidenceReview: boolean;
+};
 export type InterviewNoteDto = components["schemas"]["InterviewNoteDto"];
 export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationDto"];
 export type HireResultDto = components["schemas"]["HireResultDto"];
@@ -41,6 +56,24 @@ export const useCandidate = (id: number | null) =>
     queryFn: () => apiFetch<CandidateDetailDto>(`/candidates/${id}`),
     enabled: id !== null,
   });
+
+export const useCandidateCorrections = (id: number) =>
+  useQuery({ queryKey: ["recruitment", "candidate", id, "corrections"],
+    queryFn: () => apiFetch<CandidateCorrectionDto[]>(`/candidates/${id}/corrections`) });
+
+export const useCorrectCandidate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: CandidateCorrectionInput) =>
+      apiFetch<CandidateDetailDto>(`/candidates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    onError: (_error, input) => queryClient.invalidateQueries({
+      queryKey: ["recruitment", "candidate", input.id] }),
+  });
+};
 
 export const useRecruitmentFunnel = () =>
   useQuery({

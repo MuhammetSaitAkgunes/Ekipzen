@@ -7,6 +7,7 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
+import { CandidateCorrectionModal } from "./CandidateCorrectionModal";
 import { useAddCandidateEvaluation, useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
 
 const STAGE_EXPLANATIONS: Record<string, string> = {
@@ -68,12 +69,14 @@ export function CandidateDetail({ id }: { id: number }) {
   const [evaluationReview, setEvaluationReview] = useState<CandidateEvaluationReview | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [hireOpen, setHireOpen] = useState(false);
+  const [correctionOpen, setCorrectionOpen] = useState(false);
   const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string } | null>(null);
   const [statusConfirmed, setStatusConfirmed] = useState(false);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
 
   useEffect(() => {
+    setCorrectionOpen(false);
     setNoteReview(null);
     setNoteText("");
     setNoteError(null);
@@ -227,6 +230,9 @@ export function CandidateDetail({ id }: { id: number }) {
           </div>
         </div>
         <div className="dh-actions">
+          <button className="btn btn-secondary" onClick={() => setCorrectionOpen(true)} disabled={setStatus.isPending}>
+            {isHired ? "Düzeltme geçmişi" : "Aday kaydını düzelt"}
+          </button>
           <div className="match-score"><span className="score-circle">{candidate.score}</span><span className="score-label">Elle verilen aday puanı</span></div>
           <label className="sr-only" htmlFor="candidate-status">Pipeline durumu</label>
           <select
@@ -473,6 +479,7 @@ export function CandidateDetail({ id }: { id: number }) {
         )}
       </div>
 
+      {correctionOpen && <CandidateCorrectionModal key={id} candidate={candidate} onClose={() => setCorrectionOpen(false)} />}
       {hireOpen && (
         <HireModal
           candidateId={id}
