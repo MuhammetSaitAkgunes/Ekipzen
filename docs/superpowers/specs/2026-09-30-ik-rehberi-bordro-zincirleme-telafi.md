@@ -2,9 +2,9 @@
 
 ## Kullanıcı kararı
 
-Bir çalışanın hatalı onaylı bordro ayından sonra onaylı ayları varsa parasal uygulama kilitli kalır. Etkilenen ayların tamamı, tek uzman onayıyla atomik olarak parasal sürümlere dönüştürülmelidir. Oluşan her ayın uygulama dışı ödeme ve bildirim sonucu ayrı iki kanıt ve günlük işle izlenmelidir.
+Bir çalışanın hatalı onaylı bordro ayından sonra onaylı ayları varsa tek ayın parasal uygulaması kilitli kalır. Güvenle doğrulanan etkilenen ayların tamamı, tek uzman onayıyla atomik olarak parasal sürümlere dönüştürülmelidir. Oluşan her ayın uygulama dışı ödeme ve bildirim sonucu ayrı iki kanıt ve günlük işle izlenmelidir.
 
-## Mevcut ilk adım: salt okunur etki dosyası
+## Etki dosyası ve uygulama
 
 `approved-impact`, kaynak ayın onaylı sonucu ile önerilen ücret hesabını karşılaştırır. Aynı takvim yılındaki sonraki onaylı satırlar için önerilen matrahı ay sırasıyla taşır ve gelir vergisi/net hesap farkını gösterir. Sonraki yılın satırları listelenir, fakat önceki yılın vergi matrahına dahil edilmez. Satırın kanuni profili, saklı önceki matrahı, onaylı sonucu veya yeniden hesaplanan baz sonucu uyuşmazsa tahmin durur; hiçbir kayıt değişmez. Hesaplanan toplam, yapılmış veya yapılacak gerçek ödeme ya da beyan tutarı değildir.
 
@@ -17,4 +17,4 @@ Bir çalışanın hatalı onaylı bordro ayından sonra onaylı ayları varsa pa
 - Toplu onay, banka ödemesi veya resmî bildirim gerçekleştirmez. Her ayın yeni sürümü için ödeme ve bildirim kanıtları ayrı ayrı beklemeye açılır; eski kanıtlar değişmez.
 - Takvim yılı sınırı, desteklenmeyen kanuni profil, eksik dönem snapshot'ı veya onaylı sonuç ile yeniden hesaplama uyuşmazlığı otomatik parasal uygulamanın dışında kalır ve uzman incelemesi gerektirir.
 
-Bu sınırlar uygulama öncesi ürün ve teknik kabul ölçütleridir; atomik parasal uygulama henüz geliştirilmedi.
+`POST .../approved-impact/chain/apply`, doğrulanmış etki dosyasının belirtecini, uzman referansını/notunu ve üç açık teyidi ister. Kaynak ay ile aynı takvim yılının sonraki onaylı ayları, tek işlem kimliği ve tek uzman onayı altında atomik olarak sürümlenir. Her sürüm dönem/pusulada geçerlidir; eski onaylı hesap ve ilk onaylı PDF geçmişte korunur. Ekran, oluşan ayları ayrı gösterir ve her ayın ödeme/bildirim kanıt panelini açar. Bayat önizleme, mevcut bir sürüm, güvenilmez hesap veya sonraki yılda onaylı ay bulunması 409 ile uygulamayı durdurur. Ayrı bir sonraki düzeltme/sürüm zinciri ve dış sistemlere otomatik gönderim bu kapsamda değildir.

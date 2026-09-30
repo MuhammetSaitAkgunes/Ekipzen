@@ -108,7 +108,7 @@ export type ApprovedCompensationPayrollImpact = {
   canApply: boolean; blockingReasons: string[]; previewToken: string;
   revision: ApprovedPayrollRevision | null;
   chainImpact: {
-    canEstimate: boolean; blockingReasons: string[];
+    canEstimate: boolean; blockingReasons: string[]; previewToken: string;
     laterApprovedRows: Array<{
       periodId: number; rowId: number; year: number; month: number;
       recordedPreviousTaxBase: number; projectedPreviousTaxBase: number | null;
@@ -117,12 +117,23 @@ export type ApprovedCompensationPayrollImpact = {
       blockingReason: string | null;
     }>;
   };
+  canApplyChain: boolean;
+  batchRevisions: ApprovedPayrollRevisionBatchRow[];
 };
 export type ApprovedPayrollRevision = {
   id: number; revisionNumber: number; payrollRowId: number; remediationCaseId: number;
   before: CompensationPayrollRow; after: CompensationPayrollRow;
   reason: string; expertReviewReference: string; reviewNotes: string;
+  approvedByUserId: string; approvedAtUtc: string; batchId: number | null;
+};
+export type ApprovedPayrollRevisionBatchRow = {
+  periodId: number; revision: ApprovedPayrollRevision;
+};
+export type ApprovedPayrollRevisionBatch = {
+  id: number; employeeId: number; sourcePayrollRowId: number; year: number;
+  expertReviewReference: string; reviewNotes: string;
   approvedByUserId: string; approvedAtUtc: string;
+  rows: ApprovedPayrollRevisionBatchRow[];
 };
 export type PayrollRevisionExternalAction = {
   id: number; kind: "payment" | "notification";
@@ -435,6 +446,25 @@ export const useApplyApprovedCompensationPayrollRevision = () => {
       `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact/apply`,
       { method: "POST", body: JSON.stringify({ expectedPreviewToken, expertReviewReference,
         reviewNotes, confirmSourceLink: true, confirmExternalReconciliation: true }) }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payroll"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+  });
+};
+
+export const useApplyApprovedCompensationPayrollChain = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId,
+      expectedPreviewToken, expertReviewReference, reviewNotes }: {
+      employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
+      expectedPreviewToken: string; expertReviewReference: string; reviewNotes: string;
+    }) => apiFetch<ApprovedPayrollRevisionBatch>(
+      `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact/chain/apply`,
+      { method: "POST", body: JSON.stringify({ expectedPreviewToken, expertReviewReference,
+        reviewNotes, confirmSourceLink: true, confirmChainImpact: true,
+        confirmExternalReconciliation: true }) }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),

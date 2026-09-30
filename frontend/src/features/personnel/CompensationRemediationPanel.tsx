@@ -7,6 +7,7 @@ import {
   useApproveCompensationRemediationCase,
   useApprovedCompensationPayrollImpact,
   useApplyApprovedCompensationPayrollRevision,
+  useApplyApprovedCompensationPayrollChain,
   useApplyCompensationPayrollApplication,
   useCompensationRemediationContext,
   usePreviewCompensationPayrollApplication,
@@ -186,6 +187,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   const { showToast } = useToast();
   const impactMutation = useApprovedCompensationPayrollImpact();
   const approvedApply = useApplyApprovedCompensationPayrollRevision();
+  const chainApply = useApplyApprovedCompensationPayrollChain();
   const previewMutation = usePreviewCompensationPayrollApplication();
   const applyMutation = useApplyCompensationPayrollApplication();
   const [preview, setPreview] = useState<CompensationPayrollPreview | null>(null);
@@ -194,6 +196,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   const [approvedNotes, setApprovedNotes] = useState("");
   const [sourceConfirmed, setSourceConfirmed] = useState(false);
   const [externalConfirmed, setExternalConfirmed] = useState(false);
+  const [chainConfirmed, setChainConfirmed] = useState(false);
   const [applied, setApplied] = useState<CompensationPayrollApplication | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -245,6 +248,25 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       setError(cause instanceof ApiError ? cause.message : "Bordro değişti; etki dosyasını yeniden açın.");
     }
   };
+  const applyChain = async () => {
+    if (!impact?.canApplyChain || !chainConfirmed || !sourceConfirmed || !externalConfirmed
+      || !expertReference.trim() || !approvedNotes.trim()) return;
+    setError(null);
+    try {
+      const batch = await chainApply.mutateAsync({ ...args,
+        expectedPreviewToken: impact.chainImpact.previewToken,
+        expertReviewReference: expertReference.trim(), reviewNotes: approvedNotes.trim() });
+      setImpact({ ...impact, canApply: false, canApplyChain: false,
+        revision: batch.rows.find((item) => item.revision.payrollRowId === rowId)?.revision ?? null,
+        batchRevisions: batch.rows,
+        blockingReasons: ["Zincirleme parasal sürümler tek uzman onayıyla kaydedildi."] });
+      showToast("Etkilenen ayların parasal sürümleri birlikte kaydedildi; her ayın dış işlemlerini ayrı uzlaştırın.", "success");
+    } catch (cause) {
+      setImpact(null);
+      setChainConfirmed(false);
+      setError(cause instanceof ApiError ? cause.message : "Bordro değişti; zincirleme etki dosyasını yeniden açın.");
+    }
+  };
   if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review"
     aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
     <button type="button" className="btn btn-secondary"
@@ -275,7 +297,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       <p>Bu hesap onaylı incelemedeki öneriyi güncel bordro snapshot'ıyla karşılaştırır; tek başına yeni bir uzman onayı değildir. Yalnız bu dönemin olası farkını gösterir, ödeme veya bildirim tutarı değildir. Onaylı bordro sonucu değişmedi.</p>
       {impact.laterSameYearRows.length > 0 && <p>Aynı yıl içinde kümülatif GV matrahı açısından ayrıca incelenecek sonraki bordrolar: {impact.laterSameYearRows.map((row) =>
         `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId}, ${row.status})`).join(", ")}.</p>}
-      {impact.laterApprovedRows?.length > 0 && <p>Parasal uygulamayı kilitleyen sonraki onaylı satırlar: {impact.laterApprovedRows.map((row) =>
+      {impact.laterApprovedRows?.length > 0 && <p>Etki alanındaki sonraki onaylı satırlar: {impact.laterApprovedRows.map((row) =>
         `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId})`).join(", ")}.</p>}
       {impact.chainImpact?.laterApprovedRows.length > 0 && <section
         className="ez-compensation-review" aria-label="Zincirleme bordro etki dosyası">
@@ -308,10 +330,39 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       </section>}
       {impact.chainImpact && impact.laterApprovedRows.length > impact.chainImpact.laterApprovedRows.length
         && <p>İzleyen takvim yılındaki onaylı satırlar bu yılın vergi matrahı hesabına katılmadı; uygulama öncesinde ayrıca incelenecek.</p>}
-      <p>Sonraki onaylı satır varsa uygulama kilitlenir. Dış ödeme ve bildirim uygulama tarafından gerçekleştirilmez; farklar ayrıca uzlaştırılmalıdır.</p>
+      <p>Doğrulanamayan bir ay veya sonraki yılda onaylı satır varsa zincirleme uygulama kilitlenir. Dış ödeme ve bildirim uygulama tarafından gerçekleştirilmez; farklar her ay için ayrıca uzlaştırılmalıdır.</p>
       {impact.revision && <p role="status">Geçerli parasal sürüm #{impact.revision.revisionNumber} · {impact.revision.approvedAtUtc} · önceki onaylı sonuç geçmişte korunuyor.</p>}
-      {impact.revision && <PayrollRevisionExternalReconciliationPanel {...args}
+      {impact.revision && !impact.revision.batchId && <PayrollRevisionExternalReconciliationPanel {...args}
         revisionId={impact.revision.id} />}
+      {impact.batchRevisions?.length > 0 && <section aria-label="Zincirleme sürümlerin dış işlem takibi">
+        <h5>Ay bazında ödeme ve bildirim kanıtları</h5>
+        <p>Tek uzman onayı tüm ayların parasal hesabını sürümledi. Her ayın dış ödeme ve bildirim kaydı ayrı tamamlanır; bir ayın kanıtı diğer ayın işini kapatmaz.</p>
+        {impact.batchRevisions.map((item) => <div key={item.revision.id}>
+          <p><strong>Bordro dönemi #{item.periodId}</strong> · satır #{item.revision.payrollRowId} · parasal sürüm #{item.revision.revisionNumber}</p>
+          <PayrollRevisionExternalReconciliationPanel employeeId={employeeId}
+            packageId={packageId} caseId={caseId} periodId={item.periodId}
+            rowId={item.revision.payrollRowId} revisionId={item.revision.id} />
+        </div>)}
+      </section>}
+      {impact.canApplyChain && <section aria-label="Zincirleme bordro parasal revizyonu">
+        <h5>Tüm etkilenen ayları tek uzman onayıyla sürümle</h5>
+        <p>İlk ayın ücret tutarı ve sonraki onaylı ayların kümülatif vergi matrahı birlikte hesaplanır. Özgün sonuçlar geçmişte kalır; yeni sürümler dönem ve pusulada geçerli olur.</p>
+        <div className="input-group"><label className="input-label" htmlFor={`payroll-chain-expert-${rowId}`}>Son uzman inceleme referansı</label>
+          <input id={`payroll-chain-expert-${rowId}`} className="input-control" value={expertReference}
+            onChange={(event) => setExpertReference(event.target.value)} /></div>
+        <div className="input-group"><label className="input-label" htmlFor={`payroll-chain-notes-${rowId}`}>Uzman inceleme notu</label>
+          <textarea id={`payroll-chain-notes-${rowId}`} className="input-control" value={approvedNotes}
+            onChange={(event) => setApprovedNotes(event.target.value)} /></div>
+        <label><input type="checkbox" checked={sourceConfirmed}
+          onChange={(event) => setSourceConfirmed(event.target.checked)} /> Kaynak ücret paketi ile ilk onaylı bordro satırının ilişkisini doğruladım.</label>
+        <label><input type="checkbox" checked={chainConfirmed}
+          onChange={(event) => setChainConfirmed(event.target.checked)} /> Etkilenen tüm ayların öncesini, sonrasını ve kümülatif vergi matrahını inceledim.</label>
+        <label><input type="checkbox" checked={externalConfirmed}
+          onChange={(event) => setExternalConfirmed(event.target.checked)} /> Her ayın dış ödeme ve bildirim farkının ayrı kanıtlanacağını anlıyorum.</label>
+        <button type="button" className="btn btn-primary" onClick={applyChain}
+          disabled={chainApply.isPending || !sourceConfirmed || !chainConfirmed || !externalConfirmed
+            || !expertReference.trim() || !approvedNotes.trim()}>Tüm ayların parasal sürümlerini onayla</button>
+      </section>}
       {impact.canApply && <section aria-label="Onaylı bordro parasal revizyonu">
         <h5>Parasal sürümü onayla</h5>
         <p>Onaylı uzman dosyasındaki öneri yalnız bu satıra uygulanır. Eski hesap geçmişte kalır; yeni sonuç dönem ve pusulada geçerli olur.</p>

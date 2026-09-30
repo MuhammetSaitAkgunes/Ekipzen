@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { ToastProvider } from "../../layout/ToastProvider";
@@ -22,13 +22,13 @@ test("bordro farkını gerçek ödemeden ayırır ve ödeme kanıtını ayrı ka
   expect(await screen.findByText(/Net fark gerçek ödenen tutar/)).toBeInTheDocument();
   expect(screen.getAllByText(/kanıt bekliyor/)).toHaveLength(2);
   const payment = screen.getByRole("region", { name: "Dış ödeme kanıtı" });
-  await userEvent.selectOptions(screen.getByLabelText("Sonuç", { selector: "select#payroll-external-payment-outcome" }), "completed");
-  await userEvent.type(screen.getByLabelText("Sorumlu kişi", { selector: "input#payroll-external-payment-owner" }), "Muhasebe");
-  await userEvent.type(screen.getByLabelText("Belge / işlem referansı", { selector: "input#payroll-external-payment-reference" }), "Banka-51");
-  await userEvent.type(screen.getByLabelText("Dış işlem tarihi", { selector: "input#payroll-external-payment-date" }), "2026-09-30");
-  await userEvent.type(screen.getByLabelText("Belgelenen gerçek ödeme tutarı"), "1200");
-  await userEvent.click(screen.getAllByRole("checkbox")[0]);
-  await userEvent.click(screen.getByRole("button", { name: "Yeni kanıt kaydı ekle" }));
+  await userEvent.selectOptions(within(payment).getByLabelText("Sonuç"), "completed");
+  await userEvent.type(within(payment).getByLabelText("Sorumlu kişi"), "Muhasebe");
+  await userEvent.type(within(payment).getByLabelText("Belge / işlem referansı"), "Banka-51");
+  await userEvent.type(within(payment).getByLabelText("Dış işlem tarihi"), "2026-09-30");
+  await userEvent.type(within(payment).getByLabelText("Belgelenen gerçek ödeme tutarı"), "1200");
+  await userEvent.click(within(payment).getByRole("checkbox"));
+  await userEvent.click(within(payment).getByRole("button", { name: "Yeni kanıt kaydı ekle" }));
   await waitFor(() => {
     const request = vi.mocked(fetch).mock.calls.find(([u, init]) =>
       String(u).endsWith(url) && init?.method === "POST");

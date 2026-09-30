@@ -44,6 +44,7 @@ function ActionForm({ args, kind, current, canRecord }: {
   current: PayrollRevisionExternalAction | null; canRecord: boolean;
 }) {
   const title = kind === "payment" ? "Dış ödeme" : "Dış bildirim";
+  const fieldId = (field: string) => `payroll-external-${args.revisionId}-${kind}-${field}`;
   const { showToast } = useToast();
   const mutation = useRecordPayrollRevisionExternalAction();
   const [outcome, setOutcome] = useState<"pending" | "completed" | "not-required">(
@@ -85,8 +86,8 @@ function ActionForm({ args, kind, current, canRecord }: {
     {current && <p>Son kayıt: {current.evidenceReference || "kanıt yok"} · sorumlu {current.responsibleName}. Hata varsa yeni kayıt ekleyin.</p>}
     {canRecord && <>
       <div className="form-grid-2">
-        <div className="input-group"><label htmlFor={`payroll-external-${kind}-outcome`}>Sonuç</label>
-          <select id={`payroll-external-${kind}-outcome`} className="input-control" value={outcome}
+        <div className="input-group"><label htmlFor={fieldId("outcome")}>Sonuç</label>
+          <select id={fieldId("outcome")} className="input-control" value={outcome}
             onChange={(event) => {
               const next = event.target.value as typeof outcome;
               setOutcome(next); setConfirmed(false);
@@ -97,24 +98,24 @@ function ActionForm({ args, kind, current, canRecord }: {
             <option value="completed">Uygulama dışında tamamlandı</option>
             <option value="not-required">İşlem gerekmiyor</option>
           </select></div>
-        <div className="input-group"><label htmlFor={`payroll-external-${kind}-owner`}>Sorumlu kişi</label>
-          <input id={`payroll-external-${kind}-owner`} className="input-control"
+        <div className="input-group"><label htmlFor={fieldId("owner")}>Sorumlu kişi</label>
+          <input id={fieldId("owner")} className="input-control"
             value={responsibleName} onChange={(event) => setResponsibleName(event.target.value)} /></div>
         {outcome !== "pending" && <div className="input-group">
-          <label htmlFor={`payroll-external-${kind}-reference`}>Belge / işlem referansı</label>
-          <input id={`payroll-external-${kind}-reference`} className="input-control"
+          <label htmlFor={fieldId("reference")}>Belge / işlem referansı</label>
+          <input id={fieldId("reference")} className="input-control"
             value={evidenceReference} onChange={(event) => setEvidenceReference(event.target.value)} /></div>}
         {outcome === "completed" && <div className="input-group">
-          <label htmlFor={`payroll-external-${kind}-date`}>Dış işlem tarihi</label>
-          <input id={`payroll-external-${kind}-date`} type="date" className="input-control"
+          <label htmlFor={fieldId("date")}>Dış işlem tarihi</label>
+          <input id={fieldId("date")} type="date" className="input-control"
             value={actionDate} onChange={(event) => setActionDate(event.target.value)} /></div>}
         {outcome === "completed" && kind === "payment" && <div className="input-group">
-          <label htmlFor={`payroll-external-${kind}-amount`}>Belgelenen gerçek ödeme tutarı</label>
-          <input id={`payroll-external-${kind}-amount`} type="number" min="0" step="0.01"
+          <label htmlFor={fieldId("amount")}>Belgelenen gerçek ödeme tutarı</label>
+          <input id={fieldId("amount")} type="number" min="0" step="0.01"
             className="input-control" value={recordedAmount}
             onChange={(event) => setRecordedAmount(event.target.value)} /></div>}
-        <div className="input-group form-span-2"><label htmlFor={`payroll-external-${kind}-notes`}>İnceleme / gerekçe notu</label>
-          <textarea id={`payroll-external-${kind}-notes`} className="input-control"
+        <div className="input-group form-span-2"><label htmlFor={fieldId("notes")}>İnceleme / gerekçe notu</label>
+          <textarea id={fieldId("notes")} className="input-control"
             value={notes} onChange={(event) => setNotes(event.target.value)} /></div>
       </div>
       {outcome === "not-required" && <p>İşlem gerekmiyor kararının dayanağını referans ve notla belirtin.</p>}

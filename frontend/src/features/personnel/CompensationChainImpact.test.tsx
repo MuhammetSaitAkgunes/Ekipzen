@@ -46,8 +46,9 @@ function renderImpact(blocked: boolean) {
         status: "approved" }],
       canApply: false, blockingReasons: ["Sonraki onaylı satır var."],
       previewToken: "a".repeat(64), revision: null,
+      canApplyChain: !blocked, batchRevisions: [],
       chainImpact: {
-        canEstimate: !blocked,
+        canEstimate: !blocked, previewToken: "b".repeat(64),
         blockingReasons: blocked ? ["2026/09 bordrosu: saklı önceki vergi matrahı uyuşmuyor."] : [],
         laterApprovedRows: [{ periodId: 6, rowId: 7, year: 2026, month: 9,
           recordedPreviousTaxBase: 42500, projectedPreviousTaxBase: blocked ? null : 44200,
@@ -69,6 +70,8 @@ test("sonraki onaylı ayın zincirleme net hesabını karar öncesi gösterir", 
   expect(within(dossier).getByText(/ödeme veya düzeltme beyannamesi tutarı değildir/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Yeni parasal sürümü onayla" }))
     .not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Tüm ayların parasal sürümlerini onayla" }))
+    .toBeDisabled();
 });
 
 test("matrah tutarsızsa zincir toplamını üretmez", async () => {
@@ -77,4 +80,50 @@ test("matrah tutarsızsa zincir toplamını üretmez", async () => {
   const dossier = await screen.findByRole("region", { name: "Zincirleme bordro etki dosyası" });
   expect(within(dossier).getAllByText(/önceki vergi matrahı uyuşmuyor/).length).toBeGreaterThan(0);
   expect(within(dossier).queryByText(/toplam olası net hesap farkı/)).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Tüm ayların parasal sürümlerini onayla" }))
+    .not.toBeInTheDocument();
+});
+
+test("tek uzman onayıyla oluşan her ay için ayrı dış işlem paneli açar", async () => {
+  renderImpact(false);
+  const fetchMock = vi.mocked(fetch);
+  const originalFetch = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (input, init) => {
+    const path = String(input);
+    if (path === `${rowUrl}/chain/apply`) {
+      expect(init?.method).toBe("POST");
+      const body = JSON.parse(String(init?.body));
+      expect(body.expectedPreviewToken).toBe("b".repeat(64));
+      expect(body.confirmChainImpact).toBe(true);
+      return new Response(JSON.stringify({ id: 9, rows: [
+        { periodId: 4, revision: { id: 10, payrollRowId: 5, revisionNumber: 1,
+          batchId: 9, approvedAtUtc: "2026-10-01T00:00:00Z" } },
+        { periodId: 6, revision: { id: 11, payrollRowId: 7, revisionNumber: 1,
+          batchId: 9, approvedAtUtc: "2026-10-01T00:00:00Z" } },
+      ] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    if (path.includes("/external-reconciliation")) {
+      return new Response(JSON.stringify({ revisionId: path.includes("/10/") ? 10 : 11,
+        originalNetPay: 35000, revisedNetPay: 36000, calculatedNetDifference: 1000,
+        isCurrent: true, payment: null, notification: null, history: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return originalFetch(input, init);
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Onaylı satırın etki dosyasını aç" }));
+  const form = screen.getByRole("region", { name: "Zincirleme bordro parasal revizyonu" });
+  await user.type(within(form).getByLabelText("Son uzman inceleme referansı"), "Uzman 2");
+  await user.type(within(form).getByLabelText("Uzman inceleme notu"), "Aylar incelendi");
+  for (const checkbox of within(form).getAllByRole("checkbox")) await user.click(checkbox);
+  await user.click(within(form).getByRole("button", {
+    name: "Tüm ayların parasal sürümlerini onayla" }));
+  expect(await screen.findByRole("region", { name: "Zincirleme sürümlerin dış işlem takibi" }))
+    .toBeInTheDocument();
+  expect(screen.getAllByRole("region", { name: "Bordro dış ödeme ve bildirim uzlaştırması" }))
+    .toHaveLength(2);
+  expect(screen.getByLabelText("Sorumlu kişi", { selector: "input#payroll-external-10-payment-owner" }))
+    .toBeInTheDocument();
+  expect(screen.getByLabelText("Sorumlu kişi", { selector: "input#payroll-external-11-payment-owner" }))
+    .toBeInTheDocument();
 });
