@@ -2,17 +2,25 @@ import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { useDepartments } from "../personnel/queries";
-import { useCreatePosition, type CreatePositionCommand } from "./queries";
+import { useCorrectPosition, useCreatePosition, usePositionCorrections,
+  type PositionDto } from "./queries";
 
-type PositionReview = { command: CreatePositionCommand; departmentName: string };
+type PositionReview = {
+  title: string; departmentId: number | null; departmentName: string;
+  openCount: number; isOpen: boolean; reason: string;
+};
 
-export function PositionModal({ onClose }: { onClose: () => void }) {
+export function PositionModal({ onClose, position }: { onClose: () => void; position?: PositionDto }) {
   const { showToast } = useToast();
   const departmentsQ = useDepartments();
   const createPosition = useCreatePosition();
-  const [title, setTitle] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
-  const [openCount, setOpenCount] = useState("1");
+  const correctPosition = useCorrectPosition();
+  const historyQ = usePositionCorrections(position?.id ?? null);
+  const [title, setTitle] = useState(position?.title ?? "");
+  const [departmentId, setDepartmentId] = useState(position?.departmentId ? String(position.departmentId) : "");
+  const [openCount, setOpenCount] = useState(String(position?.openCount ?? 1));
+  const [isOpen, setIsOpen] = useState(position?.isOpen ?? true);
+  const [reason, setReason] = useState("");
   const [review, setReview] = useState<PositionReview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,8 +31,16 @@ export function PositionModal({ onClose }: { onClose: () => void }) {
       setError("Pozisyon adını 1-128 karakter arasında girin.");
       return;
     }
-    if (!/^(?:[1-9]|[1-9][0-9]|100)$/.test(openCount)) {
-      setError("Açık kadro sayısı 1-100 arasında tam sayı olmalıdır.");
+    const count = Number(openCount);
+    if (!/^\d{1,3}$/.test(openCount) || count > 100 || (isOpen && count < 1)
+      || (!position && count < 1)) {
+      setError(isOpen || !position
+        ? "Açık kadro sayısı 1-100 arasında tam sayı olmalıdır."
+        : "Kapalı pozisyonda kalan açık kadro sayısı 0-100 arasında olmalıdır.");
+      return;
+    }
+    if (position && (!reason.trim() || reason.trim().length > 2000)) {
+      setError("Düzeltme gerekçesini 1-2000 karakter arasında girin.");
       return;
     }
     if (!departmentsQ.data) {
@@ -39,24 +55,30 @@ export function PositionModal({ onClose }: { onClose: () => void }) {
       return;
     }
     setReview({
-      command: {
-        title: cleanTitle,
-        departmentId: department?.id ?? null,
-        openCount: Number(openCount),
-      },
+      title: cleanTitle,
+      departmentId: department?.id ?? null,
       departmentName: department?.name ?? "Departman seçilmedi",
+      openCount: count, isOpen, reason: reason.trim(),
     });
   };
 
   const submit = async () => {
-    if (!review || createPosition.isPending) return;
+    if (!review || createPosition.isPending || correctPosition.isPending) return;
     setError(null);
     try {
-      const position = await createPosition.mutateAsync(review.command);
-      showToast((position.title || review.command.title) + " pozisyonu açıldı.", "success");
+      if (position) {
+        await correctPosition.mutateAsync({ id: position.id, expectedVersion: position.version,
+          title: review.title, departmentId: review.departmentId,
+          openCount: review.openCount, isOpen: review.isOpen, reason: review.reason });
+        showToast("Pozisyon düzeltildi; önceki değerler geçmişte saklandı.", "success");
+      } else {
+        const created = await createPosition.mutateAsync({ title: review.title,
+          departmentId: review.departmentId, openCount: review.openCount });
+        showToast((created.title || review.title) + " pozisyonu açıldı.", "success");
+      }
       onClose();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Pozisyon oluşturulamadı.");
+      setError(e instanceof ApiError ? e.message : "Pozisyon kaydedilemedi.");
     }
   };
 
@@ -65,8 +87,8 @@ export function PositionModal({ onClose }: { onClose: () => void }) {
       <div className="modal-card scale-in">
         <div className="modal-head">
           <div>
-            <h3>Yeni Pozisyon</h3>
-            <p>İşe alım için açık kadro oluşturun.</p>
+            <h3>{position ? "Pozisyonu Düzelt" : "Yeni Pozisyon"}</h3>
+            <p>{position ? `Sürüm ${position.version} · düzeltme geçmişi korunur.` : "İşe alım için açık kadro oluşturun."}</p>
           </div>
           <button className="btn-icon-sm" onClick={onClose} title="Kapat" aria-label="Pozisyon penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
@@ -75,9 +97,11 @@ export function PositionModal({ onClose }: { onClose: () => void }) {
         <div className="modal-body-scroll">
           {error && <p className="form-error" role="alert">{error}</p>}
           <section className="ez-position-guide" aria-label="Pozisyon oluşturma rehberi">
-            <p><strong>Ne yapıyoruz?</strong> Başvuruları bağlayabileceğiniz açık pozisyonu kaydediyoruz. Bu işlem aday veya çalışan oluşturmaz, ilan yayımlamaz.</p>
+            <p><strong>Ne yapıyoruz?</strong> {position
+              ? "Pozisyonun adını, departmanını, kalan kadrosunu veya açık durumunu gerekçeyle düzeltiyoruz. Önceki değerler geçmişte kalır."
+              : "Başvuruları bağlayabileceğiniz açık pozisyonu kaydediyoruz. Bu işlem aday veya çalışan oluşturmaz, ilan yayımlamaz."}</p>
             <p><strong>Neden kadro sayısını seçiyoruz?</strong> Açık kadro sayısı, bu pozisyona bağlı bir aday işe alındığında azalır. Örneğin iki kişi alınacaksa sayı 2 olmalıdır; başvuru sayısını yazmayın.</p>
-            <p>Departman seçimi isteğe bağlıdır. Mevcut API pozisyonu düzenleme veya kapatma sunmuyor; ad, departman ve sayıyı kaydetmeden önce doğrulayın.</p>
+            <p>Kapalı pozisyonun bağlı adayları ve başvuru geçmişi korunur. Kapalı veya kadrosuz pozisyona yeni aday bağlanamaz; bağlı adayın işe alınması için pozisyonun yeniden açılması gerekir.</p>
           </section>
           <div className="form-grid-2">
             <div className="input-group">
@@ -99,22 +123,41 @@ export function PositionModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="position-count">Açık kadro sayısı</label>
-              <input id="position-count" type="number" min="1" max="100" step="1" className="input-control"
+              <input id="position-count" type="number" min={position && !isOpen ? "0" : "1"}
+                max="100" step="1" className="input-control"
                 value={openCount} onChange={(e) => { setOpenCount(e.target.value); setReview(null); setError(null); }} />
             </div>
+            {position && <><label><input type="checkbox" checked={isOpen}
+              onChange={(e) => { setIsOpen(e.target.checked); setReview(null); setError(null); }} /> Pozisyon açık</label>
+              <div className="input-group"><label className="input-label" htmlFor="position-reason">Düzeltme gerekçesi</label>
+                <textarea id="position-reason" className="input-control" value={reason}
+                  onChange={(e) => { setReason(e.target.value); setReview(null); setError(null); }} /></div></>}
           </div>
+          {position && <details><summary>Düzeltme geçmişi</summary>
+            <p>Bu liste gerekçeli manuel düzeltmeleri gösterir. İşe alma da kalan kadroyu ve pozisyon sürümünü değiştirir.</p>
+            {historyQ.isPending && <p>Geçmiş yükleniyor.</p>}
+            {historyQ.isError && <p role="alert">Düzeltme geçmişi yüklenemedi.</p>}
+            {historyQ.data?.length === 0 && <p>Henüz düzeltme yok.</p>}
+            {historyQ.data?.map((item) => <p key={item.id}>
+              Sürüm {item.fromVersion} → {item.toVersion} · {item.reason} · {item.changedAtUtc}<br />
+              {item.before.title} / {item.before.openCount} kadro / {item.before.isOpen ? "açık" : "kapalı"}
+              {" → "}{item.after.title} / {item.after.openCount} kadro / {item.after.isOpen ? "açık" : "kapalı"}
+            </p>)}
+          </details>}
           {review && <section className="ez-position-review" role="region" aria-label="Pozisyon ön kontrolü" aria-live="polite">
-            <h4>Pozisyonu açmadan önce</h4>
-            <p><strong>Ad:</strong> {review.command.title} · <strong>Departman:</strong> {review.departmentName}</p>
-            <p><strong>Açık kadro:</strong> {review.command.openCount}</p>
-            <p>Bu kayıt açık pozisyon olarak oluşacak. Aday eklerken bu pozisyonu ayrıca seçmeniz gerekir.</p>
+            <h4>{position ? "Düzeltmeyi kaydetmeden önce" : "Pozisyonu açmadan önce"}</h4>
+            <p><strong>Ad:</strong> {review.title} · <strong>Departman:</strong> {review.departmentName}</p>
+            <p><strong>Açık kadro:</strong> {review.openCount} · {review.isOpen ? "Açık" : "Kapalı"}</p>
+            {position ? <p><strong>Gerekçe:</strong> {review.reason}. Bağlı {position.candidateCount} adayın bağlantısı korunur.</p>
+              : <p>Bu kayıt açık pozisyon olarak oluşacak. Aday eklerken bu pozisyonu ayrıca seçmeniz gerekir.</p>}
           </section>}
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
           {review && <button className="btn btn-ghost" onClick={() => setReview(null)}>Bilgileri düzelt</button>}
-          <button className="btn btn-primary" onClick={review ? submit : prepareReview} disabled={createPosition.isPending || departmentsQ.isPending}>
-            {review ? "Pozisyonu oluştur" : "Bilgileri kontrol et"}
+          <button className="btn btn-primary" onClick={review ? submit : prepareReview}
+            disabled={createPosition.isPending || correctPosition.isPending || departmentsQ.isPending}>
+            {review ? (position ? "Düzeltmeyi kaydet" : "Pozisyonu oluştur") : "Bilgileri kontrol et"}
           </button>
         </div>
       </div>

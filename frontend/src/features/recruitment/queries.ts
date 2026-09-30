@@ -11,7 +11,13 @@ export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationD
 export type HireResultDto = components["schemas"]["HireResultDto"];
 export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
 export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
-export type PositionDto = components["schemas"]["PositionDto"];
+export type PositionDto = components["schemas"]["PositionDto"] & { id: number; version: number };
+export type PositionCorrectionDto = {
+  id: number; positionId: number; fromVersion: number; toVersion: number;
+  before: { title: string; departmentId: number | null; isOpen: boolean; openCount: number };
+  after: { title: string; departmentId: number | null; isOpen: boolean; openCount: number };
+  reason: string; changedByUserId: string; changedAtUtc: string;
+};
 export type RecruitmentFunnelDto = components["schemas"]["RecruitmentFunnelDto"];
 export type CreatePositionCommand = components["schemas"]["CreatePositionCommand"];
 
@@ -54,6 +60,29 @@ export const useCreatePosition = () => {
         body: JSON.stringify(command),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment", "positions"] }),
+  });
+};
+
+export const usePositionCorrections = (positionId: number | null) =>
+  useQuery({
+    queryKey: ["recruitment", "positions", positionId, "corrections"],
+    queryFn: () => apiFetch<PositionCorrectionDto[]>(`/positions/${positionId}/corrections`),
+    enabled: positionId !== null,
+  });
+
+export const useCorrectPosition = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: {
+      id: number; expectedVersion: number; title: string; departmentId: number | null;
+      openCount: number; isOpen: boolean; reason: string;
+    }) => apiFetch<PositionDto>(`/positions/${id}`, {
+      method: "PUT", body: JSON.stringify(body),
+    }),
+    onSuccess: (_result, input) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["recruitment", "positions"] }),
+      queryClient.invalidateQueries({ queryKey: ["recruitment", "positions", input.id, "corrections"] }),
+    ]),
   });
 };
 

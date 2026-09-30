@@ -49,9 +49,10 @@ test("günlük görev bağlantısı ilgili adayı açar", async () => {
 
 test("gerçek pozisyon listesi ve oluşturma girişi görünür", async () => {
   renderShell();
-  expect(await screen.findByRole("heading", { name: "Açık pozisyonlar" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Pozisyonlar" })).toBeInTheDocument();
   expect(await screen.findByText("QA Engineer")).toBeInTheDocument();
-  expect(screen.getByText(/2 açık kadro · 1 bağlı aday/)).toBeInTheDocument();
+  expect(screen.getByText(/2 kalan kadro · 1 bağlı aday/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "QA Engineer kaydını düzelt" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Yeni pozisyon" })).toBeInTheDocument();
 });
 

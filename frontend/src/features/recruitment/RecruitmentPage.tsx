@@ -5,7 +5,7 @@ import { CandidateDetail } from "./CandidateDetail";
 import { CandidateModal } from "./CandidateModal";
 import { PositionModal } from "./PositionModal";
 import { formatTimeAgo, scoreClass, statusTagClass } from "./format";
-import { useCandidates, usePositions, useRecruitmentFunnel, type RecruitmentFunnelDto } from "./queries";
+import { useCandidates, usePositions, useRecruitmentFunnel, type PositionDto, type RecruitmentFunnelDto } from "./queries";
 
 const STAGES: { status: string; label: string; count: keyof RecruitmentFunnelDto; explanation: string }[] = [
   { status: "Yeni", label: "Yeni", count: "new", explanation: "Başvurular ilk inceleme sırasındadır; bu sayı tek başına gecikme veya yapılmış kontrol anlamına gelmez." },
@@ -22,7 +22,7 @@ export function RecruitmentPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
-  const [positionOpen, setPositionOpen] = useState(false);
+  const [positionEditor, setPositionEditor] = useState<PositionDto | "new" | null>(null);
 
   // Personel sayfasındaki server-side arama debounce deseni.
   useEffect(() => {
@@ -48,10 +48,10 @@ export function RecruitmentPage() {
       <section className="ez-recruitment-positions" aria-labelledby="recruitment-positions-title">
         <div className="ez-recruitment-positions-head">
           <div>
-            <h2 id="recruitment-positions-title">Açık pozisyonlar</h2>
+            <h2 id="recruitment-positions-title">Pozisyonlar</h2>
             <p>Pozisyonu açın, ardından adayı ilgili kayda bağlayın. Liste açık ve kapanmış kadroları gösterir.</p>
           </div>
-          <button className="btn btn-secondary" onClick={() => setPositionOpen(true)}>Yeni pozisyon</button>
+          <button className="btn btn-secondary" onClick={() => setPositionEditor("new")}>Yeni pozisyon</button>
         </div>
         {positionsQ.isPending && <p className="pending-desc">Pozisyonlar yükleniyor.</p>}
         {positionsQ.isError && <p className="form-error" role="alert">Pozisyonlar yüklenemedi. Adayı pozisyona bağlamadan önce listeyi yeniden yükleyin.</p>}
@@ -61,7 +61,9 @@ export function RecruitmentPage() {
             <div className="ez-recruitment-position-card" key={position.id}>
               <strong>{position.title}</strong>
               <span>{position.department || "Departman seçilmedi"}</span>
-              <span>{position.isOpen ? "Açık" : "Kapalı"} · {position.openCount ?? 0} açık kadro · {position.candidateCount ?? 0} bağlı aday</span>
+              <span>{position.isOpen ? "Açık" : "Kapalı"} · {position.openCount ?? 0} kalan kadro · {position.candidateCount ?? 0} bağlı aday</span>
+              <button type="button" className="btn btn-secondary"
+                onClick={() => setPositionEditor(position)}>{position.title} kaydını düzelt</button>
             </div>
           ))}
         </div>}
@@ -159,7 +161,9 @@ export function RecruitmentPage() {
       {createOpen && (
         <CandidateModal onClose={() => setCreateOpen(false)} onCreated={(id) => { setStatusFilter(""); setSearch(""); setSearchParams({ candidateId: String(id) }, { replace: true }); }} />
       )}
-      {positionOpen && <PositionModal onClose={() => setPositionOpen(false)} />}
+      {positionEditor && <PositionModal key={positionEditor === "new" ? "new" : positionEditor.id}
+        position={positionEditor === "new" ? undefined : positionEditor}
+        onClose={() => setPositionEditor(null)} />}
       </div>
     </div>
   );
