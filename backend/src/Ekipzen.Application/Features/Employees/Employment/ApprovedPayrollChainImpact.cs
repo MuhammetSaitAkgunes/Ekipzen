@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Payroll;
 using Ekipzen.Domain.Entities.Payroll;
@@ -15,13 +18,15 @@ public sealed record ApprovedPayrollChainRowDto(
 
 public sealed record ApprovedPayrollChainImpactDto(
     bool CanEstimate, IReadOnlyList<string> BlockingReasons,
-    IReadOnlyList<ApprovedPayrollChainRowDto> LaterApprovedRows);
+    IReadOnlyList<ApprovedPayrollChainRowDto> LaterApprovedRows,
+    string PreviewToken);
 
 internal static class ApprovedPayrollChainImpact
 {
     public static async Task<ApprovedPayrollChainImpactDto> CalculateAsync(
         IApplicationDbContext context, IPayrollEngine engine,
         PayrollEmployee source, ApprovedPayrollAmountDto? proposed,
+        string sourcePreviewToken,
         CancellationToken cancellationToken)
     {
         var laterRows = await context.PayrollEmployees.AsNoTracking()
@@ -35,7 +40,7 @@ internal static class ApprovedPayrollChainImpact
             .OrderBy(row => row.Period!.Month)
             .ToListAsync(cancellationToken);
         if (laterRows.Count == 0)
-            return new(true, [], []);
+            return new(true, [], [], string.Empty);
 
         var issues = new List<string>();
         var projectedRows = new List<ApprovedPayrollChainRowDto>();
@@ -82,7 +87,22 @@ internal static class ApprovedPayrollChainImpact
             recordedCarry = recorded is null
                 ? null : row.PreviousTaxBase + recorded.IncomeTaxBase;
         }
-        return new(issues.Count == 0, issues, projectedRows);
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new {
+                SourcePreviewToken = sourcePreviewToken,
+                Rows = laterRows.Select(row => new {
+                    row.Id, row.UpdatedAtUtc, row.ApprovalStatus,
+                    ResultUpdatedAtUtc = row.Result?.UpdatedAtUtc,
+                    ResultCalculatedAtUtc = row.Result?.CalculatedAtUtc,
+                    PeriodStatus = row.Period!.Status,
+                    SettingsVersion = row.Period.Settings?.Version,
+                    SettingsUpdatedAtUtc = row.Period.Settings?.UpdatedAtUtc,
+                    Parameters = row.Period.Settings?.ToEngineParameters(),
+                    Input = row.ToEngineInput(row.Period.MinimumWageIncomeTaxBaseBefore),
+                }),
+                ProjectedRows = projectedRows,
+            }))));
+        return new(issues.Count == 0, issues, projectedRows, token);
     }
 
     private static string? GetBlockingReason(PayrollEmployee row, decimal? recordedCarry,

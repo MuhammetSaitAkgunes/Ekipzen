@@ -748,6 +748,204 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     }
 
     [Fact]
+    public async Task ApprovedPayrollChain_AppliesAllMonthsAtomicallyAndKeepsSeparateEvidence()
+    {
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
+        var auth = await LoginAsync("ik@hrmaster.local");
+        var admin = factory.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
+        var employeeId = await CreateMinimalEmployeeAsync(admin, departmentId,
+            "Zincir", $"Bordro{Guid.NewGuid():N}");
+        var packageResponse = await admin.PostAsJsonAsync(
+            $"/api/employees/{employeeId}/compensation-packages", new
+            {
+                effectiveFrom = "2042-01-01", monthlyGrossSalary = 50000m,
+                regularPremium = 0m, roadAllowance = 0m, mealAllowance = 0m,
+                otherRegularBenefits = 0m, sourceReference = "İlk ücret kararı",
+            });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var packageId = (await packageResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!
+            .CompensationPackages.Single().Id;
+        int periodId, rowId, laterPeriodId, laterRowId;
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var settings = await db.PayrollSettings.Include(item => item.TaxBrackets)
+                .FirstAsync(item => item.Status == PayrollSettingsStatus.Approved);
+            var engine = scope.Services.GetRequiredService<IPayrollEngine>();
+            var first = new PayrollPeriod
+            {
+                Name = $"Zincir ilk {Guid.NewGuid():N}", Year = 2043, Month = 1,
+                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Approved,
+            };
+            var source = new PayrollEmployee
+            {
+                EmployeeId = employeeId, GrossSalary = 50000m,
+                StatutoryProfile = PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA,
+                WorkedDays = settings.DefaultWorkedDays, SgkPremiumDaysConfirmed = true,
+                IbanComplete = true, TimesheetComplete = true,
+                DisabilityReliefType = PayrollDisabilityReliefType.None,
+                OtherIncomeTaxBaseDeductionsConfirmedNone = true,
+                CumulativeIncomeTaxBaseConfirmed = true,
+                ApprovalStatus = PayrollApprovalStatus.Approved,
+            };
+            var firstCalculation = engine.Calculate(source.ToEngineInput(0),
+                settings.ToEngineParameters());
+            source.Result = new PayrollResult
+            {
+                GrossEarnings = firstCalculation.GrossEarnings,
+                IncomeTaxBase = firstCalculation.IncomeTaxBase,
+                IncomeTax = firstCalculation.IncomeTax,
+                NetPay = firstCalculation.NetPay,
+                EmployerCost = firstCalculation.EmployerCost,
+                CalculatedAtUtc = DateTime.UtcNow,
+            };
+            first.Employees.Add(source);
+            db.PayrollPeriods.Add(first);
+            var second = new PayrollPeriod
+            {
+                Name = $"Zincir ikinci {Guid.NewGuid():N}", Year = 2043, Month = 2,
+                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Approved,
+            };
+            var later = new PayrollEmployee
+            {
+                EmployeeId = employeeId, GrossSalary = 50000m,
+                StatutoryProfile = PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA,
+                WorkedDays = settings.DefaultWorkedDays, SgkPremiumDaysConfirmed = true,
+                IbanComplete = true, TimesheetComplete = true,
+                DisabilityReliefType = PayrollDisabilityReliefType.None,
+                OtherIncomeTaxBaseDeductionsConfirmedNone = true,
+                CumulativeIncomeTaxBaseConfirmed = true,
+                PreviousTaxBase = firstCalculation.IncomeTaxBase,
+                ApprovalStatus = PayrollApprovalStatus.Approved,
+            };
+            var laterCalculation = engine.Calculate(later.ToEngineInput(0),
+                settings.ToEngineParameters());
+            later.Result = new PayrollResult
+            {
+                GrossEarnings = laterCalculation.GrossEarnings,
+                IncomeTaxBase = laterCalculation.IncomeTaxBase,
+                IncomeTax = laterCalculation.IncomeTax,
+                NetPay = laterCalculation.NetPay,
+                EmployerCost = laterCalculation.EmployerCost,
+                CalculatedAtUtc = DateTime.UtcNow,
+            };
+            second.Employees.Add(later);
+            db.PayrollPeriods.Add(second);
+            await db.SaveChangesAsync(CancellationToken.None);
+            periodId = first.Id; rowId = source.Id;
+            laterPeriodId = second.Id; laterRowId = later.Id;
+        }
+        var caseUrl = $"/api/employees/{employeeId}/compensation-packages/{packageId}/remediation-case";
+        var openedResponse = await admin.PostAsJsonAsync(caseUrl, new
+        {
+            expectedPackageVersion = 1, expectedCaseVersion = (int?)null,
+            issueDescription = "Zincirleme ücret hatası.", proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 52000m, regularPremium = 0m,
+            roadAllowance = 0m, mealAllowance = 0m,
+            otherRegularBenefits = 0m, sourceReference = "Uzman ücret kararı",
+        });
+        openedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var opened = (await openedResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        (await admin.PostAsJsonAsync($"{caseUrl}/{opened.Id}/approve", new
+        {
+            expectedCaseVersion = opened.Version, expertReviewReference = "Zincir raporu",
+            reviewNotes = "Kaynak ve dönemler doğrulandı.", confirmExpertReview = true,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var impactUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{periodId}/rows/{rowId}/approved-impact";
+        var impact = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        impact.CanApplyChain.Should().BeTrue();
+        var body = new
+        {
+            expectedPreviewToken = impact.ChainImpact.PreviewToken,
+            expertReviewReference = "Zincir son onayı", reviewNotes = "İki ay birlikte incelendi.",
+            confirmSourceLink = true, confirmChainImpact = true,
+            confirmExternalReconciliation = true,
+        };
+        (await manager.PostAsJsonAsync($"{impactUrl}/chain/apply", body))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync($"{impactUrl}/chain/apply", new
+        {
+            expectedPreviewToken = new string('0', 64),
+            expertReviewReference = "Zincir son onayı", reviewNotes = "Bayat önizleme.",
+            confirmSourceLink = true, confirmChainImpact = true,
+            confirmExternalReconciliation = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            (await db.PayrollApprovedRowRevisions.CountAsync(item =>
+                item.PayrollRowId == rowId || item.PayrollRowId == laterRowId)).Should().Be(0);
+        }
+        var response = await admin.PostAsJsonAsync($"{impactUrl}/chain/apply", body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var batch = (await response.Content.ReadFromJsonAsync<ApprovedPayrollRevisionBatchDto>(jsonOptions))!;
+        batch.Rows.Should().HaveCount(2);
+        batch.Rows.Should().OnlyContain(item => item.Revision.BatchId == batch.Id);
+        batch.Rows.Select(item => item.PeriodId).Should().BeEquivalentTo([periodId, laterPeriodId]);
+        var sourceRevision = batch.Rows.Single(item => item.Revision.PayrollRowId == rowId).Revision;
+        var laterRevision = batch.Rows.Single(item => item.Revision.PayrollRowId == laterRowId).Revision;
+        sourceRevision.After.GrossSalary.Should().Be(52000m);
+        laterRevision.After.PreviousTaxBase.Should().Be(sourceRevision.After.IncomeTaxBase);
+        (await admin.PostAsJsonAsync($"{impactUrl}/chain/apply", body))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var reopened = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        reopened.BatchRevisions.Should().HaveCount(2);
+        var laterDetail = (await admin.GetFromJsonAsync<PayrollPeriodDetailDto>(
+            $"/api/payroll/periods/{laterPeriodId}", jsonOptions))!;
+        laterDetail.Rows.Single(item => item.Id == laterRowId).NetPay
+            .Should().Be(laterRevision.After.NetPay);
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            (await db.PayrollEmployees.SingleAsync(item => item.Id == rowId))
+                .GrossSalary.Should().Be(50000m);
+            (await db.PayrollEmployees.SingleAsync(item => item.Id == laterRowId))
+                .PreviousTaxBase.Should().Be(sourceRevision.Before.IncomeTaxBase);
+            (await db.PayrollApprovedRowRevisions.CountAsync(item => item.BatchId == batch.Id))
+                .Should().Be(2);
+        }
+        foreach (var item in batch.Rows)
+        {
+            var evidenceUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{item.PeriodId}"
+                + $"/rows/{item.Revision.PayrollRowId}/revisions/{item.Revision.Id}/external-reconciliation";
+            var evidence = (await admin.GetFromJsonAsync<PayrollRevisionExternalReconciliationDto>(
+                evidenceUrl, jsonOptions))!;
+            evidence.Payment.Should().BeNull();
+            evidence.Notification.Should().BeNull();
+        }
+        var paymentKey = $"payroll-revision-external-payment:{sourceRevision.Id}";
+        var laterPaymentKey = $"payroll-revision-external-payment:{laterRevision.Id}";
+        var tasks = await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks");
+        tasks.Should().ContainSingle(item => item.Key == paymentKey);
+        tasks.Should().ContainSingle(item => item.Key == laterPaymentKey);
+        tasks.Should().ContainSingle(item => item.Key
+            == $"payroll-revision-external-notification:{sourceRevision.Id}");
+        tasks.Should().ContainSingle(item => item.Key
+            == $"payroll-revision-external-notification:{laterRevision.Id}");
+        var firstEvidenceUrl = $"{caseUrl}/{opened.Id}/payroll-periods/{periodId}"
+            + $"/rows/{rowId}/revisions/{sourceRevision.Id}/external-reconciliation";
+        (await admin.PostAsJsonAsync(firstEvidenceUrl, new
+        {
+            kind = "payment", outcome = "not-required", responsibleName = "Muhasebe",
+            evidenceReference = "Banka uzlaştırma kaydı", actionDate = (string?)null,
+            recordedAmount = (decimal?)null, notes = "Bu ay ek ödeme gerekmiyor.",
+            expectedLatestRecordId = (int?)null, confirmRecordedStatus = true,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var remaining = await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks");
+        remaining.Should().NotContain(item => item.Key == paymentKey);
+        remaining.Should().ContainSingle(item => item.Key == laterPaymentKey);
+    }
+
+    [Fact]
     public async Task ApprovedPayrollRevision_PreservesOriginalAndBlocksLaterApprovedRows()
     {
         var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);

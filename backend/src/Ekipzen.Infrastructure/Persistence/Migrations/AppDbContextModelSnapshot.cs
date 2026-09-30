@@ -2189,6 +2189,60 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("IncomeTaxBrackets");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRevisionBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExpertReviewReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PreviewToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("RemediationCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewNotes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("SourcePayrollRowId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "SourcePayrollRowId")
+                        .IsUnique();
+
+                    b.ToTable("PayrollApprovedRevisionBatches");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRowExternalActionRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -2275,6 +2329,9 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int");
+
                     b.Property<string>("BeforeJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -2319,6 +2376,8 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
 
                     b.HasIndex("PayrollRowId");
 
@@ -3998,6 +4057,11 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRowRevision", b =>
                 {
+                    b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRevisionBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollEmployee", "PayrollRow")
                         .WithMany()
                         .HasForeignKey("PayrollRowId")
@@ -4009,6 +4073,8 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RemediationCaseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Batch");
 
                     b.Navigation("PayrollRow");
 

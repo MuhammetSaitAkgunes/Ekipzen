@@ -53,10 +53,12 @@ public static class PayrollCumulativeTaxBase
                 group =>
                 {
                     var latest = group.OrderByDescending(row => row.Month).First();
-                    var taxBase = revisions.TryGetValue(latest.Id, out var revision)
-                        ? ApprovedPayrollRevisionRules.EffectiveRow(revision).IncomeTaxBase
-                        : latest.IncomeTaxBase;
-                    return latest.PreviousTaxBase + taxBase;
+                    if (revisions.TryGetValue(latest.Id, out var revision))
+                    {
+                        var effective = ApprovedPayrollRevisionRules.EffectiveRow(revision);
+                        return effective.PreviousTaxBase + effective.IncomeTaxBase;
+                    }
+                    return latest.PreviousTaxBase + latest.IncomeTaxBase;
                 });
 
         foreach (var row in rows)

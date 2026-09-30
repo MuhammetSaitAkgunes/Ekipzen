@@ -73,6 +73,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<PayrollEmployee> PayrollEmployees => Set<PayrollEmployee>();
     public DbSet<PayrollResult> PayrollResults => Set<PayrollResult>();
     public DbSet<PayrollApprovedRowRevision> PayrollApprovedRowRevisions => Set<PayrollApprovedRowRevision>();
+    public DbSet<PayrollApprovedRevisionBatch> PayrollApprovedRevisionBatches
+        => Set<PayrollApprovedRevisionBatch>();
     public DbSet<PayrollApprovedRowExternalActionRecord> PayrollApprovedRowExternalActionRecords
         => Set<PayrollApprovedRowExternalActionRecord>();
 

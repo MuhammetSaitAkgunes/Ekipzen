@@ -222,6 +222,18 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.ExpertReviewReference, body.ReviewNotes,
             body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
 
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact/chain/apply")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<ApprovedPayrollRevisionBatchDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApprovedPayrollRevisionBatchDto>> ApplyApprovedCompensationPayrollChain(
+        int id, int packageId, int caseId, int periodId, int rowId,
+        ApplyApprovedPayrollChainBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApplyApprovedCompensationPayrollChainCommand(
+            id, packageId, caseId, periodId, rowId, body.ExpectedPreviewToken,
+            body.ExpertReviewReference, body.ReviewNotes, body.ConfirmSourceLink,
+            body.ConfirmChainImpact, body.ConfirmExternalReconciliation), cancellationToken));
+
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/revisions/{revisionId:int}/external-reconciliation")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<PayrollRevisionExternalReconciliationDto>(StatusCodes.Status200OK)]
@@ -552,6 +564,10 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record ApplyApprovedPayrollRevisionBody(
         string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
         bool ConfirmSourceLink, bool ConfirmExternalReconciliation);
+
+    public sealed record ApplyApprovedPayrollChainBody(
+        string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
+        bool ConfirmSourceLink, bool ConfirmChainImpact, bool ConfirmExternalReconciliation);
 
     public sealed record PreviewCompensationDateCorrectionBody(DateOnly ProposedEffectiveFrom);
 

@@ -16,7 +16,7 @@ public sealed record ApprovedPayrollRevisionDto(
     int Id, int RevisionNumber, int PayrollRowId, int RemediationCaseId,
     PayrollRowDto Before, PayrollRowDto After, string Reason,
     string ExpertReviewReference, string ReviewNotes,
-    string ApprovedByUserId, DateTime ApprovedAtUtc);
+    string ApprovedByUserId, DateTime ApprovedAtUtc, int? BatchId = null);
 
 public sealed record ApplyApprovedCompensationPayrollRevisionCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId,
@@ -109,7 +109,7 @@ public static class ApprovedPayrollRevisionRules
             JsonSerializer.Deserialize<PayrollRowDto>(item.BeforeJson)!,
             JsonSerializer.Deserialize<PayrollRowDto>(item.AfterJson)!,
             item.Reason, item.ExpertReviewReference, item.ReviewNotes,
-            item.ApprovedByUserId, item.ApprovedAtUtc);
+            item.ApprovedByUserId, item.ApprovedAtUtc, item.BatchId);
 
     public static PayrollRowDto EffectiveRow(PayrollApprovedRowRevision item)
         => JsonSerializer.Deserialize<PayrollRowDto>(item.AfterJson)!;

@@ -102,6 +102,21 @@ public sealed class PayrollApprovedRowRevisionConfiguration
             .HasForeignKey(item => item.PayrollRowId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(item => item.RemediationCase).WithMany()
             .HasForeignKey(item => item.RemediationCaseId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(item => item.Batch).WithMany()
+            .HasForeignKey(item => item.BatchId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class PayrollApprovedRevisionBatchConfiguration
+    : IEntityTypeConfiguration<PayrollApprovedRevisionBatch>
+{
+    public void Configure(EntityTypeBuilder<PayrollApprovedRevisionBatch> builder)
+    {
+        builder.Property(item => item.PreviewToken).IsRequired().HasMaxLength(64);
+        builder.Property(item => item.ExpertReviewReference).IsRequired().HasMaxLength(256);
+        builder.Property(item => item.ReviewNotes).IsRequired().HasMaxLength(2000);
+        builder.Property(item => item.ApprovedByUserId).IsRequired().HasMaxLength(450);
+        builder.HasIndex(item => new { item.TenantId, item.SourcePayrollRowId }).IsUnique();
     }
 }
 

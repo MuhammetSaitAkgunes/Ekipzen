@@ -24,7 +24,8 @@ public sealed record ApprovedCompensationPayrollImpactDto(
     IReadOnlyList<ApprovedPayrollImpactPeriodDto> LaterApprovedRows,
     bool CanApply, IReadOnlyList<string> BlockingReasons, string PreviewToken,
     ApprovedPayrollRevisionDto? Revision,
-    ApprovedPayrollChainImpactDto ChainImpact);
+    ApprovedPayrollChainImpactDto ChainImpact, bool CanApplyChain,
+    IReadOnlyList<ApprovedPayrollRevisionBatchRowDto> BatchRevisions);
 
 public sealed record ReviewApprovedCompensationPayrollImpactQuery(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId)
@@ -152,10 +153,23 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
                 remediation.ProposedValuesJson, RevisionId = revision?.Id }))));
         var chainImpact = revision is null
             ? await ApprovedPayrollChainImpact.CalculateAsync(
-                context, engine, row, hypothetical, cancellationToken)
+                context, engine, row, hypothetical, token, cancellationToken)
             : new ApprovedPayrollChainImpactDto(false,
                 ["İlk satırın parasal sürümü zaten var; zincirleme telafi ayrı inceleme gerektirir."],
-                []);
+                [], string.Empty);
+        var canApplyChain = revision is null && chainImpact.CanEstimate
+            && chainImpact.LaterApprovedRows.Count > 0
+            && laterApprovedRows.Count == chainImpact.LaterApprovedRows.Count
+            && blocking.Count == 1
+            && blocking[0].StartsWith("Aynı çalışanın sonraki onaylı bordro satırı var;",
+                StringComparison.Ordinal);
+        var batchRevisions = revision?.BatchId is int batchId
+            ? await context.PayrollApprovedRowRevisions.AsNoTracking()
+                .Where(item => item.BatchId == batchId)
+                .Include(item => item.PayrollRow)
+                .OrderBy(item => item.Id)
+                .ToListAsync(cancellationToken)
+            : [];
         return new(request.PeriodId, request.RowId,
             row.Period.Status.ToString().ToLowerInvariant(), request.CaseId,
             remediation.ExpertReviewReference, remediation.ReviewedAtUtc.Value,
@@ -163,6 +177,8 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
             laterApprovedRows,
             blocking.Count == 0, blocking, token,
             revision is null ? null : ApprovedPayrollRevisionRules.ToDto(revision),
-            chainImpact);
+            chainImpact, canApplyChain,
+            batchRevisions.Select(item => new ApprovedPayrollRevisionBatchRowDto(
+                item.PayrollRow!.PayrollPeriodId, ApprovedPayrollRevisionRules.ToDto(item))).ToList());
     }
 }

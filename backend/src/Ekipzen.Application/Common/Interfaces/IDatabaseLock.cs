@@ -10,4 +10,9 @@ public interface IDatabaseLock
         string resource,
         Func<CancellationToken, Task<T>> action,
         CancellationToken cancellationToken);
+
+    Task<T> ExecuteExclusiveAsync<T>(
+        IReadOnlyCollection<string> resources,
+        Func<CancellationToken, Task<T>> action,
+        CancellationToken cancellationToken);
 }

@@ -19,12 +19,24 @@ public sealed class SqlServerDatabaseLock(AppDbContext context, ICurrentTenant c
         string resource,
         Func<CancellationToken, Task<T>> action,
         CancellationToken cancellationToken)
+        => await ExecuteExclusiveAsync([resource], action, cancellationToken);
+
+    public async Task<T> ExecuteExclusiveAsync<T>(
+        IReadOnlyCollection<string> resources,
+        Func<CancellationToken, Task<T>> action,
+        CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(resource);
+        if (resources.Count == 0)
+            throw new ArgumentException("En az bir kilit kaynağı gerekli.", nameof(resources));
+        var ordered = resources.Distinct(StringComparer.Ordinal)
+            .OrderBy(resource => resource, StringComparer.Ordinal).ToList();
+        foreach (var resource in ordered)
+            ArgumentException.ThrowIfNullOrWhiteSpace(resource);
 
         await using var transaction = await context.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
-        await AcquireAsync(resource, transaction, cancellationToken);
+        foreach (var resource in ordered)
+            await AcquireAsync(resource, transaction, cancellationToken);
 
         var result = await action(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
