@@ -4,7 +4,15 @@ using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Payroll;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Setup;
+using Ekipzen.Domain.Constants;
+using Ekipzen.Domain.Entities.Organization;
 using Ekipzen.Domain.Enums;
+using Ekipzen.Infrastructure.Identity;
+using Ekipzen.Tests.Integration.Tenancy;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -213,7 +221,11 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
     [Fact]
     public async Task PeriodLifecycle_EndToEnd_WithCumulativeCarryAndPayslip()
     {
-        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        // Diğer testlerin demo şirkete yazdığı ileri dönemler bu senaryonun
+        // kronolojik açılış kuralını etkileyemez; katalog test sonunda temizlenir.
+        await using var lifecycle = new LifecycleTenant(factory);
+        await lifecycle.PrepareAsync();
+        var admin = lifecycle.Admin;
         var ahmetEmployeeId = await FindEmployeeIdAsync(admin, "Ahmet");
         var employees = await GetAsync<PagedResult<EmployeeListItemDto>>(
             admin, "/api/employees?pageSize=100");
@@ -237,7 +249,8 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
 
         // --- dönem oluştur ---
         var createResponse = await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created,
+            await createResponse.Content.ReadAsStringAsync());
         var period = (await createResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!;
 
         period.Name.Should().Be("Eylül 2026");
@@ -251,7 +264,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, "/api/guidance/daily-tasks"))
             .Should().ContainSingle(task => task.Key == payrollTaskKey, "aynı kaynak ikinci görev oluşturmaz");
         var managerTasks = await GetAsync<List<DailyGuidanceTaskDto>>(
-            await AuthedClientAsync("ece.arslan@hrmaster.local"), "/api/guidance/daily-tasks");
+            lifecycle.Manager, "/api/guidance/daily-tasks");
         managerTasks.Should().NotContain(task => task.Key == payrollTaskKey,
             "yönetici bordro dönemine erişemez");
         period.Rows.Should().NotBeEmpty("aktif personel için girdi satırları üretilir");
@@ -483,7 +496,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
                 "en son dönemden geriye doğru dönem açılamaz");
 
         // --- pusula PDF: çalışan kendisininkini indirir, başkasınınkini indiremez ---
-        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        var employee = lifecycle.Employee;
 
         var payslipResponse = await employee.GetAsync(
             $"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/payslip");
@@ -516,6 +529,94 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
     }
 
     // --- yardımcılar ve yanıt modelleri ---
+
+    private sealed class LifecycleTenant(EkipzenApiFactory factory)
+        : TenancyTestBase(factory), IAsyncDisposable
+    {
+        public HttpClient Admin { get; private set; } = null!;
+        public HttpClient Manager { get; private set; } = null!;
+        public HttpClient Employee { get; private set; } = null!;
+
+        public async Task PrepareAsync()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            var adminEmail = $"payroll-admin-{suffix}@example.test";
+            var managerEmail = $"payroll-manager-{suffix}@example.test";
+            var employeeEmail = $"payroll-employee-{suffix}@example.test";
+            var tenant = await ProvisionAndActivateAsync("Bordro yaşam döngüsü", adminEmail);
+            var department = new Department { Name = "Yazılım", Code = "YAZ" };
+            var manager = new Ekipzen.Domain.Entities.Organization.Employee
+            {
+                FirstName = "Ece", LastName = "Arslan", Department = department,
+                HireDate = new DateOnly(2020, 5, 15), Profile = new EmployeeProfile(),
+            };
+            var employee = new Ekipzen.Domain.Entities.Organization.Employee
+            {
+                FirstName = "Ahmet", LastName = "Yılmaz", Department = department, Manager = manager,
+                HireDate = new DateOnly(2022, 3, 12), Profile = new EmployeeProfile(),
+            };
+            var staff = new[]
+            {
+                manager, employee,
+                new Ekipzen.Domain.Entities.Organization.Employee
+                {
+                    FirstName = "Ayşe", LastName = "Demir", Department = department,
+                    HireDate = new DateOnly(2021, 9, 4), Profile = new EmployeeProfile(),
+                },
+                new Ekipzen.Domain.Entities.Organization.Employee
+                {
+                    FirstName = "Selin", LastName = "Koç", Department = department,
+                    HireDate = new DateOnly(2023, 1, 17), Status = EmployeeStatus.Passive,
+                    Profile = new EmployeeProfile(),
+                },
+            };
+            await SeedInTenantAsync(tenant.TenantId, db =>
+            {
+                foreach (var person in staff)
+                    person.EmploymentPeriods.Add(new EmployeeEmploymentPeriod { StartDate = person.HireDate });
+                db.Employees.AddRange(staff);
+                var settings = TenantBaseline2026.CreatePayrollDraft();
+                settings.Status = PayrollSettingsStatus.Approved;
+                settings.ReviewNotes = "Yalnız entegrasyon testi veri kurulumu";
+                settings.ApprovedByUserId = "test:payroll-lifecycle";
+                settings.ApprovedAtUtc = DateTime.UtcNow;
+                db.PayrollSettings.Add(settings);
+                return Task.CompletedTask;
+            });
+            using (var scope = Factory.Services.GetRequiredService<ITenantScopeFactory>().Create(tenant.TenantId))
+            {
+                var users = scope.Services.GetRequiredService<UserManager<ApplicationUser>>();
+                var directory = scope.Services.GetRequiredService<ITenantDirectory>();
+                var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+                foreach (var (email, person, role) in new[]
+                {
+                    (managerEmail, manager, Roles.Manager), (employeeEmail, employee, Roles.Employee),
+                })
+                {
+                    var user = new ApplicationUser
+                    {
+                        UserName = email, Email = email, EmailConfirmed = true,
+                        TenantId = tenant.TenantId, EmployeeId = person.Id, DisplayName = person.FullName,
+                    };
+                    (await users.CreateAsync(user, DemoPassword)).Succeeded.Should().BeTrue();
+                    (await users.AddToRoleAsync(user, role)).Succeeded.Should().BeTrue();
+                    await directory.ReserveAsync(email, tenant.TenantId, CancellationToken.None);
+                    var tracked = await db.Employees.FindAsync([person.Id]);
+                    tracked!.UserId = user.Id;
+                }
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+            Admin = await AuthedClientAsync(adminEmail);
+            Manager = await AuthedClientAsync(managerEmail);
+            Employee = await AuthedClientAsync(employeeEmail);
+        }
+
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            Admin?.Dispose(); Manager?.Dispose(); Employee?.Dispose();
+            await base.DisposeAsync();
+        }
+    }
 
     private sealed record PayrollCalcDto(decimal NetPay, decimal EmployerCost, decimal SgkBase, List<string> Warnings);
 
