@@ -47,6 +47,8 @@ public sealed record IdentityProvisioningDto(
     int AttemptCount,
     string? LastError);
 
+public sealed record CandidateEmployeeLinkDto(int Id, string Name, bool IsActive);
+
 /// <summary>Aday detayı — recruitment.js sekmeleri (özgeçmiş/notlar/değerlendirme/geçmiş).</summary>
 public sealed record CandidateDetailDto(
     int Id,
@@ -66,7 +68,8 @@ public sealed record CandidateDetailDto(
     IReadOnlyList<InterviewNoteDto> Notes,
     IReadOnlyList<CandidateEvaluationDto> Evaluations,
     IReadOnlyList<CandidateHistoryDto> History,
-    IdentityProvisioningDto? Provisioning, int Version, IReadOnlyList<CandidateStageDecisionDto> StageDecisions);
+    IdentityProvisioningDto? Provisioning, int Version, IReadOnlyList<CandidateStageDecisionDto> StageDecisions,
+    CandidateEmployeeLinkDto? LinkedEmployee);
 
 public sealed record CandidateStateDto(
     string Name, string AppliedRole, int? PositionId, string? PositionTitle,

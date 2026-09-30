@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -301,13 +302,18 @@ test("başka işlem aday aşamasını değiştirdiyse eski kararı göndermez", 
 test("işe alma ön kontrolünden sonra personel kaydı oluşturur ve kalan işe giriş adımına bağlar", async () => {
   stubApi({
     "/api/candidates/5": detail,
+    "/api/candidates/6": { ...detail, id: 6, name: "Diğer Aday", status: "Yeni", provisioning: null },
     "/api/departments": departments,
     "/api/candidates/5/hire": {
       candidateId: 5, employeeId: 9, employeeName: "Burak Yılmaz",
       provisioning: { status: "pending", email: "burak.yilmaz@hrmaster.local" },
     },
   });
-  renderDetail();
+  function SwitchCandidate() {
+    const [id, setId] = useState(5);
+    return <ToastProvider><button onClick={() => setId(6)}>Diğer adayı seç</button><CandidateDetail id={id} /></ToastProvider>;
+  }
+  renderPage(<SwitchCandidate />);
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.click(screen.getByRole("button", { name: /İşe Al/ }));
   await userEvent.selectOptions(await screen.findByLabelText("Departman"), "1");
@@ -333,6 +339,38 @@ test("işe alma ön kontrolünden sonra personel kaydı oluşturur ve kalan işe
   expect(screen.getByRole("link", { name: "Personel kartını ve kalan adımları aç" }))
     .toHaveAttribute("href", "/app/personnel/9?edit=1&guide=1&tab=tab-evrak");
   expect(screen.getByRole("button", { name: /İşe Al/ })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Diğer adayı seç" }));
+  await screen.findByRole("heading", { name: "Diğer Aday" });
+  expect(screen.queryByRole("heading", { name: "Personel kaydı oluşturuldu" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Personel kartını ve kalan adımları aç" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /İşe Al/ })).toBeEnabled();
+});
+
+test.each(["pending", "completed"])("yeniden açılan işe alınmış adayda %s hesabın çalışan bağlantısı kalır", async status => {
+  stubApi({ "/api/candidates/5": { ...detail, status: "İşe Alındı",
+    provisioning: { status, email: "burak@example.com" },
+    linkedEmployee: { id: 9, name: "Burak Yılmaz", isActive: true } }, "/api/departments": departments });
+  renderDetail();
+  expect(await screen.findByRole("link", { name: "Bağlı personel kartını aç" })).toHaveAttribute("href", "/app/personnel/9");
+  expect(screen.getByRole("link", { name: "İşe giriş rehberine devam et" })).toHaveAttribute("href", "/app/personnel/9?edit=1&guide=1&tab=tab-evrak");
+  expect(screen.getByText(/davetin teslim edilmiş olduğunu göstermez/)).toBeInTheDocument();
+});
+
+test("aktif olmayan bağlı çalışanın kartı açılır; işe giriş tamamlandı veya işe dönüldü sayılmaz", async () => {
+  stubApi({ "/api/candidates/5": { ...detail, status: "İşe Alındı",
+    linkedEmployee: { id: 9, name: "Burak Yılmaz", isActive: false } }, "/api/departments": departments });
+  renderDetail();
+  expect(await screen.findByRole("link", { name: "Bağlı personel kartını aç" })).toHaveAttribute("href", "/app/personnel/9");
+  expect(screen.queryByRole("link", { name: "İşe giriş rehberine devam et" })).not.toBeInTheDocument();
+  expect(screen.getByText(/Bu bağlantı işe dönüş işlemi yapmaz/)).toBeInTheDocument();
+});
+
+test("bağlantısı doğrulanamayan eski başvuruda çalışan kimliği tahmin edilmez", async () => {
+  stubApi({ "/api/candidates/5": { ...detail, status: "İşe Alındı", linkedEmployee: null }, "/api/departments": departments });
+  renderDetail();
+  expect(await screen.findByRole("link", { name: "Personel listesini kontrol et" })).toHaveAttribute("href", "/app/personnel");
+  expect(screen.queryByRole("link", { name: "Bağlı personel kartını aç" })).not.toBeInTheDocument();
+  expect(screen.getByText(/aynı kişiye yeniden kayıt açmayın/)).toBeInTheDocument();
 });
 
 test("işe giriş tarihi açıkça seçilmeden işlem gönderilmez", async () => {

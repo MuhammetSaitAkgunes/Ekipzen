@@ -150,6 +150,10 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
         // Aday kilitlenir, pozisyon kontenjanı kapanır.
         var afterHire = await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}");
         afterHire.Status.Should().Be("İşe Alındı");
+        afterHire.LinkedEmployee.Should().NotBeNull();
+        afterHire.LinkedEmployee!.Id.Should().Be(hired.EmployeeId);
+        afterHire.LinkedEmployee.Name.Should().Be(employee.FirstName + " " + employee.LastName);
+        afterHire.LinkedEmployee.IsActive.Should().BeTrue();
         afterHire.History.Should().Contain(h => h.Event.Contains("İşe alındı"));
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status", new { status = "Yeni", expectedVersion = afterHire.Version, reason = "Geçmişi yeniden açma denemesi." }))
@@ -321,6 +325,8 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
         var pending = await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}");
         pending.Status.Should().Be("İşe Alındı");
         pending.Provisioning!.Status.Should().Be("pending");
+        pending.LinkedEmployee.Should().NotBeNull();
+        pending.LinkedEmployee!.Id.Should().Be(hired.EmployeeId);
         pending.Provisioning.LastError.Should().NotBeNullOrWhiteSpace();
 
         var retryResponse = await admin.PostAsJsonAsync(
@@ -362,6 +368,26 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
             $"/api/candidates/{candidate.Id}/provisioning/retry", new { email = (string?)null }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict,
                 "tamamlanan idempotent is yeniden kuyruga alinmamali");
+
+        // Eski başvurunun bağlantısı güncel çalışan durumunu izler; çelişkili
+        // teslimat kayıtlarından bir çalışan tahmin edilmez.
+        using var linkScope = retryFactory.Services.GetRequiredService<ITenantScopeFactory>().Create(auth.User.TenantId);
+        var linkDb = linkScope.Services.GetRequiredService<IApplicationDbContext>();
+        await linkDb.Employees.Where(item => item.Id == hired.EmployeeId).ExecuteUpdateAsync(setters =>
+            setters.SetProperty(item => item.Status, Ekipzen.Domain.Enums.EmployeeStatus.Passive));
+        (await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}"))
+            .LinkedEmployee!.IsActive.Should().BeFalse();
+        var otherEmployeeId = await linkDb.Employees.Where(item => item.Id != hired.EmployeeId)
+            .Select(item => item.Id).FirstAsync();
+        linkDb.IdentityProvisioningOperations.Add(new Ekipzen.Domain.Entities.Identity.IdentityProvisioningOperation
+        {
+            CandidateId = candidate.Id, EmployeeId = otherEmployeeId,
+            Type = Ekipzen.Domain.Enums.IdentityProvisioningOperationType.EmployeeLogin,
+            Status = Ekipzen.Domain.Enums.IdentityProvisioningStatus.Failed,
+        });
+        await linkDb.SaveChangesAsync(CancellationToken.None);
+        (await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}"))
+            .LinkedEmployee.Should().BeNull();
     }
 
     [Fact]
@@ -792,6 +818,7 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
         var zero = await CreateAsync(new { name = "Sıfır Puan", appliedRole = "Uzman", score = 0 });
         var maximum = await CreateAsync(new { name = "Tam Puan", appliedRole = "Uzman", score = 100 });
         omitted.Score.Should().BeNull(); explicitNull.Score.Should().BeNull();
+        omitted.LinkedEmployee.Should().BeNull();
         zero.Score.Should().Be(0); maximum.Score.Should().Be(100);
         var listed = await GetAsync<List<CandidateListItemDto>>(admin, "/api/candidates");
         listed.Single(item => item.Id == omitted.Id).Score.Should().BeNull();

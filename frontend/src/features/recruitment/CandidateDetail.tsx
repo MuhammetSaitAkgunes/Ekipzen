@@ -80,6 +80,7 @@ export function CandidateDetail({ id }: { id: number }) {
   const [provisioningEmail, setProvisioningEmail] = useState("");
 
   useEffect(() => {
+    setHireOutcome(null); setHireOpen(false); setProvisioningEmail("");
     setCorrectionOpen(false);
     setEvidenceSelection(null);
     setStatusReview(null); setStatusConfirmed(false); setStatusReason(""); setStatusEvidence([]);
@@ -102,7 +103,8 @@ export function CandidateDetail({ id }: { id: number }) {
   if (detailQ.isError) return <PageError error={detailQ.error} />;
 
   const candidate = detailQ.data;
-  const isHired = candidate.status === "İşe Alındı" || hireOutcome !== null;
+  const currentHireOutcome = hireOutcome?.candidateId === id ? hireOutcome : null;
+  const isHired = candidate.status === "İşe Alındı" || currentHireOutcome !== null;
   const provisioning = candidate.provisioning;
 
   const pendingStatus = statusReview?.candidateId === id && statusReview.from === (candidate.status ?? "Yeni") ? statusReview : null;
@@ -307,17 +309,33 @@ export function CandidateDetail({ id }: { id: number }) {
       {candidate.status === "Red" && <p role="status" className="ez-hire-status-note">
         Reddedilmiş aday işe alınamaz. Karar değiştiyse önce pipeline durumunu güncelleyin.
       </p>}
-      {hireOutcome && <section className="ez-hire-outcome" aria-labelledby="hire-outcome-title" role="status">
+      {currentHireOutcome && <section className="ez-hire-outcome" aria-labelledby="hire-outcome-title" role="status">
         <h3 id="hire-outcome-title">Personel kaydı oluşturuldu</h3>
-        <p>{hireOutcome.employeeName || candidate.name} için çalışan kaydı açıldı. Adayı işe almak, özlük belgelerini, ücret paketini veya uygulama dışındaki bildirimleri tamamlamaz.</p>
-        <p>{hireOutcome.provisioning?.status === "completed"
+        <p>{currentHireOutcome.employeeName || candidate.name} için çalışan kaydı açıldı. Adayı işe almak, özlük belgelerini, ücret paketini veya uygulama dışındaki bildirimleri tamamlamaz.</p>
+        <p>{currentHireOutcome.provisioning?.status === "completed"
           ? "Giriş hesabı hazır. Davetin teslimini ayrıca kontrol edin."
-          : hireOutcome.provisioning?.status
+          : currentHireOutcome.provisioning?.status
             ? "Giriş hesabı hazırlanıyor; durumunu bu aday ekranından takip edin."
             : "Giriş hesabının durumu yanıtta doğrulanamadı; aday kaydını yenileyip kontrol edin."}</p>
-        {hireOutcome.employeeId
-          ? <Link className="btn btn-secondary" to={appPath("/personnel/" + hireOutcome.employeeId + "?edit=1&guide=1&tab=tab-evrak")} state={{ guideCreated: true }}>Personel kartını ve kalan adımları aç</Link>
+        {currentHireOutcome.employeeId
+          ? <Link className="btn btn-secondary" to={appPath("/personnel/" + currentHireOutcome.employeeId + "?edit=1&guide=1&tab=tab-evrak")} state={{ guideCreated: true }}>Personel kartını ve kalan adımları aç</Link>
           : <Link className="btn btn-secondary" to={appPath("/personnel")}>Çalışan listesini kontrol et</Link>}
+      </section>}
+
+      {isHired && !currentHireOutcome && <section className="ez-hire-outcome" aria-labelledby="candidate-employee-link-title">
+        <h3 id="candidate-employee-link-title">Adaydan oluşan çalışan kaydı</h3>
+        {candidate.linkedEmployee ? <>
+          <p>{candidate.linkedEmployee.name} · {candidate.linkedEmployee.isActive ? "Aktif çalışan" : "Aktif olmayan çalışan"}</p>
+          <p>Başvuru geçmişi bu aday kaydında kalır. Çalışan bilgileri ve belgeler personel kartında yönetilir; işe alınmış başvurunun bilgileri bu ekrandan değiştirilemez.</p>
+          <Link className="btn btn-secondary" to={appPath("/personnel/" + candidate.linkedEmployee.id)}>Bağlı personel kartını aç</Link>
+          {candidate.linkedEmployee.isActive
+            ? <Link className="btn btn-secondary" to={appPath("/personnel/" + candidate.linkedEmployee.id + "?edit=1&guide=1&tab=tab-evrak")}>İşe giriş rehberine devam et</Link>
+            : <p>Çalışan şu anda aktif değil. Bu bağlantı işe dönüş işlemi yapmaz; güncel istihdam durumunu personel kartında kontrol edin.</p>}
+          <p>Çalışan bağlantısı, giriş hesabının hazır veya davetin teslim edilmiş olduğunu göstermez. Evrak, ücret paketi ve uygulama dışı adımları ayrıca kontrol edin.</p>
+        </> : <>
+          <p>İlgili çalışan kaydı güvenilir biçimde doğrulanamadı. Personel listesini ve işe alma geçmişini kontrol edin; aynı kişiye yeniden kayıt açmayın.</p>
+          <Link className="btn btn-secondary" to={appPath("/personnel")}>Personel listesini kontrol et</Link>
+        </>}
       </section>}
 
       {isHired && provisioning && provisioning.status !== "completed" && (

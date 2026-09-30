@@ -9,6 +9,7 @@ export type CandidateDetailDto = Omit<components["schemas"]["CandidateDetailDto"
   score: number | null;
   id: number; version: number; notes?: InterviewNoteDto[]; evaluations?: CandidateEvaluationDto[];
   stageDecisions?: CandidateStageDecisionDto[];
+  linkedEmployee?: { id: number; name: string; isActive: boolean } | null;
 };
 export type CandidateDecisionEvidenceReference = { kind: "note" | "evaluation"; id: number; version: number };
 export type CandidateStageDecisionDto = {

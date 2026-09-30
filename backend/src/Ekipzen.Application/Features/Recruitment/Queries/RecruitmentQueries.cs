@@ -77,12 +77,23 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Aday", request.Id);
 
-        var provisioning = await context.IdentityProvisioningOperations
+        var provisioningRecords = await context.IdentityProvisioningOperations
             .AsNoTracking()
             .Where(operation => operation.CandidateId == candidate.Id
                 && operation.Type == IdentityProvisioningOperationType.EmployeeLogin)
             .OrderByDescending(operation => operation.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+        var provisioning = provisioningRecords.FirstOrDefault();
+        var employeeIds = provisioningRecords.Select(item => item.EmployeeId).Distinct().Take(2).ToArray();
+        CandidateEmployeeLinkDto? linkedEmployee = null;
+        if (candidate.Status == CandidateStatus.Hired && employeeIds.Length == 1)
+        {
+            linkedEmployee = await context.Employees.AsNoTracking()
+                .Where(employee => employee.Id == employeeIds[0])
+                .Select(employee => new CandidateEmployeeLinkDto(employee.Id,
+                    employee.FirstName + " " + employee.LastName, employee.Status == EmployeeStatus.Active))
+                .SingleOrDefaultAsync(cancellationToken);
+        }
 
         var revisions = await context.CandidateEvidenceRevisions.AsNoTracking()
             .Where(item => item.CandidateId == candidate.Id).ToListAsync(cancellationToken);
@@ -140,7 +151,7 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
             decisions.Select(item => new CandidateStageDecisionDto(item.Id,
                 item.FromStatus.ToDto(), item.ToStatus.ToDto(), item.FromVersion, item.ToVersion,
                 item.Reason, JsonSerializer.Deserialize<List<CandidateDecisionEvidenceDto>>(item.EvidenceJson)!,
-                item.DecidedByUserId, item.DecidedByName, item.DecidedAtUtc)).ToList());
+                item.DecidedByUserId, item.DecidedByName, item.DecidedAtUtc)).ToList(), linkedEmployee);
     }
 }
 
