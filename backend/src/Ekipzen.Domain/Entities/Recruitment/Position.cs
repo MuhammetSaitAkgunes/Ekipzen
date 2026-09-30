@@ -14,6 +14,7 @@ public class Position : AuditableEntity
 
     public bool IsOpen { get; set; } = true;
     public int OpenCount { get; set; } = 1;
+    public int Version { get; set; } = 1;
 
     public ICollection<Candidate> Candidates { get; set; } = new List<Candidate>();
 }

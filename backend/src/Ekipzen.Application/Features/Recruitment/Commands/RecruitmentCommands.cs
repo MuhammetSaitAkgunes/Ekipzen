@@ -57,7 +57,7 @@ public sealed class CreatePositionCommandHandler(IApplicationDbContext context)
 
         return new PositionDto(
             position.Id, position.Title, position.DepartmentId, departmentName,
-            position.IsOpen, position.OpenCount, 0);
+            position.IsOpen, position.OpenCount, 0, position.Version);
     }
 }
 
@@ -89,16 +89,27 @@ public sealed class CreateCandidateCommandValidator : AbstractValidator<CreateCa
     }
 }
 
-public sealed class CreateCandidateCommandHandler(IApplicationDbContext context, ISender sender)
+public sealed class CreateCandidateCommandHandler(
+    IApplicationDbContext context, ISender sender, IDatabaseLock databaseLock)
     : IRequestHandler<CreateCandidateCommand, CandidateDetailDto>
 {
-    public async Task<CandidateDetailDto> Handle(
+    public Task<CandidateDetailDto> Handle(
+        CreateCandidateCommand request, CancellationToken cancellationToken)
+        => request.PositionId is { } positionId
+            ? databaseLock.ExecuteExclusiveAsync($"recruitment-position:{positionId}",
+                token => CreateAsync(request, token), cancellationToken)
+            : CreateAsync(request, cancellationToken);
+
+    private async Task<CandidateDetailDto> CreateAsync(
         CreateCandidateCommand request, CancellationToken cancellationToken)
     {
-        if (request.PositionId is not null &&
-            !await context.Positions.AnyAsync(p => p.Id == request.PositionId, cancellationToken))
+        if (request.PositionId is { } positionId)
         {
-            throw new NotFoundException("Pozisyon", request.PositionId);
+            var position = await context.Positions.AsNoTracking()
+                .SingleOrDefaultAsync(p => p.Id == positionId, cancellationToken)
+                ?? throw new NotFoundException("Pozisyon", positionId);
+            if (!position.IsOpen || position.OpenCount < 1)
+                throw new ConflictException("Pozisyon kapalı veya açık kadrosu yok; aday bağlantısı kurulamaz.");
         }
 
         var candidate = new Candidate
@@ -328,16 +339,42 @@ public sealed class HireCandidateCommandValidator : AbstractValidator<HireCandid
 public sealed class HireCandidateCommandHandler(
     IApplicationDbContext context,
     IIdentityService identityService,
-    IIdentityProvisioningProcessor provisioningProcessor)
+    IIdentityProvisioningProcessor provisioningProcessor,
+    IDatabaseLock databaseLock)
     : IRequestHandler<HireCandidateCommand, HireResultDto>
 {
     public async Task<HireResultDto> Handle(HireCandidateCommand request, CancellationToken cancellationToken)
+    {
+        var positionId = await context.Candidates.AsNoTracking()
+            .Where(candidate => candidate.Id == request.CandidateId)
+            .Select(candidate => candidate.PositionId)
+            .SingleOrDefaultAsync(cancellationToken);
+        var resources = positionId is { } id
+            ? new[] { $"recruitment-candidate:{request.CandidateId}", $"recruitment-position:{id}" }
+            : new[] { $"recruitment-candidate:{request.CandidateId}" };
+        var persisted = await databaseLock.ExecuteExclusiveAsync(resources,
+            token => HireLockedAsync(request, positionId, token), cancellationToken);
+        await provisioningProcessor.ProcessNowAsync(persisted.ProvisioningId, cancellationToken);
+        var currentProvisioning = await context.IdentityProvisioningOperations
+            .AsNoTracking()
+            .SingleAsync(operation => operation.Id == persisted.ProvisioningId, cancellationToken);
+        return new HireResultDto(persisted.CandidateId, persisted.EmployeeId,
+            persisted.EmployeeName, currentProvisioning.ToDto());
+    }
+
+    private sealed record HirePersisted(int CandidateId, int EmployeeId,
+        string EmployeeName, int ProvisioningId);
+
+    private async Task<HirePersisted> HireLockedAsync(
+        HireCandidateCommand request, int? expectedPositionId, CancellationToken cancellationToken)
     {
         var candidate = await context.Candidates
             .Include(c => c.Position)
             .FirstOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
             ?? throw new NotFoundException("Aday", request.CandidateId);
 
+        if (candidate.PositionId != expectedPositionId)
+            throw new ConflictException("Adayın pozisyon bağlantısı değişti; yeniden inceleyin.");
         if (candidate.Status is CandidateStatus.Hired)
         {
             throw new ConflictException("Aday zaten işe alınmış.");
@@ -347,6 +384,10 @@ public sealed class HireCandidateCommandHandler(
         {
             throw new ConflictException("Reddedilmiş aday işe alınamaz; önce pipeline durumunu güncelleyin.");
         }
+
+        if (candidate.Position is not null
+            && (!candidate.Position.IsOpen || candidate.Position.OpenCount < 1))
+            throw new ConflictException("Bağlı pozisyon kapalı veya açık kadrosu yok; işe alma tamamlanamaz.");
 
         if (!await context.Departments.AnyAsync(d => d.Id == request.DepartmentId, cancellationToken))
         {
@@ -406,17 +447,12 @@ public sealed class HireCandidateCommandHandler(
         {
             candidate.Position.OpenCount = Math.Max(0, candidate.Position.OpenCount - 1);
             candidate.Position.IsOpen = candidate.Position.OpenCount > 0;
+            candidate.Position.Version++;
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
-        await provisioningProcessor.ProcessNowAsync(provisioning.Id, cancellationToken);
-        var currentProvisioning = await context.IdentityProvisioningOperations
-            .AsNoTracking()
-            .SingleAsync(operation => operation.Id == provisioning.Id, cancellationToken);
-
-        return new HireResultDto(
-            candidate.Id, employee.Id, employee.FullName, currentProvisioning.ToDto());
+        return new HirePersisted(candidate.Id, employee.Id, employee.FullName, provisioning.Id);
     }
 }
 

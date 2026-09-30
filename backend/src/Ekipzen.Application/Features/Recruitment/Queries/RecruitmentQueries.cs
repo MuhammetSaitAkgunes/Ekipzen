@@ -127,7 +127,8 @@ public sealed class GetPositionsQueryHandler(IApplicationDbContext context)
             .AsNoTracking()
             .OrderBy(p => p.Title)
             .Select(p => new PositionDto(
-                p.Id, p.Title, p.DepartmentId, p.Department!.Name, p.IsOpen, p.OpenCount, p.Candidates.Count))
+                p.Id, p.Title, p.DepartmentId, p.Department!.Name, p.IsOpen, p.OpenCount, p.Candidates.Count,
+                p.Version))
             .ToListAsync(cancellationToken);
 }
 

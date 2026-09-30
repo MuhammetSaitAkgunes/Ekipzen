@@ -17,6 +17,20 @@ public class PositionConfiguration : IEntityTypeConfiguration<Position>
     }
 }
 
+public sealed class PositionCorrectionConfiguration : IEntityTypeConfiguration<PositionCorrection>
+{
+    public void Configure(EntityTypeBuilder<PositionCorrection> b)
+    {
+        b.Property(item => item.BeforeJson).IsRequired();
+        b.Property(item => item.AfterJson).IsRequired();
+        b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
+        b.Property(item => item.ChangedByUserId).IsRequired().HasMaxLength(450);
+        b.HasOne(item => item.Position).WithMany()
+            .HasForeignKey(item => item.PositionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(item => new { item.TenantId, item.PositionId, item.ToVersion }).IsUnique();
+    }
+}
+
 public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
 {
     public void Configure(EntityTypeBuilder<Candidate> b)

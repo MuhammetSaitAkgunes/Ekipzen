@@ -99,6 +99,21 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         return CreatedAtAction(nameof(GetPositions), new { }, position);
     }
 
+    [HttpPut("positions/{id:int}")]
+    [ProducesResponseType<PositionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<PositionDto>> CorrectPosition(
+        int id, CorrectPositionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new CorrectPositionCommand(id, body.ExpectedVersion,
+            body.Title, body.DepartmentId, body.OpenCount, body.IsOpen, body.Reason),
+            cancellationToken));
+
+    [HttpGet("positions/{id:int}/corrections")]
+    [ProducesResponseType<IReadOnlyList<PositionCorrectionDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PositionCorrectionDto>>> GetPositionCorrections(
+        int id, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetPositionCorrectionsQuery(id), cancellationToken));
+
     [HttpGet("recruitment/funnel")]
     [ProducesResponseType<RecruitmentFunnelDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<RecruitmentFunnelDto>> GetFunnel(CancellationToken cancellationToken)
@@ -109,4 +124,6 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5);
     public sealed record CandidateHireBody(int DepartmentId, string Email, string ContractType, string? Title = null, DateOnly? HireDate = null);
     public sealed record RetryProvisioningBody(string? Email = null);
+    public sealed record CorrectPositionBody(int ExpectedVersion, string Title,
+        int? DepartmentId, int OpenCount, bool IsOpen, string Reason);
 }

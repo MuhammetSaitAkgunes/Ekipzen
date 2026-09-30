@@ -164,6 +164,92 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
     }
 
     [Fact]
+    public async Task PositionCorrection_PreservesCandidates_AndEnforcesClosureAcrossCreateAndHire()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var department = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))
+            .Single(item => item.Name == "Yazılım");
+        var positionResponse = await admin.PostAsJsonAsync("/api/positions", new
+        {
+            title = "QA Uzmanı", departmentId = department.Id, openCount = 2,
+        });
+        positionResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var position = (await positionResponse.Content.ReadFromJsonAsync<PositionDto>())!;
+        position.Version.Should().Be(1);
+        var candidateResponse = await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Deniz Korkmaz", appliedRole = position.Title,
+            positionId = position.Id, score = 75,
+        });
+        candidateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var candidate = (await candidateResponse.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var correctionUrl = $"/api/positions/{position.Id}";
+        var closeBody = new
+        {
+            expectedVersion = position.Version, title = "Kalite Güvence Uzmanı",
+            departmentId = department.Id, openCount = 2, isOpen = false,
+            reason = "İşe alım geçici olarak durduruldu.",
+        };
+        (await manager.PutAsJsonAsync(correctionUrl, closeBody))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var closeResponse = await admin.PutAsJsonAsync(correctionUrl, closeBody);
+        closeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closed = (await closeResponse.Content.ReadFromJsonAsync<PositionDto>())!;
+        closed.Version.Should().Be(2);
+        closed.IsOpen.Should().BeFalse();
+        closed.CandidateCount.Should().Be(1);
+        (await admin.PutAsJsonAsync(correctionUrl, closeBody))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Yeni Başvuran", appliedRole = closed.Title,
+            positionId = position.Id, score = 70,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
+        {
+            departmentId = department.Id,
+            email = $"closed-position-{Guid.NewGuid():N}@hrmaster.local",
+            contractType = "indefinite",
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await GetAsync<CandidateDetailDto>(admin, $"/api/candidates/{candidate.Id}"))
+            .PositionId.Should().Be(position.Id);
+        var history = await GetAsync<List<PositionCorrectionDto>>(admin,
+            $"{correctionUrl}/corrections");
+        history.Should().ContainSingle();
+        history[0].Before.Title.Should().Be(position.Title);
+        history[0].After.Title.Should().Be(closed.Title);
+        history[0].Reason.Should().Be(closeBody.reason);
+
+        var reopenResponse = await admin.PutAsJsonAsync(correctionUrl, new
+        {
+            expectedVersion = closed.Version, title = closed.Title,
+            departmentId = department.Id, openCount = 1, isOpen = true,
+            reason = "Yeni onaylı kadro açıldı.",
+        });
+        reopenResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var reopened = (await reopenResponse.Content.ReadFromJsonAsync<PositionDto>())!;
+        reopened.Version.Should().Be(3);
+        var hireResponse = await admin.PostAsJsonAsync($"/api/candidates/{candidate.Id}/hire", new
+        {
+            departmentId = department.Id,
+            email = $"reopened-position-{Guid.NewGuid():N}@hrmaster.local",
+            contractType = "indefinite",
+        });
+        hireResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterHire = (await GetAsync<List<PositionDto>>(admin, "/api/positions"))
+            .Single(item => item.Id == position.Id);
+        afterHire.OpenCount.Should().Be(0);
+        afterHire.IsOpen.Should().BeFalse();
+        afterHire.Version.Should().Be(4);
+        (await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Kontenjan Sonrası", appliedRole = afterHire.Title,
+            positionId = position.Id, score = 70,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
     public async Task RejectedCandidate_CannotBeHired()
     {
         var admin = await AuthedClientAsync("ik@hrmaster.local");

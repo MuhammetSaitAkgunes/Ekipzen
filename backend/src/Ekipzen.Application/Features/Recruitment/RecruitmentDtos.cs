@@ -52,7 +52,14 @@ public sealed record CandidateDetailDto(
     IdentityProvisioningDto? Provisioning);
 
 public sealed record PositionDto(
-    int Id, string Title, int? DepartmentId, string? Department, bool IsOpen, int OpenCount, int CandidateCount);
+    int Id, string Title, int? DepartmentId, string? Department, bool IsOpen, int OpenCount, int CandidateCount,
+    int Version);
+
+public sealed record PositionStateDto(string Title, int? DepartmentId, bool IsOpen, int OpenCount);
+public sealed record PositionCorrectionDto(
+    int Id, int PositionId, int FromVersion, int ToVersion,
+    PositionStateDto Before, PositionStateDto After, string Reason,
+    string ChangedByUserId, DateTime ChangedAtUtc);
 
 /// <summary>Funnel verisi: pipeline aşaması başına aday sayısı.</summary>
 public sealed record RecruitmentFunnelDto(
