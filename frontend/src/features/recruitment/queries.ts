@@ -5,7 +5,9 @@ import { recruitmentJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
 
 export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
-export type CandidateDetailDto = components["schemas"]["CandidateDetailDto"] & { id: number; version: number };
+export type CandidateDetailDto = Omit<components["schemas"]["CandidateDetailDto"], "notes" | "evaluations"> & {
+  id: number; version: number; notes?: InterviewNoteDto[]; evaluations?: CandidateEvaluationDto[];
+};
 export type CandidateState = {
   name: string; appliedRole: string; positionId: number | null; positionTitle: string | null;
   score: number; location: string | null; experienceYears: number; summary: string | null; status: string;
@@ -21,8 +23,23 @@ export type CandidateCorrectionInput = {
   location: string | null; experienceYears: number; summary: string | null;
   reason: string; confirmExistingEvidenceReview: boolean;
 };
-export type InterviewNoteDto = components["schemas"]["InterviewNoteDto"];
-export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationDto"];
+export type InterviewNoteDto = components["schemas"]["InterviewNoteDto"] & { version: number };
+export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationDto"] & { version: number };
+export type CandidateEvidenceState = {
+  noteType: string | null; text: string | null; criterion: string | null;
+  score: number | null; maxScore: number | null;
+};
+export type CandidateEvidenceHistory = {
+  original: CandidateEvidenceState;
+  revisions: { id: number; version: number; fromCandidateVersion: number; toCandidateVersion: number;
+    before: CandidateEvidenceState; after: CandidateEvidenceState; reason: string;
+    changedByName: string; changedByUserId: string; changedAtUtc: string }[];
+};
+export type CandidateEvidenceInput = {
+  candidateId: number; recordId: number; kind: "notes" | "evaluations";
+  expectedCandidateVersion: number; expectedRecordVersion: number; reason: string;
+  noteType?: string; text?: string; criterion?: string; score?: number; maxScore?: number;
+};
 export type HireResultDto = components["schemas"]["HireResultDto"];
 export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
 export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
@@ -80,6 +97,23 @@ export const useRecruitmentFunnel = () =>
     queryKey: ["recruitment", "funnel"],
     queryFn: () => apiFetch<RecruitmentFunnelDto>("/recruitment/funnel"),
   });
+
+export const useCandidateEvidenceHistory = (candidateId: number, kind: "notes" | "evaluations", recordId: number) =>
+  useQuery({ queryKey: ["recruitment", "candidate", candidateId, kind, recordId, "revisions"],
+    queryFn: () => apiFetch<CandidateEvidenceHistory>(`/candidates/${candidateId}/${kind}/${recordId}/revisions`) });
+
+export const useReviseCandidateEvidence = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ candidateId, kind, recordId, ...body }: CandidateEvidenceInput) =>
+      apiFetch<CandidateDetailDto>(`/candidates/${candidateId}/${kind}/${recordId}/revisions`, {
+        method: "POST", body: JSON.stringify(body),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+    onError: (_error, input) => queryClient.invalidateQueries({
+      queryKey: ["recruitment", "candidate", input.candidateId] }),
+  });
+};
 
 export const usePositions = () =>
   useQuery({ queryKey: ["recruitment", "positions"], queryFn: () => apiFetch<PositionDto[]>("/positions") });

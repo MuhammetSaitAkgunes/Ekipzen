@@ -8,6 +8,7 @@ import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
 import { CandidateCorrectionModal } from "./CandidateCorrectionModal";
+import { CandidateEvidenceModal, type EvidenceSelection } from "./CandidateEvidenceModal";
 import { useAddCandidateEvaluation, useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
 
 const STAGE_EXPLANATIONS: Record<string, string> = {
@@ -70,6 +71,7 @@ export function CandidateDetail({ id }: { id: number }) {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [hireOpen, setHireOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [evidenceSelection, setEvidenceSelection] = useState<EvidenceSelection | null>(null);
   const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string } | null>(null);
   const [statusConfirmed, setStatusConfirmed] = useState(false);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
@@ -77,6 +79,7 @@ export function CandidateDetail({ id }: { id: number }) {
 
   useEffect(() => {
     setCorrectionOpen(false);
+    setEvidenceSelection(null);
     setNoteReview(null);
     setNoteText("");
     setNoteError(null);
@@ -144,7 +147,7 @@ export function CandidateDetail({ id }: { id: number }) {
   };
 
   const submitNote = async () => {
-    if (!pendingNote || addNote.isPending) return;
+    if (!pendingNote || addNote.isPending || isHired) return;
     setNoteError(null);
     try {
       await addNote.mutateAsync({ id: pendingNote.candidateId, noteType: pendingNote.noteType, text: pendingNote.text });
@@ -179,7 +182,7 @@ export function CandidateDetail({ id }: { id: number }) {
   };
 
   const submitEvaluation = async () => {
-    if (!pendingEvaluation || addEvaluation.isPending) return;
+    if (!pendingEvaluation || addEvaluation.isPending || isHired) return;
     setEvaluationError(null);
     try {
       await addEvaluation.mutateAsync({
@@ -361,7 +364,7 @@ export function CandidateDetail({ id }: { id: number }) {
               <section className="ez-interview-note-guide" aria-label="Mülakat notu rehberi">
                 <p><strong>Ne yapıyoruz?</strong> Görüşmede gözlediğiniz iş ile ilgili bilgiyi aday kaydına ekliyoruz. Bu işlem değerlendirme puanı veya pipeline aşamasını değiştirmez.</p>
                 <p><strong>Neden kontrol ediyoruz?</strong> Notu sonraki değerlendirmede aynı adaya ve doğru görüşme türüne bağlayabilmek için. Örneğin teknik görüşme bulgusunu İK görüşmesi diye etiketlemeyin; gözlem ve karar yorumunu açıkça ayırın.</p>
-                <p>Not kaydedildiğinde yazarı ve ekleme olayı geçmişe geçer. Mevcut API notu düzenleme veya silme sunmuyor; kaydetmeden önce kişiyi, türü ve metni kontrol edin.</p>
+                <p>İlk kayıt ve yazarı korunur. Hatalı not yeni sürüm ve gerekçeyle düzeltilebilir; güncel sürüm bu listede görünür. İşe alınmış adayın geçmişi kilitlidir; ekleme veya düzeltme yapılamaz.</p>
               </section>
               <div className="add-note-box">
                 <label className="sr-only" htmlFor="interview-note">Mülakat notu</label>
@@ -377,7 +380,7 @@ export function CandidateDetail({ id }: { id: number }) {
                     {NOTE_TYPES.map((type) => <option key={type}>{type}</option>)}
                   </select>
                   {pendingNote && <button className="btn btn-ghost btn-sm" onClick={() => setNoteReview(null)}>Notu düzelt</button>}
-                  <button className="btn btn-primary btn-sm" onClick={pendingNote ? submitNote : prepareNote} disabled={addNote.isPending}>
+                  <button className="btn btn-primary btn-sm" onClick={pendingNote ? submitNote : prepareNote} disabled={addNote.isPending || isHired}>
                     {pendingNote ? "Notu kaydet" : "Notu kontrol et"}
                   </button>
                 </div>
@@ -394,9 +397,13 @@ export function CandidateDetail({ id }: { id: number }) {
                   <div className="note-avatar" aria-hidden="true">{initialsOf(note.authorName)}</div>
                   <div className="note-body">
                     <div className="note-header">
-                      <strong>{note.authorName} ({note.noteType})</strong> <span>{formatTimeAgo(note.createdAtUtc)}</span>
+                      <strong>İlk kayıt: {note.authorName} · güncel tür: {note.noteType}</strong> <span>{formatTimeAgo(note.createdAtUtc)}</span>
                     </div>
                     <p>{note.text}</p>
+                    <p>Güncel sürüm {note.version ?? 1}</p>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEvidenceSelection({ kind: "notes", record: note })}>
+                      {isHired ? "Notun sürüm geçmişi" : "Notu düzelt ve geçmişini gör"}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -410,7 +417,7 @@ export function CandidateDetail({ id }: { id: number }) {
             <section className="ez-candidate-evaluation-guide" aria-label="Aday değerlendirme rehberi">
               <p><strong>Ne yapıyoruz?</strong> Adayı belirli bir iş ölçütü için puanlıyoruz. Örneğin teknik görüşmede TypeScript bilgisi için 4/5 kaydı açabilirsiniz.</p>
               <p><strong>Neden ölçüt yazıyoruz?</strong> Sayının neyi ölçtüğü ve azami puanı açık olursa sonraki incelemede gerekçe anlaşılır. Bu kayıt adayın genel puanını veya pipeline aşamasını otomatik değiştirmez.</p>
-              <p>Kaydedilen değerlendirmeyi düzenleme veya silme API'si yok. Gözlemin dayanağını mülakat notunda belirtin; adayı, ölçütü ve puanı kaydetmeden önce doğrulayın.</p>
+              <p>Hatalı değerlendirme gerekçeli yeni sürümle düzeltilir; ilk puan ve önceki sürümler korunur. İşe alınmış adayın geçmişi kilitlidir; ekleme veya düzeltme yapılamaz. Gözlemin dayanağını mülakat notunda belirtin.</p>
             </section>
             <div className="ez-candidate-evaluation-form">
               <div className="input-group">
@@ -430,7 +437,7 @@ export function CandidateDetail({ id }: { id: number }) {
               </div>
               <div className="ez-candidate-evaluation-actions">
                 {pendingEvaluation && <button className="btn btn-ghost" onClick={() => setEvaluationReview(null)}>Bilgileri düzelt</button>}
-                <button className="btn btn-primary" onClick={pendingEvaluation ? submitEvaluation : prepareEvaluation} disabled={addEvaluation.isPending}>
+                <button className="btn btn-primary" onClick={pendingEvaluation ? submitEvaluation : prepareEvaluation} disabled={addEvaluation.isPending || isHired}>
                   {pendingEvaluation ? "Değerlendirmeyi kaydet" : "Bilgileri kontrol et"}
                 </button>
               </div>
@@ -455,6 +462,10 @@ export function CandidateDetail({ id }: { id: number }) {
                       style={{ width: `${Math.round(((evaluation.score ?? 0) / (evaluation.maxScore || 1)) * 100)}%` }}
                     />
                   </div>
+                  <p>Güncel sürüm {evaluation.version ?? 1}</p>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEvidenceSelection({ kind: "evaluations", record: evaluation })}>
+                    {isHired ? "Değerlendirmenin sürüm geçmişi" : "Değerlendirmeyi düzelt ve geçmişini gör"}
+                  </button>
                 </div>
               ))}
               {(candidate.evaluations ?? []).length === 0 && <p className="pending-desc">Henüz değerlendirme yok.</p>}
@@ -479,7 +490,9 @@ export function CandidateDetail({ id }: { id: number }) {
         )}
       </div>
 
-      {correctionOpen && <CandidateCorrectionModal key={id} candidate={candidate} onClose={() => setCorrectionOpen(false)} />}
+      {correctionOpen && <CandidateCorrectionModal key={id} candidate={{ ...candidate, status: isHired ? "İşe Alındı" : candidate.status }} onClose={() => setCorrectionOpen(false)} />}
+      {evidenceSelection && <CandidateEvidenceModal key={`${id}-${evidenceSelection.kind}-${evidenceSelection.record.id}`}
+        candidate={{ ...candidate, status: isHired ? "İşe Alındı" : candidate.status }} selection={evidenceSelection} onClose={() => setEvidenceSelection(null)} />}
       {hireOpen && (
         <HireModal
           candidateId={id}

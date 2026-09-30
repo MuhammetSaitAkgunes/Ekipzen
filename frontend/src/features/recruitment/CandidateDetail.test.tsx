@@ -7,14 +7,14 @@ import { ToastProvider } from "../../layout/ToastProvider";
 import { CandidateDetail } from "./CandidateDetail";
 
 const detail = {
-  id: 5, name: "Burak Yılmaz", appliedRole: "Senior Frontend Developer",
+  id: 5, name: "Burak Yılmaz", appliedRole: "Senior Frontend Developer", version: 4,
   positionId: null, positionTitle: null, status: "Mülakat", score: 92, initials: "BY",
   appliedAtUtc: "2026-07-16T10:00:00Z", location: "İstanbul", experienceYears: 5,
   summary: "React ve modern JavaScript konusunda güçlü aday.",
   skills: [{ id: 1, name: "React.js" }, { id: 2, name: "TypeScript" }],
   experiences: [{ id: 1, title: "Senior Frontend Developer", company: "TechSolutions A.Ş.", period: "2021 - Günümüz", description: "Arayüz geliştirme." }],
-  notes: [{ id: 1, authorName: "Ayşe Demir", noteType: "İK Görüşmesi", text: "İletişim becerileri kuvvetli.", createdAtUtc: "2026-07-15T14:30:00Z" }],
-  evaluations: [{ id: 1, criterion: "Teknik Yeterlilik", score: 4, maxScore: 5 }],
+  notes: [{ id: 1, authorName: "Ayşe Demir", noteType: "İK Görüşmesi", text: "İletişim becerileri kuvvetli.", createdAtUtc: "2026-07-15T14:30:00Z", version: 1 }],
+  evaluations: [{ id: 1, criterion: "Teknik Yeterlilik", score: 4, maxScore: 5, version: 1 }],
   history: [{ id: 1, event: "Başvuru alındı", occurredAtUtc: "2026-07-14T09:00:00Z" }],
 };
 const departments = [{ id: 1, name: "Yazılım", employeeCount: 4 }];
@@ -43,6 +43,41 @@ const renderDetail = () =>
       <CandidateDetail id={5} />
     </ToastProvider>,
   );
+
+test("aday detayından mevcut not gerekçeli düzeltme penceresinde açılır", async () => {
+  stubApi({ "/api/candidates/5": detail,
+    "/api/candidates/5/notes/1/revisions": { original: { noteType: "İK Görüşmesi",
+      text: "İletişim becerileri kuvvetli.", criterion: null, score: null, maxScore: null }, revisions: [] } });
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Mülakat Notları" }));
+  await userEvent.click(screen.getByRole("button", { name: "Notu düzelt ve geçmişini gör" }));
+  expect(screen.getByRole("dialog")).toHaveTextContent("incelenen kayıt sürümü 1");
+  expect(screen.getByLabelText("Güncel not metni")).toHaveValue("İletişim becerileri kuvvetli.");
+  expect(screen.getByRole("button", { name: "Bilgileri kontrol et" })).toBeEnabled();
+});
+
+test("işe alınmış adayda not ve değerlendirme ekleme kilitli, sürüm geçmişi erişilebilir", async () => {
+  const original = { noteType: "İK Görüşmesi", text: "İletişim becerileri kuvvetli.", criterion: null, score: null, maxScore: null };
+  stubApi({ "/api/candidates/5": { ...detail, status: "İşe Alındı" },
+    "/api/candidates/5/notes/1/revisions": { original, revisions: [] },
+    "/api/candidates/5/evaluations/1/revisions": { original: { noteType: null, text: null,
+      criterion: "Teknik Yeterlilik", score: 4, maxScore: 5 }, revisions: [] } });
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Mülakat Notları" }));
+  expect(screen.getByRole("button", { name: "Notu kontrol et" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Notun sürüm geçmişi" }));
+  expect(screen.getByRole("dialog")).toHaveTextContent("başvuru geçmişi kilitli");
+  expect(screen.queryByLabelText("Güncel not metni")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Kanıt düzeltme penceresini kapat" }));
+  await userEvent.click(screen.getByRole("button", { name: "Değerlendirme" }));
+  expect(screen.getByRole("button", { name: "Bilgileri kontrol et" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Değerlendirmenin sürüm geçmişi" }));
+  expect(screen.getByRole("dialog")).toHaveTextContent("başvuru geçmişi kilitli");
+  expect(screen.queryByLabelText("Güncel puan")).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
 
 test("detay profil, etiketler ve özgeçmiş sekmesiyle açılır", async () => {
   renderDetail();
