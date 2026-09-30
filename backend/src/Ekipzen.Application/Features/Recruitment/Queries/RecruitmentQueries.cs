@@ -5,6 +5,7 @@ using Ekipzen.Application.Features.Recruitment.Commands;
 using Ekipzen.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Ekipzen.Application.Features.Recruitment.Queries;
 
@@ -91,6 +92,9 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
         var evaluationVersions = revisions.Where(item => item.EvaluationId != null)
             .GroupBy(item => item.EvaluationId!.Value)
             .ToDictionary(group => group.Key, group => group.MaxBy(item => item.Version)!);
+        var decisions = await context.CandidateStageDecisions.AsNoTracking()
+            .Where(item => item.CandidateId == candidate.Id)
+            .OrderByDescending(item => item.ToVersion).ToListAsync(cancellationToken);
 
         return new CandidateDetailDto(
             candidate.Id,
@@ -132,7 +136,11 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
                 .OrderByDescending(h => h.OccurredAtUtc)
                 .Select(h => new CandidateHistoryDto(h.Id, h.Event, h.OccurredAtUtc))
                 .ToList(),
-            provisioning?.ToDto(), candidate.Version);
+            provisioning?.ToDto(), candidate.Version,
+            decisions.Select(item => new CandidateStageDecisionDto(item.Id,
+                item.FromStatus.ToDto(), item.ToStatus.ToDto(), item.FromVersion, item.ToVersion,
+                item.Reason, JsonSerializer.Deserialize<List<CandidateDecisionEvidenceDto>>(item.EvidenceJson)!,
+                item.DecidedByUserId, item.DecidedByName, item.DecidedAtUtc)).ToList());
     }
 }
 

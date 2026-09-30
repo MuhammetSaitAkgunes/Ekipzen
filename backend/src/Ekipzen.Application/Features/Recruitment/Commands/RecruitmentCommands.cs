@@ -9,6 +9,7 @@ using Ekipzen.Domain.Entities.Recruitment;
 using Ekipzen.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Ekipzen.Application.Features.Recruitment.Commands;
 
@@ -156,12 +157,25 @@ public sealed class CreateCandidateCommandHandler(
 
 // --- pipeline durum geçişi ---
 
-public sealed record SetCandidateStatusCommand(int Id, string Status) : IRequest<CandidateDetailDto>;
+public sealed record SetCandidateStatusCommand(int Id, string Status, int ExpectedVersion, string Reason,
+    IReadOnlyList<CandidateDecisionEvidenceReference>? Evidence = null) : IRequest<CandidateDetailDto>;
 
 public sealed class SetCandidateStatusCommandValidator : AbstractValidator<SetCandidateStatusCommand>
 {
     public SetCandidateStatusCommandValidator()
     {
+        RuleFor(x => x.Id).GreaterThan(0);
+        RuleFor(x => x.ExpectedVersion).GreaterThan(0);
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(2000);
+        RuleFor(x => x.Evidence).Must(items => items is null || (items.Count <= 20 && items.All(item => item is not null)
+            && items.DistinctBy(item => (item.Kind, item.Id)).Count() == items.Count))
+            .WithMessage("En fazla 20 farklı dayanak kaydı seçilebilir.");
+        RuleForEach(x => x.Evidence).ChildRules(item =>
+        {
+            item.RuleFor(x => x.Kind).Must(kind => kind is "note" or "evaluation");
+            item.RuleFor(x => x.Id).GreaterThan(0);
+            item.RuleFor(x => x.Version).GreaterThan(0);
+        });
         RuleFor(x => x.Status)
             .Must(s => s is "Yeni" or "Mülakat" or "Teklif" or "Red")
             .WithMessage("Pipeline durumu: Yeni | Mülakat | Teklif | Red (işe alım için hire ucu kullanılır).");
@@ -184,6 +198,9 @@ public sealed class SetCandidateStatusCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Aday", request.Id);
 
+        if (candidate.Version != request.ExpectedVersion)
+            throw new ConflictException("Aday kaydı değişti; güncel kayıt ve dayanaklarla aşama kararını yeniden inceleyin.");
+
         if (candidate.Status == CandidateStatus.Hired)
         {
             throw new ConflictException("İşe alınmış adayın pipeline durumu değiştirilemez.");
@@ -192,10 +209,32 @@ public sealed class SetCandidateStatusCommandHandler(
         var newStatus = RecruitmentMappings.ParseStatus(request.Status);
         if (newStatus != candidate.Status)
         {
+            var userId = currentUser.UserId
+                ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
+            var evidence = new List<CandidateDecisionEvidenceDto>();
+            foreach (var reference in request.Evidence ?? [])
+            {
+                var isNote = reference.Kind == "note";
+                var original = await CandidateEvidenceVersions.OriginalAsync(context,
+                    candidate.Id, reference.Id, isNote, cancellationToken);
+                var latest = await CandidateEvidenceVersions.Revisions(context,
+                        candidate.Id, reference.Id, isNote)
+                    .AsNoTracking().OrderByDescending(item => item.Version).FirstOrDefaultAsync(cancellationToken);
+                if ((latest?.Version ?? 1) != reference.Version)
+                    throw new ConflictException("Seçilen dayanak sürümü değişti; güncel dayanağı yeniden inceleyin.");
+                evidence.Add(new(reference.Kind, reference.Id, reference.Version,
+                    latest is null ? original : CandidateEvidenceVersions.Read(latest.AfterJson)));
+            }
+            context.CandidateStageDecisions.Add(new CandidateStageDecision
+            {
+                CandidateId = candidate.Id, FromStatus = candidate.Status, ToStatus = newStatus,
+                FromVersion = candidate.Version, ToVersion = candidate.Version + 1,
+                Reason = request.Reason.Trim(), EvidenceJson = JsonSerializer.Serialize(evidence),
+                DecidedByUserId = userId, DecidedByName = currentUser.UserName ?? "İK",
+                DecidedAtUtc = DateTime.UtcNow,
+            });
             if (candidate.Status == CandidateStatus.New)
             {
-                var userId = currentUser.UserId
-                    ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
                 var alreadyVerified = await context.CandidateReviewEvidences
                     .AnyAsync(item => item.CandidateId == candidate.Id && item.UserId == userId, cancellationToken);
                 if (!alreadyVerified)

@@ -63,6 +63,7 @@ public interface IApplicationDbContext
     DbSet<Candidate> Candidates { get; }
     DbSet<CandidateCorrection> CandidateCorrections { get; }
     DbSet<CandidateEvidenceRevision> CandidateEvidenceRevisions { get; }
+    DbSet<CandidateStageDecision> CandidateStageDecisions { get; }
     DbSet<CandidateSkill> CandidateSkills { get; }
     DbSet<CandidateExperience> CandidateExperiences { get; }
     DbSet<InterviewNote> InterviewNotes { get; }

@@ -119,15 +119,15 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
             .Should().NotContain(task => task.Key == key, "yönetici aday aşamasını değiştiremez");
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Mülakat" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Mülakat", expectedVersion = candidate.Version, reason = "İlk inceleme tamamlandı." })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Yeni" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Yeni", expectedVersion = candidate.Version + 1, reason = "Başvuru yeniden incelenecek." })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().ContainSingle(task => task.Key == key);
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Red" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Red", expectedVersion = candidate.Version + 2, reason = "Başvuru uygun bulunmadı." })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
     }
 

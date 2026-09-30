@@ -84,6 +84,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<Candidate> Candidates => Set<Candidate>();
     public DbSet<CandidateCorrection> CandidateCorrections => Set<CandidateCorrection>();
     public DbSet<CandidateEvidenceRevision> CandidateEvidenceRevisions => Set<CandidateEvidenceRevision>();
+    public DbSet<CandidateStageDecision> CandidateStageDecisions => Set<CandidateStageDecision>();
     public DbSet<CandidateSkill> CandidateSkills => Set<CandidateSkill>();
     public DbSet<CandidateExperience> CandidateExperiences => Set<CandidateExperience>();
     public DbSet<InterviewNote> InterviewNotes => Set<InterviewNote>();

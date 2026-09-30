@@ -125,21 +125,21 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
             .Should().Be(before.VerifiedFirstReviews, "aday kartını açmak veya oluşturmak ilk karar değildir");
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Yeni" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Yeni", expectedVersion = candidate.Version, reason = "İlk aşamada tutuldu." })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<RecruitmentJourneyDto>(admin, url)).VerifiedFirstReviews
             .Should().Be(before.VerifiedFirstReviews, "değişmeyen durum kanıt üretmez");
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Mülakat" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Mülakat", expectedVersion = candidate.Version, reason = "Başvuru incelendi." })).StatusCode.Should().Be(HttpStatusCode.OK);
         var after = await GetAsync<RecruitmentJourneyDto>(admin, url);
         after.ProcessKey.Should().Be("recruitment");
         after.VerifiedFirstReviews.Should().Be(before.VerifiedFirstReviews + 1);
         after.LastVerifiedAtUtc.Should().NotBeNull();
 
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Yeni" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Yeni", expectedVersion = candidate.Version + 1, reason = "Yeniden inceleme gerekiyor." })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Red" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Red", expectedVersion = candidate.Version + 2, reason = "Başvuru rol koşullarını karşılamadı." })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<RecruitmentJourneyDto>(admin, url)).VerifiedFirstReviews
             .Should().Be(after.VerifiedFirstReviews, "aynı aday tekrar sayılamaz");
 

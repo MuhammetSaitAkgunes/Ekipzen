@@ -78,7 +78,7 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
         var candidate = (await candidateResponse.Content.ReadFromJsonAsync<
             Ekipzen.Application.Features.Recruitment.CandidateDetailDto>())!;
         (await admin.PatchAsJsonAsync($"/api/candidates/{candidate.Id}/status",
-            new { status = "Mülakat" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            new { status = "Mülakat", expectedVersion = candidate.Version, reason = "Başvuru incelendi." })).StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var adminExport = JsonDocument.Parse(await admin.GetStringAsync("/api/me/data-export"));
         var adminRoot = adminExport.RootElement;

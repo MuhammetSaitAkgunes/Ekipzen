@@ -88,6 +88,20 @@ public sealed class CandidateEvidenceRevisionConfiguration : IEntityTypeConfigur
     }
 }
 
+public sealed class CandidateStageDecisionConfiguration : IEntityTypeConfiguration<CandidateStageDecision>
+{
+    public void Configure(EntityTypeBuilder<CandidateStageDecision> b)
+    {
+        b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
+        b.Property(item => item.EvidenceJson).IsRequired();
+        b.Property(item => item.DecidedByUserId).IsRequired().HasMaxLength(450);
+        b.Property(item => item.DecidedByName).IsRequired().HasMaxLength(200);
+        b.HasOne(item => item.Candidate).WithMany().HasForeignKey(item => item.CandidateId)
+            .OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(item => new { item.TenantId, item.CandidateId, item.ToVersion }).IsUnique();
+    }
+}
+
 public class CandidateSkillConfiguration : IEntityTypeConfiguration<CandidateSkill>
 {
     public void Configure(EntityTypeBuilder<CandidateSkill> b)

@@ -35,6 +35,12 @@ public sealed record CandidateEvidenceHistoryDto(
 
 public sealed record CandidateHistoryDto(int Id, string Event, DateTime OccurredAtUtc);
 
+public sealed record CandidateDecisionEvidenceReference(string Kind, int Id, int Version);
+public sealed record CandidateDecisionEvidenceDto(string Kind, int Id, int Version, CandidateEvidenceStateDto State);
+public sealed record CandidateStageDecisionDto(int Id, string FromStatus, string ToStatus,
+    int FromVersion, int ToVersion, string Reason, IReadOnlyList<CandidateDecisionEvidenceDto> Evidence,
+    string DecidedByUserId, string DecidedByName, DateTime DecidedAtUtc);
+
 public sealed record IdentityProvisioningDto(
     string Status,
     string? Email,
@@ -60,7 +66,7 @@ public sealed record CandidateDetailDto(
     IReadOnlyList<InterviewNoteDto> Notes,
     IReadOnlyList<CandidateEvaluationDto> Evaluations,
     IReadOnlyList<CandidateHistoryDto> History,
-    IdentityProvisioningDto? Provisioning, int Version);
+    IdentityProvisioningDto? Provisioning, int Version, IReadOnlyList<CandidateStageDecisionDto> StageDecisions);
 
 public sealed record CandidateStateDto(
     string Name, string AppliedRole, int? PositionId, string? PositionTitle,
