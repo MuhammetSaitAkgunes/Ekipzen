@@ -4,8 +4,9 @@ import { dailyTasksKey } from "../guidance/queries";
 import { recruitmentJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
 
-export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
-export type CandidateDetailDto = Omit<components["schemas"]["CandidateDetailDto"], "notes" | "evaluations"> & {
+export type CandidateListItemDto = Omit<components["schemas"]["CandidateListItemDto"], "score"> & { score: number | null };
+export type CandidateDetailDto = Omit<components["schemas"]["CandidateDetailDto"], "notes" | "evaluations" | "score"> & {
+  score: number | null;
   id: number; version: number; notes?: InterviewNoteDto[]; evaluations?: CandidateEvaluationDto[];
   stageDecisions?: CandidateStageDecisionDto[];
 };
@@ -17,7 +18,7 @@ export type CandidateStageDecisionDto = {
 };
 export type CandidateState = {
   name: string; appliedRole: string; positionId: number | null; positionTitle: string | null;
-  score: number; location: string | null; experienceYears: number; summary: string | null; status: string;
+  score: number | null; location: string | null; experienceYears: number; summary: string | null; status: string;
 };
 export type CandidateCorrectionDto = {
   id: number; candidateId: number; fromVersion: number; toVersion: number;
@@ -26,7 +27,7 @@ export type CandidateCorrectionDto = {
 };
 export type CandidateCorrectionInput = {
   id: number; expectedVersion: number; name: string; appliedRole: string;
-  positionId: number | null; expectedPositionVersion: number | null; score: number;
+  positionId: number | null; expectedPositionVersion: number | null; score: number | null;
   location: string | null; experienceYears: number; summary: string | null;
   reason: string; confirmExistingEvidenceReview: boolean;
 };
@@ -49,7 +50,7 @@ export type CandidateEvidenceInput = {
 };
 export type HireResultDto = components["schemas"]["HireResultDto"];
 export type IdentityProvisioningDto = components["schemas"]["IdentityProvisioningDto"];
-export type CreateCandidateCommand = components["schemas"]["CreateCandidateCommand"];
+export type CreateCandidateCommand = Omit<components["schemas"]["CreateCandidateCommand"], "score"> & { score?: number | null };
 export type PositionDto = components["schemas"]["PositionDto"] & { id: number; version: number };
 export type PositionCorrectionDto = {
   id: number; positionId: number; fromVersion: number; toVersion: number;

@@ -4,7 +4,7 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { CandidateDetail } from "./CandidateDetail";
 import { CandidateModal } from "./CandidateModal";
 import { PositionModal } from "./PositionModal";
-import { formatTimeAgo, scoreClass, statusTagClass } from "./format";
+import { formatTimeAgo, formatCandidateScore, scoreClass, statusTagClass } from "./format";
 import { useCandidates, usePositions, useRecruitmentFunnel, type PositionDto, type RecruitmentFunnelDto } from "./queries";
 
 const STAGES: { status: string; label: string; count: keyof RecruitmentFunnelDto; explanation: string }[] = [
@@ -139,7 +139,7 @@ export function RecruitmentPage() {
                 <p>{candidate.appliedRole}</p>
                 <div className="ci-meta">
                   <span className={`status-tag ${statusTagClass(candidate.status)}`}>{candidate.status}</span>
-                  <span className={`score-text ${scoreClass(candidate.score)}`}>{candidate.score}/100 puan</span>
+                  <span className={`score-text ${candidate.score == null ? "" : scoreClass(candidate.score)}`}>{formatCandidateScore(candidate.score)}</span>
                 </div>
               </div>
             </div>

@@ -93,17 +93,31 @@ test("ad boşsa ön kontrol hatası gösterilir, istek atılmaz", async () => {
   expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
 });
 
-test("boş veya geçersiz puan sessizce varsayılmaz", async () => {
+test("geçersiz puan reddedilir", async () => {
   renderModal();
   await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
   await userEvent.type(screen.getByLabelText("Başvurulan rol"), "QA Engineer");
-  await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
-  expect(screen.getByRole("alert")).toHaveTextContent("Aday puanını 0-100 arasında");
   await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "101");
   await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
-  expect(screen.getByRole("alert")).toHaveTextContent("Aday puanını 0-100 arasında");
+  expect(screen.getByRole("alert")).toHaveTextContent("boş bırakın veya 0-100 arasında");
   expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
 });
+
+test.each([{ input: "", score: null, label: "Henüz puan verilmedi" }, { input: "0", score: 0, label: "0/100 puan" }])(
+  "puan alanı $input olduğunda önizleme ve istek $score değerini korur", async ({ input, score, label }) => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText("Ad Soyad"), "Zeynep Aksoy");
+    await userEvent.type(screen.getByLabelText("Başvurulan rol"), "QA Engineer");
+    if (input) await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), input);
+    await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+    expect(screen.getByText(/Elle verilen puan:/).closest("p")).toHaveTextContent(label);
+    expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: /Adayı oluştur/ }));
+    await waitFor(() => {
+      const posted = vi.mocked(fetch).mock.calls.find(([url, init]) => String(url) === "/api/candidates" && init?.method === "POST");
+      expect(JSON.parse(String(posted?.[1]?.body)).score).toBe(score);
+    });
+  });
 
 test("ön kontrolden sonra alan değişirse eski onay geçersiz olur", async () => {
   renderModal();

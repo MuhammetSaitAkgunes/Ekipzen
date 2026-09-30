@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
+import { formatCandidateScore } from "./format";
 import { useToast } from "../../layout/ToastProvider";
 import { useCandidateCorrections, useCorrectCandidate, usePositions,
   type CandidateCorrectionInput, type CandidateDetailDto, type CandidateState } from "./queries";
@@ -12,7 +13,7 @@ function Comparison({ before, after }: { before: CandidateState; after: Candidat
   ];
   return <table className="data-table"><thead><tr><th>Alan</th><th>Önce</th><th>Sonra</th></tr></thead>
     <tbody>{fields.map(([label, key]) => <tr key={key}><th scope="row">{label}</th>
-      <td>{String(before[key] ?? "Belirtilmedi")}</td><td>{String(after[key] ?? "Belirtilmedi")}</td>
+      <td>{key === "score" ? formatCandidateScore(before.score) : String(before[key] ?? "Belirtilmedi")}</td><td>{key === "score" ? formatCandidateScore(after.score) : String(after[key] ?? "Belirtilmedi")}</td>
     </tr>)}</tbody></table>;
 }
 
@@ -26,7 +27,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
   const positionsQ = usePositions();
   const correction = useCorrectCandidate();
   const [form, setForm] = useState({ name: source.name ?? "", appliedRole: source.appliedRole ?? "",
-    positionId: source.positionId ? String(source.positionId) : "", score: String(source.score ?? 0),
+    positionId: source.positionId ? String(source.positionId) : "", score: source.score == null ? "" : String(source.score),
     location: source.location ?? "", experienceYears: String(source.experienceYears ?? 0),
     summary: source.summary ?? "", reason: "" });
   const [review, setReview] = useState<CandidateCorrectionInput | null>(null);
@@ -38,7 +39,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
     || (form.positionId ? Number(form.positionId) : null) !== (source.positionId ?? null);
   const before: CandidateState = { name: source.name ?? "", appliedRole: source.appliedRole ?? "",
     positionId: source.positionId ?? null, positionTitle: source.positionTitle ?? null,
-    score: source.score ?? 0, location: source.location ?? null,
+    score: source.score ?? null, location: source.location ?? null,
     experienceYears: source.experienceYears ?? 0, summary: source.summary ?? null,
     status: source.status ?? "Yeni" };
 
@@ -53,9 +54,9 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
       || !form.appliedRole.trim() || form.appliedRole.trim().length > 128) {
       setError("Ad Soyad 1-200, başvurulan rol 1-128 karakter olmalıdır."); return;
     }
-    if (!/^(0|[1-9]\d{0,2})$/.test(form.score) || Number(form.score) > 100
+    if ((form.score !== "" && (!/^(0|[1-9]\d{0,2})$/.test(form.score) || Number(form.score) > 100))
       || !/^(0|[1-9]\d?)$/.test(form.experienceYears) || Number(form.experienceYears) > 60) {
-      setError("Puanı 0-100, deneyimi 0-60 arasında tam sayı olarak girin."); return;
+      setError("Puanı boş bırakın veya 0-100, deneyimi 0-60 arasında tam sayı olarak girin."); return;
     }
     if (form.location.trim().length > 128 || form.summary.trim().length > 2000
       || !form.reason.trim() || form.reason.trim().length > 2000) {
@@ -75,7 +76,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
     setReview({ id: source.id, expectedVersion: source.version, name: form.name.trim(),
       appliedRole: form.appliedRole.trim(), positionId: targetId,
       expectedPositionVersion: positionChanged && target ? target.version : null,
-      score: Number(form.score), location: form.location.trim() || null,
+      score: form.score === "" ? null : Number(form.score), location: form.location.trim() || null,
       experienceYears: Number(form.experienceYears), summary: form.summary.trim() || null,
       reason: form.reason.trim(), confirmExistingEvidenceReview: roleChanged && evidenceConfirmed });
   };
@@ -106,7 +107,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
           : <><section aria-label="Aday düzeltme rehberi">
             <p><strong>Ne yapıyoruz?</strong> Hatalı başvuru bilgisini gerekçeyle düzeltiyoruz. Örneğin yanlış pozisyona bağlanan başvuruyu doğru açık kadroya taşıyabilirsiniz.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Rol değiştiğinde eski mülakat ölçütleri yeni işe uygun olmayabilir. Aşama, notlar ve değerlendirmeler korunur; yeniden inceleme kararını siz verirsiniz.</p>
-            <p>Puan elle kaydedilen 0-100 değeridir. Puanı değiştiriyorsanız gerekçede değerlendirme kaynağını belirtin. Ayrıntılı yetenekler ve iş deneyimi kayıtları ayrı kalır.</p>
+            <p>Puan elle kaydedilen 0-100 değeridir; boş alan “Henüz puan verilmedi” demektir. Yanlış girilmiş puanı gerekçeyle boşaltabilirsiniz; önceki değer geçmişte kalır. Puanı değiştiriyorsanız gerekçede değerlendirme kaynağını belirtin. Not ve ölçüt değerlendirmeleri genel puanı otomatik hesaplamaz.</p>
           </section><div className="form-grid-2">
             <div className="input-group"><label className="input-label" htmlFor="correction-name">Ad Soyad</label>
               <input id="correction-name" className="input-control" value={form.name} onChange={e => set("name", e.target.value)} /></div>

@@ -242,7 +242,7 @@ export function CandidateDetail({ id }: { id: number }) {
           <button className="btn btn-secondary" onClick={() => setCorrectionOpen(true)} disabled={setStatus.isPending}>
             {isHired ? "Düzeltme geçmişi" : "Aday kaydını düzelt"}
           </button>
-          <div className="match-score"><span className="score-circle">{candidate.score}</span><span className="score-label">Elle verilen aday puanı</span></div>
+          <div className="match-score"><span className="score-circle">{candidate.score ?? "—"}</span><span className="score-label">{candidate.score == null ? "Genel puan henüz verilmedi" : "Elle verilen aday puanı"}</span></div>
           <label className="sr-only" htmlFor="candidate-status">Pipeline durumu</label>
           <select
             id="candidate-status"

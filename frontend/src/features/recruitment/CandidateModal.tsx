@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { useCreateCandidate, usePositions, type CreateCandidateCommand } from "./queries";
+import { formatCandidateScore } from "./format";
 
 type CandidateForm = {
   name: string; appliedRole: string; positionId: string; score: string; location: string;
@@ -47,8 +48,8 @@ export function CandidateModal({ onClose, onCreated }: {
       setError("Ad en fazla 200, pozisyon 128 ve başvuru özeti 2000 karakter olabilir.");
       return;
     }
-    if (!/^(0|[1-9]\d{0,2})$/.test(form.score) || Number(form.score) > 100) {
-      setError("Aday puanını 0-100 arasında tam sayı olarak açıkça girin.");
+    if (form.score !== "" && (!/^(0|[1-9]\d{0,2})$/.test(form.score) || Number(form.score) > 100)) {
+      setError("Aday puanını boş bırakın veya 0-100 arasında tam sayı olarak girin.");
       return;
     }
     if (!/^(0|[1-9]\d{0,2})$/.test(form.experienceYears) || Number(form.experienceYears) > 60) {
@@ -56,7 +57,7 @@ export function CandidateModal({ onClose, onCreated }: {
       return;
     }
     setReview({
-      name, appliedRole, positionId: selectedPosition?.id ?? null, score: Number(form.score),
+      name, appliedRole, positionId: selectedPosition?.id ?? null, score: form.score === "" ? null : Number(form.score),
       location: form.location.trim() || null,
       experienceYears: Number(form.experienceYears),
       summary: form.summary.trim() || null,
@@ -103,7 +104,7 @@ export function CandidateModal({ onClose, onCreated }: {
           <section className="ez-candidate-create-guide" aria-label="Aday kaydı rehberi">
             <p><strong>Ne yapıyoruz?</strong> Başvuruyu aday havuzuna kaydediyoruz. Aday “Yeni” aşamasında açılır; bu işlem çalışan kaydı oluşturmaz veya adaya mesaj göndermez.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Kimlik, başvurulan rol ve değerlendirme puanı sonraki aşama kararlarında görünür. Örneğin farklı bir pozisyon için yapılan başvuruyu yanlış role kaydetmek değerlendirmeyi yanıltır.</p>
-            <p><strong>Puanın kaynağı:</strong> Buradaki 0-100 puanı siz girersiniz; sistem AI ile hesaplamaz. Değerlendirmeniz yoksa rastgele puan vermeyin. Mevcut kayıt sözleşmesi puansız adayı ayrı gösteremiyor.</p>
+            <p><strong>Puanın kaynağı:</strong> Buradaki 0-100 puanı siz girersiniz; sistem AI ile hesaplamaz. Genel puanın dayanağı henüz yoksa alanı boş bırakın. Boş alan “Henüz puan verilmedi”, 0 ise verilmiş sıfır puandır. Not veya ölçüt değerlendirmesi genel puanı otomatik hesaplamaz.</p>
             <p>Açık pozisyon seçerseniz aday o kadroya bağlanır ve rol adı pozisyondan alınır. İlan yayımlamadan gelen başvuruyu pozisyon bağlantısı olmadan da kaydedebilirsiniz.</p>
             <GuidanceDecisionCheck process="recruitment" step="candidate-create" operationName="aday işlemi" />
           </section>
@@ -135,6 +136,7 @@ export function CandidateModal({ onClose, onCreated }: {
             <div className="input-group">
               <label className="input-label" htmlFor="cand-score">Elle verilen aday puanı (0-100)</label>
               <input id="cand-score" type="number" min="0" max="100" step="1" className="input-control" value={form.score} onChange={set("score")} />
+              <small>İsteğe bağlı. Henüz puan vermediyseniz boş bırakın; 0 yazmayın.</small>
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="cand-exp">Deneyim (yıl)</label>
@@ -157,7 +159,7 @@ export function CandidateModal({ onClose, onCreated }: {
             <h4 id="candidate-create-review-title">Kaydetmeden önce son kontrol</h4>
             <p><strong>Aday:</strong> {review.name} · <strong>Başvurulan rol:</strong> {review.appliedRole}</p>
             <p><strong>Pozisyon bağlantısı:</strong> {review.positionId ? selectedPosition?.title || "Seçilen pozisyon" : "Bağlanmadı"}</p>
-            <p><strong>Elle verilen puan:</strong> {review.score}/100 · <strong>Deneyim:</strong> {review.experienceYears} yıl · <strong>Lokasyon:</strong> {review.location || "Belirtilmedi"}</p>
+            <p><strong>Elle verilen puan:</strong> {formatCandidateScore(review.score)} · <strong>Deneyim:</strong> {review.experienceYears} yıl · <strong>Lokasyon:</strong> {review.location || "Belirtilmedi"}</p>
             <p><strong>Yetenekler:</strong> {review.skills?.length ? review.skills.join(", ") : "Belirtilmedi"}</p>
             <p><strong>Başvuru özeti:</strong> {review.summary || "Belirtilmedi"}</p>
             <p><strong>Sonuç:</strong> Aday “Yeni” aşamasında açılacak. Pozisyon bağlantısını ve aynı kişinin zaten kayıtlı olup olmadığını kontrol edin.</p>

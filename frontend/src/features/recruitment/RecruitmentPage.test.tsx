@@ -38,6 +38,16 @@ test("aday listesi skor ve durum etiketleriyle dolar", async () => {
   expect(screen.getByText("Aday Havuzu")).toBeInTheDocument();
 });
 
+test("listede puansız aday ile sıfır puanlı aday ayrı gösterilir", async () => {
+  stubApi({ "/api/candidates": [{ ...candidates[0], score: null }, { ...candidates[1], score: 0 }],
+    "/api/candidates/5": { ...candidates[0], score: null, notes: [], evaluations: [] } });
+  renderShell();
+  expect(await screen.findByText("Henüz puan verilmedi")).toBeInTheDocument();
+  expect(screen.getByText("0/100 puan")).toBeInTheDocument();
+  expect(await screen.findByText("Genel puan henüz verilmedi")).toBeInTheDocument();
+  expect(screen.queryByText("null/100 puan")).not.toBeInTheDocument();
+});
+
 test("günlük görev bağlantısı ilgili adayı açar", async () => {
   renderPage(
     <ToastProvider><RecruitmentPage /></ToastProvider>,

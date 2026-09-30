@@ -92,6 +92,30 @@ test("arka planda sürüm değişse de eski formun beklenen sürümü değiştir
   expect(screen.queryByRole("button", { name: "Düzeltmeyi kaydet" })).not.toBeInTheDocument();
 });
 
+test.each([{ score: null, value: "" }, { score: 0, value: "0" }])("başka alan düzeltmesi genel puanı $score olarak korur", async ({ score, value }) => {
+  renderModal({ ...candidate, score });
+  expect(screen.getByLabelText("Elle verilen aday puanı (0-100)")).toHaveValue(value === "" ? null : 0);
+  await userEvent.type(screen.getByLabelText("Lokasyon"), "Ankara");
+  await userEvent.type(screen.getByLabelText("Düzeltme gerekçesi ve dayanak"), "Adres doğrulandı");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  await userEvent.click(screen.getByRole("button", { name: "Düzeltmeyi kaydet" }));
+  await waitFor(() => expect(putCalls()).toHaveLength(1));
+  expect(JSON.parse(String(putCalls()[0][1]?.body)).score).toBe(score);
+});
+
+test("yanlış genel puan boşaltılırken önce ve sonra açıkça gösterilir", async () => {
+  renderModal();
+  await userEvent.clear(screen.getByLabelText("Elle verilen aday puanı (0-100)"));
+  await userEvent.type(screen.getByLabelText("Düzeltme gerekçesi ve dayanak"), "Dayanağı olmayan puan kaldırıldı");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
+  const preview = screen.getByRole("region", { name: "Aday düzeltmesi ön kontrolü" });
+  expect(preview).toHaveTextContent("70/100 puan");
+  expect(preview).toHaveTextContent("Henüz puan verilmedi");
+  await userEvent.click(screen.getByRole("button", { name: "Düzeltmeyi kaydet" }));
+  await waitFor(() => expect(putCalls()).toHaveLength(1));
+  expect(JSON.parse(String(putCalls()[0][1]?.body))).toMatchObject({ score: null, expectedVersion: 4 });
+});
+
 test("işe alınmış başvuru salt okunur gerekçeli geçmiş sunar", async () => {
   const before = { name: "Deniz Yanlış", appliedRole: "Eski Rol", positionId: 12, positionTitle: "Eski Rol",
     score: 70, location: null, experienceYears: 3, summary: null, status: "Mülakat" };

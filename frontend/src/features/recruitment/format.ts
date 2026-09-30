@@ -12,6 +12,9 @@ export const formatTimeAgo = (iso?: string | null): string => {
 export const statusTagClass = (status?: string | null): string =>
   status === "İşe Alındı" ? "hired" : (status ?? "").toLocaleLowerCase("tr-TR");
 
+export const formatCandidateScore = (score?: number | null): string =>
+  score == null ? "Henüz puan verilmedi" : `${score}/100 puan`;
+
 export const scoreClass = (score?: number | null): "high" | "mid" =>
   (score ?? 0) > 80 ? "high" : "mid";
 
