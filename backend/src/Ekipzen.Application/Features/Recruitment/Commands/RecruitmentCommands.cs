@@ -168,10 +168,16 @@ public sealed class SetCandidateStatusCommandValidator : AbstractValidator<SetCa
     }
 }
 
-public sealed class SetCandidateStatusCommandHandler(IApplicationDbContext context, ISender sender, ICurrentUser currentUser)
+public sealed class SetCandidateStatusCommandHandler(
+    IApplicationDbContext context, ISender sender, ICurrentUser currentUser, IDatabaseLock databaseLock)
     : IRequestHandler<SetCandidateStatusCommand, CandidateDetailDto>
 {
-    public async Task<CandidateDetailDto> Handle(
+    public Task<CandidateDetailDto> Handle(
+        SetCandidateStatusCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"recruitment-candidate:{request.Id}",
+            token => ChangeAsync(request, token), cancellationToken);
+
+    private async Task<CandidateDetailDto> ChangeAsync(
         SetCandidateStatusCommand request, CancellationToken cancellationToken)
     {
         var candidate = await context.Candidates
@@ -210,6 +216,7 @@ public sealed class SetCandidateStatusCommandHandler(IApplicationDbContext conte
                 OccurredAtUtc = DateTime.UtcNow,
             });
             candidate.Status = newStatus;
+            candidate.Version++;
             await context.SaveChangesAsync(cancellationToken);
         }
 
@@ -233,16 +240,22 @@ public sealed class AddInterviewNoteCommandValidator : AbstractValidator<AddInte
     }
 }
 
-public sealed class AddInterviewNoteCommandHandler(IApplicationDbContext context, ICurrentUser currentUser)
+public sealed class AddInterviewNoteCommandHandler(
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
     : IRequestHandler<AddInterviewNoteCommand, InterviewNoteDto>
 {
-    public async Task<InterviewNoteDto> Handle(
+    public Task<InterviewNoteDto> Handle(
+        AddInterviewNoteCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"recruitment-candidate:{request.CandidateId}",
+            token => AddAsync(request, token), cancellationToken);
+
+    private async Task<InterviewNoteDto> AddAsync(
         AddInterviewNoteCommand request, CancellationToken cancellationToken)
     {
-        if (!await context.Candidates.AnyAsync(c => c.Id == request.CandidateId, cancellationToken))
-        {
-            throw new NotFoundException("Aday", request.CandidateId);
-        }
+        var candidate = await context.Candidates
+            .SingleOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
+            ?? throw new NotFoundException("Aday", request.CandidateId);
+        candidate.Version++;
 
         var note = new InterviewNote
         {
@@ -284,16 +297,21 @@ public sealed class AddCandidateEvaluationCommandValidator : AbstractValidator<A
     }
 }
 
-public sealed class AddCandidateEvaluationCommandHandler(IApplicationDbContext context)
+public sealed class AddCandidateEvaluationCommandHandler(IApplicationDbContext context, IDatabaseLock databaseLock)
     : IRequestHandler<AddCandidateEvaluationCommand, CandidateEvaluationDto>
 {
-    public async Task<CandidateEvaluationDto> Handle(
+    public Task<CandidateEvaluationDto> Handle(
+        AddCandidateEvaluationCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"recruitment-candidate:{request.CandidateId}",
+            token => AddAsync(request, token), cancellationToken);
+
+    private async Task<CandidateEvaluationDto> AddAsync(
         AddCandidateEvaluationCommand request, CancellationToken cancellationToken)
     {
-        if (!await context.Candidates.AnyAsync(c => c.Id == request.CandidateId, cancellationToken))
-        {
-            throw new NotFoundException("Aday", request.CandidateId);
-        }
+        var candidate = await context.Candidates
+            .SingleOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
+            ?? throw new NotFoundException("Aday", request.CandidateId);
+        candidate.Version++;
 
         var evaluation = new CandidateEvaluation
         {
@@ -436,6 +454,7 @@ public sealed class HireCandidateCommandHandler(
         context.IdentityProvisioningOperations.Add(provisioning);
 
         candidate.Status = CandidateStatus.Hired;
+        candidate.Version++;
         candidate.History.Add(new CandidateHistory
         {
             Event = "İşe alındı — personel kaydı oluşturuldu",

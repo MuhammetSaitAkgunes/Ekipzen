@@ -61,6 +61,7 @@ public interface IApplicationDbContext
     DbSet<Position> Positions { get; }
     DbSet<PositionCorrection> PositionCorrections { get; }
     DbSet<Candidate> Candidates { get; }
+    DbSet<CandidateCorrection> CandidateCorrections { get; }
     DbSet<CandidateSkill> CandidateSkills { get; }
     DbSet<CandidateExperience> CandidateExperiences { get; }
     DbSet<InterviewNote> InterviewNotes { get; }

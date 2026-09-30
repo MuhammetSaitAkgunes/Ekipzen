@@ -15,8 +15,9 @@ public class Candidate : AuditableEntity
     public Position? Position { get; set; }
 
     public CandidateStatus Status { get; set; } = CandidateStatus.New;
+    public int Version { get; set; } = 1;
 
-    /// <summary>AI uyum skoru (%).</summary>
+    /// <summary>İK kullanıcısının elle kaydettiği aday puanı (0-100).</summary>
     public int Score { get; set; }
 
     public DateTime AppliedAtUtc { get; set; }

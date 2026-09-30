@@ -8,6 +8,7 @@ using Ekipzen.Application.Features.Departments;
 using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Leaves;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Recruitment;
 using Ekipzen.Application.Features.Recruitment.Commands;
 using Microsoft.AspNetCore.TestHost;
@@ -412,6 +413,143 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
 
         var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
         (await employee.GetAsync("/api/recruitment/funnel")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task CandidateCorrection_PreservesEvidence_AndRequiresCurrentVersionsAndRoleReview()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var department = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0];
+        async Task<PositionDto> CreatePosition(string title)
+        {
+            var response = await admin.PostAsJsonAsync("/api/positions", new
+            { title, departmentId = department.Id, openCount = 2 });
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            return (await response.Content.ReadFromJsonAsync<PositionDto>())!;
+        }
+        var source = await CreatePosition("Kaynak Rol");
+        var target = await CreatePosition("Yeni Rol");
+        var created = await admin.PostAsJsonAsync("/api/candidates", new
+        {
+            name = "Deniz Yanlış", appliedRole = source.Title, positionId = source.Id, score = 60,
+            skills = new[] { "SQL" },
+            experiences = new[] { new { title = "Uzman", company = "Önceki Şirket" } },
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var candidate = (await created.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        candidate.Version.Should().Be(1);
+        var url = $"/api/candidates/{candidate.Id}";
+        var interviewed = await PatchStatusAsync(admin, candidate.Id, "Mülakat");
+        interviewed.Version.Should().Be(2);
+        (await admin.PostAsJsonAsync($"{url}/notes", new
+        { noteType = "Teknik Mülakat", text = "Kaynak role ilişkin gözlem." }))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+        var afterNote = await GetAsync<CandidateDetailDto>(admin, url);
+        afterNote.Version.Should().Be(3);
+        (await admin.PostAsJsonAsync($"{url}/evaluations", new
+        { criterion = "SQL", score = 4, maxScore = 5 })).StatusCode.Should().Be(HttpStatusCode.Created);
+        var current = await GetAsync<CandidateDetailDto>(admin, url);
+        current.Version.Should().Be(4);
+        object Body(int version, bool confirm = true, int? targetVersion = null) => new
+        {
+            expectedVersion = version, name = "Deniz Doğru", appliedRole = target.Title,
+            positionId = target.Id, expectedPositionVersion = targetVersion ?? target.Version,
+            score = 75, location = "Ankara", experienceYears = 3, summary = "Belgeden doğrulandı.",
+            reason = "Başvuru belgesindeki isim ve rol doğrulandı.", confirmExistingEvidenceReview = confirm,
+        };
+        (await manager.PutAsJsonAsync(url, Body(current.Version)))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await manager.GetAsync($"{url}/corrections")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PutAsJsonAsync(url, Body(interviewed.Version)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict, "not ve değerlendirme eski düzeltme formunu geçersiz kılar");
+        (await admin.PutAsJsonAsync(url, Body(afterNote.Version))).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PutAsJsonAsync(url, Body(current.Version, false)))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await admin.PutAsJsonAsync(url, Body(current.Version, targetVersion: 999)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var correctedResponse = await admin.PutAsJsonAsync(url, Body(current.Version));
+        correctedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var corrected = (await correctedResponse.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        corrected.Version.Should().Be(5);
+        corrected.Status.Should().Be("Mülakat");
+        corrected.AppliedAtUtc.Should().Be(candidate.AppliedAtUtc);
+        corrected.PositionId.Should().Be(target.Id);
+        corrected.Notes.Should().BeEquivalentTo(current.Notes);
+        corrected.Evaluations.Should().BeEquivalentTo(current.Evaluations);
+        corrected.Skills.Should().BeEquivalentTo(candidate.Skills);
+        corrected.Experiences.Should().BeEquivalentTo(candidate.Experiences);
+        var history = await GetAsync<List<CandidateCorrectionDto>>(admin, $"{url}/corrections");
+        history.Should().ContainSingle();
+        history[0].Before.Name.Should().Be(candidate.Name);
+        history[0].Before.PositionId.Should().Be(source.Id);
+        history[0].After.Name.Should().Be("Deniz Doğru");
+        history[0].After.Status.Should().Be("Mülakat");
+        history[0].EvidenceReviewConfirmed.Should().BeTrue();
+        history[0].ChangedByName.Should().Be("İK Yöneticisi");
+        history[0].ChangedByUserId.Should().NotBeNullOrEmpty();
+        history[0].Reason.Should().Be("Başvuru belgesindeki isim ve rol doğrulandı.");
+        (await admin.PutAsJsonAsync(url, Body(current.Version))).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var positions = await GetAsync<List<PositionDto>>(admin, "/api/positions");
+        positions.Single(item => item.Id == source.Id).CandidateCount.Should().Be(0);
+        positions.Single(item => item.Id == target.Id).CandidateCount.Should().Be(1);
+        positions.Where(item => item.Id == source.Id || item.Id == target.Id)
+            .Should().OnlyContain(item => item.OpenCount == 2 && item.Version == 1);
+
+        var hired = await admin.PostAsJsonAsync($"{url}/hire", new
+        { departmentId = department.Id, email = $"corrected-{Guid.NewGuid():N}@hrmaster.local", contractType = "indefinite" });
+        hired.StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterHire = await GetAsync<CandidateDetailDto>(admin, url);
+        afterHire.Version.Should().Be(6);
+        (await admin.PutAsJsonAsync(url, Body(afterHire.Version))).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await GetAsync<List<CandidateCorrectionDto>>(admin, $"{url}/corrections")).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task CandidateCorrection_ClosedTargetCannotBeAttached_ButExistingClosedLinkCanBeKeptOrRemoved()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var createdPosition = await admin.PostAsJsonAsync("/api/positions", new
+        { title = "Kapanacak Rol", openCount = 1 });
+        var position = (await createdPosition.Content.ReadFromJsonAsync<PositionDto>())!;
+        var createdCandidate = await admin.PostAsJsonAsync("/api/candidates", new
+        { name = "Mevcut Aday", appliedRole = position.Title, positionId = position.Id, score = 70 });
+        var linked = (await createdCandidate.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var unlinkedResponse = await admin.PostAsJsonAsync("/api/candidates", new
+        { name = "Bağlantısız Aday", appliedRole = position.Title, score = 70 });
+        var unlinked = (await unlinkedResponse.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var journey = await GetAsync<RecruitmentJourneyDto>(admin, "/api/guidance/recruitment/journey");
+        var closedResponse = await admin.PutAsJsonAsync($"/api/positions/{position.Id}", new
+        { expectedVersion = position.Version, title = position.Title, openCount = 1, isOpen = false, reason = "Alım durdu." });
+        closedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var closed = (await closedResponse.Content.ReadFromJsonAsync<PositionDto>())!;
+        object Body(CandidateDetailDto item, int? positionId, string name, string reason = "Belgeden düzeltildi.") => new
+        {
+            expectedVersion = item.Version, name, appliedRole = item.AppliedRole, positionId,
+            expectedPositionVersion = closed.Version, score = item.Score,
+            experienceYears = item.ExperienceYears, reason, confirmExistingEvidenceReview = true,
+        };
+        (await admin.PutAsJsonAsync($"/api/candidates/{unlinked.Id}", Body(unlinked, position.Id, "Yeni Ad")))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PutAsJsonAsync($"/api/candidates/{linked.Id}", Body(linked, position.Id, "Yeni Ad", " ")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var renameResponse = await admin.PutAsJsonAsync($"/api/candidates/{linked.Id}", Body(linked, position.Id, "Doğru Ad"));
+        renameResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var renamed = (await renameResponse.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        renamed.PositionId.Should().Be(position.Id);
+        renamed.Status.Should().Be("Yeni");
+        (await admin.PutAsJsonAsync($"/api/candidates/{linked.Id}", Body(renamed, position.Id, renamed.Name)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict, "değişikliksiz kayıt geçmiş üretmez");
+        var detachedResponse = await admin.PutAsJsonAsync($"/api/candidates/{linked.Id}", Body(renamed, null, renamed.Name));
+        detachedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await detachedResponse.Content.ReadFromJsonAsync<CandidateDetailDto>())!.PositionId.Should().BeNull();
+        var history = await GetAsync<List<CandidateCorrectionDto>>(admin, $"/api/candidates/{linked.Id}/corrections");
+        history.Should().HaveCount(2);
+        history[0].EvidenceReviewConfirmed.Should().BeTrue();
+        history[1].EvidenceReviewConfirmed.Should().BeFalse();
+        (await GetAsync<RecruitmentJourneyDto>(admin, "/api/guidance/recruitment/journey"))
+            .VerifiedFirstReviews.Should().Be(journey.VerifiedFirstReviews,
+                "başvuru düzeltmesi ilk aşama kararı veya yeni öğrenme kanıtı değildir");
     }
 
     // --- yardımcılar ---

@@ -49,7 +49,16 @@ public sealed record CandidateDetailDto(
     IReadOnlyList<InterviewNoteDto> Notes,
     IReadOnlyList<CandidateEvaluationDto> Evaluations,
     IReadOnlyList<CandidateHistoryDto> History,
-    IdentityProvisioningDto? Provisioning);
+    IdentityProvisioningDto? Provisioning, int Version);
+
+public sealed record CandidateStateDto(
+    string Name, string AppliedRole, int? PositionId, string? PositionTitle,
+    int Score, string? Location, int ExperienceYears, string? Summary, string Status);
+
+public sealed record CandidateCorrectionDto(
+    int Id, int CandidateId, int FromVersion, int ToVersion,
+    CandidateStateDto Before, CandidateStateDto After, string Reason,
+    bool EvidenceReviewConfirmed, string ChangedByUserId, string ChangedByName, DateTime ChangedAtUtc);
 
 public sealed record PositionDto(
     int Id, string Title, int? DepartmentId, string? Department, bool IsOpen, int OpenCount, int CandidateCount,

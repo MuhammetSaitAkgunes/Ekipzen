@@ -49,6 +49,21 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
     }
 }
 
+public sealed class CandidateCorrectionConfiguration : IEntityTypeConfiguration<CandidateCorrection>
+{
+    public void Configure(EntityTypeBuilder<CandidateCorrection> b)
+    {
+        b.Property(item => item.BeforeJson).IsRequired();
+        b.Property(item => item.AfterJson).IsRequired();
+        b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
+        b.Property(item => item.ChangedByUserId).IsRequired().HasMaxLength(450);
+        b.Property(item => item.ChangedByName).IsRequired().HasMaxLength(200);
+        b.HasOne(item => item.Candidate).WithMany()
+            .HasForeignKey(item => item.CandidateId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(item => new { item.TenantId, item.CandidateId, item.ToVersion }).IsUnique();
+    }
+}
+
 public class CandidateSkillConfiguration : IEntityTypeConfiguration<CandidateSkill>
 {
     public void Configure(EntityTypeBuilder<CandidateSkill> b)

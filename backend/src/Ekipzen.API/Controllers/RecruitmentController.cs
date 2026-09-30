@@ -47,6 +47,23 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         int id, CandidateStatusBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new SetCandidateStatusCommand(id, body.Status), cancellationToken));
 
+    [HttpPut("candidates/{id:int}")]
+    [ProducesResponseType<CandidateDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CandidateDetailDto>> CorrectCandidate(
+        int id, CorrectCandidateBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new CorrectCandidateCommand(id, body.ExpectedVersion,
+            body.Name, body.AppliedRole, body.PositionId, body.ExpectedPositionVersion,
+            body.Score, body.Location, body.ExperienceYears, body.Summary,
+            body.Reason, body.ConfirmExistingEvidenceReview), cancellationToken));
+
+    [HttpGet("candidates/{id:int}/corrections")]
+    [ProducesResponseType<IReadOnlyList<CandidateCorrectionDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CandidateCorrectionDto>>> GetCandidateCorrections(
+        int id, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetCandidateCorrectionsQuery(id), cancellationToken));
+
     [HttpPost("candidates/{id:int}/notes")]
     [ProducesResponseType<InterviewNoteDto>(StatusCodes.Status201Created)]
     public async Task<ActionResult<InterviewNoteDto>> AddNote(
@@ -120,6 +137,9 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new GetRecruitmentFunnelQuery(), cancellationToken));
 
     public sealed record CandidateStatusBody(string Status);
+    public sealed record CorrectCandidateBody(int ExpectedVersion, string Name, string AppliedRole,
+        int? PositionId, int? ExpectedPositionVersion, int Score, string? Location,
+        int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview);
     public sealed record CandidateNoteBody(string NoteType, string Text);
     public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5);
     public sealed record CandidateHireBody(int DepartmentId, string Email, string ContractType, string? Title = null, DateOnly? HireDate = null);

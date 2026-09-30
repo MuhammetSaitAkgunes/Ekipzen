@@ -110,7 +110,7 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
                 .OrderByDescending(h => h.OccurredAtUtc)
                 .Select(h => new CandidateHistoryDto(h.Id, h.Event, h.OccurredAtUtc))
                 .ToList(),
-            provisioning?.ToDto());
+            provisioning?.ToDto(), candidate.Version);
     }
 }
 
