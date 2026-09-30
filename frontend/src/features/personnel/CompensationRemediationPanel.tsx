@@ -7,6 +7,7 @@ import {
   useApproveCompensationRemediationCase,
   useApprovedCompensationPayrollImpact,
   useApplyApprovedCompensationPayrollRevision,
+  useApplyApprovedCompensationPayrollNextRevision,
   useApplyApprovedCompensationPayrollChain,
   useApplyCompensationPayrollApplication,
   useCompensationRemediationContext,
@@ -49,9 +50,12 @@ function RemediationContent({ context, employeeId, packageId }: {
   const { showToast } = useToast();
   const save = useSaveCompensationRemediationCase();
   const approve = useApproveCompensationRemediationCase();
-  const current = context.case;
+  const [openingNew, setOpeningNew] = useState(false);
+  const [historicalCaseId, setHistoricalCaseId] = useState<number | null>(null);
+  const historicalCase = context.history?.find((item) => item.id === historicalCaseId);
+  const current = openingNew ? null : historicalCase ?? context.case;
   const displayedImpact = current?.status === "approved" ? current.impactSnapshot : context.currentImpact;
-  const initial = current?.proposedValues ?? context.package;
+  const initial = current?.proposedValues ?? context.case?.proposedValues ?? context.package;
   const [values, setValues] = useState<CompensationPackageValues>({
     monthlyGrossSalary: initial.monthlyGrossSalary, regularPremium: initial.regularPremium,
     roadAllowance: initial.roadAllowance, mealAllowance: initial.mealAllowance,
@@ -111,17 +115,51 @@ function RemediationContent({ context, employeeId, packageId }: {
     }
   };
 
+  const startNewCase = () => {
+    setOpeningNew(true);
+    setHistoricalCaseId(null);
+    setValues(context.case?.proposedValues ?? context.package);
+    setIssue("");
+    setEffectiveFrom("");
+    setExpertReference("");
+    setReviewNotes("");
+    setConfirmed(false);
+    setError(null);
+  };
+
   return <>
     <p><strong>Mevcut paket:</strong> {context.package.effectiveFrom} · {currency.format(context.package.monthlyGrossSalary)} · sürüm {context.package.version}</p>
+    {context.history?.length > 0 && <details>
+      <summary>Uzman inceleme dosyası geçmişi ({context.history.length})</summary>
+      <ul>{context.history.map((item) => <li key={item.id}>
+        Dosya #{item.id} · {item.status === "approved" ? "onaylı" : "taslak"} · {item.issueDescription}
+        {item.expertReviewReference && ` · ${item.expertReviewReference}`}
+        {item.id !== context.case?.id && <button type="button" className="btn btn-secondary"
+          onClick={() => { setOpeningNew(false); setHistoricalCaseId(item.id); }}>
+          Dosya #{item.id} görüntüle
+        </button>}
+      </li>)}</ul>
+    </details>}
+    {historicalCase && <button type="button" className="btn btn-secondary"
+      onClick={() => setHistoricalCaseId(null)}>Güncel dosyaya dön</button>}
+    {context.case?.status === "approved" && context.canOpen && !openingNew
+      && !historicalCase && <button
+      type="button" className="btn btn-secondary" onClick={startNewCase}>
+      Yeni uzman inceleme dosyası aç
+    </button>}
+    {openingNew && <button type="button" className="btn btn-secondary"
+      onClick={() => setOpeningNew(false)}>Yeni dosyadan vazgeç</button>}
     <p>Bordro satırında kaynak paket kimliği tutulmadığı için aşağıdaki bordrolar tarih aralığına göre <strong>olası etki</strong> olarak gösterilir; ilişkilerini uzman doğrulamalıdır.</p>
     <ul>
-      {displayedImpact.potentialPayrollRows.map((row) => <li key={`payroll-${row.rowId}`}>
+      {displayedImpact.potentialPayrollRows.map((row) => <li
+        key={`payroll-${current?.id ?? "new"}-${row.rowId}`}>
         {row.year}/{String(row.month).padStart(2, "0")} bordro satırı #{row.rowId} · {row.periodStatus}/{row.rowStatus} · kayıtlı brüt {currency.format(row.recordedGrossSalary)}
         {current?.status === "approved" && <PayrollRemediationRow
           employeeId={employeeId} packageId={packageId} caseId={current.id}
           periodId={row.periodId} rowId={row.rowId} periodStatus={row.periodStatus} />}
       </li>)}
-      {displayedImpact.offboardingCases.map((item) => <li key={`offboarding-${item.caseId}`}>
+      {displayedImpact.offboardingCases.map((item) => <li
+        key={`offboarding-${current?.id ?? "new"}-${item.caseId}`}>
         {item.terminationDate} ayrılış vakası #{item.caseId} · {item.status} · ücret görüntüsü {currency.format(item.grossSalarySnapshot)}
         {current?.status === "approved" && <OffboardingSettlementRevisionPanel
           employeeId={employeeId} packageId={packageId} remediationCaseId={current.id}
@@ -187,6 +225,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   const { showToast } = useToast();
   const impactMutation = useApprovedCompensationPayrollImpact();
   const approvedApply = useApplyApprovedCompensationPayrollRevision();
+  const nextApply = useApplyApprovedCompensationPayrollNextRevision();
   const chainApply = useApplyApprovedCompensationPayrollChain();
   const previewMutation = usePreviewCompensationPayrollApplication();
   const applyMutation = useApplyCompensationPayrollApplication();
@@ -267,6 +306,26 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       setError(cause instanceof ApiError ? cause.message : "Bordro değişti; zincirleme etki dosyasını yeniden açın.");
     }
   };
+  const applyNext = async () => {
+    if (!impact?.canApplyNext || !impact.revision || !sourceConfirmed || !externalConfirmed
+      || !expertReference.trim() || !approvedNotes.trim()) return;
+    setError(null);
+    try {
+      const revision = await nextApply.mutateAsync({ ...args,
+        expectedCurrentRevisionId: impact.revision.id,
+        expectedPreviewToken: impact.previewToken,
+        expertReviewReference: expertReference.trim(), reviewNotes: approvedNotes.trim() });
+      setImpact({ ...impact, revision, canApplyNext: false,
+        revisionHistory: [...impact.revisionHistory, revision],
+        blockingReasons: ["Yeni parasal sürüm onaylandı; dış işlemleri yeniden uzlaştırın."] });
+      showToast("Yeni parasal bordro sürümü geçerli oldu; önceki sürüm ve kanıtları geçmişte korundu.", "success");
+    } catch (cause) {
+      setImpact(null);
+      setSourceConfirmed(false);
+      setExternalConfirmed(false);
+      setError(cause instanceof ApiError ? cause.message : "Bordro değişti; etki dosyasını yeniden açın.");
+    }
+  };
   if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review"
     aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
     <button type="button" className="btn btn-secondary"
@@ -332,15 +391,24 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
         && <p>İzleyen takvim yılındaki onaylı satırlar bu yılın vergi matrahı hesabına katılmadı; uygulama öncesinde ayrıca incelenecek.</p>}
       <p>Doğrulanamayan bir ay veya sonraki yılda onaylı satır varsa zincirleme uygulama kilitlenir. Dış ödeme ve bildirim uygulama tarafından gerçekleştirilmez; farklar her ay için ayrıca uzlaştırılmalıdır.</p>
       {impact.revision && <p role="status">Geçerli parasal sürüm #{impact.revision.revisionNumber} · {impact.revision.approvedAtUtc} · önceki onaylı sonuç geçmişte korunuyor.</p>}
-      {impact.revision && !impact.revision.batchId && <PayrollRevisionExternalReconciliationPanel {...args}
-        revisionId={impact.revision.id} />}
+      {impact.revision && !impact.revision.batchId && <PayrollRevisionExternalReconciliationPanel
+        {...args} caseId={impact.revision.remediationCaseId} revisionId={impact.revision.id} />}
+      {impact.revisionHistory?.some((item) => item.id !== impact.revision?.id && !item.batchId)
+        && <details><summary>Önceki parasal sürümler ve kanıtları</summary>
+          {impact.revisionHistory.filter((item) => item.id !== impact.revision?.id && !item.batchId)
+            .map((item) => <div key={item.id}>
+              <p>Sürüm #{item.revisionNumber} · dosya #{item.remediationCaseId} · {item.approvedAtUtc}</p>
+              <PayrollRevisionExternalReconciliationPanel {...args}
+                caseId={item.remediationCaseId} revisionId={item.id} />
+            </div>)}
+        </details>}
       {impact.batchRevisions?.length > 0 && <section aria-label="Zincirleme sürümlerin dış işlem takibi">
         <h5>Ay bazında ödeme ve bildirim kanıtları</h5>
         <p>Tek uzman onayı tüm ayların parasal hesabını sürümledi. Her ayın dış ödeme ve bildirim kaydı ayrı tamamlanır; bir ayın kanıtı diğer ayın işini kapatmaz.</p>
         {impact.batchRevisions.map((item) => <div key={item.revision.id}>
           <p><strong>Bordro dönemi #{item.periodId}</strong> · satır #{item.revision.payrollRowId} · parasal sürüm #{item.revision.revisionNumber}</p>
           <PayrollRevisionExternalReconciliationPanel employeeId={employeeId}
-            packageId={packageId} caseId={caseId} periodId={item.periodId}
+            packageId={packageId} caseId={item.revision.remediationCaseId} periodId={item.periodId}
             rowId={item.revision.payrollRowId} revisionId={item.revision.id} />
         </div>)}
       </section>}
@@ -362,6 +430,23 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
         <button type="button" className="btn btn-primary" onClick={applyChain}
           disabled={chainApply.isPending || !sourceConfirmed || !chainConfirmed || !externalConfirmed
             || !expertReference.trim() || !approvedNotes.trim()}>Tüm ayların parasal sürümlerini onayla</button>
+      </section>}
+      {impact.canApplyNext && impact.revision && <section aria-label="Sonraki bordro parasal revizyonu">
+        <h5>Geçerli parasal sürümü yeniden düzelt</h5>
+        <p>Yeni uzman dosyasındaki tutarlar geçerli sürüm #{impact.revision.revisionNumber} ile karşılaştırıldı. Sonraki onaylı ay yoksa eski sürüm ve kanıtlar geçmişte korunarak yeni sürüm onaylanabilir.</p>
+        <div className="input-group"><label className="input-label" htmlFor={`payroll-next-expert-${rowId}`}>Son uzman inceleme referansı</label>
+          <input id={`payroll-next-expert-${rowId}`} className="input-control" value={expertReference}
+            onChange={(event) => setExpertReference(event.target.value)} /></div>
+        <div className="input-group"><label className="input-label" htmlFor={`payroll-next-notes-${rowId}`}>Uzman inceleme notu</label>
+          <textarea id={`payroll-next-notes-${rowId}`} className="input-control" value={approvedNotes}
+            onChange={(event) => setApprovedNotes(event.target.value)} /></div>
+        <label><input type="checkbox" checked={sourceConfirmed}
+          onChange={(event) => setSourceConfirmed(event.target.checked)} /> Yeni uzman dosyasının kaynak ücret paketi ve geçerli bordro sürümüyle ilişkisini doğruladım.</label>
+        <label><input type="checkbox" checked={externalConfirmed}
+          onChange={(event) => setExternalConfirmed(event.target.checked)} /> Yeni sürümün dış ödeme ve bildirim sonuçlarını yeniden, ayrı kanıtlarla izleyeceğim.</label>
+        <button type="button" className="btn btn-primary" onClick={applyNext}
+          disabled={nextApply.isPending || !sourceConfirmed || !externalConfirmed
+            || !expertReference.trim() || !approvedNotes.trim()}>Yeni geçerli parasal sürümü onayla</button>
       </section>}
       {impact.canApply && <section aria-label="Onaylı bordro parasal revizyonu">
         <h5>Parasal sürümü onayla</h5>
