@@ -6,6 +6,8 @@ namespace Ekipzen.Domain.Entities.Payroll;
 /// <summary>Onaylı bordro sonucunun geçmişi silinmeyen parasal düzeltme sürümü.</summary>
 public sealed class PayrollApprovedRowRevision : AuditableEntity
 {
+    public int? BasedOnRevisionId { get; set; }
+    public PayrollApprovedRowRevision? BasedOnRevision { get; set; }
     public int? BatchId { get; set; }
     public PayrollApprovedRevisionBatch? Batch { get; set; }
     public int PayrollRowId { get; set; }

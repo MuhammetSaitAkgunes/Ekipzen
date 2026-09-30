@@ -73,7 +73,7 @@ public sealed class EmployeeCompensationRemediationCaseConfiguration
         b.Property(item => item.ReviewedByUserId).HasMaxLength(450);
         b.Property(item => item.ExpertReviewReference).HasMaxLength(256);
         b.Property(item => item.ReviewNotes).HasMaxLength(2000);
-        b.HasIndex(item => new { item.TenantId, item.CompensationPackageId }).IsUnique();
+        b.HasIndex(item => new { item.TenantId, item.CompensationPackageId });
         b.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
         b.HasOne(item => item.CompensationPackage).WithMany()

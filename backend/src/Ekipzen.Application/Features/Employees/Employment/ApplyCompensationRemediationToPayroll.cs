@@ -61,7 +61,9 @@ public sealed class ApplyCompensationRemediationToPayrollCommandHandler(
 {
     public Task<CompensationPayrollApplicationDto> Handle(
         ApplyCompensationRemediationToPayrollCommand request, CancellationToken cancellationToken)
-        => databaseLock.ExecuteExclusiveAsync(PayrollRowGuards.LockResource(request.PeriodId),
+        => databaseLock.ExecuteExclusiveAsync([
+                $"employee-compensation:{request.EmployeeId}",
+                PayrollRowGuards.LockResource(request.PeriodId)],
             token => ApplyAsync(request, token), cancellationToken);
 
     private async Task<CompensationPayrollApplicationDto> ApplyAsync(
@@ -146,6 +148,10 @@ internal static class CompensationPayrollApplicationRules
         var reasons = new List<string>();
         if (remediation.Status != "approved")
             reasons.Add("Uzman inceleme dosyası henüz onaylanmadı.");
+        if (await context.EmployeeCompensationRemediationCases.AsNoTracking()
+            .AnyAsync(item => item.CompensationPackageId == packageId
+                && item.Id > caseId, cancellationToken))
+            reasons.Add("Bu dosyadan sonra yeni uzman inceleme dosyası açılmış; eski dosya yeni bordro uygulaması için kullanılamaz.");
         if (remediation.PackageVersion != package.Version)
             reasons.Add("Ücret paketi inceleme sonrasında değişti.");
         var reviewedImpact = JsonSerializer.Deserialize<CompensationRemediationImpactDto>(

@@ -1354,8 +1354,7 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("EmployeeId");
 
-                    b.HasIndex("TenantId", "CompensationPackageId")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "CompensationPackageId");
 
                     b.ToTable("EmployeeCompensationRemediationCases");
                 });
@@ -2329,6 +2328,9 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("BasedOnRevisionId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("BatchId")
                         .HasColumnType("int");
 
@@ -2376,6 +2378,8 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BasedOnRevisionId");
 
                     b.HasIndex("BatchId");
 
@@ -4057,6 +4061,11 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRowRevision", b =>
                 {
+                    b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRowRevision", "BasedOnRevision")
+                        .WithMany()
+                        .HasForeignKey("BasedOnRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollApprovedRevisionBatch", "Batch")
                         .WithMany()
                         .HasForeignKey("BatchId")
@@ -4073,6 +4082,8 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RemediationCaseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("BasedOnRevision");
 
                     b.Navigation("Batch");
 

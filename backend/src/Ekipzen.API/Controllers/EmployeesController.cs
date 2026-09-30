@@ -222,6 +222,18 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.ExpertReviewReference, body.ReviewNotes,
             body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
 
+    [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact/revise")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<ApprovedPayrollRevisionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ApprovedPayrollRevisionDto>> ApplyApprovedCompensationPayrollNextRevision(
+        int id, int packageId, int caseId, int periodId, int rowId,
+        ApplyApprovedPayrollNextRevisionBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApplyApprovedCompensationPayrollNextRevisionCommand(
+            id, packageId, caseId, periodId, rowId, body.ExpectedCurrentRevisionId,
+            body.ExpectedPreviewToken, body.ExpertReviewReference, body.ReviewNotes,
+            body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
+
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact/chain/apply")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<ApprovedPayrollRevisionBatchDto>(StatusCodes.Status200OK)]
@@ -563,6 +575,11 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
 
     public sealed record ApplyApprovedPayrollRevisionBody(
         string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
+        bool ConfirmSourceLink, bool ConfirmExternalReconciliation);
+
+    public sealed record ApplyApprovedPayrollNextRevisionBody(
+        int ExpectedCurrentRevisionId, string ExpectedPreviewToken,
+        string ExpertReviewReference, string ReviewNotes,
         bool ConfirmSourceLink, bool ConfirmExternalReconciliation);
 
     public sealed record ApplyApprovedPayrollChainBody(

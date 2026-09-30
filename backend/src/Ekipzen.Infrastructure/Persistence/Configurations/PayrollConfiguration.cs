@@ -104,6 +104,8 @@ public sealed class PayrollApprovedRowRevisionConfiguration
             .HasForeignKey(item => item.RemediationCaseId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(item => item.Batch).WithMany()
             .HasForeignKey(item => item.BatchId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(item => item.BasedOnRevision).WithMany()
+            .HasForeignKey(item => item.BasedOnRevisionId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

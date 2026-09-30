@@ -24,7 +24,8 @@ public sealed record CompensationRemediationCaseDto(
     string? ExpertReviewReference, string? ReviewNotes);
 public sealed record CompensationRemediationContextDto(
     EmployeeCompensationPackageDto Package, CompensationRemediationImpactDto CurrentImpact,
-    bool CanOpen, CompensationRemediationCaseDto? Case);
+    bool CanOpen, CompensationRemediationCaseDto? Case,
+    IReadOnlyList<CompensationRemediationCaseDto> History);
 
 public sealed record GetCompensationRemediationContextQuery(int EmployeeId, int PackageId)
     : IRequest<CompensationRemediationContextDto>;
@@ -39,11 +40,14 @@ public sealed class GetCompensationRemediationContextQueryHandler(IApplicationDb
             context, request.EmployeeId, request.PackageId, cancellationToken);
         var impact = await CompensationRemediationRules.ImpactAsync(
             context, request.EmployeeId, package, cancellationToken);
-        var item = await context.EmployeeCompensationRemediationCases.AsNoTracking()
-            .SingleOrDefaultAsync(candidate => candidate.CompensationPackageId == package.Id,
-                cancellationToken);
+        var cases = await context.EmployeeCompensationRemediationCases.AsNoTracking()
+            .Where(candidate => candidate.CompensationPackageId == package.Id)
+            .OrderByDescending(candidate => candidate.Id)
+            .ToListAsync(cancellationToken);
+        var item = cases.FirstOrDefault();
         return new(package.ToDto(), impact,
-            item is null && CompensationRemediationRules.HasImpact(impact), item?.ToDto());
+            (item?.Status is null or "approved") && CompensationRemediationRules.HasImpact(impact),
+            item?.ToDto(), cases.Select(candidate => candidate.ToDto()).ToList());
     }
 }
 
@@ -99,12 +103,14 @@ public sealed class SaveCompensationRemediationCaseCommandHandler(
             request.MonthlyGrossSalary, request.RegularPremium, request.RoadAllowance,
             request.MealAllowance, request.OtherRegularBenefits, request.SourceReference.Trim());
         var existing = await context.EmployeeCompensationRemediationCases
-            .SingleOrDefaultAsync(item => item.CompensationPackageId == package.Id, cancellationToken);
+            .Where(item => item.CompensationPackageId == package.Id)
+            .OrderByDescending(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
         EmployeeCompensationRemediationCase item;
         if (request.CaseId is null)
         {
-            if (existing is not null)
-                throw new ConflictException("Bu ücret paketi için inceleme dosyası zaten var.");
+            if (existing?.Status == "draft")
+                throw new ConflictException("Bu ücret paketi için açık inceleme taslağı zaten var.");
             item = new EmployeeCompensationRemediationCase
             {
                 EmployeeId = request.EmployeeId,
@@ -229,6 +235,8 @@ internal static class CompensationRemediationRules
                 row.Period.Month, PeriodStatus = row.Period.Status,
                 RowStatus = row.ApprovalStatus, row.GrossSalary })
             .ToListAsync(cancellationToken);
+        var revisions = await ApprovedPayrollRevisionRules.LatestByRowAsync(context,
+            payroll.Select(row => row.Id).ToArray(), cancellationToken);
         var potential = payroll.Where(row =>
                 new DateOnly(row.Year, row.Month, 1) >= package.EffectiveFrom
                 && (package.EffectiveTo is null
@@ -237,7 +245,10 @@ internal static class CompensationRemediationRules
             .Select(row => new CompensationPayrollImpactDto(
                 row.Id, row.PayrollPeriodId, row.Year, row.Month,
                 row.PeriodStatus.ToString().ToLowerInvariant(),
-                row.RowStatus.ToString().ToLowerInvariant(), row.GrossSalary))
+                row.RowStatus.ToString().ToLowerInvariant(),
+                revisions.TryGetValue(row.Id, out var revision)
+                    ? ApprovedPayrollRevisionRules.EffectiveRow(revision).GrossSalary
+                    : row.GrossSalary))
             .ToList();
         var offboarding = await context.EmployeeOffboardingCases.AsNoTracking()
             .Where(item => item.EmployeeId == employeeId && item.CompensationPackageId == package.Id)

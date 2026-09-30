@@ -58,7 +58,9 @@ public sealed class OpenOffboardingSettlementRevisionCommandHandler(
 {
     public Task<OffboardingSettlementRevisionDto> Handle(
         OpenOffboardingSettlementRevisionCommand request, CancellationToken cancellationToken)
-        => databaseLock.ExecuteExclusiveAsync($"employee-offboarding:{request.EmployeeId}",
+        => databaseLock.ExecuteExclusiveAsync([
+                $"employee-compensation:{request.EmployeeId}",
+                $"employee-offboarding:{request.EmployeeId}"],
             token => OpenAsync(request, token), cancellationToken);
 
     private async Task<OffboardingSettlementRevisionDto> OpenAsync(
@@ -137,7 +139,9 @@ public sealed class SaveOffboardingSettlementRevisionCommandHandler(
 {
     public Task<OffboardingSettlementRevisionDto> Handle(
         SaveOffboardingSettlementRevisionCommand request, CancellationToken cancellationToken)
-        => databaseLock.ExecuteExclusiveAsync($"employee-offboarding:{request.EmployeeId}",
+        => databaseLock.ExecuteExclusiveAsync([
+                $"employee-compensation:{request.EmployeeId}",
+                $"employee-offboarding:{request.EmployeeId}"],
             token => SaveAsync(request, token), cancellationToken);
 
     private async Task<OffboardingSettlementRevisionDto> SaveAsync(
@@ -200,7 +204,9 @@ public sealed class ApproveOffboardingSettlementRevisionCommandHandler(
 {
     public Task<OffboardingSettlementRevisionDto> Handle(
         ApproveOffboardingSettlementRevisionCommand request, CancellationToken cancellationToken)
-        => databaseLock.ExecuteExclusiveAsync($"employee-offboarding:{request.EmployeeId}",
+        => databaseLock.ExecuteExclusiveAsync([
+                $"employee-compensation:{request.EmployeeId}",
+                $"employee-offboarding:{request.EmployeeId}"],
             token => ApproveAsync(request, token), cancellationToken);
 
     private async Task<OffboardingSettlementRevisionDto> ApproveAsync(
@@ -297,6 +303,10 @@ internal static class OffboardingSettlementRevisionRules
         var reasons = new List<string>();
         if (remediation.Status != "approved")
             reasons.Add("Ücret telafi incelemesi henüz onaylanmadı.");
+        if (await context.EmployeeCompensationRemediationCases.AsNoTracking()
+            .AnyAsync(item => item.CompensationPackageId == packageId
+                && item.Id > remediationCaseId, cancellationToken))
+            reasons.Add("Bu dosyadan sonra yeni uzman inceleme dosyası açılmış; eski dosya yeni parasal uygulama için kullanılamaz.");
         if (remediation.PackageVersion != package.Version)
             reasons.Add("Ücret paketi inceleme sonrasında değişti.");
         if (offboarding.CompensationPackageId != packageId)

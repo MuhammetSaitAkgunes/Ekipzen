@@ -16,7 +16,8 @@ public sealed record ApprovedPayrollRevisionDto(
     int Id, int RevisionNumber, int PayrollRowId, int RemediationCaseId,
     PayrollRowDto Before, PayrollRowDto After, string Reason,
     string ExpertReviewReference, string ReviewNotes,
-    string ApprovedByUserId, DateTime ApprovedAtUtc, int? BatchId = null);
+    string ApprovedByUserId, DateTime ApprovedAtUtc, int? BatchId = null,
+    int? BasedOnRevisionId = null);
 
 public sealed record ApplyApprovedCompensationPayrollRevisionCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId,
@@ -44,7 +45,9 @@ public sealed class ApplyApprovedCompensationPayrollRevisionCommandHandler(
 {
     public Task<ApprovedPayrollRevisionDto> Handle(
         ApplyApprovedCompensationPayrollRevisionCommand request, CancellationToken cancellationToken)
-        => databaseLock.ExecuteExclusiveAsync(PayrollRowGuards.LockResource(request.PeriodId),
+        => databaseLock.ExecuteExclusiveAsync([
+                $"employee-compensation:{request.EmployeeId}",
+                PayrollRowGuards.LockResource(request.PeriodId)],
             token => ApplyAsync(request, token), cancellationToken);
 
     private async Task<ApprovedPayrollRevisionDto> ApplyAsync(
@@ -109,7 +112,18 @@ public static class ApprovedPayrollRevisionRules
             JsonSerializer.Deserialize<PayrollRowDto>(item.BeforeJson)!,
             JsonSerializer.Deserialize<PayrollRowDto>(item.AfterJson)!,
             item.Reason, item.ExpertReviewReference, item.ReviewNotes,
-            item.ApprovedByUserId, item.ApprovedAtUtc, item.BatchId);
+            item.ApprovedByUserId, item.ApprovedAtUtc, item.BatchId,
+            item.BasedOnRevisionId);
+
+    public static void ApplyEffectiveInputs(PayrollEmployee row, PayrollRowDto effective)
+    {
+        row.GrossSalary = effective.GrossSalary;
+        row.PremiumPay = effective.PremiumPay;
+        row.RoadAllowance = effective.RoadAllowance;
+        row.MealAllowance = effective.MealAllowance;
+        row.BenefitPay = effective.BenefitPay;
+        row.PreviousTaxBase = effective.PreviousTaxBase;
+    }
 
     public static PayrollRowDto EffectiveRow(PayrollApprovedRowRevision item)
         => JsonSerializer.Deserialize<PayrollRowDto>(item.AfterJson)!;

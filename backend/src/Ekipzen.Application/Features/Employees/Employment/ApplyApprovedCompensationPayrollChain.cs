@@ -54,7 +54,8 @@ public sealed class ApplyApprovedCompensationPayrollChainCommandHandler(
         var periodIds = await RelevantPeriodIdsAsync(
             source.Year, source.Month, cancellationToken);
         var resources = periodIds.Select(PayrollRowGuards.LockResource)
-            .Append("payroll-period-create").ToArray();
+            .Append("payroll-period-create")
+            .Append($"employee-compensation:{request.EmployeeId}").ToArray();
         return await databaseLock.ExecuteExclusiveAsync(resources, async token =>
         {
             var currentIds = await RelevantPeriodIdsAsync(

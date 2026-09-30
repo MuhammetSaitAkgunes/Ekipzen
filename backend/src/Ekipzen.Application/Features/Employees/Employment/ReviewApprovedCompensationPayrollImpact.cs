@@ -25,7 +25,8 @@ public sealed record ApprovedCompensationPayrollImpactDto(
     bool CanApply, IReadOnlyList<string> BlockingReasons, string PreviewToken,
     ApprovedPayrollRevisionDto? Revision,
     ApprovedPayrollChainImpactDto ChainImpact, bool CanApplyChain,
-    IReadOnlyList<ApprovedPayrollRevisionBatchRowDto> BatchRevisions);
+    IReadOnlyList<ApprovedPayrollRevisionBatchRowDto> BatchRevisions,
+    bool CanApplyNext, IReadOnlyList<ApprovedPayrollRevisionDto> RevisionHistory);
 
 public sealed record ReviewApprovedCompensationPayrollImpactQuery(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId)
@@ -68,8 +69,21 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
         if (reviewedRow is null)
             throw new ConflictException("Satır onaylı uzman inceleme dosyasının kapsamında değil.");
 
+        var revisionHistory = await context.PayrollApprovedRowRevisions.AsNoTracking()
+            .Where(item => item.PayrollRowId == request.RowId)
+            .OrderBy(item => item.RevisionNumber)
+            .ToListAsync(cancellationToken);
+        var revision = revisionHistory.LastOrDefault();
+        var effective = revision is null ? null : ApprovedPayrollRevisionRules.EffectiveRow(revision);
+        var hasNewerCase = await context.EmployeeCompensationRemediationCases.AsNoTracking()
+            .AnyAsync(item => item.CompensationPackageId == request.PackageId
+                && item.Id > request.CaseId, cancellationToken);
+        var previousCase = revision is null ? null
+            : await context.EmployeeCompensationRemediationCases.AsNoTracking()
+                .SingleAsync(item => item.Id == revision.RemediationCaseId, cancellationToken);
+
         var warnings = new List<string>();
-        if (reviewedRow.RecordedGrossSalary != row.GrossSalary)
+        if (reviewedRow.RecordedGrossSalary != (effective?.GrossSalary ?? row.GrossSalary))
             warnings.Add("Satır brütü uzman incelemesinden sonra değişti; kaynak ilişkisi yeniden incelenmeli.");
         if (remediation.PackageVersion != package.Version)
             warnings.Add("Kaynak ücret paketi uzman incelemesinden sonra değişti.");
@@ -116,10 +130,19 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
 
         var result = row.Result;
         var sourceUpdatedAt = row.UpdatedAtUtc;
-        var recorded = new ApprovedPayrollAmountDto(result.GrossEarnings, result.IncomeTaxBase,
-            result.IncomeTax, result.NetPay, result.EmployerCost);
+        var recorded = effective is null
+            ? new ApprovedPayrollAmountDto(result.GrossEarnings, result.IncomeTaxBase,
+                result.IncomeTax, result.NetPay, result.EmployerCost)
+            : new ApprovedPayrollAmountDto(effective.GrossEarnings, effective.IncomeTaxBase,
+                effective.IncomeTax, effective.NetPay, effective.EmployerCost);
+        if (effective is not null)
+            ApprovedPayrollRevisionRules.ApplyEffectiveInputs(row, effective);
         ApprovedPayrollAmountDto? hypothetical = null;
         var blocking = new List<string>(warnings);
+        if (hasNewerCase)
+            blocking.Add("Bu dosyadan sonra yeni uzman inceleme dosyası açılmış; eski dosya salt okunur.");
+        if (previousCase is not null && previousCase.CompensationPackageId != request.PackageId)
+            blocking.Add("Geçerli parasal sürüm farklı bir ücret paketi incelemesine bağlı.");
         if (warnings.Count == 0)
         {
             var values = JsonSerializer.Deserialize<CompensationPackageValuesDto>(
@@ -140,17 +163,14 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
         }
         if (laterApprovedRows.Count > 0)
             blocking.Add("Aynı çalışanın sonraki onaylı bordro satırı var; zincirleme vergi etkisi ayrı telafi gerektirir.");
-        var revision = await context.PayrollApprovedRowRevisions.AsNoTracking()
-            .Where(item => item.PayrollRowId == request.RowId)
-            .OrderByDescending(item => item.RevisionNumber)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (revision is not null)
-            blocking.Add("Bu satır için onaylı parasal sürüm zaten var; sonraki düzeltme ayrı inceleme gerektirir.");
+        if (revision is not null && revision.RemediationCaseId >= request.CaseId)
+            blocking.Add("Yeni parasal sürüm için önceki sürümden ayrı, yeni onaylı uzman dosyası gerekli.");
         var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(new { recorded, hypothetical, laterRowData, laterApprovedData,
                 sourceUpdatedAt, result.CalculatedAtUtc,
                 CaseVersion = remediation.Version, PackageVersion = package.Version,
-                remediation.ProposedValuesJson, RevisionId = revision?.Id }))));
+                remediation.ProposedValuesJson, RevisionId = revision?.Id,
+                CurrentAfter = revision?.AfterJson }))));
         var chainImpact = revision is null
             ? await ApprovedPayrollChainImpact.CalculateAsync(
                 context, engine, row, hypothetical, token, cancellationToken)
@@ -175,10 +195,12 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
             remediation.ExpertReviewReference, remediation.ReviewedAtUtc.Value,
             hypothetical is not null, warnings, recorded, hypothetical, laterRows,
             laterApprovedRows,
-            blocking.Count == 0, blocking, token,
+            revision is null && blocking.Count == 0, blocking, token,
             revision is null ? null : ApprovedPayrollRevisionRules.ToDto(revision),
             chainImpact, canApplyChain,
             batchRevisions.Select(item => new ApprovedPayrollRevisionBatchRowDto(
-                item.PayrollRow!.PayrollPeriodId, ApprovedPayrollRevisionRules.ToDto(item))).ToList());
+                item.PayrollRow!.PayrollPeriodId, ApprovedPayrollRevisionRules.ToDto(item))).ToList(),
+            revision is not null && blocking.Count == 0,
+            revisionHistory.Select(ApprovedPayrollRevisionRules.ToDto).ToList());
     }
 }

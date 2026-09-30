@@ -423,7 +423,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         createPackage.StatusCode.Should().Be(HttpStatusCode.OK);
         var packageId = (await createPackage.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!
             .CompensationPackages.Single().Id;
-        int payrollRowId;
+        int payrollRowId, payrollPeriodId;
         using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
                    .Create(auth.User.TenantId))
         {
@@ -439,6 +439,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             db.PayrollPeriods.Add(period);
             await db.SaveChangesAsync(CancellationToken.None);
             payrollRowId = row.Id;
+            payrollPeriodId = period.Id;
         }
 
         var url = $"/api/employees/{employeeId}/compensation-packages/{packageId}/remediation-case";
@@ -529,6 +530,24 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             (await db.PayrollEmployees.SingleAsync(row => row.Id == payrollRowId))
                 .GrossSalary.Should().Be(41000m);
         }
+        var newCaseResponse = await admin.PostAsJsonAsync(url, new
+        {
+            expectedPackageVersion = 1, expectedCaseVersion = (int?)null,
+            issueDescription = "Sonradan bulunan yeni ücret hatası.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 44000m, regularPremium = 1000m,
+            roadAllowance = 0m, mealAllowance = 0m,
+            otherRegularBenefits = 0m, sourceReference = "Yeni uzman belgesi",
+        });
+        newCaseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var historicalPreviewResponse = await admin.GetAsync(
+            $"{url}/{approved.Id}/payroll-periods/{payrollPeriodId}/rows/{payrollRowId}/preview");
+        historicalPreviewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var historicalPreview = JsonDocument.Parse(
+            await historicalPreviewResponse.Content.ReadAsStringAsync());
+        historicalPreview.RootElement.GetProperty("blockingReasons").EnumerateArray()
+            .Select(item => item.GetString()).Should().Contain(reason =>
+                reason!.Contains("yeni uzman inceleme dosyası"));
     }
 
     [Fact]
@@ -1248,6 +1267,141 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             .SingleAsync(item => item.Id == rowId)).Result!.NetPay.Should().Be(37000m);
         (await verifyDb.PayrollApprovedRowRevisions.CountAsync(item => item.PayrollRowId == rowId))
             .Should().Be(1);
+
+        var nextContext = await GetAsync<CompensationRemediationContextDto>(admin, caseUrl);
+        nextContext.CanOpen.Should().BeTrue();
+        nextContext.History.Should().ContainSingle(item => item.Id == opened.Id);
+        nextContext.CurrentImpact.PotentialPayrollRows.Single(item => item.RowId == rowId)
+            .RecordedGrossSalary.Should().Be(52000m);
+        var nextCaseResponse = await admin.PostAsJsonAsync(caseUrl, new
+        {
+            expectedPackageVersion = nextContext.Package.Version,
+            expectedCaseVersion = (int?)null,
+            issueDescription = "İkinci uzman düzeltmesi.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 54000m, regularPremium = 0m,
+            roadAllowance = 0m, mealAllowance = 0m,
+            otherRegularBenefits = 0m, sourceReference = "İkinci ücret kararı",
+        });
+        nextCaseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var nextCase = (await nextCaseResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        nextCase.Id.Should().NotBe(opened.Id);
+        var historicalImpact = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        historicalImpact.BlockingReasons.Should().Contain(reason =>
+            reason.Contains("yeni uzman inceleme dosyası"));
+        (await admin.PostAsJsonAsync($"{caseUrl}/{nextCase.Id}/approve", new
+        {
+            expectedCaseVersion = nextCase.Version,
+            expertReviewReference = "İkinci uzman raporu",
+            reviewNotes = "Geçerli sürüm yeniden incelendi.", confirmExpertReview = true,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var nextImpactUrl = $"{caseUrl}/{nextCase.Id}/payroll-periods/{periodId}/rows/{rowId}/approved-impact";
+        var nextImpact = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            nextImpactUrl, jsonOptions))!;
+        nextImpact.CanApply.Should().BeFalse();
+        nextImpact.CanApplyNext.Should().BeTrue();
+        nextImpact.Revision!.Id.Should().Be(revision.Id);
+        nextImpact.RevisionHistory.Should().ContainSingle(item => item.Id == revision.Id);
+        nextImpact.Recorded.NetPay.Should().Be(revision.After.NetPay);
+        nextImpact.Hypothetical!.NetPay.Should().NotBe(revision.After.NetPay);
+        var nextBody = new
+        {
+            expectedCurrentRevisionId = revision.Id,
+            expectedPreviewToken = nextImpact.PreviewToken,
+            expertReviewReference = "İkinci son onay",
+            reviewNotes = "Yeni tutar ve dış etkiler kontrol edildi.",
+            confirmSourceLink = true, confirmExternalReconciliation = true,
+        };
+        (await manager.PostAsJsonAsync($"{nextImpactUrl}/revise", nextBody))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync($"{nextImpactUrl}/revise", new
+        {
+            expectedCurrentRevisionId = revision.Id,
+            expectedPreviewToken = new string('0', 64),
+            expertReviewReference = "İkinci son onay", reviewNotes = "Bayat önizleme.",
+            confirmSourceLink = true, confirmExternalReconciliation = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await verifyDb.PayrollApprovedRowRevisions.CountAsync(item => item.PayrollRowId == rowId))
+            .Should().Be(1);
+        var nextApplyResponse = await admin.PostAsJsonAsync($"{nextImpactUrl}/revise", nextBody);
+        nextApplyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var nextRevision = (await nextApplyResponse.Content.ReadFromJsonAsync<ApprovedPayrollRevisionDto>(
+            jsonOptions))!;
+        nextRevision.RevisionNumber.Should().Be(2);
+        nextRevision.BasedOnRevisionId.Should().Be(revision.Id);
+        nextRevision.RemediationCaseId.Should().Be(nextCase.Id);
+        nextRevision.Before.NetPay.Should().Be(revision.After.NetPay);
+        nextRevision.Before.GrossSalary.Should().Be(52000m);
+        nextRevision.After.GrossSalary.Should().Be(54000m);
+        (await admin.PostAsJsonAsync($"{nextImpactUrl}/revise", nextBody))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await GetAsync<PayrollRevisionExternalReconciliationDto>(admin, externalUrl))
+            .IsCurrent.Should().BeFalse();
+        var nextExternalUrl = $"{caseUrl}/{nextCase.Id}/payroll-periods/{periodId}/rows/{rowId}"
+            + $"/revisions/{nextRevision.Id}/external-reconciliation";
+        var newExternal = await GetAsync<PayrollRevisionExternalReconciliationDto>(
+            admin, nextExternalUrl);
+        newExternal.IsCurrent.Should().BeTrue();
+        newExternal.Payment.Should().BeNull();
+        newExternal.Notification.Should().BeNull();
+        newExternal.OriginalNetPay.Should().Be(revision.After.NetPay);
+        var nextTasks = await GetAsync<List<DailyGuidanceTaskDto>>(
+            admin, "/api/guidance/daily-tasks");
+        nextTasks.Should().NotContain(item => item.Key == paymentKey || item.Key == notificationKey);
+        nextTasks.Should().ContainSingle(item => item.Key
+            == $"payroll-revision-external-payment:{nextRevision.Id}");
+        nextTasks.Should().ContainSingle(item => item.Key
+            == $"payroll-revision-external-notification:{nextRevision.Id}");
+        var nextDetail = (await admin.GetFromJsonAsync<PayrollPeriodDetailDto>(
+            $"/api/payroll/periods/{periodId}", jsonOptions))!;
+        nextDetail.Rows.Single(item => item.Id == rowId).NetPay.Should().Be(nextRevision.After.NetPay);
+        nextDetail.Rows.Single(item => item.Id == rowId).RevisionNumber.Should().Be(2);
+        var refreshedLater = (await admin.GetFromJsonAsync<PayrollPeriodDetailDto>(
+            $"/api/payroll/periods/{laterPeriodId}", jsonOptions))!;
+        refreshedLater.Rows.Single(item => item.Id == laterRowId).PreviousTaxBase
+            .Should().Be(nextRevision.After.IncomeTaxBase);
+        (await verifyDb.PayrollEmployees.Include(item => item.Result)
+            .SingleAsync(item => item.Id == rowId)).Result!.NetPay.Should().Be(37000m);
+
+        var laterApprovedRow = await verifyDb.PayrollEmployees
+            .SingleAsync(item => item.Id == laterRowId);
+        laterApprovedRow.ApprovalStatus = PayrollApprovalStatus.Approved;
+        await verifyDb.SaveChangesAsync(CancellationToken.None);
+        var thirdContext = await GetAsync<CompensationRemediationContextDto>(admin, caseUrl);
+        thirdContext.History.Should().HaveCount(2);
+        var thirdResponse = await admin.PostAsJsonAsync(caseUrl, new
+        {
+            expectedPackageVersion = thirdContext.Package.Version,
+            expectedCaseVersion = (int?)null,
+            issueDescription = "Sonraki onaylı ay bulunan üçüncü düzeltme.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 56000m, regularPremium = 0m,
+            roadAllowance = 0m, mealAllowance = 0m,
+            otherRegularBenefits = 0m, sourceReference = "Üçüncü ücret kararı",
+        });
+        thirdResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var thirdCase = (await thirdResponse.Content.ReadFromJsonAsync<CompensationRemediationCaseDto>())!;
+        (await admin.PostAsJsonAsync($"{caseUrl}/{thirdCase.Id}/approve", new
+        {
+            expectedCaseVersion = thirdCase.Version,
+            expertReviewReference = "Üçüncü uzman raporu",
+            reviewNotes = "Sonraki ay ayrıca incelenecek.", confirmExpertReview = true,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var thirdImpactUrl = $"{caseUrl}/{thirdCase.Id}/payroll-periods/{periodId}/rows/{rowId}/approved-impact";
+        var thirdImpact = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            thirdImpactUrl, jsonOptions))!;
+        thirdImpact.CanApplyNext.Should().BeFalse();
+        thirdImpact.BlockingReasons.Should().Contain(reason => reason.Contains("sonraki onaylı"));
+        (await admin.PostAsJsonAsync($"{thirdImpactUrl}/revise", new
+        {
+            expectedCurrentRevisionId = nextRevision.Id,
+            expectedPreviewToken = thirdImpact.PreviewToken,
+            expertReviewReference = "Üçüncü son onay", reviewNotes = "Kilitli kapsam.",
+            confirmSourceLink = true, confirmExternalReconciliation = true,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await verifyDb.PayrollApprovedRowRevisions.CountAsync(item => item.PayrollRowId == rowId))
+            .Should().Be(2);
     }
 
     [Fact]
@@ -1480,6 +1634,24 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         (await admin.PostAsJsonAsync($"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
             new { expectedVersion = completed.Version, reason = "Yanlış geri alma" }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var freshReview = await GetAsync<CompensationRemediationContextDto>(admin, caseUrl);
+        freshReview.CanOpen.Should().BeTrue();
+        var laterCaseResponse = await admin.PostAsJsonAsync(caseUrl, new
+        {
+            expectedPackageVersion = freshReview.Package.Version,
+            expectedCaseVersion = (int?)null,
+            issueDescription = "Ayrılış için yeni ücret incelemesi.",
+            proposedEffectiveFrom = (string?)null,
+            monthlyGrossSalary = 53000m, regularPremium = 1000m,
+            roadAllowance = 100m, mealAllowance = 200m,
+            otherRegularBenefits = 300m, sourceReference = "Yeni uzman kararı",
+        });
+        laterCaseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var oldSettlementContext = await GetAsync<OffboardingSettlementRevisionContextDto>(
+            admin, revisionUrl);
+        oldSettlementContext.CanOpen.Should().BeFalse();
+        oldSettlementContext.BlockingReasons.Should().Contain(reason =>
+            reason.Contains("yeni uzman inceleme dosyası"));
     }
 
     [Fact]
