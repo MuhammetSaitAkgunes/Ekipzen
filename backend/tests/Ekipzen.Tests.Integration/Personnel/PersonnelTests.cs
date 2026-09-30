@@ -19,6 +19,7 @@ using Ekipzen.Domain.Entities.Leaves;
 using Ekipzen.Domain.Entities.Payroll;
 using Ekipzen.Domain.Enums;
 using Ekipzen.Domain.ReadModels;
+using Ekipzen.Domain.Services;
 using Ekipzen.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -769,12 +770,12 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         var packageId = (await packageResponse.Content.ReadFromJsonAsync<EmployeeEmploymentFoundationDto>())!
             .CompensationPackages.Single().Id;
 
-        int periodId, rowId, laterPeriodId, laterRowId;
+        int periodId, rowId, laterPeriodId, laterRowId, finalRowId;
         using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
                    .Create(auth.User.TenantId))
         {
             var db = scope.Services.GetRequiredService<IApplicationDbContext>();
-            var settings = await db.PayrollSettings
+            var settings = await db.PayrollSettings.Include(item => item.TaxBrackets)
                 .FirstAsync(item => item.Status == PayrollSettingsStatus.Approved);
             var period = new PayrollPeriod
             {
@@ -804,20 +805,70 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             var later = new PayrollPeriod
             {
                 Name = $"Revizyon sonrası {Guid.NewGuid():N}", Year = 2041, Month = 9,
-                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Draft,
+                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Approved,
             };
             var laterRow = new PayrollEmployee
             {
                 EmployeeId = employeeId, GrossSalary = 50000m,
+                StatutoryProfile = PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA,
+                WorkedDays = settings.DefaultWorkedDays, SgkPremiumDaysConfirmed = true,
+                IbanComplete = true, TimesheetComplete = true,
+                DisabilityReliefType = PayrollDisabilityReliefType.None,
+                OtherIncomeTaxBaseDeductionsConfirmedNone = true,
+                CumulativeIncomeTaxBaseConfirmed = true,
+                PreviousTaxBase = 42500m,
                 ApprovalStatus = PayrollApprovalStatus.Approved,
+            };
+            var engine = scope.Services.GetRequiredService<IPayrollEngine>();
+            var laterCalculation = engine.Calculate(laterRow.ToEngineInput(0),
+                settings.ToEngineParameters());
+            laterRow.Result = new PayrollResult
+            {
+                GrossEarnings = laterCalculation.GrossEarnings,
+                IncomeTaxBase = laterCalculation.IncomeTaxBase,
+                IncomeTax = laterCalculation.IncomeTax,
+                NetPay = laterCalculation.NetPay,
+                EmployerCost = laterCalculation.EmployerCost,
+                CalculatedAtUtc = DateTime.UtcNow,
             };
             later.Employees.Add(laterRow);
             db.PayrollPeriods.Add(later);
+            var final = new PayrollPeriod
+            {
+                Name = $"Revizyon zinciri {Guid.NewGuid():N}", Year = 2041, Month = 10,
+                PayrollSettingsId = settings.Id, Status = PayrollPeriodStatus.Approved,
+            };
+            var finalRow = new PayrollEmployee
+            {
+                EmployeeId = employeeId, GrossSalary = 50000m,
+                StatutoryProfile = PayrollStatutoryProfile.DomesticPrivateSectorStandardFourA,
+                WorkedDays = settings.DefaultWorkedDays, SgkPremiumDaysConfirmed = true,
+                IbanComplete = true, TimesheetComplete = true,
+                DisabilityReliefType = PayrollDisabilityReliefType.None,
+                OtherIncomeTaxBaseDeductionsConfirmedNone = true,
+                CumulativeIncomeTaxBaseConfirmed = true,
+                PreviousTaxBase = 42500m + laterCalculation.IncomeTaxBase,
+                ApprovalStatus = PayrollApprovalStatus.Approved,
+            };
+            var finalCalculation = engine.Calculate(finalRow.ToEngineInput(0),
+                settings.ToEngineParameters());
+            finalRow.Result = new PayrollResult
+            {
+                GrossEarnings = finalCalculation.GrossEarnings,
+                IncomeTaxBase = finalCalculation.IncomeTaxBase,
+                IncomeTax = finalCalculation.IncomeTax,
+                NetPay = finalCalculation.NetPay,
+                EmployerCost = finalCalculation.EmployerCost,
+                CalculatedAtUtc = DateTime.UtcNow,
+            };
+            final.Employees.Add(finalRow);
+            db.PayrollPeriods.Add(final);
             await db.SaveChangesAsync(CancellationToken.None);
             periodId = period.Id;
             rowId = row.Id;
             laterPeriodId = later.Id;
             laterRowId = laterRow.Id;
+            finalRowId = finalRow.Id;
         }
         var caseUrl = $"/api/employees/{employeeId}/compensation-packages/{packageId}/remediation-case";
         var openedResponse = await admin.PostAsJsonAsync(caseUrl, new
@@ -842,6 +893,17 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             impactUrl, jsonOptions))!;
         blocked.CanApply.Should().BeFalse();
         blocked.BlockingReasons.Should().Contain(reason => reason.Contains("sonraki onaylı"));
+        blocked.ChainImpact.CanEstimate.Should().BeTrue();
+        blocked.ChainImpact.LaterApprovedRows.Should().HaveCount(2);
+        blocked.ChainImpact.LaterApprovedRows[0].Should().Match<ApprovedPayrollChainRowDto>(item =>
+                item.RowId == laterRowId && item.RecordedPreviousTaxBase == 42500m
+                && item.ProjectedPreviousTaxBase == blocked.Hypothetical!.IncomeTaxBase
+                && item.Projected != null);
+        blocked.ChainImpact.LaterApprovedRows[1].Should().Match<ApprovedPayrollChainRowDto>(item =>
+            item.RowId == finalRowId && item.ProjectedPreviousTaxBase
+                == blocked.ChainImpact.LaterApprovedRows[0].ProjectedPreviousTaxBase
+                    + blocked.ChainImpact.LaterApprovedRows[0].Projected!.IncomeTaxBase
+                && item.Projected != null);
         (await manager.GetAsync(impactUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
@@ -849,7 +911,24 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         {
             var db = scope.Services.GetRequiredService<IApplicationDbContext>();
             var later = await db.PayrollEmployees.SingleAsync(item => item.Id == laterRowId);
+            later.PreviousTaxBase = 42501m;
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        var inconsistent = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(
+            impactUrl, jsonOptions))!;
+        inconsistent.ChainImpact.CanEstimate.Should().BeFalse();
+        inconsistent.ChainImpact.BlockingReasons.Should().Contain(reason =>
+            reason.Contains("önceki vergi matrahı"));
+        inconsistent.ChainImpact.LaterApprovedRows.Should().OnlyContain(item => item.Projected == null);
+
+        using (var scope = factory.Services.GetRequiredService<ITenantScopeFactory>()
+                   .Create(auth.User.TenantId))
+        {
+            var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+            var later = await db.PayrollEmployees.SingleAsync(item => item.Id == laterRowId);
             later.ApprovalStatus = PayrollApprovalStatus.PreCalc;
+            var final = await db.PayrollEmployees.SingleAsync(item => item.Id == finalRowId);
+            final.ApprovalStatus = PayrollApprovalStatus.PreCalc;
             await db.SaveChangesAsync(CancellationToken.None);
         }
         var preview = (await admin.GetFromJsonAsync<ApprovedCompensationPayrollImpactDto>(

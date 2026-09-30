@@ -23,7 +23,8 @@ public sealed record ApprovedCompensationPayrollImpactDto(
     IReadOnlyList<ApprovedPayrollImpactPeriodDto> LaterSameYearRows,
     IReadOnlyList<ApprovedPayrollImpactPeriodDto> LaterApprovedRows,
     bool CanApply, IReadOnlyList<string> BlockingReasons, string PreviewToken,
-    ApprovedPayrollRevisionDto? Revision);
+    ApprovedPayrollRevisionDto? Revision,
+    ApprovedPayrollChainImpactDto ChainImpact);
 
 public sealed record ReviewApprovedCompensationPayrollImpactQuery(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId)
@@ -149,12 +150,19 @@ public sealed class ReviewApprovedCompensationPayrollImpactQueryHandler(
                 sourceUpdatedAt, result.CalculatedAtUtc,
                 CaseVersion = remediation.Version, PackageVersion = package.Version,
                 remediation.ProposedValuesJson, RevisionId = revision?.Id }))));
+        var chainImpact = revision is null
+            ? await ApprovedPayrollChainImpact.CalculateAsync(
+                context, engine, row, hypothetical, cancellationToken)
+            : new ApprovedPayrollChainImpactDto(false,
+                ["İlk satırın parasal sürümü zaten var; zincirleme telafi ayrı inceleme gerektirir."],
+                []);
         return new(request.PeriodId, request.RowId,
             row.Period.Status.ToString().ToLowerInvariant(), request.CaseId,
             remediation.ExpertReviewReference, remediation.ReviewedAtUtc.Value,
             hypothetical is not null, warnings, recorded, hypothetical, laterRows,
             laterApprovedRows,
             blocking.Count == 0, blocking, token,
-            revision is null ? null : ApprovedPayrollRevisionRules.ToDto(revision));
+            revision is null ? null : ApprovedPayrollRevisionRules.ToDto(revision),
+            chainImpact);
     }
 }

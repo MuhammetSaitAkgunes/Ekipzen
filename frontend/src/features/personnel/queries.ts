@@ -107,6 +107,16 @@ export type ApprovedCompensationPayrollImpact = {
     month: number; status: string }>;
   canApply: boolean; blockingReasons: string[]; previewToken: string;
   revision: ApprovedPayrollRevision | null;
+  chainImpact: {
+    canEstimate: boolean; blockingReasons: string[];
+    laterApprovedRows: Array<{
+      periodId: number; rowId: number; year: number; month: number;
+      recordedPreviousTaxBase: number; projectedPreviousTaxBase: number | null;
+      recorded: ApprovedCompensationPayrollImpact["recorded"] | null;
+      projected: ApprovedCompensationPayrollImpact["recorded"] | null;
+      blockingReason: string | null;
+    }>;
+  };
 };
 export type ApprovedPayrollRevision = {
   id: number; revisionNumber: number; payrollRowId: number; remediationCaseId: number;

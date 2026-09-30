@@ -277,6 +277,37 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
         `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId}, ${row.status})`).join(", ")}.</p>}
       {impact.laterApprovedRows?.length > 0 && <p>Parasal uygulamayı kilitleyen sonraki onaylı satırlar: {impact.laterApprovedRows.map((row) =>
         `${row.year}/${String(row.month).padStart(2, "0")} (#${row.rowId})`).join(", ")}.</p>}
+      {impact.chainImpact?.laterApprovedRows.length > 0 && <section
+        className="ez-compensation-review" aria-label="Zincirleme bordro etki dosyası">
+        <h5>Sonraki onaylı ayların zincirleme etki dosyası</h5>
+        <p>Bu aylar aynı takvim yılındadır. Önerilen ilk ay matrahından başlayarak doğrulanabilen sonraki onaylı sonuçlar sırayla yeniden hesaplandı. Kayıtlı sonuçlar değiştirilmedi.</p>
+        {impact.chainImpact.blockingReasons.length > 0 && <ul>
+          {impact.chainImpact.blockingReasons.map((reason) => <li key={reason}>{reason}</li>)}
+        </ul>}
+        <div className="ez-compensation-table-scroll"><table>
+          <thead><tr><th>Ay</th><th>Önceki GV matrahı: kayıtlı → olası</th>
+            <th>Gelir vergisi: kayıtlı → olası</th><th>Net hesap: kayıtlı → olası</th><th>İnceleme</th></tr></thead>
+          <tbody>{impact.chainImpact.laterApprovedRows.map((row) => <tr key={row.rowId}>
+            <td>{row.year}/{String(row.month).padStart(2, "0")}</td>
+            <td>{currency.format(row.recordedPreviousTaxBase)} → {row.projectedPreviousTaxBase === null
+              ? "hesaplanamadı" : currency.format(row.projectedPreviousTaxBase)}</td>
+            <td>{row.recorded ? currency.format(row.recorded.incomeTax) : "kayıtlı sonuç yok"} → {row.projected
+              ? currency.format(row.projected.incomeTax) : "hesaplanamadı"}</td>
+            <td>{row.recorded ? currency.format(row.recorded.netPay) : "kayıtlı sonuç yok"} → {row.projected
+              ? currency.format(row.projected.netPay) : "hesaplanamadı"}</td>
+            <td>{row.blockingReason ?? "Uzman doğrulaması bekliyor"}</td>
+          </tr>)}</tbody>
+        </table></div>
+        {impact.chainImpact.canEstimate && impact.hypothetical && <p>
+          İlk ay dahil, gösterilen ayların toplam olası net hesap farkı: <strong>{currency.format(
+            impact.hypothetical.netPay - impact.recorded.netPay
+            + impact.chainImpact.laterApprovedRows.reduce((sum, row) =>
+              sum + (row.projected!.netPay - row.recorded!.netPay), 0))}</strong>.
+          Bu toplam yapılacak ödeme veya düzeltme beyannamesi tutarı değildir.
+        </p>}
+      </section>}
+      {impact.chainImpact && impact.laterApprovedRows.length > impact.chainImpact.laterApprovedRows.length
+        && <p>İzleyen takvim yılındaki onaylı satırlar bu yılın vergi matrahı hesabına katılmadı; uygulama öncesinde ayrıca incelenecek.</p>}
       <p>Sonraki onaylı satır varsa uygulama kilitlenir. Dış ödeme ve bildirim uygulama tarafından gerçekleştirilmez; farklar ayrıca uzlaştırılmalıdır.</p>
       {impact.revision && <p role="status">Geçerli parasal sürüm #{impact.revision.revisionNumber} · {impact.revision.approvedAtUtc} · önceki onaylı sonuç geçmişte korunuyor.</p>}
       {impact.revision && <PayrollRevisionExternalReconciliationPanel {...args}
