@@ -41,6 +41,24 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
         targetPath: "/payroll?periodId=3",
       },
       {
+        key: "payroll-revision-external-payment:51",
+        kind: "payroll-revision-external-payment", recordId: 51,
+        title: "Yeni Kişi bordro düzeltmesi ödeme kanıtını incele",
+        reason: "Parasal sürümün dış ödeme sonucu kanıtlanmadı.",
+        nextAction: "Dış ödeme belgesini inceleyin.", dueDate: null,
+        dateNote: "Güvenilir son tarih kayıtlı değil.",
+        targetPath: "/personnel/42?tab=tab-mali",
+      },
+      {
+        key: "payroll-revision-external-notification:51",
+        kind: "payroll-revision-external-notification", recordId: 51,
+        title: "Yeni Kişi bordro düzeltmesi bildirim kanıtını incele",
+        reason: "Parasal sürümün dış bildirim sonucu kanıtlanmadı.",
+        nextAction: "Dış bildirim belgesini inceleyin.", dueDate: null,
+        dateNote: "Güvenilir son tarih kayıtlı değil.",
+        targetPath: "/personnel/42?tab=tab-mali",
+      },
+      {
         key: "candidate-review:6", kind: "candidate-review", recordId: 6,
         title: "Selin Koç başvurusunu incele",
         reason: "UI/UX Designer başvurusu Yeni aşamasında; ilk değerlendirme bekliyor.",
@@ -79,6 +97,10 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
   expect(within(payrollCard).getByText(/kayıtlı son tarih yok/)).toBeInTheDocument();
   expect(within(payrollCard).getByRole("link", { name: /Kaydı incele/ }))
     .toHaveAttribute("href", "/app/payroll?periodId=3");
+  expect(within(screen.getByText("Yeni Kişi bordro düzeltmesi ödeme kanıtını incele")
+    .closest("article")!).getByText("BORDRO DIŞ ÖDEME KANITI")).toBeInTheDocument();
+  expect(within(screen.getByText("Yeni Kişi bordro düzeltmesi bildirim kanıtını incele")
+    .closest("article")!).getByText("BORDRO DIŞ BİLDİRİM KANITI")).toBeInTheDocument();
   const candidateCard = screen.getByText("Selin Koç başvurusunu incele").closest("article")!;
   expect(within(candidateCard).getByText("ADAY İNCELEMESİ")).toBeInTheDocument();
   expect(within(candidateCard).getByText(/Başvuru tarihi karar son tarihi değildir/)).toBeInTheDocument();

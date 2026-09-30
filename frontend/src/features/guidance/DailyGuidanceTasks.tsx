@@ -4,6 +4,17 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { useDailyGuidanceTasks } from "./queries";
 
 const dateLabel = (date: string): string => date.split("-").reverse().join(".");
+const taskLabels: Record<string, string> = {
+  "leave-approval": "İZİN ONAYI",
+  "payroll-period": "BORDRO DÖNEMİ",
+  "candidate-review": "ADAY İNCELEMESİ",
+  "employee-compensation": "ÜCRET HAZIRLIĞI",
+  "offboarding-case": "AYRILIŞ TASLAĞI",
+  "offboarding-external-payment": "AYRILIŞ DIŞ ÖDEME KANITI",
+  "offboarding-external-notification": "AYRILIŞ DIŞ BİLDİRİM KANITI",
+  "payroll-revision-external-payment": "BORDRO DIŞ ÖDEME KANITI",
+  "payroll-revision-external-notification": "BORDRO DIŞ BİLDİRİM KANITI",
+};
 
 export function DailyGuidanceTasks({ limit }: { limit?: number }) {
   const query = useDailyGuidanceTasks();
@@ -12,9 +23,9 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
 
   const tasks = limit ? query.data.slice(0, limit) : query.data;
   return <div className="ez-guidance-tasks">
-    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını; İK yöneticileri için eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış düzeltmesinin eksik dış işlem kanıtlarını, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. Diğer İK işleri burada henüz üretilmez.</p>
+    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını; İK yöneticileri için eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. Diğer İK işleri burada henüz üretilmez.</p>
     {tasks.map((task) => <article className="ez-guidance-task" key={task.key}>
-      <span className="ez-overline">{task.kind === "leave-approval" ? "İZİN ONAYI" : task.kind === "payroll-period" ? "BORDRO DÖNEMİ" : task.kind === "candidate-review" ? "ADAY İNCELEMESİ" : task.kind === "employee-compensation" ? "ÜCRET HAZIRLIĞI" : task.kind === "offboarding-case" ? "AYRILIŞ TASLAĞI" : task.kind === "offboarding-external-payment" ? "DIŞ ÖDEME KANITI" : task.kind === "offboarding-external-notification" ? "DIŞ BİLDİRİM KANITI" : "BELGE TAKİBİ"}</span>
+      <span className="ez-overline">{taskLabels[task.kind] ?? "BELGE TAKİBİ"}</span>
       <h3>{task.title}</h3>
       <p><strong>Neden?</strong> {task.reason}</p>
       <p><strong>Ne yapmalı?</strong> {task.nextAction}</p>
