@@ -197,6 +197,9 @@ test("pipeline aşaması gerekçeli ön kontrol ve teyitten sonra değişir", as
   expect(screen.getByRole("button", { name: /İşe Al/ })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Aşamayı kaydet" })).toBeDisabled();
   expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/candidates/5/status")).toBe(false);
+  await userEvent.type(screen.getByLabelText("Aşama kararının gerekçesi ve dayanağı"), "Görüşme ve teknik puan olumlu.");
+  await userEvent.click(screen.getByLabelText(/Not #1 · sürüm 1/));
+  await userEvent.click(screen.getByLabelText(/Değerlendirme #1 · sürüm 1/));
   await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
   await userEvent.click(screen.getByRole("button", { name: "Aşamayı kaydet" }));
   await waitFor(() => {
@@ -204,8 +207,51 @@ test("pipeline aşaması gerekçeli ön kontrol ve teyitten sonra değişir", as
       ([u, i]) => String(u) === "/api/candidates/5/status" && i?.method === "PATCH",
     );
     expect(patched).toBeTruthy();
-    expect(JSON.parse(String(patched![1]?.body))).toMatchObject({ status: "Teklif" });
+    expect(JSON.parse(String(patched![1]?.body))).toEqual({ status: "Teklif", expectedVersion: 4,
+      reason: "Görüşme ve teknik puan olumlu.", evidence: [{ kind: "note", id: 1, version: 1 },
+        { kind: "evaluation", id: 1, version: 1 }] });
   });
+});
+
+test("gerekçe zorunludur ve dayanak seçimi önceki teyidi geçersiz kılar", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Red");
+  await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
+  expect(screen.getByRole("button", { name: "Aşamayı kaydet" })).toBeDisabled();
+  await userEvent.type(screen.getByLabelText("Aşama kararının gerekçesi ve dayanağı"), "Rol koşulları karşılanmadı.");
+  expect(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim.")).not.toBeChecked();
+  await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
+  expect(screen.getByRole("button", { name: "Aşamayı kaydet" })).toBeEnabled();
+  await userEvent.click(screen.getByLabelText(/Not #1 · sürüm 1/));
+  expect(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim.")).not.toBeChecked();
+});
+
+test("aşama aynı kalsa bile yeni not sürümü eski kararı göndermeyi durdurur", async () => {
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Teklif");
+  await userEvent.type(screen.getByLabelText("Aşama kararının gerekçesi ve dayanağı"), "Görüşme olumlu.");
+  await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...detail, version: 5 }),
+    { status: 200, headers: { "Content-Type": "application/json" } })));
+  await userEvent.click(screen.getByRole("button", { name: "Aşamayı kaydet" }));
+  expect(await screen.findByText(/yeni bilgi eklendi/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
+});
+
+test("gerekçeli aşama geçmişi karar anındaki eski dayanak sürümünü gösterir", async () => {
+  stubApi({ "/api/candidates/5": { ...detail, notes: [{ ...detail.notes[0], version: 2, text: "Düzeltilmiş güncel not" }],
+    stageDecisions: [{ id: 11, fromStatus: "Yeni", toStatus: "Mülakat", fromVersion: 2, toVersion: 3,
+      reason: "İlk görüşme gözlemiyle ilerletildi", decidedByName: "İK", decidedAtUtc: "2026-09-30T10:00:00Z",
+      evidence: [{ kind: "note", id: 1, version: 1, state: { noteType: "İK Görüşmesi", text: "Karar anındaki ilk not" } }] }] } });
+  renderDetail();
+  await screen.findByRole("heading", { name: "Burak Yılmaz" });
+  await userEvent.click(screen.getByRole("button", { name: "Geçmiş" }));
+  await userEvent.click(screen.getByText(/İlk görüşme gözlemiyle ilerletildi/));
+  expect(screen.getByRole("region", { name: "Gerekçeli aşama kararları" })).toHaveTextContent("karar anındaki sürüm 1");
+  expect(screen.getByText(/Karar anındaki ilk not/)).toBeInTheDocument();
+  expect(screen.queryByText("Düzeltilmiş güncel not")).not.toBeInTheDocument();
 });
 
 test("Yeni adayın ilk aşama ön kontrolü karar alıştırmasını gösterir", async () => {
@@ -241,6 +287,7 @@ test("başka işlem aday aşamasını değiştirdiyse eski kararı göndermez", 
   renderDetail();
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Teklif");
+  await userEvent.type(screen.getByLabelText("Aşama kararının gerekçesi ve dayanağı"), "Teknik görüşme olumlu.");
   await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...detail, status: "Red" }), {
     status: 200, headers: { "Content-Type": "application/json" },

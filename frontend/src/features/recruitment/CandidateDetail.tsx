@@ -9,7 +9,7 @@ import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
 import { CandidateCorrectionModal } from "./CandidateCorrectionModal";
 import { CandidateEvidenceModal, type EvidenceSelection } from "./CandidateEvidenceModal";
-import { useAddCandidateEvaluation, useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto } from "./queries";
+import { useAddCandidateEvaluation, useAddInterviewNote, useCandidate, useHireCandidate, useRetryCandidateProvisioning, useSetCandidateStatus, type HireResultDto, type CandidateDetailDto, type CandidateDecisionEvidenceReference } from "./queries";
 
 const STAGE_EXPLANATIONS: Record<string, string> = {
   "Yeni": "Başvuruyu yeniden ilk inceleme sırasına alır; önceki notlar ve aşama geçmişi kalır.",
@@ -72,14 +72,17 @@ export function CandidateDetail({ id }: { id: number }) {
   const [hireOpen, setHireOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [evidenceSelection, setEvidenceSelection] = useState<EvidenceSelection | null>(null);
-  const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string } | null>(null);
+  const [statusReview, setStatusReview] = useState<{ candidateId: number; from: string; to: string; source: CandidateDetailDto } | null>(null);
   const [statusConfirmed, setStatusConfirmed] = useState(false);
+  const [statusReason, setStatusReason] = useState("");
+  const [statusEvidence, setStatusEvidence] = useState<CandidateDecisionEvidenceReference[]>([]);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
 
   useEffect(() => {
     setCorrectionOpen(false);
     setEvidenceSelection(null);
+    setStatusReview(null); setStatusConfirmed(false); setStatusReason(""); setStatusEvidence([]);
     setNoteReview(null);
     setNoteText("");
     setNoteError(null);
@@ -108,22 +111,25 @@ export function CandidateDetail({ id }: { id: number }) {
 
   const prepareStatus = (status: string) => {
     setStatusConfirmed(false);
+    setStatusReason(""); setStatusEvidence([]);
     setStatusReview(status === (candidate.status ?? "Yeni") ? null : {
-      candidateId: id, from: candidate.status ?? "Yeni", to: status,
+      candidateId: id, from: candidate.status ?? "Yeni", to: status, source: candidate,
     });
   };
 
   const changeStatus = async () => {
-    if (!pendingStatus || !statusConfirmed || setStatus.isPending) return;
+    if (!pendingStatus || !statusConfirmed || setStatus.isPending
+      || !statusReason.trim() || statusReason.trim().length > 2000 || statusEvidence.length > 20) return;
     try {
       const latest = await detailQ.refetch();
       if (latest.isError || !latest.data) throw new Error("Adayın güncel durumu okunamadı.");
-      if (latest.data.status !== pendingStatus.from) {
+      if (latest.data.status !== pendingStatus.from || latest.data.version !== pendingStatus.source.version) {
         setStatusReview(null);
-        showToast("Adayın durumu bu sırada değişti. Güncel kaydı inceleyip yeniden karar verin.", "warning");
+        showToast("Adayın durumu bu sırada değişti veya yeni bilgi eklendi. Güncel kaydı inceleyip yeniden karar verin.", "warning");
         return;
       }
-      await setStatus.mutateAsync({ id, status: pendingStatus.to });
+      await setStatus.mutateAsync({ id, status: pendingStatus.to, expectedVersion: pendingStatus.source.version,
+        reason: statusReason.trim(), evidence: statusEvidence });
       setStatusReview(null);
       setStatusConfirmed(false);
       showToast(candidate.name + " için pipeline durumu " + pendingStatus.to + " olarak kaydedildi.", "success");
@@ -263,12 +269,38 @@ export function CandidateDetail({ id }: { id: number }) {
         <p><strong>Örnek:</strong> {STAGE_EXAMPLES[pendingStatus.to]}</p>
         <p><strong>Neden kontrol ediyoruz?</strong> Mülakat notları, değerlendirme ve başvuru belgeleriyle bu aşamanın gerekçesini karşılaştırın. Elle verilen aday puanı tek başına karar kanıtı değildir.</p>
         <p>Yanlış aşamayı kaydederseniz işe alınmamış adayın durumunu yeniden değiştirebilirsiniz; önceki hareket geçmişte kalır. İşe alınmış adayın aşaması bu alandan değiştirilemez.</p>
-        <p>Onaydan hemen önce sunucudaki mevcut aşama yeniden okunur; başka işlem araya girerse kararınızı yeniden değerlendirin.</p>
+        <p>Gerekçeyi kaydediyoruz. Seçtiğiniz dayanakların karar anındaki sürümü ve içeriği korunur; sonradan düzeltme yapılması eski kararın dayanağını değiştirmez.</p>
+        <p>Onaydan önce aday sürümü yeniden okunur ve sunucu kaydederken aynı sürümü doğrular; yeni bilgi veya düzeltme araya girerse kararınızı yeniden değerlendirin.</p>
+        <div className="input-group"><label className="input-label" htmlFor="candidate-stage-reason">Aşama kararının gerekçesi ve dayanağı</label>
+          <textarea id="candidate-stage-reason" className="input-control" value={statusReason}
+            onChange={e => { setStatusReason(e.target.value); setStatusConfirmed(false); }} maxLength={2000} />
+        </div>
+        <fieldset><legend>Karara bağlanacak mevcut dayanaklar (isteğe bağlı)</legend>
+          {(pendingStatus.source.notes ?? []).map(note => <label key={`note-${note.id}`}>
+            <input type="checkbox" checked={statusEvidence.some(item => item.kind === "note" && item.id === note.id)}
+              onChange={e => { setStatusConfirmed(false); setStatusEvidence(previous => e.target.checked
+                ? [...previous, { kind: "note", id: note.id!, version: note.version }]
+                : previous.filter(item => item.kind !== "note" || item.id !== note.id)); }} />
+            Not #{note.id} · sürüm {note.version} · {note.noteType}: {note.text}
+          </label>)}
+          {(pendingStatus.source.evaluations ?? []).map(evaluation => <label key={`evaluation-${evaluation.id}`}>
+            <input type="checkbox" checked={statusEvidence.some(item => item.kind === "evaluation" && item.id === evaluation.id)}
+              onChange={e => { setStatusConfirmed(false); setStatusEvidence(previous => e.target.checked
+                ? [...previous, { kind: "evaluation", id: evaluation.id!, version: evaluation.version }]
+                : previous.filter(item => item.kind !== "evaluation" || item.id !== evaluation.id)); }} />
+            Değerlendirme #{evaluation.id} · sürüm {evaluation.version} · {evaluation.criterion}: {evaluation.score}/{evaluation.maxScore}
+          </label>)}
+          {(pendingStatus.source.notes?.length ?? 0) + (pendingStatus.source.evaluations?.length ?? 0) === 0
+            && <p>Kayıtlı not veya değerlendirme yok; kararınızın bilgi kaynağını gerekçede açıklayın.</p>}
+          <p>Yalnız bu kararda kullandığınız dayanakları seçin; en fazla 20 kayıt bağlanabilir. Seçim kanıtın doğruluğunu otomatik onaylamaz.</p>
+        </fieldset>
         {candidate.status === "Yeni" && <GuidanceDecisionCheck process="recruitment" step="first-review" operationName="aday işlemi" />}
         <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>
         <div className="ez-candidate-status-actions">
           <button className="btn btn-ghost" onClick={() => { setStatusReview(null); setStatusConfirmed(false); }}>Vazgeç</button>
-          <button className="btn btn-primary" onClick={changeStatus} disabled={!statusConfirmed || setStatus.isPending}>Aşamayı kaydet</button>
+          <button className="btn btn-primary" onClick={changeStatus} disabled={!statusConfirmed || setStatus.isPending
+            || !statusReason.trim() || statusReason.trim().length > 2000 || statusEvidence.length > 20
+            || !Number.isInteger(pendingStatus.source.version) || pendingStatus.source.version < 1}>Aşamayı kaydet</button>
         </div>
       </section>}
 
@@ -475,6 +507,19 @@ export function CandidateDetail({ id }: { id: number }) {
 
         {tab === "history" && (
           <div id="tab-history" className="tab-content active">
+            <section aria-label="Gerekçeli aşama kararları"><h4>Gerekçeli aşama kararları</h4>
+              <p>Önceki aşama kararları karar anındaki dayanakla saklanır. Bu özellikten önceki hareketlerde gerekçe veya dayanak bilgisi bulunmayabilir.</p>
+              {(candidate.stageDecisions ?? []).map(decision => <details key={decision.id}>
+                <summary>{decision.fromStatus} → {decision.toStatus} · {decision.reason}</summary>
+                <p>{decision.decidedByName} · {decision.decidedAtUtc} · aday sürümü {decision.fromVersion} → {decision.toVersion}</p>
+                {decision.evidence.length === 0 && <p>Bu karara kayıtlı not/değerlendirme bağlanmadı.</p>}
+                {decision.evidence.map(item => <div key={`${item.kind}-${item.id}`}>
+                  <strong>{item.kind === "note" ? "Not" : "Değerlendirme"} #{item.id} · karar anındaki sürüm {item.version}</strong>
+                  <p>{item.kind === "note" ? `${item.state.noteType}: ${item.state.text}`
+                    : `${item.state.criterion}: ${item.state.score}/${item.state.maxScore}`}</p>
+                </div>)}
+              </details>)}
+            </section>
             <div className="history-list">
               {(candidate.history ?? []).map((entry) => (
                 <div key={entry.id} className="hist-item">

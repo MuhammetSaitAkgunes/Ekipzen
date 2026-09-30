@@ -7,6 +7,13 @@ import type { components } from "../../api/schema";
 export type CandidateListItemDto = components["schemas"]["CandidateListItemDto"];
 export type CandidateDetailDto = Omit<components["schemas"]["CandidateDetailDto"], "notes" | "evaluations"> & {
   id: number; version: number; notes?: InterviewNoteDto[]; evaluations?: CandidateEvaluationDto[];
+  stageDecisions?: CandidateStageDecisionDto[];
+};
+export type CandidateDecisionEvidenceReference = { kind: "note" | "evaluation"; id: number; version: number };
+export type CandidateStageDecisionDto = {
+  id: number; fromStatus: string; toStatus: string; fromVersion: number; toVersion: number;
+  reason: string; evidence: (CandidateDecisionEvidenceReference & { state: CandidateEvidenceState })[];
+  decidedByUserId: string; decidedByName: string; decidedAtUtc: string;
 };
 export type CandidateState = {
   name: string; appliedRole: string; positionId: number | null; positionTitle: string | null;
@@ -171,16 +178,18 @@ export const useCreateCandidate = () => {
 export const useSetCandidateStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
+    mutationFn: ({ id, ...body }: { id: number; status: string; expectedVersion: number;
+      reason: string; evidence: CandidateDecisionEvidenceReference[] }) =>
       apiFetch<CandidateDetailDto>(`/candidates/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(body),
       }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
       queryClient.invalidateQueries({ queryKey: recruitmentJourneyKey }),
     ]),
+    onError: (_error, input) => queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", input.id] }),
   });
 };
 
