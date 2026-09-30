@@ -83,6 +83,38 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         return CreatedAtAction(nameof(GetCandidate), new { id }, evaluation);
     }
 
+    [HttpPost("candidates/{id:int}/notes/{noteId:int}/revisions")]
+    [ProducesResponseType<CandidateDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CandidateDetailDto>> ReviseNote(
+        int id, int noteId, ReviseNoteBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ReviseCandidateEvidenceCommand(id, noteId, true,
+            body.ExpectedCandidateVersion, body.ExpectedRecordVersion, body.NoteType, body.Text,
+            null, null, null, body.Reason), cancellationToken));
+
+    [HttpGet("candidates/{id:int}/notes/{noteId:int}/revisions")]
+    [ProducesResponseType<CandidateEvidenceHistoryDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CandidateEvidenceHistoryDto>> GetNoteRevisions(
+        int id, int noteId, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetCandidateEvidenceHistoryQuery(id, noteId, true), cancellationToken));
+
+    [HttpPost("candidates/{id:int}/evaluations/{evaluationId:int}/revisions")]
+    [ProducesResponseType<CandidateDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CandidateDetailDto>> ReviseEvaluation(
+        int id, int evaluationId, ReviseEvaluationBody body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ReviseCandidateEvidenceCommand(id, evaluationId, false,
+            body.ExpectedCandidateVersion, body.ExpectedRecordVersion, null, null,
+            body.Criterion, body.Score, body.MaxScore, body.Reason), cancellationToken));
+
+    [HttpGet("candidates/{id:int}/evaluations/{evaluationId:int}/revisions")]
+    [ProducesResponseType<CandidateEvidenceHistoryDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CandidateEvidenceHistoryDto>> GetEvaluationRevisions(
+        int id, int evaluationId, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetCandidateEvidenceHistoryQuery(id, evaluationId, false), cancellationToken));
+
     [HttpPost("candidates/{id:int}/hire")]
     [ProducesResponseType<HireResultDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -137,6 +169,10 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new GetRecruitmentFunnelQuery(), cancellationToken));
 
     public sealed record CandidateStatusBody(string Status);
+    public sealed record ReviseNoteBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
+        string NoteType, string Text, string Reason);
+    public sealed record ReviseEvaluationBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
+        string Criterion, int Score, int MaxScore, string Reason);
     public sealed record CorrectCandidateBody(int ExpectedVersion, string Name, string AppliedRole,
         int? PositionId, int? ExpectedPositionVersion, int Score, string? Location,
         int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview);

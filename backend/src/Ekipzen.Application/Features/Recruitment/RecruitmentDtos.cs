@@ -18,9 +18,20 @@ public sealed record CandidateExperienceDto(
     int Id, string Title, string Company, string? Period, string? Description);
 
 public sealed record InterviewNoteDto(
-    int Id, string AuthorName, string NoteType, string Text, DateTime CreatedAtUtc);
+    int Id, string AuthorName, string NoteType, string Text, DateTime CreatedAtUtc, int Version = 1);
 
-public sealed record CandidateEvaluationDto(int Id, string Criterion, int Score, int MaxScore);
+public sealed record CandidateEvaluationDto(int Id, string Criterion, int Score, int MaxScore, int Version = 1);
+
+public sealed record CandidateEvidenceStateDto(
+    string? NoteType, string? Text, string? Criterion, int? Score, int? MaxScore);
+
+public sealed record CandidateEvidenceRevisionDto(
+    int Id, int Version, int FromCandidateVersion, int ToCandidateVersion,
+    CandidateEvidenceStateDto Before, CandidateEvidenceStateDto After, string Reason,
+    string ChangedByUserId, string ChangedByName, DateTime ChangedAtUtc);
+
+public sealed record CandidateEvidenceHistoryDto(
+    CandidateEvidenceStateDto Original, IReadOnlyList<CandidateEvidenceRevisionDto> Revisions);
 
 public sealed record CandidateHistoryDto(int Id, string Event, DateTime OccurredAtUtc);
 

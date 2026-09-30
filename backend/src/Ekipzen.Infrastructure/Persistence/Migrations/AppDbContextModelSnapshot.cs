@@ -3037,6 +3037,83 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("CandidateEvaluations");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Recruitment.CandidateEvidenceRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AfterJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BeforeJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CandidateId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ChangedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("EvaluationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FromCandidateVersion")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InterviewNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToCandidateVersion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateId");
+
+                    b.HasIndex("EvaluationId");
+
+                    b.HasIndex("InterviewNoteId");
+
+                    b.HasIndex("TenantId", "EvaluationId", "Version")
+                        .IsUnique()
+                        .HasFilter("[EvaluationId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "InterviewNoteId", "Version")
+                        .IsUnique()
+                        .HasFilter("[InterviewNoteId] IS NOT NULL");
+
+                    b.ToTable("CandidateEvidenceRevisions", t =>
+                        {
+                            t.HasCheckConstraint("CK_CandidateEvidenceRevisions_OneSource", "([InterviewNoteId] IS NOT NULL AND [EvaluationId] IS NULL) OR ([InterviewNoteId] IS NULL AND [EvaluationId] IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Recruitment.CandidateExperience", b =>
                 {
                     b.Property<int>("Id")
@@ -4279,6 +4356,31 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Candidate");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Recruitment.CandidateEvidenceRevision", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Recruitment.Candidate", "Candidate")
+                        .WithMany()
+                        .HasForeignKey("CandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Ekipzen.Domain.Entities.Recruitment.CandidateEvaluation", "Evaluation")
+                        .WithMany()
+                        .HasForeignKey("EvaluationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Ekipzen.Domain.Entities.Recruitment.InterviewNote", "InterviewNote")
+                        .WithMany()
+                        .HasForeignKey("InterviewNoteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Candidate");
+
+                    b.Navigation("Evaluation");
+
+                    b.Navigation("InterviewNote");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Recruitment.CandidateExperience", b =>

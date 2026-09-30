@@ -552,6 +552,145 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
                 "başvuru düzeltmesi ilk aşama kararı veya yeni öğrenme kanıtı değildir");
     }
 
+    [Fact]
+    public async Task EvidenceRevisions_KeepOriginals_ProjectCurrentVersions_AndDoNotCreateLearningEvidence()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var created = await admin.PostAsJsonAsync("/api/candidates", new
+        { name = "Kanıt Sürüm Adayı", appliedRole = "Uzman", score = 66 });
+        var candidate = (await created.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var url = $"/api/candidates/{candidate.Id}";
+        var noteResponse = await admin.PostAsJsonAsync($"{url}/notes", new
+        { noteType = "İK Görüşmesi", text = "İlk not metni." });
+        var note = (await noteResponse.Content.ReadFromJsonAsync<InterviewNoteDto>())!;
+        var evaluationResponse = await admin.PostAsJsonAsync($"{url}/evaluations", new
+        { criterion = "SQL", score = 4, maxScore = 5 });
+        var evaluation = (await evaluationResponse.Content.ReadFromJsonAsync<CandidateEvaluationDto>())!;
+        var current = await GetAsync<CandidateDetailDto>(admin, url);
+        var journey = await GetAsync<RecruitmentJourneyDto>(admin, "/api/guidance/recruitment/journey");
+        var noteUrl = $"{url}/notes/{note.Id}/revisions";
+        var evalUrl = $"{url}/evaluations/{evaluation.Id}/revisions";
+        object NoteBody(int candidateVersion, int recordVersion, string text = "Doğrulanmış teknik gözlem.", string reason = "Görüşme kaynağıyla doğrulandı.") => new
+        { expectedCandidateVersion = candidateVersion, expectedRecordVersion = recordVersion,
+            noteType = "Teknik Mülakat", text, reason };
+        (await manager.PostAsJsonAsync(noteUrl, NoteBody(current.Version, 1)))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await manager.GetAsync(noteUrl)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync(noteUrl, NoteBody(candidate.Version, 1)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync(noteUrl, NoteBody(current.Version, 99)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync(noteUrl, NoteBody(current.Version, 1, reason: " ")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var firstRevision = await admin.PostAsJsonAsync(noteUrl, NoteBody(current.Version, 1));
+        firstRevision.StatusCode.Should().Be(HttpStatusCode.OK);
+        current = (await firstRevision.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var currentNote = current.Notes.Single(item => item.Id == note.Id);
+        currentNote.Version.Should().Be(2);
+        currentNote.Text.Should().Be("Doğrulanmış teknik gözlem.");
+        currentNote.NoteType.Should().Be("Teknik Mülakat");
+        currentNote.AuthorName.Should().Be(note.AuthorName);
+        currentNote.CreatedAtUtc.Should().Be(note.CreatedAtUtc);
+        var secondRevision = await admin.PostAsJsonAsync(noteUrl,
+            NoteBody(current.Version, currentNote.Version, "İkinci doğrulanmış gözlem."));
+        secondRevision.StatusCode.Should().Be(HttpStatusCode.OK);
+        current = (await secondRevision.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        (await admin.PostAsJsonAsync(noteUrl, NoteBody(current.Version, 3, "İkinci doğrulanmış gözlem.")))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict, "değişikliksiz istek sürüm üretmez");
+        var noteHistory = await GetAsync<CandidateEvidenceHistoryDto>(admin, noteUrl);
+        noteHistory.Original.Text.Should().Be(note.Text);
+        noteHistory.Original.NoteType.Should().Be(note.NoteType);
+        noteHistory.Revisions.Select(item => item.Version).Should().Equal(3, 2);
+        noteHistory.Revisions[0].Before.Text.Should().Be("Doğrulanmış teknik gözlem.");
+        noteHistory.Revisions[1].Before.Should().Be(noteHistory.Original);
+        noteHistory.Revisions.Should().OnlyContain(item => item.ChangedByName == "İK Yöneticisi"
+            && item.ToCandidateVersion == item.FromCandidateVersion + 1 && item.ChangedByUserId != "");
+        (await admin.PostAsJsonAsync(evalUrl, new
+        { expectedCandidateVersion = current.Version, expectedRecordVersion = 1, criterion = "SQL",
+            score = 6, maxScore = 5, reason = "Yanlış puan" })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var evalRevision = await admin.PostAsJsonAsync(evalUrl, new
+        { expectedCandidateVersion = current.Version, expectedRecordVersion = 1, criterion = "SQL uygulaması",
+            score = 4, maxScore = 10, reason = "Belgedeki puan ölçeği düzeltildi." });
+        evalRevision.StatusCode.Should().Be(HttpStatusCode.OK);
+        current = (await evalRevision.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        var effectiveEvaluation = current.Evaluations.Single(item => item.Id == evaluation.Id);
+        effectiveEvaluation.Version.Should().Be(2);
+        effectiveEvaluation.Criterion.Should().Be("SQL uygulaması");
+        effectiveEvaluation.MaxScore.Should().Be(10);
+        current.Status.Should().Be("Yeni");
+        current.Score.Should().Be(66);
+        current.AppliedAtUtc.Should().Be(candidate.AppliedAtUtc);
+        (await GetAsync<RecruitmentJourneyDto>(admin, "/api/guidance/recruitment/journey"))
+            .VerifiedFirstReviews.Should().Be(journey.VerifiedFirstReviews);
+        var evaluationHistory = await GetAsync<CandidateEvidenceHistoryDto>(admin, evalUrl);
+        evaluationHistory.Original.Score.Should().Be(4);
+        evaluationHistory.Original.MaxScore.Should().Be(5);
+        evaluationHistory.Revisions.Should().ContainSingle().Which.After.MaxScore.Should().Be(10);
+
+        var login = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new
+        { email = "ik@hrmaster.local", password = DemoPassword });
+        var auth = (await login.Content.ReadFromJsonAsync<AuthResponse>())!;
+        using var scope = factory.Services.GetRequiredService<ITenantScopeFactory>().Create(auth.User.TenantId);
+        var db = scope.Services.GetRequiredService<IApplicationDbContext>();
+        var storedNote = await db.InterviewNotes.AsNoTracking().SingleAsync(item => item.Id == note.Id);
+        storedNote.Text.Should().Be(note.Text, "ilk kaynak satırı değişmeden kalmalı");
+        storedNote.NoteType.Should().Be(note.NoteType);
+        var storedEvaluation = await db.CandidateEvaluations.AsNoTracking().SingleAsync(item => item.Id == evaluation.Id);
+        storedEvaluation.Criterion.Should().Be(evaluation.Criterion);
+        storedEvaluation.MaxScore.Should().Be(evaluation.MaxScore);
+    }
+
+    [Fact]
+    public async Task EvidenceRevisions_RejectWrongCandidate_ConcurrentWrites_AndHiredHistoryMutation()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        async Task<CandidateDetailDto> CreateCandidate()
+        {
+            var response = await admin.PostAsJsonAsync("/api/candidates", new
+            { name = "Kilit Testi " + Guid.NewGuid().ToString("N"), appliedRole = "Uzman", score = 70 });
+            return (await response.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        }
+        var candidate = await CreateCandidate();
+        var other = await CreateCandidate();
+        var url = $"/api/candidates/{candidate.Id}";
+        var noteResponse = await admin.PostAsJsonAsync($"{url}/notes", new
+        { noteType = "İK Görüşmesi", text = "İlk gözlem." });
+        var note = (await noteResponse.Content.ReadFromJsonAsync<InterviewNoteDto>())!;
+        var evalResponse = await admin.PostAsJsonAsync($"{url}/evaluations", new
+        { criterion = "İletişim", score = 3, maxScore = 5 });
+        var evaluation = (await evalResponse.Content.ReadFromJsonAsync<CandidateEvaluationDto>())!;
+        var current = await GetAsync<CandidateDetailDto>(admin, url);
+        var body = new { expectedCandidateVersion = current.Version, expectedRecordVersion = 1,
+            noteType = "Teknik Mülakat", text = "Kontrol edilmiş gözlem.", reason = "Kaynağı kontrol edildi." };
+        (await admin.PostAsJsonAsync($"/api/candidates/{other.Id}/notes/{note.Id}/revisions",
+            body with { expectedCandidateVersion = other.Version })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await admin.GetAsync($"/api/candidates/{other.Id}/notes/{note.Id}/revisions"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var noteUrl = $"{url}/notes/{note.Id}/revisions";
+        var responses = await Task.WhenAll(admin.PostAsJsonAsync(noteUrl, body), admin.PostAsJsonAsync(noteUrl, body));
+        responses.Select(item => item.StatusCode).Should().BeEquivalentTo(
+            new[] { HttpStatusCode.OK, HttpStatusCode.Conflict });
+        (await GetAsync<CandidateEvidenceHistoryDto>(admin, noteUrl)).Revisions.Should().ContainSingle();
+        current = await GetAsync<CandidateDetailDto>(admin, url);
+        var department = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0];
+        (await admin.PostAsJsonAsync($"{url}/hire", new
+        { departmentId = department.Id, email = $"evidence-lock-{Guid.NewGuid():N}@hrmaster.local",
+            contractType = "indefinite" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var hired = await GetAsync<CandidateDetailDto>(admin, url);
+        (await admin.PostAsJsonAsync(noteUrl, body with { expectedCandidateVersion = hired.Version, expectedRecordVersion = 2 }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync($"{url}/evaluations/{evaluation.Id}/revisions", new
+        { expectedCandidateVersion = hired.Version, expectedRecordVersion = 1, criterion = "İletişim",
+            score = 4, maxScore = 5, reason = "Sonradan düzeltme" })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync($"{url}/notes", new
+        { noteType = "İK Görüşmesi", text = "Düzeltme yerine yeni kayıt." })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PostAsJsonAsync($"{url}/evaluations", new
+        { criterion = "İletişim", score = 4, maxScore = 5 })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await GetAsync<CandidateDetailDto>(admin, url)).Version.Should().Be(hired.Version);
+        (await GetAsync<CandidateEvidenceHistoryDto>(admin, noteUrl)).Revisions.Should().ContainSingle();
+    }
+
     // --- yardımcılar ---
 
     private sealed class FailCountEmailSender(

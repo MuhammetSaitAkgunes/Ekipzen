@@ -64,6 +64,30 @@ public sealed class CandidateCorrectionConfiguration : IEntityTypeConfiguration<
     }
 }
 
+public sealed class CandidateEvidenceRevisionConfiguration : IEntityTypeConfiguration<CandidateEvidenceRevision>
+{
+    public void Configure(EntityTypeBuilder<CandidateEvidenceRevision> b)
+    {
+        b.Property(item => item.BeforeJson).IsRequired();
+        b.Property(item => item.AfterJson).IsRequired();
+        b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
+        b.Property(item => item.ChangedByUserId).IsRequired().HasMaxLength(450);
+        b.Property(item => item.ChangedByName).IsRequired().HasMaxLength(200);
+        b.HasOne(item => item.Candidate).WithMany().HasForeignKey(item => item.CandidateId)
+            .OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(item => item.InterviewNote).WithMany().HasForeignKey(item => item.InterviewNoteId)
+            .OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(item => item.Evaluation).WithMany().HasForeignKey(item => item.EvaluationId)
+            .OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(item => new { item.TenantId, item.InterviewNoteId, item.Version }).IsUnique()
+            .HasFilter("[InterviewNoteId] IS NOT NULL");
+        b.HasIndex(item => new { item.TenantId, item.EvaluationId, item.Version }).IsUnique()
+            .HasFilter("[EvaluationId] IS NOT NULL");
+        b.ToTable(table => table.HasCheckConstraint("CK_CandidateEvidenceRevisions_OneSource",
+            "([InterviewNoteId] IS NOT NULL AND [EvaluationId] IS NULL) OR ([InterviewNoteId] IS NULL AND [EvaluationId] IS NOT NULL)"));
+    }
+}
+
 public class CandidateSkillConfiguration : IEntityTypeConfiguration<CandidateSkill>
 {
     public void Configure(EntityTypeBuilder<CandidateSkill> b)

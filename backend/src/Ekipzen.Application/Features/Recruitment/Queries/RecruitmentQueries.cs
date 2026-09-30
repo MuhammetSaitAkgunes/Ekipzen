@@ -1,6 +1,7 @@
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Recruitment.Commands;
 using Ekipzen.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -82,6 +83,15 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
             .OrderByDescending(operation => operation.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var revisions = await context.CandidateEvidenceRevisions.AsNoTracking()
+            .Where(item => item.CandidateId == candidate.Id).ToListAsync(cancellationToken);
+        var noteVersions = revisions.Where(item => item.InterviewNoteId != null)
+            .GroupBy(item => item.InterviewNoteId!.Value)
+            .ToDictionary(group => group.Key, group => group.MaxBy(item => item.Version)!);
+        var evaluationVersions = revisions.Where(item => item.EvaluationId != null)
+            .GroupBy(item => item.EvaluationId!.Value)
+            .ToDictionary(group => group.Key, group => group.MaxBy(item => item.Version)!);
+
         return new CandidateDetailDto(
             candidate.Id,
             candidate.Name,
@@ -101,10 +111,22 @@ public sealed class GetCandidateQueryHandler(IApplicationDbContext context)
                 .ToList(),
             candidate.Notes
                 .OrderByDescending(n => n.CreatedAtUtc)
-                .Select(n => new InterviewNoteDto(n.Id, n.AuthorName, n.NoteType, n.Text, n.CreatedAtUtc))
+                .Select(n =>
+                {
+                    var revision = noteVersions.GetValueOrDefault(n.Id);
+                    var state = revision is null ? null : CandidateEvidenceVersions.Read(revision.AfterJson);
+                    return new InterviewNoteDto(n.Id, n.AuthorName, state?.NoteType ?? n.NoteType,
+                        state?.Text ?? n.Text, n.CreatedAtUtc, revision?.Version ?? 1);
+                })
                 .ToList(),
             candidate.Evaluations
-                .Select(e => new CandidateEvaluationDto(e.Id, e.Criterion, e.Score, e.MaxScore))
+                .Select(e =>
+                {
+                    var revision = evaluationVersions.GetValueOrDefault(e.Id);
+                    var state = revision is null ? null : CandidateEvidenceVersions.Read(revision.AfterJson);
+                    return new CandidateEvaluationDto(e.Id, state?.Criterion ?? e.Criterion,
+                        state?.Score ?? e.Score, state?.MaxScore ?? e.MaxScore, revision?.Version ?? 1);
+                })
                 .ToList(),
             candidate.History
                 .OrderByDescending(h => h.OccurredAtUtc)

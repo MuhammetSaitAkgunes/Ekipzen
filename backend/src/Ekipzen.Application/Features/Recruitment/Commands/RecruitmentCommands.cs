@@ -255,6 +255,8 @@ public sealed class AddInterviewNoteCommandHandler(
         var candidate = await context.Candidates
             .SingleOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
             ?? throw new NotFoundException("Aday", request.CandidateId);
+        if (candidate.Status == CandidateStatus.Hired)
+            throw new ConflictException("İşe alınmış adayın başvuru geçmişi kilitli; yeni mülakat notu eklenemez.");
         candidate.Version++;
 
         var note = new InterviewNote
@@ -311,6 +313,8 @@ public sealed class AddCandidateEvaluationCommandHandler(IApplicationDbContext c
         var candidate = await context.Candidates
             .SingleOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
             ?? throw new NotFoundException("Aday", request.CandidateId);
+        if (candidate.Status == CandidateStatus.Hired)
+            throw new ConflictException("İşe alınmış adayın başvuru geçmişi kilitli; yeni değerlendirme eklenemez.");
         candidate.Version++;
 
         var evaluation = new CandidateEvaluation
