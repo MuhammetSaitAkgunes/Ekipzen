@@ -102,6 +102,7 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
             .Should().ContainSingle(item =>
                 item.GetProperty("processKey").GetString() == "recruitment" &&
                 item.GetProperty("stepKey").GetString() == "candidate-create" &&
+                item.GetProperty("contentVersion").GetInt32() == 2 &&
                 item.GetProperty("lastCorrect").GetBoolean());
 
         var otherUser = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");

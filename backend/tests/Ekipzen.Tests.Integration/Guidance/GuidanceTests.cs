@@ -8,6 +8,10 @@ using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Features.Leaves;
 using FluentAssertions;
+using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Domain.Entities.Guidance;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ekipzen.Tests.Integration.Guidance;
 
@@ -207,11 +211,24 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
         const string reviewUrl = "/api/guidance/recruitment/checks/first-review";
         var admin = await AuthedClientAsync("ik@hrmaster.local");
         var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var login = await factory.CreateClient().PostAsJsonAsync("/api/auth/login",
+            new { email = "ik@hrmaster.local", password = "demo123" });
+        var auth = (await login.Content.ReadFromJsonAsync<AuthResponse>())!;
+        using var tenantScope = factory.Services.GetRequiredService<ITenantScopeFactory>().Create(auth.User.TenantId);
+        var db = tenantScope.Services.GetRequiredService<IApplicationDbContext>();
+        var legacy = new GuidanceDecisionProgress
+        {
+            UserId = auth.User.Id, ProcessKey = "recruitment", StepKey = "candidate-create",
+            ContentVersion = 1, AttemptCount = 7, LastSelectedChoice = 2,
+            LastCorrect = true, LastAnsweredAtUtc = DateTime.UtcNow,
+        };
+        db.GuidanceDecisionProgresses.Add(legacy);
+        await db.SaveChangesAsync(CancellationToken.None);
         var before = await GetAsync<RecruitmentJourneyDto>(
             admin, "/api/guidance/recruitment/journey");
 
         var initial = await GetAsync<RecruitmentDecisionCheckDto>(admin, createUrl);
-        initial.ContentVersion.Should().Be(1);
+        initial.ContentVersion.Should().Be(2);
         initial.Choices.Should().HaveCount(3);
         initial.Explanation.Should().BeNull();
         initial.AttemptCount.Should().Be(0);
@@ -235,12 +252,21 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
         saved.LastCorrect.Should().BeTrue();
         saved.LastSelectedChoice.Should().Be(2);
         saved.AttemptCount.Should().Be(2);
+        saved.Explanation.Should().Contain("boş bırakarak");
+        var retained = await db.GuidanceDecisionProgresses.AsNoTracking().SingleAsync(item => item.Id == legacy.Id);
+        retained.ContentVersion.Should().Be(1);
+        retained.AttemptCount.Should().Be(7);
+        using var exported = System.Text.Json.JsonDocument.Parse(await admin.GetStringAsync("/api/me/data-export"));
+        exported.RootElement.GetProperty("guidanceDecisionProgresses").EnumerateArray()
+            .Where(item => item.GetProperty("processKey").GetString() == "recruitment"
+                && item.GetProperty("stepKey").GetString() == "candidate-create")
+            .Select(item => item.GetProperty("contentVersion").GetInt32()).Should().BeEquivalentTo([1, 2]);
 
         (await admin.PostAsJsonAsync(reviewUrl + "/attempts",
             new { selectedChoice = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
         var after = await GetAsync<RecruitmentJourneyDto>(
             admin, "/api/guidance/recruitment/journey");
-        after.ContentVersion.Should().Be(1);
+        after.ContentVersion.Should().Be(2);
         after.AnsweredChecks.Should().Be(before.AnsweredChecks + 2);
         after.CorrectChecks.Should().Be(before.CorrectChecks + 2);
         after.VerifiedFirstReviews.Should().Be(before.VerifiedFirstReviews);

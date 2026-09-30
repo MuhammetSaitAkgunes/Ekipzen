@@ -71,7 +71,7 @@ public sealed record CreateCandidateCommand(
     string Name,
     string AppliedRole,
     int? PositionId = null,
-    int Score = 0,
+    int? Score = null,
     string? Location = null,
     int ExperienceYears = 0,
     string? Summary = null,

@@ -176,7 +176,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public sealed record ReviseEvaluationBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
         string Criterion, int Score, int MaxScore, string Reason);
     public sealed record CorrectCandidateBody(int ExpectedVersion, string Name, string AppliedRole,
-        int? PositionId, int? ExpectedPositionVersion, int Score, string? Location,
+        int? PositionId, int? ExpectedPositionVersion, int? Score, string? Location,
         int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview);
     public sealed record CandidateNoteBody(string NoteType, string Text);
     public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5);

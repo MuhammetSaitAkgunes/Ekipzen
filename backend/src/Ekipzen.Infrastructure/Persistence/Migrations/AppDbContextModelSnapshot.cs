@@ -2909,7 +2909,7 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<int?>("PositionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Score")
+                    b.Property<int?>("Score")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")

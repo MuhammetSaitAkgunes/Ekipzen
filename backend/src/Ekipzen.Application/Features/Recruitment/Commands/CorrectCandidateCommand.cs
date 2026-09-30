@@ -13,7 +13,7 @@ namespace Ekipzen.Application.Features.Recruitment.Commands;
 
 public sealed record CorrectCandidateCommand(
     int CandidateId, int ExpectedVersion, string Name, string AppliedRole,
-    int? PositionId, int? ExpectedPositionVersion, int Score, string? Location,
+    int? PositionId, int? ExpectedPositionVersion, int? Score, string? Location,
     int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview)
     : IRequest<CandidateDetailDto>;
 

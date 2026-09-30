@@ -13,7 +13,7 @@ internal sealed record RecruitmentCheckDefinition(
 internal static class RecruitmentDecisionChecks
 {
     public const string ProcessKey = "recruitment";
-    public const int ContentVersion = 1;
+    public const int ContentVersion = 2;
 
     private static readonly IReadOnlyDictionary<string, RecruitmentCheckDefinition> Checks =
         new Dictionary<string, RecruitmentCheckDefinition>(StringComparer.Ordinal)
@@ -22,7 +22,7 @@ internal static class RecruitmentDecisionChecks
                 "Başvuruyu kaydederken aday puanının dayanağı henüz yok. Ne yaparsınız?",
                 ["Tahmini bir puan girerim", "Puanı başka adaydan kopyalarım", "Değerlendirme dayanağını netleştirmeden puan uydurmam"],
                 2,
-                "Mevcut aday kaydı puanı zorunlu tutuyor. Dayanak yoksa rastgele sayı girip başvuruyu değerlendirilmiş gibi göstermeyin; eksik API ihtiyacını ayrıca takip edin."),
+                "Genel puanın dayanağı henüz yoksa puan alanını boş bırakarak başvuruyu kaydedin. Boş alan henüz puan verilmediğini, 0 ise verilmiş sıfır puanı gösterir. Not ve ölçüt değerlendirmeleri genel puanı otomatik hesaplamaz."),
             ["first-review"] = new(
                 "Yeni adayın aşamasını değiştirmeden önce hangi kontrol gerekir?",
                 ["Yalnız genel aday puanına bakarım", "Başvuru, not ve değerlendirme dayanaklarını karşılaştırır; aday iletişimini ayrı takip ederim", "Aşama seçimi adaya otomatik bildirim gönderir"],

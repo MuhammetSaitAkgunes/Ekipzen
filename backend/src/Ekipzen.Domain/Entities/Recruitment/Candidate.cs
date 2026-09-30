@@ -18,7 +18,7 @@ public class Candidate : AuditableEntity
     public int Version { get; set; } = 1;
 
     /// <summary>İK kullanıcısının elle kaydettiği aday puanı (0-100).</summary>
-    public int Score { get; set; }
+    public int? Score { get; set; }
 
     public DateTime AppliedAtUtc { get; set; }
     public string? Location { get; set; }

@@ -8,7 +8,7 @@ public sealed record CandidateListItemDto(
     string Name,
     string AppliedRole,
     string Status,
-    int Score,
+    int? Score,
     string Initials,
     DateTime AppliedAtUtc);
 
@@ -55,7 +55,7 @@ public sealed record CandidateDetailDto(
     int? PositionId,
     string? PositionTitle,
     string Status,
-    int Score,
+    int? Score,
     string Initials,
     DateTime AppliedAtUtc,
     string? Location,
@@ -70,7 +70,7 @@ public sealed record CandidateDetailDto(
 
 public sealed record CandidateStateDto(
     string Name, string AppliedRole, int? PositionId, string? PositionTitle,
-    int Score, string? Location, int ExperienceYears, string? Summary, string Status);
+    int? Score, string? Location, int ExperienceYears, string? Summary, string Status);
 
 public sealed record CandidateCorrectionDto(
     int Id, int CandidateId, int FromVersion, int ToVersion,

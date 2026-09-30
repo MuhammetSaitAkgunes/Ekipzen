@@ -777,6 +777,59 @@ public sealed class RecruitmentTests(EkipzenApiFactory factory)
             .VerifiedFirstReviews.Should().Be(journey.VerifiedFirstReviews + 1);
     }
 
+    [Fact]
+    public async Task GeneralScore_UnscoredAndZeroStayDistinct_AndCorrectionsPreserveHistory()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        async Task<CandidateDetailDto> CreateAsync(object body)
+        {
+            var response = await admin.PostAsJsonAsync("/api/candidates", body);
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            return (await response.Content.ReadFromJsonAsync<CandidateDetailDto>())!;
+        }
+        var omitted = await CreateAsync(new { name = "Puansız Başvuru", appliedRole = "Uzman" });
+        var explicitNull = await CreateAsync(new { name = "Puansız Başvuru 2", appliedRole = "Uzman", score = (int?)null });
+        var zero = await CreateAsync(new { name = "Sıfır Puan", appliedRole = "Uzman", score = 0 });
+        var maximum = await CreateAsync(new { name = "Tam Puan", appliedRole = "Uzman", score = 100 });
+        omitted.Score.Should().BeNull(); explicitNull.Score.Should().BeNull();
+        zero.Score.Should().Be(0); maximum.Score.Should().Be(100);
+        var listed = await GetAsync<List<CandidateListItemDto>>(admin, "/api/candidates");
+        listed.Single(item => item.Id == omitted.Id).Score.Should().BeNull();
+        listed.Single(item => item.Id == zero.Id).Score.Should().Be(0);
+        foreach (var invalid in new[] { -1m, 101m, 1.5m })
+            (await admin.PostAsJsonAsync("/api/candidates", new
+            { name = "Geçersiz Puan", appliedRole = "Uzman", score = invalid }))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var url = $"/api/candidates/{omitted.Id}";
+        object Correction(int version, int? score, string reason) => new
+        {
+            expectedVersion = version, omitted.Name, omitted.AppliedRole,
+            positionId = (int?)null, expectedPositionVersion = (int?)null, score,
+            location = (string?)null, experienceYears = 0, summary = (string?)null,
+            reason, confirmExistingEvidenceReview = false,
+        };
+        foreach (var invalid in new[] { -1, 101 })
+            (await admin.PutAsJsonAsync(url, Correction(omitted.Version, invalid, "Hatalı puan")))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await admin.PutAsJsonAsync(url, Correction(omitted.Version, 0, "Değerlendirme kaynağı kontrol edildi")))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var scored = await GetAsync<CandidateDetailDto>(admin, url);
+        scored.Score.Should().Be(0);
+        (await admin.PutAsJsonAsync(url, Correction(omitted.Version, null, "Eski sürüm")))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await admin.PutAsJsonAsync(url, Correction(scored.Version, null, "Yanlış adayın genel puanı kaldırıldı")))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await GetAsync<CandidateDetailDto>(admin, url)).Score.Should().BeNull();
+        var history = await GetAsync<List<CandidateCorrectionDto>>(admin, url + "/corrections");
+        history.Should().HaveCount(2);
+        history[0].Before.Score.Should().Be(0); history[0].After.Score.Should().BeNull();
+        history[1].Before.Score.Should().BeNull(); history[1].After.Score.Should().Be(0);
+        (await admin.PostAsJsonAsync(url + "/evaluations", new { criterion = "SQL", score = 4, maxScore = 5 }))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+        (await GetAsync<CandidateDetailDto>(admin, url)).Score.Should().BeNull();
+    }
+
     // --- yardımcılar ---
 
     private sealed class FailCountEmailSender(
