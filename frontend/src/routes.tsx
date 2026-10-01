@@ -18,6 +18,7 @@ const HomePageApp = lazy(() => import("./features/home/HomePage").then((m) => ({
 const InboxPage = lazy(() => import("./features/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
 const PersonnelProfilePage = lazy(() => import("./features/personnel/PersonnelProfilePage").then((m) => ({ default: m.PersonnelProfilePage })));
 const GuidanceJourneyPage = lazy(() => import("./features/guidance/GuidanceJourneyPage").then((m) => ({ default: m.GuidanceJourneyPage })));
+const GuidanceCatalogPage = lazy(() => import("./features/guidance/GuidanceCatalogPage").then((m) => ({ default: m.GuidanceCatalogPage })));
 
 const OverviewPage = lazy(() => import("./features/overview/OverviewPage").then((m) => ({ default: m.OverviewPage })));
 const RiskCenterPage = lazy(() => import("./features/dashboard/RiskCenterPage").then((m) => ({ default: m.RiskCenterPage })));
@@ -72,6 +73,7 @@ export const appRoutes: AppRoute[] = [
   { key: "actions", path: appPath("/actions"), title: "Aksiyonlar", eyebrow: "Ekipzen", navKey: "inbox", roles: ALL },
   { key: "personnel", path: appPath("/personnel"), title: "Çalışanlar", eyebrow: "Ekipzen", navKey: "personnel", roles: MGMT },
   { key: "guidance", path: appPath("/guidance"), title: "Öğrenme Yolculuğum", eyebrow: "İK Rehberi", navKey: "guidance", roles: MGMT },
+  { key: "guidance-catalog", path: appPath("/guidance/catalog"), title: "Rehber içerikleri", eyebrow: "İK Rehberi", navKey: "guidance-catalog", roles: ALL },
   { key: "recruitment", path: appPath("/recruitment"), title: "İşe Alım", eyebrow: "Ekipzen", navKey: "recruitment", roles: ["hr-admin"] },
   { key: "attendance", path: appPath("/attendance"), title: "Mesai & Puantaj", eyebrow: "Ekipzen", navKey: "attendance", roles: MGMT },
   { key: "leaves", path: appPath("/leaves"), title: "İzinler", eyebrow: "Ekipzen", navKey: "leaves", roles: ALL },
@@ -92,6 +94,7 @@ export const navIcons: Record<string, string> = {
   home: "fa-house", inbox: "fa-inbox",
   dashboard: "fa-shield-heart", overview: "fa-chart-line", actions: "fa-list-check",
   personnel: "fa-user-tie", guidance: "fa-book-open", recruitment: "fa-briefcase", attendance: "fa-clock",
+  "guidance-catalog": "fa-book-open",
   leaves: "fa-plane-departure", payroll: "fa-money-check-dollar",
   manager: "fa-chart-pie", settings: "fa-gear",
 };
@@ -112,6 +115,7 @@ const pageFor: Record<string, ComponentType> = {
   "compliance-risk": CompliancePage,
   personnel: PersonnelPage,
   guidance: GuidanceJourneyPage,
+  "guidance-catalog": GuidanceCatalogPage,
   recruitment: RecruitmentPage,
   leaves: LeavesPage,
   attendance: AttendancePage,
@@ -200,6 +204,7 @@ export const navigation: { label: string; items: NavigationItem[] }[] = [
   { label: "İnsan kaynakları", items: [
     { key: "personnel", path: appPath("/personnel"), label: "Çalışanlar", icon: "fa-user-group", roles: MGMT },
     { key: "guidance", path: appPath("/guidance"), label: "Öğrenme Yolculuğum", icon: "fa-book-open", roles: MGMT },
+    { key: "guidance-catalog", path: appPath("/guidance/catalog"), label: "Rehber içerikleri", icon: "fa-book-open", roles: ALL },
     { key: "leaves", path: appPath("/leaves"), label: "İzinler", employeeLabel: "İzinlerim", icon: "fa-calendar-days", roles: ALL },
     { key: "attendance", path: appPath("/attendance"), label: "Mesai ve Puantaj", icon: "fa-clock", roles: MGMT },
     { key: "recruitment", path: appPath("/recruitment"), label: "İşe Alım", icon: "fa-briefcase", roles: ["hr-admin"] },

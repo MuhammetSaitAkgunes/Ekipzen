@@ -74,6 +74,7 @@ export function GuidanceJourneyPage() {
     <div className="page-header">
       <div><span className="ez-overline">İK REHBERİ</span><h1>Öğrenme yolculuğum</h1>
         <p>Gerçek işlemlerden gelen kanıtları ve rehberde kaldığınız bölümü görün.</p></div>
+      <Link className="btn btn-secondary" to={appPath("/guidance/catalog")}>Rehber içeriklerini aç</Link>
     </div>
     {isHrAdmin && (query.isPending ? <PageLoading /> : query.isError
       ? <PageError error={query.error} />

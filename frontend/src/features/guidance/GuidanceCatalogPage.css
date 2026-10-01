@@ -1,0 +1,11 @@
+.ez-guidance-catalog { display: grid; gap: 1rem; }
+.ez-guidance-catalog ul { display: grid; gap: .75rem; padding-left: 1.25rem; }
+.ez-guidance-content-form { display: grid; gap: 1rem; max-width: 54rem; margin-block: 1rem; }
+.ez-guidance-content-form label, .ez-guidance-reason { display: grid; gap: .35rem; }
+.ez-guidance-content-form input:not([type="checkbox"]), .ez-guidance-content-form select,
+.ez-guidance-content-form textarea, .ez-guidance-reason textarea { width: 100%; max-width: 100%; box-sizing: border-box; padding: .65rem; }
+.ez-guidance-content-form .ez-guidance-inline { display: flex; align-items: start; gap: .5rem; margin-block: .5rem; }
+.ez-guidance-article p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ez-guidance-article section { margin-block: 1rem; }
+.ez-guidance-article a { overflow-wrap: anywhere; }
+.ez-guidance-editorial { display: grid; gap: 1rem; }
