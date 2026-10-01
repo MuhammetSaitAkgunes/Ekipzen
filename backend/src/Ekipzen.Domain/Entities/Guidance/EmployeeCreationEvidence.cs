@@ -9,5 +9,7 @@ public sealed class EmployeeCreationEvidence : AuditableEntity, IGuidanceOperati
     public string UserId { get; set; } = string.Empty;
     public int EmployeeId { get; set; }
     public Employee Employee { get; set; } = null!;
+    public Guid? CreationRequestId { get; set; }
+    public string? RequestFingerprint { get; set; }
     public string? GuidanceSnapshotJson { get; set; }
 }

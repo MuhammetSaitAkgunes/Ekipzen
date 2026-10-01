@@ -42,7 +42,7 @@ public sealed class GetPayrollPeriodsQueryHandler(IApplicationDbContext context)
 /// Kümülatif matrah aynı yılın önceki onaylı sonuçlarından, fazla mesai saati
 /// aylık puantaj özetinden (vw_MonthlyAttendanceSummary), IBAN durumu profilden gelir.
 /// </summary>
-public sealed record CreatePayrollPeriodCommand(int Year, int Month, int? GuidanceContentRevisionId = null) : IRequest<PayrollPeriodDetailDto>, IGuidanceOperationCommand
+public sealed record CreatePayrollPeriodCommand(int Year, int Month, int? GuidanceContentRevisionId = null, string? ExpectedPreviewToken = null) : IRequest<PayrollPeriodDetailDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "payroll-period-create"; }
 
 public sealed class CreatePayrollPeriodCommandValidator : AbstractValidator<CreatePayrollPeriodCommand>
@@ -51,6 +51,7 @@ public sealed class CreatePayrollPeriodCommandValidator : AbstractValidator<Crea
     {
         RuleFor(x => x.Year).InclusiveBetween(2000, 2100);
         RuleFor(x => x.Month).InclusiveBetween(1, 12);
+        RuleFor(x => x.ExpectedPreviewToken).NotEmpty().MaximumLength(64);
     }
 }
 
@@ -70,110 +71,9 @@ public sealed class CreatePayrollPeriodCommandHandler(
     private async Task<PayrollPeriodDetailDto> CreateAsync(
         CreatePayrollPeriodCommand request, CancellationToken cancellationToken)
     {
-        if (await context.PayrollPeriods.AnyAsync(
-                p => p.Year == request.Year && p.Month == request.Month, cancellationToken))
-        {
-            throw new ConflictException(
-                $"{PayrollMappings.PeriodName(request.Year, request.Month)} dönemi zaten var.");
-        }
-
-        await PayrollPeriodSequence.EnsureCanCreateAsync(
-            context, request.Year, request.Month, cancellationToken);
-
-        // Dönemin kendi ayının ilk günü: o tarihte yürürlükteki parametre seti kullanılır.
-        var settings = await PayrollSettingsResolver.ResolveAsync(
-            context, new DateOnly(request.Year, request.Month, 1), cancellationToken);
-
-        var periodStart = new DateOnly(request.Year, request.Month, 1);
-        var minimumWageIncomeTaxBaseBefore = await PayrollMinimumWageTaxBase.CalculateBeforeAsync(
-            context, request.Year, request.Month, cancellationToken);
-        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
-
-        var employees = await context.Employees
-            .AsNoTracking()
-            .Where(e => e.HireDate <= periodEnd
-                        && (e.Status == EmployeeStatus.Active
-                            || (e.Status == EmployeeStatus.Passive
-                                && e.TerminationDate != null
-                                && e.TerminationDate >= periodStart)))
-            .Select(e => new
-            {
-                e.Id,
-                e.HireDate,
-                e.TerminationDate,
-                EmploymentPeriodId = e.EmploymentPeriods
-                    .Where(employment => employment.StartDate <= periodStart
-                        && (employment.EndDate == null || employment.EndDate >= periodStart))
-                    .Select(employment => (int?)employment.Id)
-                    .SingleOrDefault(),
-                HasIban = e.Profile != null && e.Profile.Iban != null,
-            })
-            .ToListAsync(cancellationToken);
-
-        var employmentPeriodIds = employees
-            .Where(employee => employee.EmploymentPeriodId is not null)
-            .Select(employee => employee.EmploymentPeriodId!.Value)
-            .ToArray();
-        var compensationPackages = await context.EmployeeCompensationPackages
-            .AsNoTracking()
-            .Where(package => employmentPeriodIds.Contains(package.EmploymentPeriodId)
-                && package.EffectiveFrom <= periodStart
-                && (package.EffectiveTo == null || package.EffectiveTo >= periodStart))
-            .ToListAsync(cancellationToken);
-        var compensationByEmploymentPeriod = compensationPackages
-            .ToDictionary(package => package.EmploymentPeriodId);
-
-        var timesheetCoverage = await PayrollTimesheetCoverage.CalculateAsync(
-            context,
-            employees.ToDictionary(
-                employee => employee.Id,
-                employee => new PayrollEmploymentPeriod(
-                    employee.HireDate, employee.TerminationDate)),
-            request.Year,
-            request.Month,
-            cancellationToken);
-
-        // Fazla mesai puantaj özetinden beslenir (plan Faz 5 → Faz 6 bağlantısı).
-        var attendance = await context.MonthlyAttendanceSummaries
-            .Where(s => s.Year == request.Year && s.Month == request.Month)
-            .ToListAsync(cancellationToken);
-        var attendanceByEmployee = attendance.ToDictionary(a => a.EmployeeId);
-
-        var period = new PayrollPeriod
-        {
-            Name = PayrollMappings.PeriodName(request.Year, request.Month),
-            Year = request.Year,
-            Month = request.Month,
-            Status = PayrollPeriodStatus.Draft,
-            PayrollSettingsId = settings.Id,
-            MinimumWageIncomeTaxBaseBefore = minimumWageIncomeTaxBaseBefore,
-        };
-
-        foreach (var employee in employees)
-        {
-            var summary = attendanceByEmployee.GetValueOrDefault(employee.Id);
-            var compensation = employee.EmploymentPeriodId is int employmentPeriodId
-                ? compensationByEmploymentPeriod.GetValueOrDefault(employmentPeriodId)
-                : null;
-            period.Employees.Add(new PayrollEmployee
-            {
-                EmployeeId = employee.Id,
-                // Paket yalnız dönem başı girdisini sağlar; satır yine İK kontrolü ve onayına tabidir.
-                GrossSalary = compensation?.MonthlyGrossSalary ?? 0m,
-                PremiumPay = compensation?.RegularPremium ?? 0m,
-                RoadAllowance = compensation?.RoadAllowance ?? 0m,
-                MealAllowance = compensation?.MealAllowance ?? 0m,
-                BenefitPay = compensation?.OtherRegularBenefits ?? 0m,
-                WorkedDays = settings.DefaultWorkedDays,
-                OvertimeHours = summary is null ? 0 : (int)Math.Round(summary.TotalOvertimeMinutes / 60.0),
-                IbanComplete = employee.HasIban,
-                TimesheetComplete = timesheetCoverage.GetValueOrDefault(employee.Id),
-                ApprovalStatus = PayrollApprovalStatus.PreCalc,
-            });
-        }
-
-        await PayrollCumulativeTaxBase.RefreshAsync(
-            context, period.Employees.ToList(), request.Year, request.Month, cancellationToken);
+        var (period, preview) = await PayrollPeriodDraftBuilder.BuildAsync(context, request.Year, request.Month, cancellationToken);
+        if (!string.Equals(request.ExpectedPreviewToken, preview.Token, StringComparison.Ordinal))
+            throw new ConflictException("Bordro başlangıç verileri değişti; önizlemeyi yenileyip yeniden kontrol edin.");
 
         context.PayrollPeriods.Add(period);
         FinancialOperationEvidence.RecordPeriod(context, user, guidance, period, request.GuidanceOperationKey);

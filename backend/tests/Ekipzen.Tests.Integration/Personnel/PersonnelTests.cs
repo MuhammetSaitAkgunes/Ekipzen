@@ -129,7 +129,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         var departments = await GetAsync<List<DepartmentDto>>(client, "/api/departments");
         var yazilim = departments.Single(d => d.Name == "Yazılım");
 
-        var createResponse = await client.PostAsJsonAsync("/api/employees", new
+        var createResponse = await client.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Mert",
             lastName = "Can",
@@ -187,7 +187,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         var departments = await GetAsync<List<DepartmentDto>>(client, "/api/departments");
         var deptId = departments[0].Id;
 
-        var invalid = await client.PostAsJsonAsync("/api/employees", new
+        var invalid = await client.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Hatalı",
             lastName = "Tc",
@@ -198,7 +198,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         });
         invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        var duplicate = await client.PostAsJsonAsync("/api/employees", new
+        var duplicate = await client.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Kopya",
             lastName = "Tc",
@@ -215,7 +215,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     {
         var client = await AuthedClientAsync("ik@hrmaster.local");
         var departmentId = (await GetAsync<List<DepartmentDto>>(client, "/api/departments"))[0].Id;
-        var createdResponse = await client.PostAsJsonAsync("/api/employees", new
+        var createdResponse = await client.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Ücret",
             lastName = $"Geçmişi{Guid.NewGuid():N}",
@@ -1631,7 +1631,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
             admin, "/api/guidance/daily-tasks");
         renewedTasks.Should().Contain(item => item.Key == $"offboarding-external-payment:{secondSaved.Id}");
         renewedTasks.Should().Contain(item => item.Key == $"offboarding-external-notification:{secondSaved.Id}");
-        (await admin.PostAsJsonAsync($"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
+        (await admin.ApplyReviewedOffboardingAsync($"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
             new { expectedVersion = completed.Version, reason = "Yanlış geri alma" }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
         var freshReview = await GetAsync<CompensationRemediationContextDto>(admin, caseUrl);
@@ -1745,7 +1745,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         var admin = factory.CreateClient();
         admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminAuth.Token);
         var departmentId = (await GetAsync<List<DepartmentDto>>(admin, "/api/departments"))[0].Id;
-        var createdResponse = await admin.PostAsJsonAsync("/api/employees", new
+        var createdResponse = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Yeniden",
             lastName = $"Giris{Guid.NewGuid():N}",
@@ -1833,7 +1833,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     {
         var client = await AuthedClientAsync("ece.arslan@hrmaster.local");
 
-        var response = await client.PostAsJsonAsync("/api/employees", new
+        var response = await client.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Yetkisiz",
             lastName = "Deneme",
@@ -1931,7 +1931,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
 
         try
         {
-            var createResponse = await admin.PostAsJsonAsync("/api/employees", new
+            var createResponse = await admin.CreateSafeEmployeeAsync("/api/employees", new
             {
                 firstName = "Rol",
                 lastName = $"Takibi{suffix}",
@@ -2035,7 +2035,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         {
             var date = DateOnly.FromDateTime(DateTime.UtcNow);
             var incomplete = await SaveOffboardingDraftAsync(admin, eceId, date);
-            (await admin.PostAsJsonAsync(
+            (await admin.ApplyReviewedOffboardingAsync(
                 $"/api/employees/{eceId}/offboarding/{incomplete.Id}/complete",
                 new { expectedVersion = incomplete.Version }))
                 .StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -2044,7 +2044,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
                 admin, eceId, date, ahmetId, incomplete.Version,
                 unusedLeaveDays: 4.5m, unusedLeavePayment: 12500m,
                 severancePayment: 80000m, noticePayment: 25000m);
-            (await admin.PostAsJsonAsync(
+            (await admin.ApplyReviewedOffboardingAsync(
                 $"/api/employees/{eceId}/offboarding/{ready.Id}/complete",
                 new { expectedVersion = incomplete.Version }))
                 .StatusCode.Should().Be(HttpStatusCode.Conflict,
@@ -2072,7 +2072,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
                 await driftDb.SaveChangesAsync(CancellationToken.None);
             }
 
-            (await admin.PostAsJsonAsync(
+            (await admin.ApplyReviewedOffboardingAsync(
                 $"/api/employees/{eceId}/offboarding/{completed.Id}/reverse",
                 new { expectedVersion = completed.Version, reason = "Sapma testi" }))
                 .StatusCode.Should().Be(HttpStatusCode.Conflict,
@@ -2385,7 +2385,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     private static async Task<EmployeeOffboardingCaseDto> CompleteOffboardingAsync(
         HttpClient client, int employeeId, EmployeeOffboardingCaseDto draft)
     {
-        var response = await client.PostAsJsonAsync(
+        var response = await client.ApplyReviewedOffboardingAsync(
             $"/api/employees/{employeeId}/offboarding/{draft.Id}/complete",
             new { expectedVersion = draft.Version });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -2395,7 +2395,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     private static async Task<EmployeeOffboardingCaseDto> ReverseOffboardingAsync(
         HttpClient client, int employeeId, EmployeeOffboardingCaseDto completed, string reason)
     {
-        var response = await client.PostAsJsonAsync(
+        var response = await client.ApplyReviewedOffboardingAsync(
             $"/api/employees/{employeeId}/offboarding/{completed.Id}/reverse",
             new { expectedVersion = completed.Version, reason });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -2430,7 +2430,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
     private static async Task<int> CreateMinimalEmployeeAsync(
         HttpClient client, int departmentId, string firstName, string lastName)
     {
-        var response = await client.PostAsJsonAsync("/api/employees", new
+        var response = await client.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName,
             lastName,

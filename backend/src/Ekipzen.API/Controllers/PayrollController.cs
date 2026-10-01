@@ -31,6 +31,11 @@ public sealed class PayrollController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetPayrollPeriodsQuery(), cancellationToken));
 
+    [HttpGet("periods/creation-preview")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    public async Task<ActionResult<PayrollPeriodCreationPreviewDto>> CreationPreview(int year, int month, CancellationToken ct)
+        => Ok(await sender.Send(new GetPayrollPeriodCreationPreviewQuery(year, month), ct));
+
     [HttpPost("periods")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<PayrollPeriodDetailDto>(StatusCodes.Status201Created)]

@@ -266,7 +266,7 @@ public sealed class SaveEmployeeOffboardingDraftCommandHandler(
 }
 
 public sealed record CompleteEmployeeOffboardingCommand(
-    int EmployeeId, int CaseId, int ExpectedVersion, int? GuidanceContentRevisionId = null)
+    int EmployeeId, int CaseId, int ExpectedVersion, int? GuidanceContentRevisionId = null, string? ExpectedPreviewToken = null)
     : IRequest<EmployeeOffboardingCaseDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "offboarding-complete"; }
 
@@ -276,6 +276,7 @@ public sealed class CompleteEmployeeOffboardingCommandValidator
     public CompleteEmployeeOffboardingCommandValidator()
     {
         RuleFor(item => item.CaseId).GreaterThan(0);
+        RuleFor(item => item.ExpectedPreviewToken).NotEmpty().MaximumLength(64);
         RuleFor(item => item.ExpectedVersion).GreaterThan(0);
     }
 }
@@ -304,6 +305,7 @@ public sealed class CompleteEmployeeOffboardingCommandHandler(
         CompleteEmployeeOffboardingCommand request,
         CancellationToken cancellationToken)
     {
+        await OffboardingImpactPreview.EnsureAsync(context, request.EmployeeId, request.CaseId, false, request.ExpectedPreviewToken, cancellationToken);
         var item = await context.EmployeeOffboardingCases
             .Include(candidate => candidate.Employee)
                 .ThenInclude(employee => employee!.Profile)
@@ -545,7 +547,7 @@ public sealed record ReverseEmployeeOffboardingCommand(
     int EmployeeId,
     int CaseId,
     int ExpectedVersion,
-    string Reason, int? GuidanceContentRevisionId = null)
+    string Reason, int? GuidanceContentRevisionId = null, string? ExpectedPreviewToken = null)
     : IRequest<EmployeeOffboardingCaseDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "offboarding-reverse"; }
 
@@ -555,6 +557,7 @@ public sealed class ReverseEmployeeOffboardingCommandValidator
     public ReverseEmployeeOffboardingCommandValidator()
     {
         RuleFor(item => item.CaseId).GreaterThan(0);
+        RuleFor(item => item.ExpectedPreviewToken).NotEmpty().MaximumLength(64);
         RuleFor(item => item.ExpectedVersion).GreaterThan(0);
         RuleFor(item => item.Reason).NotEmpty().MaximumLength(1000);
     }
@@ -588,6 +591,7 @@ public sealed class ReverseEmployeeOffboardingCommandHandler(
         ReverseEmployeeOffboardingCommand request,
         CancellationToken cancellationToken)
     {
+        await OffboardingImpactPreview.EnsureAsync(context, request.EmployeeId, request.CaseId, true, request.ExpectedPreviewToken, cancellationToken);
         var item = await context.EmployeeOffboardingCases
             .Include(candidate => candidate.Employee)
                 .ThenInclude(employee => employee!.Profile)

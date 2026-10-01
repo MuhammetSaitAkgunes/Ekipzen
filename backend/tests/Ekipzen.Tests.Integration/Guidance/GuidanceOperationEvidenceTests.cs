@@ -37,13 +37,13 @@ public sealed partial class GuidanceCatalogTests
             var department = (await departmentResponse.Content.ReadFromJsonAsync<DepartmentDto>())!;
             object Body(int? version, int departmentId) => new { firstName = "Gerçek", lastName = "İşlem", title = "Uzman",
                 departmentId, hireDate = GuidanceContentCatalog.Today, contractType = "indefinite", guidanceContentRevisionId = version };
-            (await author.PostAsJsonAsync("/api/employees", Body(0, department.Id))).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-            (await author.PostAsJsonAsync("/api/employees", Body(source.Content.Id, int.MaxValue))).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            (await author.CreateSafeEmployeeAsync("/api/employees", Body(0, department.Id))).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await author.CreateSafeEmployeeAsync("/api/employees", Body(source.Content.Id, int.MaxValue))).StatusCode.Should().Be(HttpStatusCode.NotFound);
             (await OwnOperationsAsync(author)).Should().BeEmpty();
-            var without = await author.PostAsJsonAsync("/api/employees", Body(null, department.Id));
+            var without = await author.CreateSafeEmployeeAsync("/api/employees", Body(null, department.Id));
             without.StatusCode.Should().Be(HttpStatusCode.Created);
             (await OwnOperationsAsync(author)).Should().BeEmpty("geçmiş işlemlere kaynak tahmin edilmez");
-            var created = await author.PostAsJsonAsync("/api/employees", Body(source.Content.Id, department.Id));
+            var created = await author.CreateSafeEmployeeAsync("/api/employees", Body(source.Content.Id, department.Id));
             created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
             var employee = (await created.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
             var own = (await OwnOperationsAsync(author)).Should().ContainSingle().Subject;
@@ -63,7 +63,7 @@ public sealed partial class GuidanceCatalogTests
             (await PublishAsync(reviewer, next)).StatusCode.Should().Be(HttpStatusCode.OK);
             var historical = (await OwnOperationsAsync(author)).Should().ContainSingle().Subject;
             historical.IsCurrent.Should().BeFalse(); historical.Evidence.Should().BeEquivalentTo(own.Evidence);
-            (await author.PostAsJsonAsync("/api/employees", Body(source.Content.Id, department.Id))).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await author.CreateSafeEmployeeAsync("/api/employees", Body(source.Content.Id, department.Id))).StatusCode.Should().Be(HttpStatusCode.Conflict);
             (await OwnOperationsAsync(author)).Should().ContainSingle();
             using var scope = Factory.Services.GetRequiredService<ITenantScopeFactory>().Create(team.TenantId);
             var db = scope.Services.GetRequiredService<IApplicationDbContext>();
@@ -166,7 +166,7 @@ public sealed partial class GuidanceCatalogTests
             var source = await PublishOperationSourceAsync(author, reviewer, "recruitment", "first-review");
             var candidate = (await (await author.PostAsJsonAsync("/api/candidates", new { name = "Kaynak sınırı", appliedRole = "Uzman" })).Content.ReadFromJsonAsync<CandidateDetailDto>())!;
             var input = new { status = "Mülakat", expectedVersion = candidate.Version, reason = "Kontrol", guidanceContentRevisionId = source.Content.Id };
-            (await author.PostAsJsonAsync("/api/employees", new { firstName = "Yanlış", lastName = "Adım", title = "Uzman", departmentId = 1,
+            (await author.CreateSafeEmployeeAsync("/api/employees", new { firstName = "Yanlış", lastName = "Adım", title = "Uzman", departmentId = 1,
                 hireDate = GuidanceContentCatalog.Today, guidanceContentRevisionId = source.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
             using (var scope = Factory.Services.CreateScope())
             {

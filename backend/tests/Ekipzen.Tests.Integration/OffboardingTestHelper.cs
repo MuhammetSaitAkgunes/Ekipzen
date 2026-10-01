@@ -30,7 +30,7 @@ internal static class OffboardingTestHelper
         var draft = (await draftResponse.Content
             .ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
 
-        var completeResponse = await client.PostAsJsonAsync(
+        var completeResponse = await client.ApplyReviewedOffboardingAsync(
             $"/api/employees/{employeeId}/offboarding/{draft.Id}/complete",
             new { expectedVersion = draft.Version });
         completeResponse.StatusCode.Should().Be(HttpStatusCode.OK);

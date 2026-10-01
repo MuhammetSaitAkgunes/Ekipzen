@@ -60,7 +60,7 @@ public sealed class MyDataExportTests(EkipzenApiFactory factory)
 
         var departments = await admin.GetFromJsonAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
             "/api/departments");
-        var created = await admin.PostAsJsonAsync("/api/employees", new
+        var created = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Dışa", lastName = "Aktarım", title = "Uzman",
             departmentId = departments![0].Id, hireDate = "2026-09-24",

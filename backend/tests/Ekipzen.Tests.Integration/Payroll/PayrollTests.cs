@@ -248,7 +248,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
             admin, "Eksik", "Puantaj", departmentId, "2026-09-30");
 
         // --- dönem oluştur ---
-        var createResponse = await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 });
+        var createResponse = await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 9 });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created,
             await createResponse.Content.ReadAsStringAsync());
         var period = (await createResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!;
@@ -285,10 +285,10 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         var incompleteRow = period.Rows.Single(r => r.EmployeeId == incompleteEmployee.Id);
         incompleteRow.TimesheetComplete.Should().BeFalse();
 
-        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 9 }))
+        (await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 9 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict, "aynı dönem ikinci kez açılamaz");
 
-        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 }))
+        (await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 10 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict,
                 "en son dönem onaylanmadan ileri dönem açılamaz");
 
@@ -436,7 +436,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
                 .StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 }))
+        (await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 10 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict,
                 "tüm satırlar onaylansa bile dönem gönderilmeden yenisi açılamaz");
 
@@ -475,8 +475,8 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         // İki farklı ileri ay aynı anda istense bile tenant başına kilit yalnız
         // birini açar; diğeri kilit sonrasında güncel sırayı görüp 409 alır.
         var concurrentResponses = await Task.WhenAll(
-            admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 }),
-            admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 11 }));
+            admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 10 }),
+            admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 11 }));
         concurrentResponses.Count(response => response.StatusCode == HttpStatusCode.Created).Should().Be(1);
         concurrentResponses.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
         var nextPeriod = (await concurrentResponses
@@ -491,7 +491,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         nextPeriod.Rows.Select(r => r.Name).Should().NotContain(departingEmployee.Name,
             "ayrılış ayından sonraki bordrolara pasif personel taşınmaz");
 
-        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 8 }))
+        (await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 8 }))
             .StatusCode.Should().Be(HttpStatusCode.Conflict,
                 "en son dönemden geriye doğru dönem açılamaz");
 
@@ -691,7 +691,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         int departmentId,
         string hireDate)
     {
-        var response = await admin.PostAsJsonAsync("/api/employees", new
+        var response = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName,
             lastName,

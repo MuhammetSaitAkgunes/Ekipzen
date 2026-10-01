@@ -471,12 +471,19 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("CreationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
                     b.Property<string>("GuidanceSnapshotJson")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("RequestFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -495,6 +502,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "UserId", "CreationRequestId")
+                        .IsUnique()
+                        .HasFilter("[CreationRequestId] IS NOT NULL");
 
                     b.HasIndex("TenantId", "UserId", "EmployeeId")
                         .IsUnique();

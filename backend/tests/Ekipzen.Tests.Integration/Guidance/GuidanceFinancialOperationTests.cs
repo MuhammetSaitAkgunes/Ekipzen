@@ -45,10 +45,10 @@ public sealed partial class GuidanceCatalogTests
                             CheckIn = new TimeOnly(9, 0), CheckOut = new TimeOnly(18, 0), BreakMinutes = 60, WorkedMinutes = 480 });
                 await db.SaveChangesAsync(CancellationToken.None);
             }
-            (await author.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10, guidanceContentRevisionId = approval.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await author.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 10, guidanceContentRevisionId = approval.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
             (await OwnOperationsAsync(author)).Should().BeEmpty();
             var body = new { year = 2026, month = 10, guidanceContentRevisionId = createSource.Content.Id };
-            var created = await Task.WhenAll(author.PostAsJsonAsync("/api/payroll/periods", body), author.PostAsJsonAsync("/api/payroll/periods", body));
+            var created = await Task.WhenAll(author.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", body), author.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", body));
             created.Select(x => x.StatusCode).Should().BeEquivalentTo([HttpStatusCode.Created, HttpStatusCode.Conflict]);
             var period = (await created.Single(x => x.StatusCode == HttpStatusCode.Created).Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(FinancialJsonOptions))!;
             var row = period.Rows.Should().ContainSingle().Subject;
@@ -98,16 +98,16 @@ public sealed partial class GuidanceCatalogTests
             var draft = (await draftResponse.Content.ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
             (await OwnOperationsAsync(author)).Should().BeEmpty("draft is not completion");
             var path = $"/api/employees/{employee.Id}/offboarding/{draft.Id}";
-            (await author.PostAsJsonAsync(path + "/complete", new { expectedVersion = draft.Version, guidanceContentRevisionId = reversal.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await author.ApplyReviewedOffboardingAsync(path + "/complete", new { expectedVersion = draft.Version, guidanceContentRevisionId = reversal.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
             var body = new { expectedVersion = draft.Version, guidanceContentRevisionId = completion.Content.Id };
-            var completed = await Task.WhenAll(author.PostAsJsonAsync(path + "/complete", body), author.PostAsJsonAsync(path + "/complete", body));
+            var completed = await Task.WhenAll(author.ApplyReviewedOffboardingAsync(path + "/complete", body), author.ApplyReviewedOffboardingAsync(path + "/complete", body));
             completed.Select(x => x.StatusCode).Should().BeEquivalentTo([HttpStatusCode.OK, HttpStatusCode.Conflict]);
             var item = (await completed.Single(x => x.StatusCode == HttpStatusCode.OK).Content.ReadFromJsonAsync<EmployeeOffboardingCaseDto>())!;
-            (await author.PostAsJsonAsync(path + "/reverse", new { expectedVersion = draft.Version, reason = "Bayat sürüm", guidanceContentRevisionId = reversal.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await author.ApplyReviewedOffboardingAsync(path + "/reverse", new { expectedVersion = draft.Version, reason = "Bayat sürüm", guidanceContentRevisionId = reversal.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
             (await OwnOperationsAsync(author)).Should().ContainSingle();
-            var reversed = await author.PostAsJsonAsync(path + "/reverse", new { expectedVersion = item.Version, reason = "Hatalı tarih doğrulandı", guidanceContentRevisionId = reversal.Content.Id });
+            var reversed = await author.ApplyReviewedOffboardingAsync(path + "/reverse", new { expectedVersion = item.Version, reason = "Hatalı tarih doğrulandı", guidanceContentRevisionId = reversal.Content.Id });
             reversed.StatusCode.Should().Be(HttpStatusCode.OK, await reversed.Content.ReadAsStringAsync());
-            (await author.PostAsJsonAsync(path + "/reverse", new { expectedVersion = item.Version, reason = "Tekrar", guidanceContentRevisionId = reversal.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await author.ApplyReviewedOffboardingAsync(path + "/reverse", new { expectedVersion = item.Version, reason = "Tekrar", guidanceContentRevisionId = reversal.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
             var history = await OwnOperationsAsync(author); history.Should().HaveCount(2);
             history.Should().Contain(x => x.Evidence.OperationKey == "offboarding-complete" && x.Evidence.Outcome == "completed" && x.Evidence.Content.ContentRevisionId == completion.Content.Id);
             history.Should().Contain(x => x.Evidence.OperationKey == "offboarding-reverse" && x.Evidence.Outcome == "reversed" && x.Evidence.Content.ContentRevisionId == reversal.Content.Id);

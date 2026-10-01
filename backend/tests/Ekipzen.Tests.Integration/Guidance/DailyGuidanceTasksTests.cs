@@ -162,7 +162,7 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
         var start = today.AddDays(-1);
         var departments = await GetAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
             admin, "/api/departments");
-        var created = await admin.PostAsJsonAsync("/api/employees", new
+        var created = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Ücret", lastName = "Takip " + Guid.NewGuid().ToString("N"),
             title = "Uzman", departmentId = departments[0].Id,
@@ -217,7 +217,7 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
         var departments = await GetAsync<List<Ekipzen.Application.Features.Departments.DepartmentDto>>(
             admin, "/api/departments");
-        var created = await admin.PostAsJsonAsync("/api/employees", new
+        var created = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Ayrılış", lastName = "Taslak " + Guid.NewGuid().ToString("N"),
             title = "Uzman", departmentId = departments[0].Id,
@@ -257,7 +257,7 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
         (await GetAsync<List<DailyGuidanceTaskDto>>(manager, Url))
             .Should().NotContain(task => task.Key == key, "yönetici ayrılış vakasını tamamlayamaz");
 
-        var completed = await admin.PostAsJsonAsync(
+        var completed = await admin.ApplyReviewedOffboardingAsync(
             $"/api/employees/{employee.Id}/offboarding/{draft.Id}/complete",
             new { expectedVersion = draft.Version });
         completed.StatusCode.Should().Be(HttpStatusCode.OK, await completed.Content.ReadAsStringAsync());

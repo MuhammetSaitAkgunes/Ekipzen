@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -27,6 +30,7 @@ public sealed class CreateEmployeeCommandValidator : AbstractValidator<CreateEmp
 
         When(x => x.Model is not null, () =>
         {
+            RuleFor(x => x.Model!.CreationRequestId).NotNull().NotEqual(Guid.Empty);
             RuleFor(x => x.Model!.Status)
                 .Equal("active")
                 .WithMessage("Yeni personel aktif oluşturulmalı; pasife alma için durum işlemini kullanın.");
@@ -40,57 +44,85 @@ public sealed class CreateEmployeeCommandHandler(
     ICurrentUser currentUser,
     INotificationTrigger notificationTrigger,
     IIdentityProvisioningProcessor provisioningProcessor,
-    GuidanceOperationContext guidance)
+    GuidanceOperationContext guidance, IDatabaseLock databaseLock)
     : IRequestHandler<CreateEmployeeCommand, EmployeeDetailDto>
 {
     public async Task<EmployeeDetailDto> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
     {
         var model = request.Model;
-
-        await EmployeeUpsertGuards.EnsureReferencesAsync(context, model, employeeId: null, cancellationToken);
-
-        var roleOperations = new List<IdentityProvisioningOperation>();
-        if (model.ManagerId is int managerId)
+        var userId = currentUser.UserId ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
+        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(model with { CreationRequestId = null }))));
+        var result = await databaseLock.ExecuteExclusiveAsync($"employee-create:{userId}:{model.CreationRequestId}", async token =>
         {
-            roleOperations.Add(ManagerRoleProvisioning.Enqueue(context, managerId, isManager: true));
+            var existing = await context.EmployeeCreationEvidences.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.UserId == userId && x.CreationRequestId == model.CreationRequestId, token);
+            if (existing != null)
+            {
+                if (existing.RequestFingerprint != fingerprint)
+                    throw new ConflictException("Bu gönderimle personel zaten kaydedildi; önceki kayıt sonucunu açıp çalışan kartından düzeltin.");
+                return (EmployeeId: existing.EmployeeId, Created: false, Operations: new List<IdentityProvisioningOperation>());
+            }
+            await EmployeeUpsertGuards.EnsureReferencesAsync(context, model, employeeId: null, token);
+            var roleOperations = new List<IdentityProvisioningOperation>();
+            if (model.ManagerId is int managerId)
+            {
+                roleOperations.Add(ManagerRoleProvisioning.Enqueue(context, managerId, isManager: true));
+            }
+
+            var employee = new Employee
+            {
+                FirstName = model.FirstName.Trim(),
+                LastName = model.LastName.Trim(),
+                Title = model.Title.Trim(),
+                NationalId = model.NationalId,
+                DepartmentId = model.DepartmentId,
+                ManagerId = model.ManagerId,
+                HireDate = model.HireDate,
+                ContractType = EmployeeEmploymentMappings.ParseContractType(model.ContractType),
+                Status = EmployeeMappings.ParseStatus(model.Status),
+                Profile = EmployeeUpsertGuards.MapProfile(new EmployeeProfile(), model.Profile),
+            };
+            employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+            {
+                StartDate = employee.HireDate,
+                ContractType = employee.ContractType,
+            });
+
+            context.Employees.Add(employee);
+            var creationEvidence = new EmployeeCreationEvidence
+            {
+                UserId = userId,
+                CreationRequestId = model.CreationRequestId,
+                RequestFingerprint = fingerprint,
+                Employee = employee,
+            };
+            guidance.Stamp(creationEvidence);
+            context.EmployeeCreationEvidences.Add(creationEvidence);
+            await context.SaveChangesAsync(token);
+
+            return (EmployeeId: employee.Id, Created: true, Operations: roleOperations);
+        }, cancellationToken);
+        await ManagerRoleProvisioning.ProcessNowAsync(provisioningProcessor, result.Operations, cancellationToken);
+        if (result.Created)
+        {
+            var employee = await context.Employees.SingleAsync(x => x.Id == result.EmployeeId, cancellationToken);
+            await notificationTrigger.NewPersonnelCreatedAsync(employee, cancellationToken);
         }
+        return await sender.Send(new GetEmployeeQuery(result.EmployeeId), cancellationToken);
+    }
+}
 
-        var employee = new Employee
-        {
-            FirstName = model.FirstName.Trim(),
-            LastName = model.LastName.Trim(),
-            Title = model.Title.Trim(),
-            NationalId = model.NationalId,
-            DepartmentId = model.DepartmentId,
-            ManagerId = model.ManagerId,
-            HireDate = model.HireDate,
-            ContractType = EmployeeEmploymentMappings.ParseContractType(model.ContractType),
-            Status = EmployeeMappings.ParseStatus(model.Status),
-            Profile = EmployeeUpsertGuards.MapProfile(new EmployeeProfile(), model.Profile),
-        };
-        employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
-        {
-            StartDate = employee.HireDate,
-            ContractType = employee.ContractType,
-        });
-
-        var userId = currentUser.UserId
-            ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
-        context.Employees.Add(employee);
-        var creationEvidence = new EmployeeCreationEvidence
-        {
-            UserId = userId,
-            Employee = employee,
-        };
-        guidance.Stamp(creationEvidence);
-        context.EmployeeCreationEvidences.Add(creationEvidence);
-        await context.SaveChangesAsync(cancellationToken);
-
-        await ManagerRoleProvisioning.ProcessNowAsync(provisioningProcessor, roleOperations, cancellationToken);
-        // Faz 11: "Yeni Personel Kaydı" bildirimi (ayar toggle'ına uyar).
-        await notificationTrigger.NewPersonnelCreatedAsync(employee, cancellationToken);
-
-        return await sender.Send(new GetEmployeeQuery(employee.Id), cancellationToken);
+public sealed record GetEmployeeCreationResultQuery(Guid RequestId) : IRequest<EmployeeDetailDto?>;
+public sealed class GetEmployeeCreationResultQueryHandler(IApplicationDbContext context, ICurrentUser user, ISender sender)
+    : IRequestHandler<GetEmployeeCreationResultQuery, EmployeeDetailDto?>
+{
+    public async Task<EmployeeDetailDto?> Handle(GetEmployeeCreationResultQuery request, CancellationToken ct)
+    {
+        var id = await context.EmployeeCreationEvidences.AsNoTracking()
+            .Where(x => x.UserId == user.UserId && x.CreationRequestId == request.RequestId)
+            .Select(x => (int?)x.EmployeeId).SingleOrDefaultAsync(ct);
+        return id is int employeeId ? await sender.Send(new GetEmployeeQuery(employeeId), ct) : null;
     }
 }
 

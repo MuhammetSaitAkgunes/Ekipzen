@@ -148,7 +148,7 @@ public sealed partial class GuidanceCatalogTests
     private static async Task<EmployeeDetailDto> CreateProofEmployeeAsync(HttpClient client)
     {
         var department = (await (await client.PostAsJsonAsync("/api/departments", new { name = "İşlem kanıtı ekibi" })).Content.ReadFromJsonAsync<DepartmentDto>())!;
-        var response = await client.PostAsJsonAsync("/api/employees", new { firstName = "Gerçek", lastName = "Kayıt", title = "Uzman", departmentId = department.Id, hireDate = "2026-01-01", contractType = "indefinite" });
+        var response = await client.CreateSafeEmployeeAsync("/api/employees", new { firstName = "Gerçek", lastName = "Kayıt", title = "Uzman", departmentId = department.Id, hireDate = "2026-01-01", contractType = "indefinite" });
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<EmployeeDetailDto>())!;
     }

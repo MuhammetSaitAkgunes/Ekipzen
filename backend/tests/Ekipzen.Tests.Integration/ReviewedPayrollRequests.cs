@@ -36,6 +36,27 @@ internal static class ReviewedPayrollRequests
         payload["expectedPreviewToken"] = preview.IsSuccessStatusCode ? JsonNode.Parse(await preview.Content.ReadAsStringAsync())?["token"]?.GetValue<string>() : "unavailable";
         return await client.PostAsJsonAsync(path, payload, Options);
     }
+    public static async Task<HttpResponseMessage> CreateReviewedPayrollPeriodAsync(this HttpClient client, string path, object body)
+    {
+        var payload = JsonSerializer.SerializeToNode(body, Options)!.AsObject();
+        var preview = await client.GetAsync(path + "/creation-preview?year=" + payload["year"] + "&month=" + payload["month"]);
+        payload["expectedPreviewToken"] = preview.IsSuccessStatusCode ? JsonNode.Parse(await preview.Content.ReadAsStringAsync())?["token"]?.GetValue<string>() : "unavailable";
+        return await client.PostAsJsonAsync(path, payload, Options);
+    }
+    public static async Task<HttpResponseMessage> CreateSafeEmployeeAsync(this HttpClient client, string path, object body)
+    {
+        var payload = JsonSerializer.SerializeToNode(body, Options)!.AsObject();
+        payload["creationRequestId"] ??= Guid.NewGuid().ToString();
+        return await client.PostAsJsonAsync(path, payload, Options);
+    }
+    public static async Task<HttpResponseMessage> ApplyReviewedOffboardingAsync(this HttpClient client, string path, object body)
+    {
+        var payload = JsonSerializer.SerializeToNode(body, Options)!.AsObject();
+        var previewPath = path.EndsWith("/complete", StringComparison.Ordinal) ? path[..^9] + "/completion-preview" : path[..^8] + "/reversal-preview";
+        var preview = await client.GetAsync(previewPath);
+        payload["expectedPreviewToken"] = preview.IsSuccessStatusCode ? JsonNode.Parse(await preview.Content.ReadAsStringAsync())?["token"]?.GetValue<string>() : "unavailable";
+        return await client.PostAsJsonAsync(path, payload, Options);
+    }
     private static async Task<JsonObject> WithRevision(HttpClient client, string path, object? body)
     {
         var payload = body is null ? new JsonObject() : JsonSerializer.SerializeToNode(body, Options)!.AsObject();

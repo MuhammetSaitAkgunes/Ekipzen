@@ -277,7 +277,7 @@ public sealed class AttendanceTests(EkipzenApiFactory factory)
         var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
         var suffix = Guid.NewGuid().ToString("N")[..8];
 
-        var createEmployeeResponse = await admin.PostAsJsonAsync("/api/employees", new
+        var createEmployeeResponse = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Puantaj",
             lastName = $"Sinir{suffix}",

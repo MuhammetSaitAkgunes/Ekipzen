@@ -66,6 +66,9 @@ public sealed class EmployeeCreationEvidenceConfiguration : IEntityTypeConfigura
 {
     public void Configure(EntityTypeBuilder<EmployeeCreationEvidence> builder)
     {
+        builder.Property(item => item.RequestFingerprint).HasMaxLength(64);
+        builder.HasIndex(item => new { item.TenantId, item.UserId, item.CreationRequestId }).IsUnique()
+            .HasFilter("[CreationRequestId] IS NOT NULL");
         builder.Property(item => item.UserId).IsRequired().HasMaxLength(450);
         builder.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         builder.HasIndex(item => new { item.TenantId, item.UserId, item.EmployeeId }).IsUnique();

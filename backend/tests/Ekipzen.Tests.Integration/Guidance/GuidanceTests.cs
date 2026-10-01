@@ -56,7 +56,7 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
         seededEvidence.CreatedByCurrentUser.Should().BeFalse();
 
         var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
-        var created = await admin.PostAsJsonAsync("/api/employees", new
+        var created = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Rehber", lastName = "Kanıt", title = "Uzman",
             departmentId = departments[0].Id, hireDate = "2026-09-24",
@@ -90,7 +90,7 @@ public sealed class GuidanceTests(EkipzenApiFactory factory)
             "sekme seçmek gerçek işlem kanıtı değildir");
 
         var departments = await GetAsync<List<DepartmentDto>>(admin, "/api/departments");
-        var created = await admin.PostAsJsonAsync("/api/employees", new
+        var created = await admin.CreateSafeEmployeeAsync("/api/employees", new
         {
             firstName = "Yolculuk", lastName = "Kanıt", title = "Uzman",
             departmentId = departments[0].Id, hireDate = "2026-09-24",

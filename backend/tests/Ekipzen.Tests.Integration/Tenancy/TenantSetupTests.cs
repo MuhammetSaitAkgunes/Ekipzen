@@ -62,7 +62,7 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
         draft.TaxBrackets.Should().HaveCount(5);
         (await admin.PostAsJsonAsync($"/api/payroll/settings/{draft.Id}/approve",
             new { id = draft.Id, expectedVersion = draft.Version })).StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 1 }))
+        (await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 1 }))
             .StatusCode.Should().Be(HttpStatusCode.NotFound, "taslak hesaplara giremez");
 
         var body = JsonSerializer.SerializeToNode(draft, JsonOptions)!.AsObject();
@@ -81,14 +81,14 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
         var department = (await departmentResponse.Content.ReadFromJsonAsync<JsonObject>())!;
         for (var i = 1; i <= 10; i++)
         {
-            var response = await admin.PostAsJsonAsync("/api/employees", new
+            var response = await admin.CreateSafeEmployeeAsync("/api/employees", new
             {
                 firstName = $"Personel{i}", lastName = "Pilot", title = "Muhasebe Personeli",
                 departmentId = department["id"]!.GetValue<int>(), hireDate = "2026-01-01",
             });
             response.StatusCode.Should().Be(HttpStatusCode.Created);
         }
-        var periodResponse = await admin.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 1 });
+        var periodResponse = await admin.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 1 });
         periodResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var period = (await periodResponse.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(JsonOptions))!;
         period.Status.Should().Be("draft");

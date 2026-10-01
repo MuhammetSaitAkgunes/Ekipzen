@@ -79,7 +79,7 @@ public sealed partial class GuidanceCatalogTests
             settings.ApprovedAtUtc = DateTime.UtcNow; settings.ApprovedByUserId = "fixture";
             await db.SaveChangesAsync(CancellationToken.None);
         }
-        var created = await owner.PostAsJsonAsync("/api/payroll/periods", new { year = 2026, month = 10 });
+        var created = await owner.CreateReviewedPayrollPeriodAsync("/api/payroll/periods", new { year = 2026, month = 10 });
         created.StatusCode.Should().Be(HttpStatusCode.Created);
         var detail = (await created.Content.ReadFromJsonAsync<PayrollPeriodDetailDto>(FinancialJsonOptions))!;
         var period = detail;
