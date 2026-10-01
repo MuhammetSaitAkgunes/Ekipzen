@@ -10,8 +10,8 @@ export type GuidanceOperationEvidence = {
   content: { contentRevisionId: number; contentKey: string; processKey: string; stepKey: string; contentVersion: number; title: string };
 };
 export type GuidanceOperationHistory = { evidence: GuidanceOperationEvidence; isCurrent: boolean };
-export const useGuidanceOperations = (userId?: string | null) => useQuery({
-  queryKey: [...guidanceOperationsKey, userId], enabled: !!userId,
+export const useGuidanceOperations = (userId?: string | null, enabled = true) => useQuery({
+  queryKey: [...guidanceOperationsKey, userId], enabled: !!userId && enabled,
   queryFn: () => apiFetch<GuidanceOperationHistory[]>("/guidance/operations"),
 });
 export const useGuidanceOperationSources = (process: string, userId?: string | null, enabled = false) => useQuery({

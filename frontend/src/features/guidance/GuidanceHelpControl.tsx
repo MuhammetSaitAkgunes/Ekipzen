@@ -4,7 +4,7 @@ import { processTitles } from "./catalogQueries";
 import { guidanceProcessPath } from "./processNavigation";
 import { useGuidanceHelpPreferences, useSaveGuidanceHelpPreference } from "./helpQueries";
 
-export function GuidanceHelpControl({ process, children }: { process: string; children?: (compact: boolean) => ReactNode }) {
+export function GuidanceHelpControl({ process, children, adaptiveReady = false }: { process: string; adaptiveReady?: boolean; children?: (compact: boolean) => ReactNode }) {
   const { user } = useAuth(); const name = useId();
   const query = useGuidanceHelpPreferences(user?.id);
   const save = useSaveGuidanceHelpPreference(user?.id);
@@ -13,10 +13,10 @@ export function GuidanceHelpControl({ process, children }: { process: string; ch
   return <div>
     <fieldset disabled={!query.isSuccess || save.isPending}>
       <legend>{processTitles[process]} anlatım tercihim</legend>
-      {(["detailed", "compact"] as const).map(value => <label key={value} className="ez-guidance-inline">
+      {(["detailed", "compact", "adaptive"] as const).map(value => <label key={value} className="ez-guidance-inline">
         <input type="radio" name={name} checked={mode === value} onChange={() => {
           save.mutate({ processKey: process, mode: value, expectedRevision: stored?.revision ?? 0 });
-        }} />{value === "detailed" ? "Ayrıntılı anlatım" : "Kısa anlatım"}
+        }} />{value === "detailed" ? "Ayrıntılı anlatım" : value === "compact" ? "Kısa anlatım" : "Uyarlanan anlatım"}
       </label>)}
     </fieldset>
     <p>Kısa anlatımda kaynaklı adımların uzun örnekleri isteğe bağlı açılır. İşlem, ön koşul, gerekçe, dayanak, düzeltme ve uzman yönlendirmeleri görünür kalır. Bu seçim yeterlilik veya işin tamamlandığı anlamına gelmez.</p>
@@ -24,7 +24,8 @@ export function GuidanceHelpControl({ process, children }: { process: string; ch
     {query.isError && <p role="alert">Tercihiniz yüklenemedi; ayrıntılı anlatım gösteriliyor. <button type="button" onClick={() => void query.refetch()}>Tercihi yeniden yükle</button></p>}
     {save.isError && <p role="alert">{save.error.message} <button type="button" onClick={() => { save.reset(); void query.refetch(); }}>Güncel tercihi yeniden yükle</button></p>}
     {save.isSuccess && <p role="status">Anlatım tercihiniz kaydedildi.</p>}
-    {children?.(mode === "compact")}
+    {mode === "adaptive" && <p role="status">{adaptiveReady ? "Bu adımın güncel sürümünde kendi doğru alıştırma yanıtınız ve gerçek işlem kanıtınız var; uzun örneği istediğiniz zaman açabilirsiniz." : "Bu adımın güncel sürümünde kendi doğru alıştırma yanıtınız ve gerçek işlem kanıtınız birlikte doğrulanmadı; ayrıntılı örnek açık kalır."} Bu bir yeterlilik onayı değildir.</p>}
+    {children?.(mode === "compact" || (mode === "adaptive" && adaptiveReady))}
   </div>;
 }
 

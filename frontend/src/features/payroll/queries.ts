@@ -1,3 +1,4 @@
+import { guidanceOperationsKey } from "../guidance/operationQueries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
@@ -36,7 +37,7 @@ export const usePayrollPeriod = (id: number | null) =>
 export const useCreatePayrollPeriod = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (command: { year: number; month: number }) =>
+    mutationFn: (command: { year: number; month: number; guidanceContentRevisionId?: number }) =>
       apiFetch<PayrollPeriodDetailDto>("/payroll/periods", {
         method: "POST",
         body: JSON.stringify(command),
@@ -44,6 +45,7 @@ export const useCreatePayrollPeriod = () => {
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -59,6 +61,7 @@ export const useUpdatePayrollRow = () => {
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -74,6 +77,7 @@ export const useRunPayrollCheck = () => {
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -81,14 +85,15 @@ export const useRunPayrollCheck = () => {
 export const useApprovePayrollRow = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ periodId, rowId }: { periodId: number; rowId: number }) =>
+    mutationFn: ({ periodId, rowId, guidanceContentRevisionId }: { periodId: number; rowId: number; guidanceContentRevisionId?: number }) =>
       apiFetch<PayrollRowDto>(`/payroll/periods/${periodId}/rows/${rowId}/approve`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({ guidanceContentRevisionId }),
       }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -96,14 +101,15 @@ export const useApprovePayrollRow = () => {
 export const useSubmitPayrollPeriod = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (periodId: number) =>
-      apiFetch<PayrollPeriodDetailDto>(`/payroll/periods/${periodId}/submit`, {
+    mutationFn: (input: number | { periodId: number; guidanceContentRevisionId?: number }) =>
+      apiFetch<PayrollPeriodDetailDto>(`/payroll/periods/${typeof input === "number" ? input : input.periodId}/submit`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify(typeof input === "number" ? {} : { guidanceContentRevisionId: input.guidanceContentRevisionId }),
       }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };

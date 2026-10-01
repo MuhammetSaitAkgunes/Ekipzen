@@ -710,17 +710,19 @@ export const useGenerateOffboardingCalculationDraft = () => {
 export const useCompleteOffboarding = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, caseId, expectedVersion }: {
+    mutationFn: ({ employeeId, caseId, expectedVersion, guidanceContentRevisionId }: {
       employeeId: number;
       caseId: number;
       expectedVersion: number;
+      guidanceContentRevisionId?: number;
     }) => apiFetch<EmployeeOffboardingCaseDto>(
       `/employees/${employeeId}/offboarding/${caseId}/complete`,
-      { method: "POST", body: JSON.stringify({ expectedVersion }) },
+      { method: "POST", body: JSON.stringify({ expectedVersion, guidanceContentRevisionId }) },
     ),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -728,18 +730,20 @@ export const useCompleteOffboarding = () => {
 export const useReverseOffboarding = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, caseId, expectedVersion, reason }: {
+    mutationFn: ({ employeeId, caseId, expectedVersion, reason, guidanceContentRevisionId }: {
       employeeId: number;
       caseId: number;
       expectedVersion: number;
+      guidanceContentRevisionId?: number;
       reason: string;
     }) => apiFetch<EmployeeOffboardingCaseDto>(
       `/employees/${employeeId}/offboarding/${caseId}/reverse`,
-      { method: "POST", body: JSON.stringify({ expectedVersion, reason }) },
+      { method: "POST", body: JSON.stringify({ expectedVersion, reason, guidanceContentRevisionId }) },
     ),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };

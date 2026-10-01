@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
@@ -76,6 +77,8 @@ export function OffboardingModal({ employeeId, onClose }: {
   const [manualOverride, setManualOverride] = useState(false);
   const [reversalReason, setReversalReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
+  const [reverseGuidanceVersion, setReverseGuidanceVersion] = useState<number | null>(null);
   const [completionReview, setCompletionReview] = useState(false);
   const [completionAcknowledged, setCompletionAcknowledged] = useState(false);
   const [reverseReview, setReverseReview] = useState(false);
@@ -189,6 +192,7 @@ export function OffboardingModal({ employeeId, onClose }: {
           employeeId,
           caseId: currentCase.id,
           expectedVersion: currentCase.version,
+          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
         });
         showToast("İşten çıkış dosyası tamamlandı; erişim ve rol işleri güvenli kuyruğa alındı.", "success");
         onClose();
@@ -205,6 +209,7 @@ export function OffboardingModal({ employeeId, onClose }: {
           employeeId,
           caseId: saved.id,
           expectedVersion: saved.version,
+          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
         });
         showToast("İşten çıkış dosyası tamamlandı; erişim ve rol işleri güvenli kuyruğa alındı.", "success");
       } else {
@@ -289,6 +294,7 @@ export function OffboardingModal({ employeeId, onClose }: {
         caseId: completedCase.id,
         expectedVersion: completedCase.version,
         reason: reversalReason.trim(),
+        ...(reverseGuidanceVersion === null ? {} : { guidanceContentRevisionId: reverseGuidanceVersion }),
       });
       showToast("İşten çıkış kontrollü biçimde geri alındı; erişim işlemlerinin durumunu kontrol edin.", "success");
       onClose();
@@ -395,6 +401,7 @@ export function OffboardingModal({ employeeId, onClose }: {
               </div>}
               {!context.hasSettlementRevisions && reverseReview && <section className="ez-offboarding-review" role="region" aria-label="Geri almadan önce kontrol edin">
                 <h4>Geri almadan önce kontrol edin</h4>
+                <GuidanceOperationSource process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={setReverseGuidanceVersion} disabled={isBusy} />
                 <p><strong>Personel:</strong> {context.employeeName} · <strong>Dosya:</strong> #{completedCase.id} · <strong>Gerekçe:</strong> {reversalReason.trim()}</p>
                 <p>Sunucu, personel durumunu ve kapanan istihdam/ücret dönemini geri açmayı, değişmeyen ekip bağlarını geri kurmayı ve erişim işlemlerini kuyruğa almayı dener. Arada değişmiş kayıt varsa güvenli geri almayı reddeder.</p>
                 <p>Uygulama dışındaki bildirimler ve yapılmış ödemeler otomatik geri alınmaz; bunları ilgili uzmanla ayrıca değerlendirin.</p>
@@ -538,6 +545,7 @@ export function OffboardingModal({ employeeId, onClose }: {
               </div>
               </fieldset>
 
+              <GuidanceOperationSource process="offboarding" step="completion" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setCompletionAcknowledged(false); }} disabled={isBusy} />
               {completionReview && <section className="ez-offboarding-review" role="region" aria-label="Tamamlamadan önce kontrol edin">
                 <h4>Tamamlamadan önce kontrol edin</h4>
                 <p><strong>Personel:</strong> {context.employeeName} · <strong>Ayrılış:</strong> {terminationDate} · <strong>Çıkış kodu:</strong> {exitCode.trim()}</p>

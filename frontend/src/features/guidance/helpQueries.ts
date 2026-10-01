@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 
-export type GuidanceHelpPreference = { processKey: string; mode: "detailed" | "compact"; revision: number };
+export type GuidanceHelpPreference = { processKey: string; mode: "detailed" | "compact" | "adaptive"; revision: number };
 export const useGuidanceHelpPreferences = (userId?: string | null) => useQuery({
   queryKey: ["guidance", "help-preferences", userId], enabled: !!userId,
   queryFn: () => apiFetch<GuidanceHelpPreference[]>("/guidance/help-preferences"),

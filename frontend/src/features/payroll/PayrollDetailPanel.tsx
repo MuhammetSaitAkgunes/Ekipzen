@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError, apiDownload, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -75,6 +76,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   });
   const [savedForm] = useState(form);
   const [reviewRow, setReviewRow] = useState<PayrollRowDto | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const hasUnsavedChanges = JSON.stringify(form) !== JSON.stringify(savedForm);
@@ -157,7 +159,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     if (!reviewRow || !reviewConfirmed || hasUnsavedChanges) return;
     setError(null);
     try {
-      await approveRow.mutateAsync({ periodId, rowId });
+      await approveRow.mutateAsync({ periodId, rowId, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
       showToast(`${row.name} bordrosu kanuni kapılardan geçerek onaylandı.`, "success");
       onClose();
     } catch (caught) {
@@ -376,6 +378,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
                 <p><strong>Puantaj:</strong> {reviewRow.timesheetComplete ? "Sistem kontrolü tamam" : "Sistem kontrolünde eksik"} · <strong>IBAN:</strong> {reviewRow.ibanComplete ? "Tamam" : "Eksik"}</p>
                 {(reviewRow.warnings ?? []).length > 0 && <div><strong>Hesap uyarıları:</strong><ul>{reviewRow.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
                 <p>Bu ön kontrol, sunucunun nihai onay kurallarının yerine geçmez. Eksik veya hatalı kayıt varsa geri dönüp düzeltin; sunucu onay sırasında yeniden denetler.</p>
+                <GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setReviewConfirmed(false); }} disabled={approveRow.isPending} />
                 <label><input type="checkbox" checked={reviewConfirmed} onChange={(e) => setReviewConfirmed(e.target.checked)} /> Kaydedilmiş satırı ve kaynak bilgilerini kontrol ettim.</label>
               </div>
             </div>

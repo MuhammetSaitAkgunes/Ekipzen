@@ -81,3 +81,55 @@ test("tercih yüklenemezse ayrıntılı anlatım korunur; tercih paneli rol kaps
   expect(screen.getByRole("radio", { name: "Ayrıntılı anlatım" })).toBeChecked();
   expect(screen.getByRole("radio", { name: "Kısa anlatım" })).toBeDisabled();
 });
+
+test.each([
+  ["güncel doğru yanıt ve işlem", 21, "task-action", true, true, true],
+  ["önceki sürümün işlemi", 20, "task-action", true, true, false],
+  ["başka adımın işlemi", 21, "task-review", true, true, false],
+  ["yanlış alıştırma yanıtı", 21, "task-action", false, true, false],
+  ["geçmiş içerik", 21, "task-action", true, false, false],
+  ["eksik işlem", 0, "task-action", true, true, false],
+])("uyarlanan anlatım: %s", async (_label, operationId, stepKey, correct, current, compact) => {
+  stubApi({
+    [path]: [{ processKey: "daily", mode: "adaptive", revision: 1 }],
+    "/api/guidance/catalog/versions/21": { ...source, id: 21, isCurrent: current, body: { ...source.body, stepKey: "task-action" } },
+    "/api/guidance/catalog/practice-progress": [{ contentRevisionId: 21, processKey: "daily", stepKey: "task-action", lastCorrect: correct, isCurrent: true }],
+    "/api/guidance/operations": operationId ? [{ isCurrent: true, evidence: { content: { contentRevisionId: operationId, processKey: "daily", stepKey } } }] : [],
+  });
+  renderPage(<AuthProvider><GuidanceStepExplanation id={21} /></AuthProvider>);
+  await waitFor(() => expect(screen.getByRole("radio", { name: "Uyarlanan anlatım" })).toBeChecked());
+  if (compact) {
+    await screen.findByText(/kendi doğru alıştırma yanıtınız ve gerçek işlem kanıtınız var/);
+    expect(screen.getByText("Uzun öğretici örnek")).not.toBeVisible();
+    await userEvent.click(screen.getByText("Ayrıntılı örneği aç"));
+  } else {
+    await screen.findByText(/birlikte doğrulanmadı/);
+  }
+  expect(screen.getByText("Uzun öğretici örnek")).toBeVisible();
+  for (const text of ["Ön koşulu kontrol et", "Yanlış sonucu düzelt", "Dayanak türü: İyi uygulama · Ürün iş akışı"])
+    if (text.startsWith("Dayanak")) expect(screen.getByText(/Dayanak türü:/)).toBeVisible();
+    else expect(screen.getByText(text)).toBeVisible();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method && init.method !== "GET")).toBe(false);
+});
+
+test("uyarlanan anlatım kanıt okunamadığında örneği açık tutar", async () => {
+  stubApi({ [path]: [{ processKey: "daily", mode: "adaptive", revision: 1 }],
+    "/api/guidance/catalog/versions/21": { ...source, body: { ...source.body, stepKey: "task-action" } },
+    "/api/guidance/catalog/practice-progress": [], });
+  renderPage(<AuthProvider><GuidanceStepExplanation id={21} /></AuthProvider>);
+  await waitFor(() => expect(screen.getByRole("radio", { name: "Uyarlanan anlatım" })).toBeChecked());
+  await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/guidance/operations", expect.anything()));
+  expect(screen.getByText("Uzun öğretici örnek")).toBeVisible();
+});
+
+test("uyarlanan anlatım seçimi kişisel tercih olarak kaydedilir", async () => {
+  stubApi({ [path]: [] }); const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (input, init) => init?.method === "PUT"
+    ? new Response(JSON.stringify({ processKey: "daily", mode: "adaptive", revision: 1 })) : original(input, init));
+  renderPage(<AuthProvider><GuidanceHelpControl process="daily" /></AuthProvider>);
+  await waitFor(() => expect(screen.getByRole("radio", { name: "Uyarlanan anlatım" })).toBeEnabled());
+  await userEvent.click(screen.getByRole("radio", { name: "Uyarlanan anlatım" }));
+  await screen.findByText("Anlatım tercihiniz kaydedildi.");
+  expect(JSON.parse(String(mock.mock.calls.find(([, init]) => init?.method === "PUT")![1]?.body)))
+    .toEqual({ mode: "adaptive", expectedRevision: 0 });
+});

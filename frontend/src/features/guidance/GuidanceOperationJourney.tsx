@@ -4,11 +4,13 @@ import { appPath } from "../../paths";
 import { useGuidanceOperations } from "./operationQueries";
 
 const operationTitles: Record<string, string> = {
+  "payroll-period-create": "Bordro dönemi oluşturma", "payroll-row-approve": "Bordro satırı onayı", "payroll-period-submit": "Bordro dönemi onayı",
+  "offboarding-complete": "Ayrılış dosyası tamamlama", "offboarding-reverse": "Ayrılışı kontrollü geri alma",
   "tenant-setup": "Şirket başlangıç kayıtları", "attendance-create": "Puantaj oluşturma", "attendance-update": "Puantaj düzeltme",
   "compliance-create": "Uyum takip kaydı oluşturma", "compliance-update": "Uyum kayıt bilgilerini düzeltme", "compliance-status": "Uyum durumu değiştirme", "compliance-owner": "Uyum sorumlusu atama",
   "employee-create": "Çalışan kartı oluşturma", "candidate-first-review": "Aday ilk aşama kararı", "leave-decision": "İzin kararı",
 };
-const outcomes: Record<string, string> = { created: "Kayıt oluşturuldu", initialized: "Eksik başlangıç kayıtları eklendi", updated: "Kayıt düzeltildi", "owner-assigned": "Sorumlu değişti", Missing: "Eksik", InReview: "İncelemede", DueSoon: "Süresi Yaklaşıyor", Completed: "Tamamlandı", Interview: "Mülakat", Offer: "Teklif", Rejected: "Ret", Approved: "Onay" };
+const outcomes: Record<string, string> = { created: "Kayıt oluşturuldu", "draft-created": "Taslak dönem oluşturuldu", approved: "Onaylandı", completed: "Dosya tamamlandı", reversed: "Kontrollü geri alındı", initialized: "Eksik başlangıç kayıtları eklendi", updated: "Kayıt düzeltildi", "owner-assigned": "Sorumlu değişti", Missing: "Eksik", InReview: "İncelemede", DueSoon: "Süresi Yaklaşıyor", Completed: "Tamamlandı", Interview: "Mülakat", Offer: "Teklif", Rejected: "Ret", Approved: "Onay" };
 export function GuidanceOperationJourney() {
   const { user } = useAuth(); const query = useGuidanceOperations(user?.id);
   return <section className="ez-panel" aria-labelledby="guidance-operation-journey">

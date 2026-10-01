@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -18,6 +19,7 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
   const next = latest ? new Date(latest.year ?? now.getFullYear(), latest.month ?? now.getMonth() + 1, 1) : now;
   const [year, setYear] = useState(String(next.getFullYear()));
   const [month, setMonth] = useState(String(next.getMonth() + 1));
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const validDate = Number.isInteger(Number(year)) && Number(year) >= 2000 && Number(year) <= 2100;
@@ -29,7 +31,7 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
     if (!canCreate || !confirmed) return;
     setError(null);
     try {
-      const period = await createPeriod.mutateAsync({ year: Number(year), month: Number(month) });
+      const period = await createPeriod.mutateAsync({ year: Number(year), month: Number(month), ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
       showToast((period.name ?? "Yeni") + " bordro dönemi oluşturuldu.", "success");
       if (period.id !== undefined) onCreated(period.id);
       onClose();
@@ -51,6 +53,7 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
           </button>
         </div>
         <div className="modal-body-scroll">
+          <GuidanceOperationSource process="payroll" step="period-create" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={createPeriod.isPending} />
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="form-grid-2">
             <div className="input-group">
@@ -90,8 +93,9 @@ export function SubmitPeriodModal({ detail, pending, onClose, onSubmit }: {
   detail: PayrollPeriodDetailDto;
   pending: boolean;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (guidanceContentRevisionId?: number) => void;
 }) {
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const rows = detail.rows ?? [];
   const approved = rows.filter((row) => row.approvalStatus === "Onaylandı").length;
@@ -109,6 +113,7 @@ export function SubmitPeriodModal({ detail, pending, onClose, onSubmit }: {
           </button>
         </div>
         <div className="modal-body-scroll">
+          <GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} />
           <div className="ez-payroll-review">
             <h4>Onaydan önce</h4>
             <p><strong>Gerçek kayıtlar:</strong> {rows.length} bordro satırının {approved} tanesi onaylı.</p>
@@ -122,7 +127,7 @@ export function SubmitPeriodModal({ detail, pending, onClose, onSubmit }: {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Satırlara dön</button>
-          <button className="btn btn-primary" onClick={onSubmit} disabled={!allApproved || !confirmed || pending}>Dönemi onayla</button>
+          <button className="btn btn-primary" onClick={() => onSubmit(guidanceVersion ?? undefined)} disabled={!allApproved || !confirmed || pending}>Dönemi onayla</button>
         </div>
       </div>
     </div>

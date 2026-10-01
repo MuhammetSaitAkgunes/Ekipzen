@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
+import { AuthProvider } from "../../auth/AuthContext";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { PayrollDetailPanel } from "./PayrollDetailPanel";
 import type { PayrollRowDto } from "./queries";
@@ -43,7 +44,7 @@ beforeEach(() => stubApi({
 afterEach(() => vi.unstubAllGlobals());
 
 const renderPanel = (row = baseRow) => renderPage(
-  <ToastProvider><PayrollDetailPanel periodId={3} periodName="Temmuz 2026" row={row} onClose={() => {}} /></ToastProvider>,
+  <AuthProvider><ToastProvider><PayrollDetailPanel periodId={3} periodName="Temmuz 2026" row={row} onClose={() => {}} /></ToastProvider></AuthProvider>,
 );
 
 test("panel kanuni sınıflandırmaları, istisnaları ve uyarıları gösterir", () => {

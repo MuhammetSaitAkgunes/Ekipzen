@@ -15,6 +15,8 @@ import { GuidanceOperationJourney } from "./GuidanceOperationJourney";
 import { TenantSetupPanel } from "../settings/TenantSetupPanel";
 import { AttendanceEntryModal } from "../attendance/AttendanceEntryModal";
 import { DocumentModal } from "../compliance/DocumentModal";
+import { CreatePeriodModal, SubmitPeriodModal } from "../payroll/PayrollPeriodGuidance";
+import type { PayrollPeriodDetailDto } from "../payroll/queries";
 import { CompliancePage } from "../compliance/CompliancePage";
 
 const source = (process = "leave", step = "decision-effect", id = 22) => ({ id, contentKey: `${process}-${step}`, processKey: process,
@@ -224,4 +226,32 @@ test("aynı satırın iki düzeltmesi ayrı görünür; kurulum kanıtında ger�
   ] });
   render(<GuidanceOperationJourney />); await screen.findByText(/Şablon yılı 2026/);
   expect(screen.getAllByText("Puantaj düzeltme")).toHaveLength(2); expect(screen.getByText(/İzin türü: 2 eklendi/)).toBeInTheDocument();
+});
+
+test("bordro açılışında kaynak değişimi teyidi sıfırlar; 409 tarih ve seçimi korur", async () => {
+  stubApi(routes("payroll", "period-create")); const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (input, init) => String(input) === "/api/payroll/periods" && init?.method === "POST"
+    ? Response.json({ title: "Rehber sürümü değişti" }, { status: 409 }) : original(input, init));
+  const onCreated = vi.fn(); render(<CreatePeriodModal latest={null} onClose={() => {}} onCreated={onCreated} />);
+  await userEvent.clear(screen.getByLabelText("Yıl")); await userEvent.type(screen.getByLabelText("Yıl"), "2026");
+  await userEvent.selectOptions(screen.getByLabelText("Ay"), "10");
+  const ack = screen.getByRole("checkbox", { name: "Ayı ve son dönem durumunu kontrol ettim." });
+  await userEvent.click(ack); await chooseSource(); expect(ack).not.toBeChecked();
+  expect(mock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Oluştur" }));
+  await screen.findByText("Rehber sürümü değişti");
+  const request = mock.mock.calls.find(([url, init]) => String(url) === "/api/payroll/periods" && init?.method === "POST")!;
+  expect(JSON.parse(String(request[1]?.body))).toEqual({ year: 2026, month: 10, guidanceContentRevisionId: 22 });
+  expect(screen.getByLabelText("Yıl")).toHaveValue(2026); expect(screen.getByLabelText("Ay")).toHaveValue("10");
+  expect(onCreated).not.toHaveBeenCalled(); expect(screen.getByText(/rehber sürümü · seçildi/)).toBeInTheDocument();
+});
+
+test("bordro dönemi onayı seçilen kaynağı yalnız son teyitten sonra iletir", async () => {
+  stubApi(routes("payroll", "approval")); const onSubmit = vi.fn();
+  const detail = { id: 1, name: "Ekim 2026", rows: [{ id: 8, approvalStatus: "Onaylandı" }] } as PayrollPeriodDetailDto;
+  render(<SubmitPeriodModal detail={detail} pending={false} onClose={() => {}} onSubmit={onSubmit} />);
+  const ack = screen.getByRole("checkbox", { name: "Satırları ve dönem sonucunu kontrol ettim." });
+  await userEvent.click(ack); await chooseSource(); expect(ack).not.toBeChecked(); expect(onSubmit).not.toHaveBeenCalled();
+  await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Dönemi onayla" }));
+  expect(onSubmit).toHaveBeenCalledExactlyOnceWith(22);
 });

@@ -49,10 +49,10 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
   const selectedDetail = periodDetailQ.data?.id === periodId ? periodDetailQ.data : null;
   const canSubmit = selected?.status === "draft" || selected?.status === "control";
 
-  const handleSubmitPeriod = async () => {
+  const handleSubmitPeriod = async (guidanceContentRevisionId?: number) => {
     if (periodId === null || !canSubmit) return;
     try {
-      await submitPeriod.mutateAsync(periodId);
+      await submitPeriod.mutateAsync({ periodId, guidanceContentRevisionId });
       setSubmitOpen(false);
       showToast("Dönem bordrosu onaylandı. Bu işlem ödeme veya dış bildirim yapmaz.", "success");
     } catch (e) {
