@@ -28,6 +28,70 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
     private const string Root = "/api/guidance/catalog";
 
     [Fact]
+    public async Task Reading_IsExplicitIdempotentPersonalAndVersioned_WithoutCreatingWorkEvidence()
+    {
+        var team = await TeamAsync();
+        await using var host = team.Host;
+        var owner = team.Clients[0]; var other = team.Clients[1];
+        var outsider = await AuthedClientAsync("globex-admin@globex.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var key = $"reading-{Guid.NewGuid():N}";
+        try
+        {
+            var create = await owner.PostAsJsonAsync($"{Root}/editorial", new { contentKey = key, processKey = "personnel", body = CompleteBody("Okuma testi") });
+            var item = (await create.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            (await owner.PostAsJsonAsync($"{Root}/versions/{item.Content.Id}/readings", new { confirmed = true })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            item = await ChangeAsync(owner, item, "submit");
+            var publish = await PublishAsync(other, item);
+            publish.StatusCode.Should().Be(HttpStatusCode.OK);
+            item = (await publish.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            var readingPath = $"{Root}/versions/{item.Content.Id}/readings";
+            (await owner.GetAsync($"{Root}/versions/{item.Content.Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await owner.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!.Should().BeEmpty("ekran açılması okuma beyanı üretmez");
+            (await owner.PostAsJsonAsync(readingPath, new { confirmed = false })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await manager.PostAsJsonAsync(readingPath, new { confirmed = true })).StatusCode.Should().Be(HttpStatusCode.NotFound, "hedef rol dışındaki okuyucu kayıt oluşturamaz");
+            (await Factory.CreateClient().PostAsJsonAsync(readingPath, new { confirmed = true })).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            var responses = await Task.WhenAll(owner.PostAsJsonAsync(readingPath, new { confirmed = true }), owner.PostAsJsonAsync(readingPath, new { confirmed = true }));
+            responses.Should().OnlyContain(x => x.StatusCode == HttpStatusCode.OK);
+            var first = (await responses[0].Content.ReadFromJsonAsync<GuidanceContentReadingDto>())!;
+            var repeated = (await responses[1].Content.ReadFromJsonAsync<GuidanceContentReadingDto>())!;
+            repeated.Should().BeEquivalentTo(first);
+            (await owner.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!.Should().ContainSingle();
+            (await other.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!.Should().BeEmpty("aynı şirkette başka kişinin inceleme beyanı görünmez");
+            (await outsider.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!.Should().NotContain(x => x.ContentKey == key);
+            var export = System.Text.Json.JsonDocument.Parse(await (await owner.GetAsync("/api/me/data-export")).Content.ReadAsStringAsync());
+            export.RootElement.GetProperty("guidanceContentReadings").GetArrayLength().Should().Be(1);
+            export.RootElement.GetProperty("guidanceContentReadings")[0].GetProperty("firstReadAtUtc").GetString().Should().EndWith("Z");
+            export.RootElement.GetProperty("employeeCreationEvidences").GetArrayLength().Should().Be(0);
+            export.RootElement.GetProperty("candidateReviewEvidences").GetArrayLength().Should().Be(0);
+            export.RootElement.GetProperty("guidanceDecisionProgresses").GetArrayLength().Should().Be(0);
+            var fork = await owner.PostAsJsonAsync($"{Root}/editorial", new { contentKey = key, processKey = "personnel", basedOnId = item.Content.Id, body = CompleteBody("Yeni metin") });
+            var next = (await fork.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            next = await ChangeAsync(owner, next, "submit");
+            next = (await (await PublishAsync(other, next)).Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            var history = (await owner.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!;
+            history.Should().ContainSingle().Which.IsCurrent.Should().BeFalse("yeni sürüm eski okuma kaydını devralmaz");
+            history[0].FirstReadAtUtc.Should().Be(first.FirstReadAtUtc);
+            (await owner.PostAsJsonAsync(readingPath, new { confirmed = true })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await owner.PostAsJsonAsync($"{Root}/versions/{next.Content.Id}/readings", new { confirmed = true })).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await owner.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!.Should().HaveCount(2);
+            using (var tenantScope = Factory.Services.GetRequiredService<ITenantScopeFactory>().Create(team.TenantId))
+            {
+                var db = tenantScope.Services.GetRequiredService<AppDbContext>();
+                var rollbackGuard = new Ekipzen.Infrastructure.Persistence.Migrations.AddGuidanceContentReadings()
+                    .DownOperations.OfType<SqlOperation>().Single().Sql;
+                var rollback = async () => await db.Database.ExecuteSqlRawAsync(rollbackGuard);
+                (await rollback.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(51000);
+                (await db.GuidanceContentReadings.CountAsync()).Should().Be(2);
+            }
+            next = await ChangeAsync(other, next, "retire", "Okuma güncellik testi");
+            (await owner.PostAsJsonAsync($"{Root}/versions/{next.Content.Id}/readings", new { confirmed = true })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await owner.GetFromJsonAsync<List<GuidanceContentReadingDto>>($"{Root}/readings"))!.Should().OnlyContain(x => !x.IsCurrent);
+        }
+        finally { await CleanupAsync(key); }
+    }
+
+    [Fact]
     public async Task CentralCatalog_RequiresIndependentTeamApproval_AndPreservesPublishedVersions()
     {
         var team = await TeamAsync();
@@ -171,7 +235,7 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
         finally { await CleanupAsync(key); }
     }
 
-    private async Task<(WebApplicationFactory<Program> Host, HttpClient[] Clients)> TeamAsync()
+    private async Task<(WebApplicationFactory<Program> Host, HttpClient[] Clients, int TenantId)> TeamAsync()
     {
         var suffix = Guid.NewGuid().ToString("N");
         var emails = Enumerable.Range(0, 4).Select(x => $"editor-{x}-{suffix}@example.test").ToArray();
@@ -212,7 +276,7 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
             var client = host.CreateClient(); client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
             clients.Add(client);
         }
-        return (host, clients.ToArray());
+        return (host, clients.ToArray(), tenant.TenantId);
     }
     private async Task CleanupAsync(string key)
     {

@@ -136,8 +136,10 @@ public sealed class GetGuidanceCatalogQueryHandler(IPlatformDbContext db, ICurre
         if (request.ProcessKey is not null) query = query.Where(x => x.ProcessKey == request.ProcessKey);
         if (request.VersionId is not null) query = query.Where(x => x.Id == request.VersionId);
         var items = await query.ToListAsync(ct);
+        var keys = items.Select(x => x.ContentKey).Distinct().ToArray();
         var currentItems = await db.GuidanceContentRevisions.AsNoTracking()
-            .Where(x => (x.State == "published" || x.State == "retired") && x.EffectiveFrom <= today).ToListAsync(ct);
+            .Where(x => keys.Contains(x.ContentKey) && (x.State == "published" || x.State == "retired")
+                && x.EffectiveFrom <= today).ToListAsync(ct);
         var latest = currentItems.GroupBy(x => x.ContentKey).ToDictionary(x => x.Key,
             x => x.OrderByDescending(y => y.EffectiveFrom).ThenByDescending(y => y.ContentVersion).First());
         var currentIds = latest.Values.Where(x => GuidanceContentCatalog.IsUsable(x, today)).Select(x => x.Id).ToHashSet();

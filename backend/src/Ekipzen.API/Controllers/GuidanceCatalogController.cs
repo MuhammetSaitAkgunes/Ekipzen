@@ -20,6 +20,12 @@ public sealed class GuidanceCatalogController(ISender sender) : ControllerBase
     [HttpGet("access")]
     public async Task<ActionResult<GuidanceEditorialAccessDto>> Access(CancellationToken ct) =>
         Ok(await sender.Send(new GetGuidanceEditorialAccessQuery(), ct));
+    [HttpGet("readings")]
+    public async Task<ActionResult<IReadOnlyList<GuidanceContentReadingDto>>> Readings(CancellationToken ct) =>
+        Ok(await sender.Send(new GetMyGuidanceContentReadingsQuery(), ct));
+    [HttpPost("versions/{id:int}/readings")]
+    public async Task<ActionResult<GuidanceContentReadingDto>> RecordReading(int id, ReadingBody body, CancellationToken ct) =>
+        Ok(await sender.Send(new RecordGuidanceContentReadingCommand(id, body.Confirmed), ct));
     [HttpGet("editorial")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     public async Task<ActionResult<IReadOnlyList<GuidanceEditorialDto>>> Editorial(CancellationToken ct) =>
@@ -40,5 +46,6 @@ public sealed class GuidanceCatalogController(ISender sender) : ControllerBase
     public async Task<ActionResult<GuidanceEditorialDto>> Transition(int id, string operation, TransitionBody body, CancellationToken ct) =>
         Ok(await sender.Send(new ChangeGuidanceContentStateCommand(id, body.ExpectedRevision, operation, body.Reason, body.Review), ct));
     public sealed record EditBody(int ExpectedRevision, GuidanceContentBody Body);
+    public sealed record ReadingBody(bool Confirmed);
     public sealed record TransitionBody(int ExpectedRevision, string? Reason, GuidanceExpertReview? Review);
 }
