@@ -15,12 +15,22 @@ public static class GuidancePublishedSteps
         ["personnel-entry"] = ["tab-kimlik", "tab-iletisim", "tab-is", "tab-mali", "tab-ozluk", "tab-evrak"],
         ["recruitment"] = ["candidate-create", "first-review"],
         ["leave"] = ["review-request", "decision-effect"],
+        ["company"] = ["initial-setup", "company-profile", "departments", "access-preparation"],
+        ["personnel"] = ["record-review", "import-review", "rehire"],
+        ["attendance"] = ["entry-review", "entry-correction", "period-summary"],
+    };
+    private static readonly IReadOnlyDictionary<string, string[]> ManagerSteps = new Dictionary<string, string[]>
+    {
+        ["leave"] = ["review-request", "decision-effect"],
+        ["personnel"] = ["record-review"],
+        ["attendance"] = ["entry-review", "entry-correction", "period-summary"],
     };
     public static void RequireAccess(string process, string step, ICurrentUser user)
     {
         if (!Steps.TryGetValue(process, out var steps) || !steps.Contains(step))
             throw new NotFoundException("Rehber alt adımı", step);
-        if (!user.Roles.Contains(Roles.HrAdmin) && !(process == "leave" && user.Roles.Contains(Roles.Manager)))
+        if (!user.Roles.Contains(Roles.HrAdmin) && !(user.Roles.Contains(Roles.Manager)
+            && ManagerSteps.TryGetValue(process, out var managerSteps) && managerSteps.Contains(step)))
             throw new ForbiddenAccessException("Bu alıştırma ilgili süreci yöneten role açıktır.");
     }
     public static void ValidateBinding(string key, string process, GuidanceContentBody body)
