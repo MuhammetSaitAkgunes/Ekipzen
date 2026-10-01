@@ -5,6 +5,7 @@ import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
 import { CandidateCorrectionModal } from "./CandidateCorrectionModal";
@@ -76,6 +77,7 @@ export function CandidateDetail({ id }: { id: number }) {
   const [statusConfirmed, setStatusConfirmed] = useState(false);
   const [statusReason, setStatusReason] = useState("");
   const [statusEvidence, setStatusEvidence] = useState<CandidateDecisionEvidenceReference[]>([]);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
 
@@ -84,6 +86,7 @@ export function CandidateDetail({ id }: { id: number }) {
     setCorrectionOpen(false);
     setEvidenceSelection(null);
     setStatusReview(null); setStatusConfirmed(false); setStatusReason(""); setStatusEvidence([]);
+    setGuidanceVersion(null);
     setNoteReview(null);
     setNoteText("");
     setNoteError(null);
@@ -112,6 +115,7 @@ export function CandidateDetail({ id }: { id: number }) {
   const pendingEvaluation = evaluationReview?.candidateId === id && evaluationReview.candidateName === candidate.name ? evaluationReview : null;
 
   const prepareStatus = (status: string) => {
+    setGuidanceVersion(null);
     setStatusConfirmed(false);
     setStatusReason(""); setStatusEvidence([]);
     setStatusReview(status === (candidate.status ?? "Yeni") ? null : {
@@ -131,7 +135,8 @@ export function CandidateDetail({ id }: { id: number }) {
         return;
       }
       await setStatus.mutateAsync({ id, status: pendingStatus.to, expectedVersion: pendingStatus.source.version,
-        reason: statusReason.trim(), evidence: statusEvidence });
+        reason: statusReason.trim(), evidence: statusEvidence,
+        ...(pendingStatus.from === "Yeni" && guidanceVersion !== null ? { guidanceContentRevisionId: guidanceVersion } : {}) });
       setStatusReview(null);
       setStatusConfirmed(false);
       showToast(candidate.name + " için pipeline durumu " + pendingStatus.to + " olarak kaydedildi.", "success");
@@ -298,6 +303,8 @@ export function CandidateDetail({ id }: { id: number }) {
           <p>Yalnız bu kararda kullandığınız dayanakları seçin; en fazla 20 kayıt bağlanabilir. Seçim kanıtın doğruluğunu otomatik onaylamaz.</p>
         </fieldset>
         {candidate.status === "Yeni" && <GuidanceDecisionCheck process="recruitment" step="first-review" operationName="aday işlemi" />}
+        {candidate.status === "Yeni" && <GuidanceOperationSource process="recruitment" step="first-review"
+          value={guidanceVersion} onChange={value => { setGuidanceVersion(value); setStatusConfirmed(false); }} disabled={setStatus.isPending} />}
         <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>
         <div className="ez-candidate-status-actions">
           <button className="btn btn-ghost" onClick={() => { setStatusReview(null); setStatusConfirmed(false); }}>Vazgeç</button>

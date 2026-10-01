@@ -181,7 +181,7 @@ export const useSetCandidateStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: { id: number; status: string; expectedVersion: number;
-      reason: string; evidence: CandidateDecisionEvidenceReference[] }) =>
+      reason: string; evidence: CandidateDecisionEvidenceReference[]; guidanceContentRevisionId?: number }) =>
       apiFetch<CandidateDetailDto>(`/candidates/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify(body),
@@ -190,6 +190,7 @@ export const useSetCandidateStatus = () => {
       queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
       queryClient.invalidateQueries({ queryKey: recruitmentJourneyKey }),
+      queryClient.invalidateQueries({ queryKey: ["guidance", "operations"] }),
     ]),
     onError: (_error, input) => queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", input.id] }),
   });

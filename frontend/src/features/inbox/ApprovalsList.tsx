@@ -7,6 +7,7 @@ import { useDecideLeave, usePendingLeaves, type LeaveRequestDto } from "../leave
 import { formatLeaveDate } from "../leaves/format";
 import { PageError, PageLoading } from "../shared/PageState";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 
 function Approval({ request, selected }: { request: LeaveRequestDto; selected: boolean }) {
   const decide = useDecideLeave();
@@ -16,9 +17,11 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
   const [error, setError] = useState("");
   const [reviewDecision, setReviewDecision] = useState<boolean | null>(null);
   const [note, setNote] = useState("");
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const beginReview = (approve: boolean) => {
     setError("");
     setReviewDecision(approve);
+    setGuidanceVersion(null);
   };
   const resolve = async () => {
     if (reviewDecision === null) return;
@@ -26,7 +29,8 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
     if (request.id == null) return;
     setError("");
     try {
-      await decide.mutateAsync({ id: request.id, approve, note });
+      await decide.mutateAsync({ id: request.id, approve, note,
+        ...(guidanceVersion !== null ? { guidanceContentRevisionId: guidanceVersion } : {}) });
       setReviewDecision(null);
       setNote("");
       showToast(`${request.employeeName} izin talebi ${approve ? "onaylandı" : "reddedildi"}.`, "success");
@@ -61,6 +65,8 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
             : "Ret talebin durumunu değiştirir ve bekleyen onay kuyruğundan çıkarır. Bu ekranda kararı geri alma işlemi yoktur."}</p>
           <GuidanceDecisionCheck process="leave-approval" step="decision-effect"
             operationName="izin kararı" eager={false} />
+          <GuidanceOperationSource process="leave" step="decision-effect" value={guidanceVersion}
+            onChange={setGuidanceVersion} disabled={decide.isPending} />
           <label htmlFor={`decision-note-${request.id}`}>Karar notu (isteğe bağlı)</label>
           <textarea id={`decision-note-${request.id}`} className="input-control" rows={2}
             maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)}

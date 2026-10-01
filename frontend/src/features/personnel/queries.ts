@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import { personnelEntryJourneyKey } from "../guidance/journeyQueries";
 import { dailyTasksKey } from "../guidance/queries";
+import { guidanceOperationsKey } from "../guidance/operationQueries";
 import type { components } from "../../api/schema";
 
 export type EmployeeListItemDto = components["schemas"]["EmployeeListItemDto"];
 export type EmployeePagedResult = components["schemas"]["EmployeeListItemDtoPagedResult"];
 export type EmployeeDetailDto = components["schemas"]["EmployeeDetailDto"];
-export type EmployeeUpsertModel = components["schemas"]["EmployeeUpsertModel"];
+export type EmployeeUpsertModel = components["schemas"]["EmployeeUpsertModel"] & { guidanceContentRevisionId?: number | null };
 export type DepartmentDto = components["schemas"]["DepartmentDto"];
 export type EmployeeDocumentDto = components["schemas"]["EmployeeDocumentDto"];
 export type WithdrawnEmployeeDocumentDto = components["schemas"]["WithdrawnEmployeeDocumentDto"];
@@ -282,6 +283,7 @@ export const useSaveEmployee = () => {
         queryClient.invalidateQueries({ queryKey: ["employees"] }),
         queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
         ...(id === null ? [queryClient.invalidateQueries({ queryKey: personnelEntryJourneyKey })] : []),
+        ...(id === null ? [queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })] : []),
       ]);
     },
   });

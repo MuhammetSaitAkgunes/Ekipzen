@@ -7,6 +7,7 @@ import { useLeaveApprovalJourney, usePersonnelEntryJourney, useRecruitmentJourne
 import { GuidanceProcessMap } from "./GuidanceProcessMap";
 import { GuidanceReadingJourney } from "./GuidanceReadingJourney";
 import { GuidancePracticeJourney } from "./GuidancePracticeJourney";
+import { GuidanceOperationJourney } from "./GuidanceOperationJourney";
 
 const stepLabels: Record<string, string> = {
   "tab-kimlik": "Kimlik ve temel bilgiler",
@@ -93,6 +94,7 @@ export function GuidanceJourneyPage() {
         ? <p role="alert">İzin onayı yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
         : <LeaveApprovalEvidence journey={leaveQ.data} />}
     <GuidanceHelpSettings />
+    <GuidanceOperationJourney />
     <GuidanceReadingJourney />
     <GuidancePracticeJourney />
     <GuidanceProcessMap isHrAdmin={isHrAdmin} />

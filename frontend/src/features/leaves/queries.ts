@@ -88,10 +88,10 @@ export const usePendingLeaves = (enabled: boolean) =>
 export const useDecideLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, approve, note }: { id: number; approve: boolean; note?: string }) =>
+    mutationFn: ({ id, approve, note, guidanceContentRevisionId }: { id: number; approve: boolean; note?: string; guidanceContentRevisionId?: number }) =>
       apiFetch<LeaveRequestDto>(`/leaves/${id}/${approve ? "approve" : "reject"}`, {
         method: "POST",
-        body: JSON.stringify({ note: note?.trim() || null }),
+        body: JSON.stringify({ note: note?.trim() || null, ...(guidanceContentRevisionId !== undefined ? { guidanceContentRevisionId } : {}) }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
@@ -99,6 +99,7 @@ export const useDecideLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["actions"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
       queryClient.invalidateQueries({ queryKey: leaveApprovalJourneyKey });
+      queryClient.invalidateQueries({ queryKey: ["guidance", "operations"] });
     },
   });
 };

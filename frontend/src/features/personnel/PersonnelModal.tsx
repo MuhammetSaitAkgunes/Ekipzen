@@ -7,6 +7,7 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { DocumentsTab } from "./DocumentsTab";
 import { CompensationCorrectionPanel } from "./CompensationCorrectionPanel";
 import { PersonnelGuide } from "./PersonnelGuide";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { usePersonnelEntryBookmark, useSavePersonnelEntryBookmark } from "./guidanceQueries";
 import {
   useDepartments,
@@ -156,6 +157,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "tab-kimlik");
   const selectedGuideStep = useRef(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
   const [compensationReview, setCompensationReview] = useState<CompensationForm | null>(null);
@@ -222,7 +224,9 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
       return;
     }
     try {
-      const saved = await save.mutateAsync({ id: employeeId, model: modelFrom(form, detailQ.data) });
+      const model = modelFrom(form, detailQ.data);
+      const saved = await save.mutateAsync({ id: employeeId,
+        model: !isEdit && guidanceVersion !== null ? { ...model, guidanceContentRevisionId: guidanceVersion } : model });
       showToast(isEdit ? "Personel kaydı güncellendi." : "Personel kaydı başarıyla oluşturuldu.", "success");
       if (!isEdit && guided) {
         saveBookmark.mutate("tab-kimlik", {
@@ -362,6 +366,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
         </aside>
 
         <section className="modal-content-area">
+          {!isEdit && !readOnly && <GuidanceOperationSource process="personnel-entry" step="tab-is"
+            value={guidanceVersion} onChange={setGuidanceVersion} disabled={save.isPending} />}
           {bookmarkQ.isError && guided && employeeId === null && <p role="status">Rehber konumu yüklenemedi; ilk adımdan devam edebilirsiniz.</p>}
           {!isEdit && departmentsQ.isSuccess && departmentsQ.data.length === 0 && <p className="ez-personnel-precondition" role="status">
             Çalışan kartı için önce departman oluşturun. <Link to={appPath("/settings")}>Ayarlar bölümüne git</Link>.
