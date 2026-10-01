@@ -4,7 +4,7 @@
 
 Bu belge [onaylı planı](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md) daraltmaz; kodda mevcut olan parçalar ile yayın öncesi açık teslimleri ayırır. Eski plandaki boş kutular tek başına sıfır ilerleme anlamına gelmez; tamamlandı kararı kod ve doğrulamaya dayanır.
 
-İçerik yayın kararı: içeriği hazırlayan kişi kendi sürümünü onaylayamaz. Onayı başka bir İK yöneticisi verir; uzman inceleme bilgisi ayrıca kaydedilir. İK rolü tek başına içerik için uzman incelemesi yapılmış olduğunu kanıtlamaz.
+İçerik yayın kararı: tek merkezî katalog; içerik yayınını yalnız Ekipzen ekibi yönetir. İçeriği hazırlayan veya düzenleyen kişi kendi sürümünü onaylayamaz. Onayı başka bir yetkili Ekipzen İK yöneticisi verir; uzman inceleme bilgisi ayrıca kaydedilir. Müşteri şirketindeki İK rolü yayın yetkisi vermez; İK rolü tek başına uzman incelemesinin kanıtı değildir.
 
 ## Kodda mevcut ürün parçaları
 
@@ -20,7 +20,7 @@ Bu belge [onaylı planı](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md
 
 | Teslim | Bitti sayılma ölçütü | Bugünkü durum |
 | --- | --- | --- |
-| Ortak içerik kataloğu ve inceleme/yayın yaşam döngüsü | Süreç/adım/rol, kaynak türü, örnek, yürürlük, içerik sürümü ve inceleyen bilgisinin sunucuda tanımlanması; onaylı sürümün değişmeden saklanması; taslak/inceleme/onay/kullanımdan kaldırma; yayımlanan içeriğin rehber ekranında okunması. | Açık; üç akışın sabit karar alıştırmaları bu katalog değildir. Sıradaki geliştirme teslimi. |
+| Ortak içerik kataloğu ve inceleme/yayın yaşam döngüsü | Süreç/adım/rol, kaynak türü, örnek, yürürlük, içerik sürümü ve inceleyen bilgisinin sunucuda tanımlanması; onaylı sürümün değişmeden saklanması; taslak/inceleme/onay/kullanımdan kaldırma; yayımlanan içeriğin rehber ekranında okunması. | Teknik katalog/API/okur-yayın ekranı uygulandı; [merkezî içerik sözleşmesi](2026-09-30-ik-rehberi-icerik-katalogu.md). Gerçek içerik ve uzman kabulü ile adım/öğrenme bağlantısı aşağıdaki teslimlerde açık. |
 | Tüm süreçlerde öğrenme ve yardım | Şirket hazırlığı, işe alım, işe giriş, personel, izin, mesai/puantaj, bordro, uyum, ayrılış ve günlük yönetimde ortak adım/örnek/karar desteği; kullanıcı/tenant/sürüm bazlı ilerleme ve yardım tercihi; gerçek işlem ile alıştırmanın ayrılması. | Kısmi; mevcut üç yolculuk bütün süreç kapsamı diye kabul edilmez. |
 | Günlük iş ve temel işlem bağımlılıkları | Kapsamdaki olağan işleri gerçek kayıttan üretme, neden/sorumlu/gerçek son tarih, tekilleştirme/kapanma/yeniden açılma; temel işlemlerde eksik sunucu önizlemesi ve eşzamanlılık kapılarının tamamlanması. | Kısmi; ayrıntılı API kuyruğu bağlantılı belgede. Karmaşık istisnalarda güvenli uzman yönlendirmesi ilk kullanıcı hedefiyle uyumludur. |
 | Kaynaklı içerik ve ürün kabulü | Mevzuat/şirket politikası/iyi uygulama ayrımı; resmî kaynağın ve koşulların uzman incelemesi; firma sahibi/yeni mezun görev denemeleri; klavye/dar ekran/hata/düzeltme ve rol/tenant sınırları; gerçek kanıtlarla tüm envanterin karşılanması. | Açık; açıklama metni veya test sayısı bu kabulün yerine geçmez. |
