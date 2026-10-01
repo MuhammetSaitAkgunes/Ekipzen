@@ -29,4 +29,20 @@
     <None Remove="App_Data/**" />
   </ItemGroup>
 
+  <Target Name="PublishEkipzenFrontend" AfterTargets="ComputeFilesToPublish"
+          Condition="'$(BuildFrontendForPublish)' == 'true'">
+    <PropertyGroup>
+      <EkipzenFrontendRoot>$(MSBuildProjectDirectory)/../../../frontend</EkipzenFrontendRoot>
+    </PropertyGroup>
+    <Exec WorkingDirectory="$(EkipzenFrontendRoot)" Command="npm ci --legacy-peer-deps" />
+    <Exec WorkingDirectory="$(EkipzenFrontendRoot)" Command="npm run build" />
+    <ItemGroup>
+      <EkipzenFrontendFile Include="$(EkipzenFrontendRoot)/dist/**/*" />
+      <ResolvedFileToPublish Include="@(EkipzenFrontendFile)">
+        <RelativePath>wwwroot/%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
 </Project>

@@ -2,7 +2,7 @@
 
 8 Eylül 2026 — P2-A yazılım ve paket hazırlığı. **Bu belge yayın yapıldığı veya pilot kabulü verildiği anlamına gelmez.** Hedef: mevcut Windows / SQL Server üzerinde tek büro, yaklaşık 10 personel. Sunucu sürümleri henüz bilinmiyor.
 
-Güncel hedef Turhost Windows Profesyonel olarak netleşti. Bu genel IIS kılavuzunu, paylaşımlı hosting'e doğrudan uygulanacak talimat gibi kullanmayın; hesaba özel ön koşullar ve ayrı API düzeni için önce `docs/turhost-pilot-onkontrol.md` belgesini okuyun.
+Önceki hedef Turhost Windows Profesyonel idi; 1 Ekim son kullanıcı bilgisi Microsoft .NET hosting ve Visual Studio publish yöntemidir. Kesin paket/runtime ve hesap düzeni ayrıca doğrulanacak. Bu genel IIS kılavuzunu, paylaşımlı hosting'e doğrudan uygulanacak talimat gibi kullanmayın; hesaba özel ön koşullar ve ayrı API düzeni için önce `docs/turhost-pilot-onkontrol.md` belgesini okuyun.
 
 ## 1. Önce envanter ve yetki
 
@@ -101,3 +101,7 @@ Mevcut tenant provizyon/migration akışı aynı uygulama bağlantısı üzerind
 - 40 saatlik haftaya uygun çalışma/izin/bordro kuralları, uzman mutabakatı ve tam geri yükleme kabulü P3/P4/P5 kapsamındadır.
 
 Senkronizasyon onayı Git işlemlerini kapsar; bu kılavuzdaki sunucu adımlarını otomatik olarak yetkilendirmez.
+
+## Visual Studio klasör profili
+
+Ekipzen.API / Properties / PublishProfiles / TurhostFolder.pubxml profili frontend ve API'yi aynı kök site için yerelde paketler. Kullanım ve sınırlar [son teslimde](superpowers/specs/2026-10-01-ik-rehberi-bordro-ayrilis-uyarlanan-anlatim.md) açıklanır. Bu profil uzaktaki Turhost hesabına bağlantı veya kimlik bilgisi içermez. Tam öğrenme kapsamı ve gerçek yayın kabulleri tamamlanmadan yükleme yapılmaz.

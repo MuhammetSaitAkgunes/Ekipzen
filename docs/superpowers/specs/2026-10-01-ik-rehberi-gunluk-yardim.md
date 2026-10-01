@@ -25,7 +25,7 @@ Bu manuel sunum tercihidir; beceri seviyesi, yardım ihtiyacının kanıta dayal
 ## API ve kişisel veri sözleşmesi
 
 - `GET /api/guidance/help-preferences`: Management yetkisindeki oturum sahibinin kayıtlı tercihlerini `{ processKey, mode, revision }` olarak döndürür. Kaydı olmayan süreç istemcide ayrıntılı varsayılır; varsayılan okuma kayıt oluşturmaz.
-- `PUT /api/guidance/help-preferences/{processKey}`: `{ mode, expectedRevision }` alır. Süreç katalogdaki on anahtardan biri; mod `detailed` veya `compact`; beklenen sürüm zorunlu ve başlangıçta sıfırdır. Kullanıcı/tenant kimliği istemciden alınmaz. Yönetici bir sunum tercihi kaydederek başka sürecin gerçek işlem yetkisini kazanmaz; çalışan bu yönetim tercihi API'sine erişemez.
+- `PUT /api/guidance/help-preferences/{processKey}`: `{ mode, expectedRevision }` alır. Süreç katalogdaki on anahtardan biri; mod `detailed`, `compact` veya son teslimle eklenen `adaptive`; beklenen sürüm zorunlu ve başlangıçta sıfırdır. Kullanıcı/tenant kimliği istemciden alınmaz. Yönetici bir sunum tercihi kaydederek başka sürecin gerçek işlem yetkisini kazanmaz; çalışan bu yönetim tercihi API'sine erişemez.
 - Kullanıcı/süreç kilidinde mevcut sürüm yeniden okunur. Değişen mod sürümü bir artırır. Aynı mevcut mod sürümü artırmaz. Mevcut sürüm beklenenden bir fazla ve mod aynıysa önceki isteğin tekrarına aynı sonuç verilir; diğer bayat istekler 409 alır. Eksik sürüm, bilinmeyen süreç ve geçersiz mod 400; çalışan rolü 403 alır.
 - `GuidanceHelpPreferences` AppDbContext kişisel tenant tablosudur; `(TenantId, UserId, ProcessKey)` benzersizdir. Başkasının tercihi okunmaz veya değişmez. `/api/me/data-export` yalnız oturum sahibinin `guidanceHelpPreferences` listesini de içerir. Tercih, okuma, sürümlü alıştırma ve gerçek işlem kanıtı ayrıdır.
 
@@ -40,3 +40,7 @@ Kiracı migration'ı `20261001104632_AddGuidanceHelpPreferences` yalnız tercih 
 - Backend birim testleri 91/91; Release `--warnaserror` sıfır uyarı/hata. Frontend üretim derlemesi başarılı; lint hata vermedi, dört mevcut test dosyası/helper uyarısı sürüyor. `npm audit --audit-level=high`: sıfır zafiyet. EF model–migration uyumu ve idempotent SQL üretimi başarılı.
 
 Bu teslimde tarayıcı görsel kabulü, gerçek uzman yayını veya canlı sunucu testi yapılmadı. Sıradaki geliştirme katalog sürümüne bağlı gerçek işlem kanıtıdır. Diğer açık olağan işlem API'leri, günlük görev envanterinin genişlemesi, kanıta dayalı beceri/yardım uyarlaması, uzman/yeni kullanıcı kabulü ve Turhost ilk kurulum tamamlanacaktır. Alt adım sayısı bütün kapsamın kabulü değildir.
+
+## 1 Ekim ek teslimi
+
+[Uyarlanan anlatım](2026-10-01-ik-rehberi-bordro-ayrilis-uyarlanan-anlatim.md) kullanıcı kararıyla uygulandı. Aynı güncel adım/sürümde kişisel doğru alıştırma ve gerçek iş kanıtı birlikte varsa yalnız uzun örnek kapalı başlar; kritik açıklamalar görünür kalır. Önceki paragraftaki uyarlama açıklığı bu sunum kuralı için kapanmıştır; bağımsız yeterlilik kabulü oluşturulmadı.
