@@ -35,7 +35,7 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
         before.MissingFullDayHolidayCount.Should().Be(14);
         (await admin.GetAsync("/api/payroll/settings")).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        var initialized = await admin.PostAsync("/api/setup", null);
+        var initialized = await admin.InitializeReviewedSetupAsync("/api/setup", null);
         initialized.StatusCode.Should().Be(HttpStatusCode.OK);
         var status = (await initialized.Content.ReadFromJsonAsync<TenantSetupStatusDto>())!;
         status.NeedsInitialization.Should().BeFalse();
@@ -112,9 +112,9 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
             return Task.CompletedTask;
         });
         var admin = await AuthedClientAsync(email);
-        var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => admin.PostAsync("/api/setup", null)));
+        var responses = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => admin.InitializeReviewedSetupAsync("/api/setup", null)));
         responses.Should().OnlyContain(x => x.StatusCode == HttpStatusCode.OK);
-        (await admin.PostAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await admin.InitializeReviewedSetupAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.OK);
         using var scope = Factory.Services.GetRequiredService<ITenantScopeFactory>().Create(tenant.TenantId);
         var db = scope.Services.GetRequiredService<AppDbContext>();
         (await db.CompanyProfiles.SingleAsync()).Name.Should().Be("Müşterinin özel adı");
@@ -136,7 +136,7 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
         await ProvisionAndActivateAsync("Büro A", emailA);
         var tenantB = await ProvisionAndActivateAsync("Büro B", emailB);
         var a = await AuthedClientAsync(emailA);
-        (await a.PostAsJsonAsync("/api/setup", new { tenantId = tenantB.TenantId })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await a.InitializeReviewedSetupAsync("/api/setup", new { tenantId = tenantB.TenantId })).StatusCode.Should().Be(HttpStatusCode.OK);
         var b = await AuthedClientAsync(emailB);
         var status = await GetAsync<TenantSetupStatusDto>(b, "/api/setup");
         status.CompanyProfileExists.Should().BeFalse();
@@ -151,7 +151,7 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
     {
         var client = await AuthedClientAsync(email);
         (await client.GetAsync("/api/setup")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await client.PostAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.InitializeReviewedSetupAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -159,6 +159,6 @@ public sealed class TenantSetupTests(EkipzenApiFactory factory) : TenancyTestBas
     {
         var client = Factory.CreateClient();
         (await client.GetAsync("/api/setup")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await client.PostAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await client.InitializeReviewedSetupAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

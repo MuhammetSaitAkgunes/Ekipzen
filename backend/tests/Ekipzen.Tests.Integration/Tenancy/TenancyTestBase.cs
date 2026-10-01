@@ -4,6 +4,7 @@ using Ekipzen.Application.Features.Auth;
 using Ekipzen.Application.Features.Tenancy.Commands;
 using Ekipzen.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -33,7 +34,7 @@ public abstract class TenancyTestBase(EkipzenApiFactory factory) : IAsyncLifetim
     public Task InitializeAsync() => Task.CompletedTask;
 
     /// <summary>
-    /// Her testten sonra o testin açtığı kiracı veritabanlarını düşürür.
+    /// Her testten sonra o testin açtığı kiracı veritabanını ve platform kaydını temizler.
     ///
     /// Ürün kararı (kullanıcı onaylı): temizlik testten sonra AGRESİF yapılır.
     /// Alternatif — koşum sonunda toplu düşürme — daha hızlıydı ama koşum ortasında
@@ -51,9 +52,23 @@ public abstract class TenancyTestBase(EkipzenApiFactory factory) : IAsyncLifetim
         var saglayici = Factory.Services.GetRequiredService<ITenantDatabaseProvisioner>();
         foreach (var katalog in _acilanKataloglar)
         {
-            // Testin kendisi kiracıyı zaten purge etmiş olabilir; DropAsync
-            // "zaten yok" durumunu hata saymıyor.
-            await saglayici.DropAsync(katalog, CancellationToken.None);
+            if (!katalog.StartsWith(EkipzenApiFactory.KiraciKatalogOneki, StringComparison.Ordinal))
+                throw new InvalidOperationException("Test temizliği yalnız test kataloglarına uygulanabilir.");
+            using var cleanupScope = Factory.Services.CreateScope();
+            var platform = cleanupScope.ServiceProvider.GetRequiredService<IPlatformDbContext>();
+            var tenant = await platform.Tenants.SingleOrDefaultAsync(x => x.DatabaseName == katalog);
+            if (tenant is not null)
+            {
+                // Yalnız DB'yi düşürmek platformda artık kiracı bırakır; sonraki
+                // toplu migration silinmiş kataloğa bağlanıp zaman aşımına uğrar.
+                await cleanupScope.ServiceProvider.GetRequiredService<ITenantPurger>()
+                    .PurgeAsync(tenant.Id, CancellationToken.None);
+            }
+            else
+            {
+                // Testin kendisi kiracıyı purge etmiş olabilir.
+                await saglayici.DropAsync(katalog, CancellationToken.None);
+            }
         }
     }
 

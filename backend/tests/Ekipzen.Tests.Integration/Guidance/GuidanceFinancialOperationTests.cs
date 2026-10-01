@@ -30,7 +30,7 @@ public sealed partial class GuidanceCatalogTests
         {
             var createSource = await PublishOperationSourceAsync(author, reviewer, "payroll", "period-create");
             var approval = await PublishOperationSourceAsync(author, reviewer, "payroll", "approval");
-            (await author.PostAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await author.InitializeReviewedSetupAsync("/api/setup", null)).StatusCode.Should().Be(HttpStatusCode.OK);
             var employee = await CreateProofEmployeeAsync(author);
             using (var scope = Factory.Services.GetRequiredService<ITenantScopeFactory>().Create(team.TenantId))
             {
@@ -55,13 +55,13 @@ public sealed partial class GuidanceCatalogTests
             var periodPath = $"/api/payroll/periods/{period.Id}";
             var rowPath = periodPath + $"/rows/{row.Id}";
             var sourceBody = new { guidanceContentRevisionId = approval.Content.Id };
-            (await author.PostAsJsonAsync(rowPath + "/approve", sourceBody)).StatusCode.Should().Be(HttpStatusCode.Conflict, "missing inputs cannot create approval evidence");
+            (await author.ApproveReviewedPayrollRowAsync(rowPath + "/approve", sourceBody)).StatusCode.Should().Be(HttpStatusCode.Conflict, "missing inputs cannot create approval evidence");
             (await author.PostAsJsonAsync(periodPath + "/submit", sourceBody)).StatusCode.Should().Be(HttpStatusCode.Conflict);
             (await OwnOperationsAsync(author)).Should().ContainSingle();
-            (await author.PutAsJsonAsync(rowPath, new { grossSalary = 33030, statutoryProfile = "domesticPrivateSectorStandardFourA", workedDays = 30,
+            (await author.PutReviewedPayrollRowAsync(rowPath, new { grossSalary = 33030, statutoryProfile = "domesticPrivateSectorStandardFourA", workedDays = 30,
                 sgkPremiumDaysConfirmed = true, overtimeHours = 0, overtimeTreatmentConfirmed = true, disabilityReliefType = "none",
                 otherIncomeTaxBaseDeductionsConfirmedNone = true, cumulativeIncomeTaxBaseConfirmed = true, ibanComplete = true })).StatusCode.Should().Be(HttpStatusCode.OK);
-            var approvals = await Task.WhenAll(author.PostAsJsonAsync(rowPath + "/approve", sourceBody), author.PostAsJsonAsync(rowPath + "/approve", sourceBody));
+            var approvals = await Task.WhenAll(author.ApproveReviewedPayrollRowAsync(rowPath + "/approve", sourceBody), author.ApproveReviewedPayrollRowAsync(rowPath + "/approve", sourceBody));
             approvals.Select(x => x.StatusCode).Should().BeEquivalentTo([HttpStatusCode.OK, HttpStatusCode.Conflict]);
             (await author.PostAsJsonAsync(periodPath + "/submit", sourceBody)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await author.PostAsJsonAsync(periodPath + "/submit", sourceBody)).StatusCode.Should().Be(HttpStatusCode.Conflict);

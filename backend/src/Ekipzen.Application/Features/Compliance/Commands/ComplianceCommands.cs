@@ -89,7 +89,7 @@ public sealed record UpdateComplianceDocumentCommand(
     int Id,
     string DocumentName,
     DateOnly? DueDate,
-    string Level, int? GuidanceContentRevisionId = null) : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
+    string Level, int? GuidanceContentRevisionId = null, string? ExpectedRevision = null, string? OwnerName = null, bool UpdateOwner = false) : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "compliance-update"; }
 
 public sealed class UpdateComplianceDocumentCommandValidator
@@ -97,6 +97,8 @@ public sealed class UpdateComplianceDocumentCommandValidator
 {
     public UpdateComplianceDocumentCommandValidator()
     {
+        RuleFor(x => x.ExpectedRevision).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.OwnerName).MaximumLength(128);
         RuleFor(x => x.DocumentName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Level)
             .Must(ComplianceMappings.IsLevel)
@@ -117,9 +119,14 @@ public sealed class UpdateComplianceDocumentCommandHandler(IApplicationDbContext
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Uyum belgesi", request.Id);
 
+        ComplianceMappings.EnsureRevision(document, request.ExpectedRevision);
+        var owner = request.UpdateOwner ? (string.IsNullOrWhiteSpace(request.OwnerName) ? null : request.OwnerName.Trim()) : document.OwnerName;
         if (document.DocumentName == request.DocumentName.Trim() && document.DueDate == request.DueDate
-            && document.Level == ComplianceMappings.ParseLevel(request.Level))
+            && document.Level == ComplianceMappings.ParseLevel(request.Level) && document.OwnerName == owner)
             return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
+        if (document.Status != ComplianceStatus.Completed && await context.ComplianceDocuments.AnyAsync(x => x.Id != document.Id && x.EmployeeId == document.EmployeeId && x.DocumentName == request.DocumentName.Trim() && x.Status != ComplianceStatus.Completed, cancellationToken))
+            throw new ConflictException("Aynı personel için bu adla açık bir belge kaydı zaten var.");
+        document.OwnerName = owner;
         document.DocumentName = request.DocumentName.Trim();
         document.DueDate = request.DueDate;
         document.Level = ComplianceMappings.ParseLevel(request.Level);
@@ -132,7 +139,7 @@ public sealed class UpdateComplianceDocumentCommandHandler(IApplicationDbContext
 
 // --- durum iş akışı ---
 
-public sealed record SetComplianceStatusCommand(int Id, string Status, int? GuidanceContentRevisionId = null)
+public sealed record SetComplianceStatusCommand(int Id, string Status, int? GuidanceContentRevisionId = null, string? ExpectedRevision = null)
     : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "compliance-status"; }
 
@@ -141,6 +148,7 @@ public sealed class SetComplianceStatusCommandValidator
 {
     public SetComplianceStatusCommandValidator()
     {
+        RuleFor(x => x.ExpectedRevision).NotEmpty().MaximumLength(64);
         RuleFor(x => x.Status)
             .Must(ComplianceMappings.IsStatus)
             .WithMessage("Belge durumu: Eksik | İncelemede | Süresi Yaklaşıyor | Tamamlandı.");
@@ -160,6 +168,7 @@ public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext cont
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Uyum belgesi", request.Id);
 
+        ComplianceMappings.EnsureRevision(document, request.ExpectedRevision);
         var target = ComplianceMappings.ParseStatus(request.Status);
         if (document.Status == target)
         {
@@ -181,7 +190,7 @@ public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext cont
 
 // --- sorumlu atama ---
 
-public sealed record AssignComplianceOwnerCommand(int Id, string OwnerName, int? GuidanceContentRevisionId = null)
+public sealed record AssignComplianceOwnerCommand(int Id, string OwnerName, int? GuidanceContentRevisionId = null, string? ExpectedRevision = null)
     : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "compliance-owner"; }
 
@@ -190,6 +199,7 @@ public sealed class AssignComplianceOwnerCommandValidator
 {
     public AssignComplianceOwnerCommandValidator()
     {
+        RuleFor(x => x.ExpectedRevision).NotEmpty().MaximumLength(64);
         RuleFor(x => x.OwnerName).NotEmpty().MaximumLength(128);
     }
 }
@@ -207,6 +217,7 @@ public sealed class AssignComplianceOwnerCommandHandler(IApplicationDbContext co
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Uyum belgesi", request.Id);
 
+        ComplianceMappings.EnsureRevision(document, request.ExpectedRevision);
         if (document.OwnerName == request.OwnerName.Trim())
             return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
         document.OwnerName = request.OwnerName.Trim();

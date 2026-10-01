@@ -40,7 +40,7 @@ public sealed record PayrollRowInputModel(
     bool CumulativeIncomeTaxBaseConfirmed = false,
     decimal SpecialDeductions = 0m,
     bool IbanComplete = true,
-    string? Notes = null);
+    string? Notes = null, string? ExpectedRevision = null);
 
 public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRowInputModel>
 {
@@ -63,6 +63,7 @@ public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRow
         RuleFor(x => x.PremiumPay).GreaterThanOrEqualTo(0m);
         RuleFor(x => x.SpecialDeductions).GreaterThanOrEqualTo(0m);
         RuleFor(x => x.Notes).MaximumLength(1000);
+        RuleFor(x => x.ExpectedRevision).NotEmpty().MaximumLength(64);
     }
 }
 
@@ -101,6 +102,8 @@ public sealed class UpdatePayrollRowCommandHandler(
             throw new ConflictException("Onaylanmış bordro satırı düzenlenemez.");
         }
 
+        await PayrollRowReview.RefreshAsync(context, row, cancellationToken);
+        PayrollRowReview.EnsureRevision(request.Model.ExpectedRevision, PayrollPeriodProjector.ToRow(row, engine, row.Period!.Settings!.ToEngineParameters(), row.Period.MinimumWageIncomeTaxBaseBefore).Revision);
         var m = request.Model;
         row.GrossSalary = m.GrossSalary;
         row.StatutoryProfile = m.StatutoryProfile;
@@ -208,8 +211,13 @@ public sealed class RunPayrollCheckCommandHandler(
 
 // --- satır onayı (sonuç snapshot'ı) ---
 
-public sealed record ApprovePayrollRowCommand(int PeriodId, int RowId, int? GuidanceContentRevisionId = null) : IRequest<PayrollRowDto>, IGuidanceOperationCommand
+public sealed record ApprovePayrollRowCommand(int PeriodId, int RowId, int? GuidanceContentRevisionId = null, string? ExpectedRevision = null) : IRequest<PayrollRowDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "payroll-row-approve"; }
+
+public sealed class ApprovePayrollRowCommandValidator : AbstractValidator<ApprovePayrollRowCommand>
+{
+    public ApprovePayrollRowCommandValidator() => RuleFor(x => x.ExpectedRevision).NotEmpty().MaximumLength(64);
+}
 
 public sealed class ApprovePayrollRowCommandHandler(
     IApplicationDbContext context,
@@ -241,6 +249,7 @@ public sealed class ApprovePayrollRowCommandHandler(
             context, [row], row.Period!.Year, row.Period.Month, cancellationToken);
         var parameters = row.Period!.Settings!.ToEngineParameters();
         var calc = engine.Calculate(row.ToEngineInput(row.Period!.MinimumWageIncomeTaxBaseBefore), parameters);
+        PayrollRowReview.EnsureRevision(request.ExpectedRevision, PayrollPeriodProjector.ToRow(row, engine, parameters, row.Period.MinimumWageIncomeTaxBaseBefore).Revision);
         PayrollRowReadiness.EnsureApprovable(row, calc);
 
         var result = row.Result ?? new PayrollResult { PayrollEmployeeId = row.Id };

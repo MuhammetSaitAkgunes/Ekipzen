@@ -294,7 +294,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
 
         // İstemci eski sözleşmedeki bayrağı gönderse dahi sunucu eksik puantajı
         // yeniden hesaplar ve onayı reddeder.
-        var bypassResponse = await admin.PutAsJsonAsync(
+        var bypassResponse = await admin.PutReviewedPayrollRowAsync(
             $"/api/payroll/periods/{period.Id}/rows/{incompleteRow.Id}", new
             {
                 grossSalary = 50000,
@@ -312,7 +312,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         var bypassRow = (await bypassResponse.Content.ReadFromJsonAsync<PayrollRowDto>(JsonOptions))!;
         bypassRow.TimesheetComplete.Should().BeFalse();
         bypassRow.ApprovalStatus.Should().Be("Eksik Veri");
-        (await admin.PostAsync(
+        (await admin.ApproveReviewedPayrollRowAsync(
                 $"/api/payroll/periods/{period.Id}/rows/{incompleteRow.Id}/approve", null))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
 
@@ -331,7 +331,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         refreshedPeriod.Rows.Single(r => r.Id == incompleteRow.Id).TimesheetComplete.Should().BeTrue();
 
         // Sıfır brüt ve bunun ürettiği negatif net, puantaj tam olsa da onaylanamaz.
-        var zeroResponse = await admin.PutAsJsonAsync(
+        var zeroResponse = await admin.PutReviewedPayrollRowAsync(
             $"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
             {
                 grossSalary = 0, workedDays = 30, overtimeHours = 0,
@@ -340,12 +340,12 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         var zeroRow = (await zeroResponse.Content.ReadFromJsonAsync<PayrollRowDto>(JsonOptions))!;
         zeroRow.ApprovalStatus.Should().Be("Eksik Veri");
         zeroRow.Warnings.Should().Contain(["Brüt maaş sıfır", "Net ödeme negatif"]);
-        (await admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null))
+        (await admin.ApproveReviewedPayrollRowAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         // Önceki matrah da eski sözleşmedeki gibi gönderilse bile ilk dönemin
         // sunucu matrahı sıfır kalır.
-        var updateResponse = await admin.PutAsJsonAsync(
+        var updateResponse = await admin.PutReviewedPayrollRowAsync(
             $"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
             {
                 grossSalary = 118000,
@@ -396,7 +396,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         var missingRow = checkedPeriod.Rows.FirstOrDefault(r => r.ApprovalStatus == "Eksik Veri");
         if (missingRow is not null)
         {
-            (await admin.PostAsync(
+            (await admin.ApproveReviewedPayrollRowAsync(
                     $"/api/payroll/periods/{period.Id}/rows/{missingRow.Id}/approve", null))
                 .StatusCode.Should().Be(HttpStatusCode.Conflict, "eksik verili satır onaylanamaz");
         }
@@ -408,7 +408,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         // --- kalan satırları tamamla ve tümünü onayla ---
         foreach (var row in checkedPeriod.Rows.Where(r => r.Id != ahmetRow.Id))
         {
-            (await admin.PutAsJsonAsync($"/api/payroll/periods/{period.Id}/rows/{row.Id}", new
+            (await admin.PutReviewedPayrollRowAsync($"/api/payroll/periods/{period.Id}/rows/{row.Id}", new
             {
                 grossSalary = 50000,
                 statutoryProfile = "domesticPrivateSectorStandardFourA",
@@ -425,14 +425,14 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
         // Aynı satıra iki eşzamanlı onay geldiğinde dönem kilidi işlemleri
         // serileştirir: yalnız biri snapshot üretir, diğeri güncel durumu görür.
         var concurrentApprovals = await Task.WhenAll(
-            admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null),
-            admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null));
+            admin.ApproveReviewedPayrollRowAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null),
+            admin.ApproveReviewedPayrollRowAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}/approve", null));
         concurrentApprovals.Count(response => response.StatusCode == HttpStatusCode.OK).Should().Be(1);
         concurrentApprovals.Count(response => response.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
 
         foreach (var row in checkedPeriod.Rows.Where(row => row.Id != ahmetRow.Id))
         {
-            (await admin.PostAsync($"/api/payroll/periods/{period.Id}/rows/{row.Id}/approve", null))
+            (await admin.ApproveReviewedPayrollRowAsync($"/api/payroll/periods/{period.Id}/rows/{row.Id}/approve", null))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
@@ -455,7 +455,7 @@ public sealed class PayrollTests(EkipzenApiFactory factory)
             .Should().NotContain(task => task.Key == payrollTaskKey,
                 "dönem onayı gerçek kaynak durumunu değiştirir");
 
-        (await admin.PutAsJsonAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
+        (await admin.PutReviewedPayrollRowAsync($"/api/payroll/periods/{period.Id}/rows/{ahmetRow.Id}", new
         {
             grossSalary = 1,
             workedDays = 30,

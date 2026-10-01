@@ -1,5 +1,7 @@
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Compliance.Queries;
+using Ekipzen.Application.Features.Actions.Queries;
+using Ekipzen.Application.Features.Setup;
 using Ekipzen.Application.Features.Leaves.Queries;
 using Ekipzen.Application.Features.Payroll.Periods;
 using Ekipzen.Application.Features.Recruitment.Queries;
@@ -47,10 +49,30 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
             $"/inbox?tab=approvals&requestId={leave.Id}"
         )).ToList();
 
+        var actions = await sender.Send(new GetGlobalActionsQuery(), ct);
+        tasks.AddRange(actions.Where(action => action.Status != "done").Select(action => new DailyGuidanceTaskDto(
+            $"action-followup:{action.Id}", "action-followup", action.Id, action.Title,
+            $"Aksiyon {action.Status} durumunda; sorumlu: {action.Owner}. Kaynak: {action.Source}.",
+            action.Action ?? "Aksiyonu ve dayanağını inceleyin; gerçek sonucu doğrulayınca durumunu güncelleyin.",
+            null, string.IsNullOrWhiteSpace(action.Due) ? "Aksiyonda güvenilir takvim son tarihi kayıtlı değil." : $"Kayıtlı tarih açıklaması: {action.Due}. Bu metin otomatik takvim son tarihi değildir.",
+            $"/actions?actionId={action.Id}")));
+
         // Yönetici belgeyi görebilir ancak durumunu değiştiremez; görev yalnız
         // kaydı düzeltebilen İK yöneticisine sunulur.
         if (currentUser.Roles.Contains(Roles.HrAdmin))
         {
+            var setup = await GetTenantSetupStatusQueryHandler.ReadAsync(context, ct);
+            if (setup.NeedsInitialization)
+                tasks.Add(new DailyGuidanceTaskDto($"company-setup:{setup.TemplateYear}", "company-setup", setup.TemplateYear,
+                    "Şirket başlangıç kayıtlarını tamamla", "Başlangıç şirket profili, izin türü, takvim veya taslak bordro ayarlarından eksikler var.",
+                    "Ayarlar ekranında eklenecek kayıtları inceleyin. Başlangıç şablonu uzman veya şirket politikası onayı değildir.",
+                    null, "Kurulum için uygulamada kayıtlı son tarih yok.", "/settings"));
+            var draftSettings = await context.PayrollSettings.AsNoTracking().Where(x => x.Status == PayrollSettingsStatus.Draft)
+                .Select(x => new { x.Id, x.Version, x.EffectiveFrom }).ToListAsync(ct);
+            tasks.AddRange(draftSettings.Select(settings => new DailyGuidanceTaskDto($"payroll-settings-review:{settings.Id}", "payroll-settings-review", settings.Id,
+                $"Bordro ayar sürüm #{settings.Version} için uzman incelemesini hazırla", "Hesap parametreleri taslak; bordroda onaylı mevzuat seti gerekir.",
+                "Kaynak referansını ve yürürlük koşullarını uzmana doğrulatın; yalnız gerçek incelemeden sonra mevcut onay akışını kullanın.",
+                null, $"Yürürlük başlangıcı: {settings.EffectiveFrom:dd.MM.yyyy}. Bu tarih inceleme son tarihi değildir.", "/payroll/settings")));
             var documents = await sender.Send(new GetComplianceDocumentsQuery(), ct);
             tasks.AddRange(documents
                 .Where(document => document.Status is "Eksik" or "Süresi Yaklaşıyor")
@@ -241,9 +263,11 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 "offboarding-case" => 2,
                 "offboarding-external-payment" or "offboarding-external-notification"
                     or "payroll-revision-external-payment" or "payroll-revision-external-notification" => 3,
-                "employee-compensation" => 4,
-                "payroll-period" => 5,
-                _ => 6,
+                "company-setup" => 4,
+                "payroll-settings-review" => 5,
+                "employee-compensation" => 6,
+                "payroll-period" => 7,
+                _ => 8,
             })
             .ThenBy(task => task.DueDate ?? DateOnly.MaxValue)
             .ThenBy(task => task.RecordId)

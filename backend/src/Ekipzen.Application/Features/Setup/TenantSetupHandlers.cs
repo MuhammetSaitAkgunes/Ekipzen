@@ -1,3 +1,5 @@
+using FluentValidation;
+using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Application.Common.Interfaces;
@@ -22,8 +24,11 @@ public sealed record TenantSetupStatusDto(
 }
 
 public sealed record GetTenantSetupStatusQuery : IRequest<TenantSetupStatusDto>;
-public sealed record InitializeTenantSetupCommand(int? GuidanceContentRevisionId = null) : IRequest<TenantSetupStatusDto>, IGuidanceOperationCommand
+public sealed record InitializeTenantSetupCommand(int? GuidanceContentRevisionId = null, string? ExpectedPreviewToken = null) : IRequest<TenantSetupStatusDto>, IGuidanceOperationCommand
 { public string GuidanceOperationKey => "tenant-setup"; }
+
+public sealed class InitializeTenantSetupCommandValidator : AbstractValidator<InitializeTenantSetupCommand>
+{ public InitializeTenantSetupCommandValidator() => RuleFor(x => x.ExpectedPreviewToken).NotEmpty().MaximumLength(64); }
 
 public sealed class GetTenantSetupStatusQueryHandler(IApplicationDbContext context)
     : IRequestHandler<GetTenantSetupStatusQuery, TenantSetupStatusDto>
@@ -57,6 +62,9 @@ public sealed class InitializeTenantSetupCommandHandler(
     public Task<TenantSetupStatusDto> Handle(InitializeTenantSetupCommand request, CancellationToken cancellationToken)
         => databaseLock.ExecuteExclusiveAsync("tenant-setup", async ct =>
         {
+            var preview = await GetTenantSetupPreviewQueryHandler.ReadAsync(context, platform, currentTenant, ct);
+            if (!preview.Status.NeedsInitialization) return preview.Status;
+            if (request.ExpectedPreviewToken != preview.Token) throw new ConflictException("Başlangıç kayıtları değişti. Önizlemeyi yeniden okuyup kontrol edin.");
             // Platform context'inde global kiracı filtresi yoktur; kimlik açıkça süzülür.
             var tenantId = currentTenant.TenantIdOrThrow();
             var addedCompany = !await context.CompanyProfiles.AnyAsync(ct);

@@ -219,6 +219,7 @@ public static class PayrollPeriodProjector
             .Include(row => row.Result)
             .ToListAsync(cancellationToken);
 
+        foreach (var row in employeeRows) row.Period = period;
         var pendingRows = employeeRows
             .Where(row => row.ApprovalStatus != PayrollApprovalStatus.Approved)
             .ToList();
@@ -295,7 +296,7 @@ public static class PayrollPeriodProjector
                 pe.ToEngineInput(minimumWageIncomeTaxBaseBefore), parameters);
         }
 
-        return new PayrollRowDto(
+        var dto = new PayrollRowDto(
             pe.Id,
             pe.EmployeeId,
             pe.Employee?.FullName ?? string.Empty,
@@ -324,5 +325,6 @@ public static class PayrollPeriodProjector
             calc.MinimumWageIncomeTaxExemption, calc.MinimumWageStampTaxExemption,
             calc.AppliedEmployerSgkRate, calc.DisabilityIncomeTaxBaseDeduction,
             calc.Warnings);
+        return dto with { Revision = PayrollRowReview.Revision(dto, pe) };
     }
 }

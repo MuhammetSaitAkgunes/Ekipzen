@@ -55,7 +55,7 @@ public sealed class ComplianceTests(EkipzenApiFactory factory)
         inReview.Status.Should().Be("İncelemede");
 
         // Aynı duruma tekrar geçiş → 409.
-        (await admin.PatchAsJsonAsync($"/api/compliance/documents/{document.Id}/status",
+        (await admin.PatchReviewedComplianceAsync($"/api/compliance/documents/{document.Id}/status",
             new { status = "İncelemede" })).StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         // --- owner atama ---
@@ -70,7 +70,7 @@ public sealed class ComplianceTests(EkipzenApiFactory factory)
         completed.DueLabel.Should().Be("Tamamlandı");
 
         // --- güncelleme: ad/son tarih/seviye ---
-        var updateResponse = await admin.PutAsJsonAsync($"/api/compliance/documents/{document.Id}", new
+        var updateResponse = await admin.PutReviewedComplianceAsync($"/api/compliance/documents/{document.Id}", new
         {
             documentName = "Faz9 Sözleşme Zeyilnamesi (rev)",
             dueDate = (DateOnly?)null,
@@ -125,14 +125,14 @@ public sealed class ComplianceTests(EkipzenApiFactory factory)
                 level = "urgent",
             }), "Status", "Level");
 
-        await AssertValidationProblemAsync(await admin.PutAsJsonAsync(
+        await AssertValidationProblemAsync(await admin.PutReviewedComplianceAsync(
             "/api/compliance/documents/1", new
             {
                 documentName = "Geçersiz enum testi",
                 level = "urgent",
             }), "Level");
 
-        await AssertValidationProblemAsync(await admin.PatchAsJsonAsync(
+        await AssertValidationProblemAsync(await admin.PatchReviewedComplianceAsync(
             "/api/compliance/documents/1/status", new { status = "completed" }), "Status");
     }
 
@@ -238,7 +238,7 @@ public sealed class ComplianceTests(EkipzenApiFactory factory)
     private static async Task<ComplianceDocumentDto> PatchAsync(
         HttpClient client, string url, object payload)
     {
-        var response = await client.PatchAsJsonAsync(url, payload);
+        var response = await client.PatchReviewedComplianceAsync(url, payload);
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"PATCH {url} → {body}");
         return (await response.Content.ReadFromJsonAsync<ComplianceDocumentDto>())!;

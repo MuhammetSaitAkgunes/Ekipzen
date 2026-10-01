@@ -16,7 +16,7 @@ public sealed record ComplianceDocumentDto(
     DateOnly? DueDate,
     string DueLabel,
     string Status,
-    string Level);
+    string Level, string Revision = "");
 
 /// <summary>Denetim hazırlığı çubuğu — dashboard.js auditChecklist şekli.</summary>
 public sealed record AuditChecklistItemDto(string Label, int Value, string Level);
@@ -37,6 +37,12 @@ public sealed record ComplianceReadinessDto(
 
 public static class ComplianceMappings
 {
+    public static string Revision(ComplianceDocument document) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { document.Id, document.EmployeeId, document.DocumentName, document.OwnerName, document.DueDate, document.Status, document.Level, Created = document.CreatedAtUtc.Ticks, Updated = document.UpdatedAtUtc.HasValue ? document.UpdatedAtUtc.Value.Ticks : (long?)null })));
+    public static void EnsureRevision(ComplianceDocument document, string? expected)
+    {
+        if (expected != Revision(document)) throw new Ekipzen.Application.Common.Exceptions.ConflictException("Belge kaydı değişti. Güncel kaydı yeniden açıp değişikliklerinizi kontrol edin.");
+    }
     public static bool IsStatus(string? value)
         => value is "Eksik" or "İncelemede" or "Süresi Yaklaşıyor" or "Tamamlandı";
 
@@ -98,7 +104,7 @@ public static class ComplianceMappings
         document.DueDate,
         DueLabel(document.Status, document.DueDate, today),
         document.Status.ToLabel(),
-        document.Level.ToLabel());
+        document.Level.ToLabel(), Revision(document));
 
     /// <summary>
     /// Rol bazlı belge kapsamı: hr-admin → hepsi; manager → ekibi + kendisi

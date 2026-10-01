@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Ekipzen.Application.Common.Models;
 using Ekipzen.Application.Features.Auth;
+using Ekipzen.Application.Features.Actions;
 using Ekipzen.Application.Features.Compliance;
 using Ekipzen.Application.Features.Employees;
 using Ekipzen.Application.Features.Employees.Offboarding;
@@ -17,6 +18,27 @@ namespace Ekipzen.Tests.Integration.Guidance;
 public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
 {
     private const string Url = "/api/guidance/daily-tasks";
+
+    [Fact]
+    public async Task ActionTask_FollowsActualStatusWithStableKeyAndNoInventedDeadline()
+    {
+        var admin = await AuthedClientAsync("ik@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var created = await admin.PostAsJsonAsync("/api/actions", new { title = "Günlük görev " + Guid.NewGuid().ToString("N"), source = "Puantaj", owner = "İK Operasyon", due = "Bugün", priority = "medium", recommendedAction = "Kaydı kontrol et." });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var action = (await created.Content.ReadFromJsonAsync<GlobalActionDto>())!;
+        var key = $"action-followup:{action.Id}";
+        try
+        {
+            foreach (var client in new[] { admin, manager })
+                (await GetAsync<List<DailyGuidanceTaskDto>>(client, Url)).Should().ContainSingle(x => x.Key == key).Which.Should().Match<DailyGuidanceTaskDto>(x => x.Kind == "action-followup" && x.DueDate == null && x.DateNote.Contains("Bugün") && x.TargetPath == $"/actions?actionId={action.Id}");
+            (await admin.PatchAsJsonAsync($"/api/actions/{action.Id}/status", new { status = "week" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().ContainSingle(x => x.Key == key);
+            (await admin.PatchAsJsonAsync($"/api/actions/{action.Id}/status", new { status = "done" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(x => x.Key == key);
+        }
+        finally { await admin.DeleteAsync($"/api/actions/{action.Id}"); }
+    }
 
     [Fact]
     public async Task ComplianceTask_FollowsSourceStateAndKeepsUnknownDeadlineExplicit()
@@ -46,15 +68,15 @@ public sealed class DailyGuidanceTasksTests(EkipzenApiFactory factory)
         (await GetAsync<List<DailyGuidanceTaskDto>>(manager, Url))
             .Should().NotContain(task => task.Key == key, "yönetici belge durumunu değiştiremez");
 
-        (await admin.PatchAsJsonAsync($"/api/compliance/documents/{document.Id}/status",
+        (await admin.PatchReviewedComplianceAsync($"/api/compliance/documents/{document.Id}/status",
             new { status = "İncelemede" })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
 
-        (await admin.PatchAsJsonAsync($"/api/compliance/documents/{document.Id}/status",
+        (await admin.PatchReviewedComplianceAsync($"/api/compliance/documents/{document.Id}/status",
             new { status = "Eksik" })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().ContainSingle(task => task.Key == key);
 
-        (await admin.PatchAsJsonAsync($"/api/compliance/documents/{document.Id}/status",
+        (await admin.PatchReviewedComplianceAsync($"/api/compliance/documents/{document.Id}/status",
             new { status = "Tamamlandı" })).StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetAsync<List<DailyGuidanceTaskDto>>(admin, Url)).Should().NotContain(task => task.Key == key);
     }

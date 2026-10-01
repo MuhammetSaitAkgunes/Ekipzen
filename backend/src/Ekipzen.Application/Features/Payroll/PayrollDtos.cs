@@ -100,7 +100,7 @@ public sealed record PayrollRowDto(
     decimal AppliedEmployerSgkRate,
     decimal DisabilityIncomeTaxBaseDeduction,
     IReadOnlyList<string> Warnings,
-    int RevisionNumber = 0);
+    int RevisionNumber = 0, string? Revision = null);
 
 public sealed record PayrollTotalsDto(decimal Gross, decimal Net, decimal EmployerCost, decimal Deductions);
 

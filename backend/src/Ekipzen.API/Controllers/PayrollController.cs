@@ -70,13 +70,18 @@ public sealed class PayrollController(ISender sender) : ControllerBase
     public async Task<ActionResult<PayrollPeriodDetailDto>> RunCheck(int id, CancellationToken cancellationToken)
         => Ok(await sender.Send(new RunPayrollCheckCommand(id), cancellationToken));
 
+    [HttpGet("periods/{id:int}/rows/{rowId:int}/approval-preview")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    public async Task<ActionResult<PayrollRowApprovalPreviewDto>> ApprovalPreview(int id, int rowId, CancellationToken ct)
+        => Ok(await sender.Send(new GetPayrollRowApprovalPreviewQuery(id, rowId), ct));
+
     [HttpPost("periods/{id:int}/rows/{rowId:int}/approve")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<PayrollRowDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<PayrollRowDto>> ApproveRow(
         int id, int rowId, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GuidanceOperationBody? body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new ApprovePayrollRowCommand(id, rowId, body?.GuidanceContentRevisionId), cancellationToken));
+        => Ok(await sender.Send(new ApprovePayrollRowCommand(id, rowId, body?.GuidanceContentRevisionId, body?.ExpectedRevision), cancellationToken));
 
     [HttpPost("periods/{id:int}/submit")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -85,7 +90,7 @@ public sealed class PayrollController(ISender sender) : ControllerBase
     public async Task<ActionResult<PayrollPeriodDetailDto>> Submit(int id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GuidanceOperationBody? body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new SubmitPayrollPeriodCommand(id, body?.GuidanceContentRevisionId), cancellationToken));
 
-    public sealed record GuidanceOperationBody(int? GuidanceContentRevisionId = null);
+    public sealed record GuidanceOperationBody(int? GuidanceContentRevisionId = null, string? ExpectedRevision = null);
 
     // --- tekil hesap (hr-admin) ---
 
