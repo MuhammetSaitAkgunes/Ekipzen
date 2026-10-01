@@ -788,6 +788,7 @@ export const useWithdrawDocument = () => {
 export type ImportRowIssue = components["schemas"]["ImportRowIssueDto"];
 export type ImportPreviewDto = components["schemas"]["ImportPreviewDto"];
 export type ImportResultDto = components["schemas"]["ImportResultDto"];
+export type ImportRowPreviewDto = components["schemas"]["ImportRowPreviewDto"];
 
 const dosyaGovdesi = (file: File): FormData => {
   const form = new FormData();
@@ -807,8 +808,12 @@ export const usePreviewImport = () =>
 export const useImportEmployees = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) =>
-      apiFetch<ImportResultDto>("/employees/import", { method: "POST", body: dosyaGovdesi(file) }),
+    mutationFn: ({ file, importRequestId, expectedPreviewToken }: { file: File; importRequestId: string; expectedPreviewToken: string }) => {
+      const body = dosyaGovdesi(file);
+      body.append("importRequestId", importRequestId);
+      body.append("expectedPreviewToken", expectedPreviewToken);
+      return apiFetch<ImportResultDto>("/employees/import", { method: "POST", body });
+    },
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),

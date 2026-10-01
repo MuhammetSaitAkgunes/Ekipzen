@@ -1799,7 +1799,7 @@ export interface paths {
         put?: never;
         /**
          * Geçerli satırları kaydeder; hatalı ve mükerrer satırları atlar.
-         *     Önizlemeyle aynı doğrulamayı kullanır, bu yüzden sonuçlar ayrışamaz.
+         *     Önizleme değişmişse kaydetmez; aynı gönderim tekrarı kayıtlı sonucu döner.
          */
         post: {
             parameters: {
@@ -1813,6 +1813,9 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         file?: string;
+                        /** Format: uuid */
+                        importRequestId?: string;
+                        expectedPreviewToken?: string;
                     };
                 };
             };
@@ -1830,6 +1833,52 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/import/results/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ImportResultDto"];
+                        "application/json": components["schemas"]["ImportResultDto"];
+                        "text/json": components["schemas"]["ImportResultDto"];
+                    };
+                };
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10214,6 +10263,8 @@ export interface components {
             mukerrerSatir?: number;
             bilinmeyenDepartmanlar?: string[] | null;
             sorunlar?: components["schemas"]["ImportRowIssueDto"][] | null;
+            satirlar?: components["schemas"]["ImportRowPreviewDto"][] | null;
+            previewToken?: string | null;
         };
         ImportResultDto: {
             /** Format: int32 */
@@ -10221,12 +10272,29 @@ export interface components {
             /** Format: int32 */
             atlananSatir?: number;
             sorunlar?: components["schemas"]["ImportRowIssueDto"][] | null;
+            satirlar?: components["schemas"]["ImportRowPreviewDto"][] | null;
+            /** Format: uuid */
+            importRequestId?: string;
         };
         ImportRowIssueDto: {
             /** Format: int32 */
             satirNo?: number;
             alan?: string | null;
             mesaj?: string | null;
+        };
+        ImportRowPreviewDto: {
+            /** Format: int32 */
+            satirNo?: number;
+            adSoyad?: string | null;
+            unvan?: string | null;
+            departman?: string | null;
+            /** Format: date */
+            iseGirisTarihi?: string | null;
+            durum?: string | null;
+            aciklama?: string | null;
+            sorunlar?: components["schemas"]["ImportRowIssueDto"][] | null;
+            /** Format: int32 */
+            employeeId?: number | null;
         };
         InitializeTenantSetupCommand: {
             /** Format: int32 */

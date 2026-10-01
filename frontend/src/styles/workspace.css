@@ -600,6 +600,22 @@
 .ez-import-review h5, .ez-import-outcome h5 { margin: 0 0 12px; color: var(--ink); font-size: 16px; }
 .ez-import-review label { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; color: var(--ink); line-height: 1.45; }
 .ez-import-review label input { flex: 0 0 auto; margin-top: 4px; }
+.ez-import-modal { overflow-y: auto; }
+.ez-import-modal > .card { flex: 0 0 auto; min-width: 0; }
+.ez-import-table-scroll { max-width: 100%; overflow-x: auto; }
+.ez-import-table-scroll table { min-width: 620px; }
+.ez-import-table-scroll td { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+.ez-import-table-scroll td p { margin: 6px 0; }
+.ez-import-table-scroll caption { text-align: left; padding: 12px 0; color: var(--ink); }
+.ez-import-outcome code, .fullscreen-modal .surface code { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .ez-import-table-scroll table { min-width: 0; }
+  .ez-import-table-scroll thead { display: none; }
+  .ez-import-table-scroll tbody, .ez-import-table-scroll tr, .ez-import-table-scroll td { display: block; }
+  .ez-import-table-scroll tbody tr { margin: 12px 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+  .ez-import-table-scroll td { padding: 8px; border: 0; }
+  .ez-import-table-scroll td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+}
 @media (max-width: 640px) { .ez-import-guide, .ez-import-review, .ez-import-outcome { padding: 16px; } }
 
 .ez-offboarding-guide, .ez-offboarding-review { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
