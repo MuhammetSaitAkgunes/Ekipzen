@@ -1,4 +1,6 @@
 import { PersonnelDecisionCheck } from "./PersonnelDecisionCheck";
+import { Link } from "react-router-dom";
+import { appPath } from "../../paths";
 
 export type PersonnelGuideStep =
   | "tab-kimlik" | "tab-iletisim" | "tab-is"
@@ -80,6 +82,7 @@ export function PersonnelGuide({ step, index }: { step: PersonnelGuideStep; inde
       <p><strong>Kontrol:</strong> {item.check}</p>
     </details>
     <PersonnelDecisionCheck key={step} step={step} />
-    <small>Bu açıklama işlem rehberidir. Mevzuat dayanağı incelemesi tamamlanan bilgiler ilgili adımda kaynaklarıyla yayımlanacaktır.</small>
+    <Link to={appPath("/guidance/catalog?process=personnel-entry")}>İşe girişin kaynaklı rehberini aç</Link>
+    <small>Kaynaklı metinler bağımsız inceleme ve yayın onayından sonra katalogda görünür.</small>
   </section>;
 }

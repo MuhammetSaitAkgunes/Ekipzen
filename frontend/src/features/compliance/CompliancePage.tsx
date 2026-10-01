@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -97,6 +98,7 @@ export function CompliancePage() {
       <div className="page-header">
         <div>
           <h2>Uyum, Evrak ve Denetim Risk Merkezi</h2>
+          <GuidanceSourceLink processKey="compliance" />
           <p>Eksik evrak, yaklaşan son tarih ve denetim hazırlığını operasyonel takip görünümünde yönetin.</p>
         </div>
         <BackToRisk />

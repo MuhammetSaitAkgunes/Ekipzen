@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { useToast } from "../../layout/ToastProvider";
 import { AttendanceEntryModal } from "./AttendanceEntryModal";
 import { downloadCsv, tableToCsvLines } from "../shared/csv";
@@ -63,6 +64,7 @@ export function AttendancePage() {
       <div className="page-header">
         <div>
           <h2>Mesai & Puantaj Takibi</h2>
+          <GuidanceSourceLink processKey="attendance" />
           <p>Giriş-çıkış saatleri, vardiya durumu ve aylık puantaj kontrolü.</p>
         </div>
         <div className="header-actions">

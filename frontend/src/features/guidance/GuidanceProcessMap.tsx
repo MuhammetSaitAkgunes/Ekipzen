@@ -76,6 +76,7 @@ export function GuidanceProcessMap({ isHrAdmin = true }: { isHrAdmin?: boolean }
           <p>{process.purpose}</p>
           <p className="ez-process-connection"><strong>Bağlantı:</strong> {process.connection}</p>
           <Link to={appPath(process.path)} aria-label={`${process.title} ekranını aç`}>Ekranı aç <span aria-hidden="true">→</span></Link>
+          <p><Link to={appPath(`/guidance/catalog?process=${process.key === "entry" ? "personnel-entry" : process.key}`)}>{process.title} için kaynaklı rehberi aç</Link></p>
         </article>
       </li>)}
     </ol>

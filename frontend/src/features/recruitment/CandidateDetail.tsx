@@ -232,6 +232,7 @@ export function CandidateDetail({ id }: { id: number }) {
           <div className="dh-avatar-lg">{candidate.initials}</div>
           <div>
             <h2>{candidate.name}</h2>
+            <Link to={appPath("/guidance/catalog?process=recruitment")}>İşe alımın kaynaklı rehberini aç</Link>
             <p className="dh-role">{candidate.appliedRole}</p>
             {candidate.positionTitle && <p className="dh-role">Bağlı pozisyon: {candidate.positionTitle}</p>}
             <div className="dh-tags">

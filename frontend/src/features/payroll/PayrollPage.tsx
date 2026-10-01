@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { appPath } from "../../paths";
@@ -63,6 +64,7 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
       <div className="page-header">
         <div>
           <h2>Bordro</h2>
+          <GuidanceSourceLink processKey="payroll" />
           <p>
             {selected
               ? `${selected.name} dönemi için hesaplama, kontrol, onay ve tekil bordro senaryolarını yönetin.`

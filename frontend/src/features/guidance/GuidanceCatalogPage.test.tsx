@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -33,6 +33,53 @@ const renderCatalog = (path = "/app/guidance/catalog") => renderPage(<AuthProvid
 const routes = (canManage = false, entries: GuidanceEditorial[] = [entry]) => ({
   "/api/guidance/catalog": [content], "/api/guidance/catalog/versions/8": content,
   "/api/guidance/catalog/access": { canManage }, "/api/guidance/catalog/editorial": entries,
+  "/api/guidance/catalog/readings": [],
+});
+
+test("inceleme kaydı yalnız açık beyanla gönderilir ve tekrar okuma tarihi değiştirmez", async () => {
+  const reading = { contentRevisionId: 8, contentKey: content.contentKey, processKey: "personnel", contentVersion: 1,
+    title: content.body.title, firstReadAtUtc: "2026-10-01T08:00:00Z", isCurrent: true };
+  stubApi({ ...routes(), "/api/guidance/catalog/versions/8/readings": reading });
+  renderCatalog("/app/guidance/catalog?version=8");
+  const region = await screen.findByRole("region", { name: "İçerik inceleme beyanı" });
+  const save = within(region).getByRole("button", { name: "İnceleme beyanımı kaydet" });
+  expect(save).toBeDisabled();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  await userEvent.click(within(region).getByRole("checkbox"));
+  await waitFor(() => expect(save).toBeEnabled());
+  await userEvent.click(save);
+  expect(await within(region).findByText(/Bu sürümü incelediğinizi/)).toBeInTheDocument();
+  const posts = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === "POST");
+  expect(posts).toHaveLength(1);
+  expect(posts[0][0]).toBe("/api/guidance/catalog/versions/8/readings");
+  expect(JSON.parse(String(posts[0][1]?.body))).toEqual({ confirmed: true });
+  expect(within(region).queryByRole("button", { name: "İnceleme beyanımı kaydet" })).not.toBeInTheDocument();
+});
+
+test("kaynaklı başlangıç metni inceleme taslağını doldurur; kendiliğinden kaydetmez veya yayınlamaz", async () => {
+  stubApi(routes(true)); renderCatalog();
+  await userEvent.click(await screen.findByRole("button", { name: "İçerik yayınını yönet" }));
+  await userEvent.click(screen.getByText("On süreç için kaynaklı başlangıç taslakları"));
+  expect(screen.getAllByRole("button", { name: /başlangıç taslağını hazırla/ })).toHaveLength(10);
+  await userEvent.click(screen.getByRole("button", { name: "Bordro başlangıç taslağını hazırla" }));
+  expect(screen.getByLabelText("İçerik kimliği")).toHaveValue("payroll-ilk-kontrol");
+  expect(screen.getByLabelText("İçerik başlığı")).toHaveValue("Bordro girdisini, sonucu ve dış ödemeyi ayırma");
+  expect((screen.getByLabelText("Kaynak bağlantısı veya belge referansı") as HTMLTextAreaElement).value).toContain("csgb.gov.tr");
+  expect(screen.getByText(/henüz uzman onaylı değildir/)).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "İşe giriş başlangıç taslağını hazırla" }));
+  expect(screen.getByLabelText("İçerik kimliği")).toHaveValue("personnel-entry-ilk-kontrol");
+  expect((screen.getByLabelText("Kaynak bağlantısı veya belge referansı") as HTMLTextAreaElement).value).toContain("sgk.gov.tr");
+});
+
+test("süreç bağlantısı ilgili içerik grubunu filtreler; eski sürüm kayıt ve işlem düğmesi sunmaz", async () => {
+  stubApi({ ...routes(), "/api/guidance/catalog/versions/8": { ...content, isCurrent: false } });
+  renderCatalog("/app/guidance/catalog?process=leave&version=8");
+  expect(await screen.findByLabelText("Süreç filtresi")).toHaveValue("leave");
+  expect(screen.queryByRole("button", { name: /Kartı doğrulama/ })).not.toBeInTheDocument();
+  expect(await screen.findByText(/Güncel olmayan sürüm için yeni inceleme beyanı kaydedilmez/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "İnceleme beyanımı kaydet" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "İlgili süreç ekranını aç" })).not.toBeInTheDocument();
 });
 
 test("çalışan incelenmiş gerekçe ve örnekleri okur; içerik yayınına yetki kazanmaz", async () => {

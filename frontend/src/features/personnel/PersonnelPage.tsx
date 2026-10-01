@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
@@ -101,6 +102,7 @@ export function PersonnelPage() {
         <div className="page-header">
           <div>
             <h2>Çalışanlar</h2>
+            <GuidanceSourceLink processKey="personnel" />
             <p>Sicil, özlük, iletişim ve kurumsal bilgileri tek ekrandan yönetin.</p>
           </div>
           {isHrAdmin && (

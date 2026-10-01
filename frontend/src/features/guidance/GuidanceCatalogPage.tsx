@@ -4,8 +4,12 @@ import { useAuth } from "../../auth/AuthContext";
 import { appPath } from "../../paths";
 import type { Role } from "../../routes";
 import { PageError, PageLoading } from "../shared/PageState";
+import { guidanceSourceDrafts, guidanceSourceResearchDate } from "./sourceDrafts";
+import { guidanceProcessPath } from "./processNavigation";
+import { GuidanceReadingJourney } from "./GuidanceReadingJourney";
 import { processTitles, sourceTitles, useGuidanceCatalog, useGuidanceCatalogVersion, useGuidanceEditorial,
-  useGuidanceEditorialAccess, useSaveGuidanceContent, type GuidanceContent, type GuidanceContentBody, type GuidanceEditorial } from "./catalogQueries";
+  useGuidanceEditorialAccess, useSaveGuidanceContent, useGuidanceContentReadings, useRecordGuidanceReading,
+  type GuidanceContent, type GuidanceContentBody, type GuidanceEditorial } from "./catalogQueries";
 import "./GuidanceCatalogPage.css";
 
 type TextField = Exclude<keyof GuidanceContentBody, "title" | "audience" | "sourceKind" | "effectiveFrom" | "effectiveTo">;
@@ -30,6 +34,8 @@ const blankBody = (): GuidanceContentBody => ({
 });
 
 function ContentArticle({ content }: { content: GuidanceContent }) {
+  const { user } = useAuth();
+  const processPath = guidanceProcessPath(content.processKey, user?.role);
   const body = content.body;
   const sourceUrl = /^https:\/\//i.test(body.sourceReference) ? body.sourceReference : null;
   return <article className="ez-panel ez-guidance-article">
@@ -44,7 +50,28 @@ function ContentArticle({ content }: { content: GuidanceContent }) {
     </section>)}
     <p>Uzman incelemesi: {content.expertName} · {content.expertRole} · {content.reviewedOn}. Yeniden inceleme: {content.reviewDueOn}.</p>
     <p>Rehberi okumak bir işlemi tamamlamaz veya öğrenme yeterliliğini onaylamaz. Gerçek sonucu ilgili işlem ekranından doğrulayın.</p>
+    <ReadingAcknowledgement key={content.id} content={content} />
+    {content.isCurrent && processPath && <Link className="btn btn-secondary" to={appPath(processPath)}>İlgili süreç ekranını aç</Link>}
   </article>;
+}
+
+function ReadingAcknowledgement({ content }: { content: GuidanceContent }) {
+  const { user } = useAuth();
+  const readings = useGuidanceContentReadings(user?.id);
+  const mutation = useRecordGuidanceReading();
+  const [confirmed, setConfirmed] = useState(false);
+  const saved = readings.data?.find(item => item.contentRevisionId === content.id) ?? mutation.data;
+  return <section aria-label="İçerik inceleme beyanı">
+    {saved ? <p role="status">Bu sürümü incelediğinizi {new Date(saved.firstReadAtUtc).toLocaleString("tr-TR")} tarihinde kaydettiniz.</p>
+      : !content.isCurrent ? <p>Güncel olmayan sürüm için yeni inceleme beyanı kaydedilmez.</p>
+      : <>
+        <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />Bu içerik sürümünü inceledim; bu beyanın iş tamamlanması veya yeterlilik onayı olmadığını anlıyorum.</label>
+        <button className="btn btn-primary" disabled={!confirmed || mutation.isPending || readings.isPending || readings.isError}
+          onClick={() => mutation.mutate(content.id)}>İnceleme beyanımı kaydet</button>
+      </>}
+    {readings.isError && <p role="alert">Önceki inceleme kayıtları yüklenemedi. <button className="btn btn-secondary" onClick={() => void readings.refetch()}>İnceleme kaydını tekrar yükle</button></p>}
+    {mutation.isError && <p role="alert">{mutation.error.message}</p>}
+  </section>;
 }
 
 function ContentForm({ initial, identity, onSaved, onDirtyChange }: {
@@ -143,6 +170,7 @@ export function GuidanceCatalogPage() {
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const versionId = /^\d+$/.test(params.get("version") ?? "") ? Number(params.get("version")) : null;
+  const processFilter = params.get("process") ?? "";
   const catalog = useGuidanceCatalog(user?.role);
   const version = useGuidanceCatalogVersion(versionId, user?.role);
   const access = useGuidanceEditorialAccess(user?.id);
@@ -162,22 +190,35 @@ export function GuidanceCatalogPage() {
     {access.data?.canManage && <button className="btn btn-secondary" onClick={() => setManage(prev => !prev)}>{manage ? "Okur görünümüne dön" : "İçerik yayınını yönet"}</button>}
     {!manage && <>
       {catalog.isPending ? <PageLoading /> : catalog.isError ? <PageError error={catalog.error} /> : <>
-        {!catalog.data.length && <p>Rolünüz için yayımlanmış ve incelemesi güncel bir içerik henüz yok. Bu durum süreçte yapılacak iş olmadığı anlamına gelmez.</p>}
-        <ul>{catalog.data.map(content => <li key={content.id}><button className="btn btn-secondary" onClick={() => setParams({ version: String(content.id) })}>
+        <label>Süreç filtresi<select value={processFilter} onChange={event => setParams(event.target.value ? { process: event.target.value } : {})}>
+          <option value="">Tüm süreçler</option>{Object.entries(processTitles).map(([key, title]) => <option key={key} value={key}>{title}</option>)}
+        </select></label>
+        {!!processFilter && !processTitles[processFilter] && <p role="alert">Bu süreç bulunamadı. Tüm süreçler seçeneğine dönün.</p>}
+        {!catalog.data.some(item => !processFilter || item.processKey === processFilter) && <p>Rolünüz ve seçili süreç için yayımlanmış ve incelemesi güncel bir içerik henüz yok. Bu durum süreçte yapılacak iş olmadığı anlamına gelmez.</p>}
+        <ul>{catalog.data.filter(item => !processFilter || item.processKey === processFilter).map(content => <li key={content.id}><button className="btn btn-secondary" onClick={() => setParams({ ...(processFilter ? { process: processFilter } : {}), version: String(content.id) })}>
           {processTitles[content.processKey]} · {content.body.title} · Sürüm {content.contentVersion}</button></li>)}</ul>
       </>}
       {versionId !== null && (version.isPending ? <PageLoading /> : version.isError ? <PageError error={version.error} /> : <ContentArticle content={version.data} />)}
+      <GuidanceReadingJourney />
     </>}
     {manage && access.data?.canManage && <>
       <p>Merkezî yayın Ekipzen ekibince yönetilir. Müşteri şirketlerinin İK rolü yayın yetkisi vermez. Taslak ve inceleme kayıtları okurlara açılmaz.</p>
       <button className="btn btn-primary" onClick={() => { setCreation({ body: blankBody() }); setSelected(null); setMessage(""); }}>Yeni içerik taslağı</button>
+      <details><summary>On süreç için kaynaklı başlangıç taslakları</summary>
+        <p>Kaynak araştırması: {guidanceSourceResearchDate}. Bu başlangıç metinleri henüz uzman onaylı değildir. Kaynak, koşul, yürürlük ve örnekleri inceleyin; kaydetmek yayınlamaz. Mevcut içerikte yeni sürüm akışını kullanın.</p>
+        <ul>{guidanceSourceDrafts.map(draft => <li key={draft.contentKey}>
+          <button className="btn btn-secondary" disabled={!editorial.isSuccess || editorial.data.some(item => item.content.contentKey === draft.contentKey)}
+            onClick={() => { setCreation({ ...draft, body: { ...draft.body, audience: [...draft.body.audience] } }); setSelected(null); setMessage(""); }}>
+            {processTitles[draft.processKey]} başlangıç taslağını hazırla</button>
+        </li>)}</ul>
+      </details>
       {message && <p role="status">{message}</p>}
       {editorial.isPending ? <PageLoading /> : editorial.isError ? <PageError error={editorial.error} /> : <ul>{editorial.data?.map(entry => <li key={entry.content.id}>
         <button className="btn btn-secondary" onClick={() => { setSelected(entry); setCreation(null); setMessage(""); }}>
           {entry.content.body.title} · Sürüm {entry.content.contentVersion} · {stateTitles[entry.content.state]}</button>
       </li>)}</ul>}
       {creation && <section className="ez-panel"><h2>{creation.basedOnId ? "Yeni içerik sürümü" : "Yeni içerik"}</h2>
-        <ContentForm key={creation.basedOnId ?? "new"} initial={creation.body} identity={creation} onSaved={saved} /></section>}
+        <ContentForm key={creation.basedOnId ?? creation.contentKey ?? "new"} initial={creation.body} identity={creation} onSaved={saved} /></section>}
       {selectedEntry && !creation && <>
         <button className="btn btn-secondary" onClick={async () => {
           const result = await editorial.refetch();

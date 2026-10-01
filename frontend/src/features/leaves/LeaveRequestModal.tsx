@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { appPath } from "../../paths";
 import { useDialog } from "../../ui/useDialog";
 import { PageError, PageLoading } from "../shared/PageState";
 import { ApiError } from "../../api/client";
@@ -160,7 +162,8 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             <strong>Ne yapıyoruz?</strong>
             <p>Gerçek izin talebini oluşturuyoruz. Türü, başlangıç ve bitişi; ilgili kayıt ve belgelerle karşılaştırın.</p>
             <p><strong>Neden?</strong> Tür, yıllık bakiyeden düşme ve onay gereksinimini etkiler. Örneğin “Raporlu” adını görmeniz tek başına belge koşulunu kanıtlamaz; belge ve şirket kuralını ayrıca doğrulayın.</p>
-            <p>Ön kontrol, iş gününü ve talebin mevcut kayıtlara göre gönderilebilirliğini sunucudan alır. Ayrıntılı mevzuat dayanağı henüz onaylı içerik olarak sunulmuyor.</p>
+            <p>Ön kontrol, iş gününü ve talebin mevcut kayıtlara göre gönderilebilirliğini sunucudan alır. Kaynaklı metinler bağımsız inceleme ve yayın onayından sonra katalogda görünür.</p>
+            <Link to={appPath("/guidance/catalog?process=leave")}>İznin kaynaklı rehberini aç</Link>
           </section>
           {typesQ.isPending || balanceQ.isPending ? <PageLoading /> : typesQ.isError || balanceQ.isError ? <PageError error={typesQ.error ?? balanceQ.error} /> : <p className="ez-balance-note">Görüntülenen yıllık izin bakiyesi: <strong>{remaining} gün</strong></p>}
           <p className="input-label" id="leave-type-label">İzin Türü — açıkça seçin</p>

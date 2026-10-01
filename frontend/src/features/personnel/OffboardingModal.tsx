@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
@@ -324,7 +325,8 @@ export function OffboardingModal({ employeeId, onClose }: {
             <strong>Ne yapıyoruz?</strong>
             <p>Önce ayrılış dosyasını taslak olarak hazırlıyoruz. Taslak kaydı personeli pasife almaz. Tamamlama ise istihdam dönemini kapatır, varsa ekibi halefe devreder ve erişim/rol işlemlerini kuyruğa alır.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Tarih, çıkış kodu, fesih nedeni, ihbar uygulaması ve finansal tutarlar gerçek vaka ve uzman incelemesiyle uyuşmalıdır. Hesap taslağı tek başına hukuki hak kararı veya ödeme kanıtı değildir.</p>
-            <p>Bu ekranda onaylı mevzuat açıklaması henüz yoktur. Gerekli dış bildirim ve ödemeleri ayrıca takip edin; tamamlanan uygulama kaydı bunları doğrulamaz.</p>
+            <GuidanceSourceLink processKey="offboarding" />
+            <p>Kaynaklı metinler inceleme ve yayın onayından sonra katalogda görünür. Gerekli dış bildirim ve ödemeleri ayrıca takip edin; tamamlanan uygulama kaydı bunları doğrulamaz.</p>
           </section>}
 
           {context && completedCase && (

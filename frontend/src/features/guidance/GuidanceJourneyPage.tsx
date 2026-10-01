@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { PageError, PageLoading } from "../shared/PageState";
 import { useLeaveApprovalJourney, usePersonnelEntryJourney, useRecruitmentJourney, type LeaveApprovalJourney, type PersonnelEntryJourney, type RecruitmentJourney } from "./journeyQueries";
 import { GuidanceProcessMap } from "./GuidanceProcessMap";
+import { GuidanceReadingJourney } from "./GuidanceReadingJourney";
 
 const stepLabels: Record<string, string> = {
   "tab-kimlik": "Kimlik ve temel bilgiler",
@@ -89,6 +90,7 @@ export function GuidanceJourneyPage() {
       : leaveQ.isError
         ? <p role="alert">İzin onayı yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
         : <LeaveApprovalEvidence journey={leaveQ.data} />}
+    <GuidanceReadingJourney />
     <GuidanceProcessMap isHrAdmin={isHrAdmin} />
   </div>;
 }

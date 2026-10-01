@@ -30,6 +30,22 @@ export type GuidanceEditorial = {
 export const useGuidanceCatalog = (role?: string | null) => useQuery({
   queryKey: ["guidance", "catalog", role], queryFn: () => apiFetch<GuidanceContent[]>("/guidance/catalog"),
 });
+export type GuidanceContentReading = {
+  contentRevisionId: number; contentKey: string; processKey: string; contentVersion: number;
+  title: string; firstReadAtUtc: string; isCurrent: boolean;
+};
+export const useGuidanceContentReadings = (userId?: string | null) => useQuery({
+  queryKey: ["guidance", "catalog-readings", userId],
+  queryFn: () => apiFetch<GuidanceContentReading[]>("/guidance/catalog/readings"),
+});
+export const useRecordGuidanceReading = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => apiFetch<GuidanceContentReading>(`/guidance/catalog/versions/${id}/readings`,
+      { method: "POST", body: JSON.stringify({ confirmed: true }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["guidance", "catalog-readings"] }); },
+  });
+};
 export const useGuidanceCatalogVersion = (id: number | null, role?: string | null) => useQuery({
   queryKey: ["guidance", "catalog-version", role, id], enabled: id !== null,
   queryFn: () => apiFetch<GuidanceContent>(`/guidance/catalog/versions/${id}`),

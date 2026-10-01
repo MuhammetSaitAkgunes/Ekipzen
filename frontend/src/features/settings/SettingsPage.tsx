@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { ApiError, apiDownload } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -144,6 +145,7 @@ export function SettingsPage() {
       <div className="page-header">
         <div>
           <h2>Sistem Ayarları</h2>
+          <GuidanceSourceLink processKey="company" />
           <p>Şirket profili, bildirimler, güvenlik ve abonelik tercihlerini yönetin.</p>
         </div>
         <button className="btn btn-primary" onClick={saveCompany} disabled={updateCompany.isPending}>
