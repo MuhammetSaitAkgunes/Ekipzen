@@ -18,12 +18,16 @@ public static class GuidancePublishedSteps
         ["company"] = ["initial-setup", "company-profile", "departments", "access-preparation"],
         ["personnel"] = ["record-review", "import-review", "rehire"],
         ["attendance"] = ["entry-review", "entry-correction", "period-summary"],
+        ["payroll"] = ["settings-review", "period-create", "row-review", "approval", "payslip-review", "correction-external"],
+        ["compliance"] = ["record-review", "status-review", "record-correction"],
+        ["offboarding"] = ["preparation", "settlement-review", "completion", "reversal-review", "correction-external"],
     };
     private static readonly IReadOnlyDictionary<string, string[]> ManagerSteps = new Dictionary<string, string[]>
     {
         ["leave"] = ["review-request", "decision-effect"],
         ["personnel"] = ["record-review"],
         ["attendance"] = ["entry-review", "entry-correction", "period-summary"],
+        ["compliance"] = ["record-review"],
     };
     public static void RequireAccess(string process, string step, ICurrentUser user)
     {

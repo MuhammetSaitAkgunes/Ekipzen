@@ -27,14 +27,23 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
 {
     private const string Root = "/api/guidance/catalog";
 
-    [Fact]
-    public async Task CompanyPersonnelAndAttendanceSteps_PreservePerStepRoleBoundariesAndPersonalHistory()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PublishedProcessSteps_PreservePerStepRoleBoundariesAndPersonalHistory(bool financialProcesses)
     {
         var team = await TeamAsync(); await using var host = team.Host;
         var owner = team.Clients[0]; var reviewer = team.Clients[1];
         var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
         var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
-        (string Process, string Step, bool Manager)[] cases = [
+        (string Process, string Step, bool Manager)[] cases = financialProcesses ? [
+            ("payroll", "settings-review", false), ("payroll", "period-create", false),
+            ("payroll", "row-review", false), ("payroll", "approval", false),
+            ("payroll", "payslip-review", false), ("payroll", "correction-external", false),
+            ("compliance", "record-review", true), ("compliance", "status-review", false), ("compliance", "record-correction", false),
+            ("offboarding", "preparation", false), ("offboarding", "settlement-review", false),
+            ("offboarding", "completion", false), ("offboarding", "reversal-review", false), ("offboarding", "correction-external", false),
+        ] : [
             ("company", "initial-setup", false), ("company", "company-profile", false),
             ("company", "departments", false), ("company", "access-preparation", false),
             ("personnel", "record-review", true), ("personnel", "import-review", false), ("personnel", "rehire", false),
@@ -70,9 +79,9 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
                     "başka kişinin denemesi yayın inceleyen kişiye taşınmaz");
             }
             var progress = (await owner.GetFromJsonAsync<List<GuidancePublishedPracticeProgressDto>>($"{Root}/practice-progress"))!;
-            progress.Should().HaveCount(10).And.OnlyContain(x => x.IsCurrent && x.LastCorrect && x.AttemptCount == 1);
+            progress.Should().HaveCount(cases.Length).And.OnlyContain(x => x.IsCurrent && x.LastCorrect && x.AttemptCount == 1);
             using var export = System.Text.Json.JsonDocument.Parse(await (await owner.GetAsync("/api/me/data-export")).Content.ReadAsStringAsync());
-            export.RootElement.GetProperty("guidancePublishedPractices").GetArrayLength().Should().Be(10);
+            export.RootElement.GetProperty("guidancePublishedPractices").GetArrayLength().Should().Be(cases.Length);
             export.RootElement.GetProperty("employeeCreationEvidences").GetArrayLength().Should().Be(0);
             export.RootElement.GetProperty("guidanceContentReadings").GetArrayLength().Should().Be(0);
             (await owner.GetAsync($"{Root}/steps/attendance/unknown-step")).StatusCode.Should().Be(HttpStatusCode.NotFound);
