@@ -26,6 +26,18 @@ public sealed class GuidanceCatalogController(ISender sender) : ControllerBase
     [HttpPost("versions/{id:int}/readings")]
     public async Task<ActionResult<GuidanceContentReadingDto>> RecordReading(int id, ReadingBody body, CancellationToken ct) =>
         Ok(await sender.Send(new RecordGuidanceContentReadingCommand(id, body.Confirmed), ct));
+    [HttpGet("steps/{processKey}/{stepKey}")]
+    public async Task<ActionResult<GuidancePublishedPracticeDto?>> Step(string processKey, string stepKey, CancellationToken ct) =>
+        new JsonResult(await sender.Send(new GetGuidancePublishedPracticeQuery(ProcessKey: processKey, StepKey: stepKey), ct));
+    [HttpGet("versions/{id:int}/practice")]
+    public async Task<ActionResult<GuidancePublishedPracticeDto?>> Practice(int id, CancellationToken ct) =>
+        Ok(await sender.Send(new GetGuidancePublishedPracticeQuery(VersionId: id), ct));
+    [HttpPost("versions/{id:int}/practice/attempts")]
+    public async Task<ActionResult<GuidancePublishedPracticeDto>> Attempt(int id, PracticeAttemptBody body, CancellationToken ct) =>
+        Ok(await sender.Send(new SubmitGuidancePublishedPracticeCommand(id, body.SelectedChoice, body.ExpectedAttemptCount, body.AttemptId), ct));
+    [HttpGet("practice-progress")]
+    public async Task<ActionResult<IReadOnlyList<GuidancePublishedPracticeProgressDto>>> PracticeProgress(CancellationToken ct) =>
+        Ok(await sender.Send(new GetMyGuidancePublishedPracticesQuery(), ct));
     [HttpGet("editorial")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     public async Task<ActionResult<IReadOnlyList<GuidanceEditorialDto>>> Editorial(CancellationToken ct) =>
@@ -47,5 +59,6 @@ public sealed class GuidanceCatalogController(ISender sender) : ControllerBase
         Ok(await sender.Send(new ChangeGuidanceContentStateCommand(id, body.ExpectedRevision, operation, body.Reason, body.Review), ct));
     public sealed record EditBody(int ExpectedRevision, GuidanceContentBody Body);
     public sealed record ReadingBody(bool Confirmed);
+    public sealed record PracticeAttemptBody(int SelectedChoice, int ExpectedAttemptCount, Guid AttemptId);
     public sealed record TransitionBody(int ExpectedRevision, string? Reason, GuidanceExpertReview? Review);
 }

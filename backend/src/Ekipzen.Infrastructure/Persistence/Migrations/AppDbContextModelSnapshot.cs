@@ -664,6 +664,83 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("GuidanceDecisionProgresses");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidancePublishedPracticeProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("ContentRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ContentVersion")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("LastAnsweredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("LastAttemptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("LastCorrect")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LastSelectedChoice")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProcessKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("StepKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId", "ContentRevisionId")
+                        .IsUnique();
+
+                    b.ToTable("GuidancePublishedPracticeProgresses");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Identity.IdentityProvisioningOperation", b =>
                 {
                     b.Property<int>("Id")

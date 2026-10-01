@@ -28,6 +28,146 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
     private const string Root = "/api/guidance/catalog";
 
     [Fact]
+    public async Task PublishedPractice_IsReviewedPinnedPersonalIdempotent_AndDoesNotTransferToNewVersion()
+    {
+        var team = await TeamAsync(); await using var host = team.Host;
+        var owner = team.Clients[0]; var reviewer = team.Clients[1];
+        var outsider = await AuthedClientAsync("globex-admin@globex.local");
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        const string key = "personnel-entry-tab-kimlik";
+        var body = CompleteBody("Alıştırma sürümü") with { StepKey = "tab-kimlik",
+            Practice = new("Doğru kişiyi nasıl seçersiniz?", ["Tahmin ederim", "Kaynakla doğrularım", "Başkasını kopyalarım"], 1, "Kaynakla doğrulayın.") };
+        try
+        {
+            var empty = await owner.GetAsync($"{Root}/steps/personnel-entry/tab-kimlik");
+            empty.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await empty.Content.ReadAsStringAsync()).Should().Be("null");
+            (await employee.GetAsync($"{Root}/steps/personnel-entry/tab-kimlik")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await manager.GetAsync($"{Root}/steps/personnel-entry/tab-kimlik")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            var created = await owner.PostAsJsonAsync($"{Root}/editorial", new { contentKey = key, processKey = "personnel-entry", body });
+            created.StatusCode.Should().Be(HttpStatusCode.Created);
+            var item = (await created.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            item.Content.Body.Practice!.CorrectChoice.Should().Be(1, "yayın incelemesi cevabı da kapsar");
+            var versionPath = $"{Root}/versions/{item.Content.Id}/practice";
+            (await outsider.GetAsync(versionPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            item = await ChangeAsync(owner, item, "submit");
+            (await PublishAsync(owner, item)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            item = (await (await PublishAsync(reviewer, item)).Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            var publicJson = await (await owner.GetAsync($"{Root}/versions/{item.Content.Id}")).Content.ReadAsStringAsync();
+            publicJson.Should().NotContain("correctChoice").And.NotContain("Kaynakla doğrulayın.");
+            var first = (await owner.GetFromJsonAsync<GuidancePublishedPracticeDto>(versionPath))!;
+            first.AttemptCount.Should().Be(0); first.Explanation.Should().BeNull();
+            (await (await owner.GetAsync(versionPath)).Content.ReadAsStringAsync()).Should().NotContain("correctChoice");
+            (await employee.GetAsync(versionPath)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            var attempts = versionPath + "/attempts";
+            var answer = new { selectedChoice = 1, expectedAttemptCount = 0, attemptId = Guid.NewGuid() };
+            (await Factory.CreateClient().PostAsJsonAsync(attempts, answer)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await owner.PostAsJsonAsync(attempts, answer with { selectedChoice = 4 })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await owner.PostAsJsonAsync(attempts, answer with { attemptId = Guid.Empty })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var repeat = await Task.WhenAll(owner.PostAsJsonAsync(attempts, answer), owner.PostAsJsonAsync(attempts, answer));
+            repeat.Should().OnlyContain(x => x.StatusCode == HttpStatusCode.OK);
+            foreach (var response in repeat)
+            {
+                var saved = (await response.Content.ReadFromJsonAsync<GuidancePublishedPracticeDto>())!;
+                saved.AttemptCount.Should().Be(1); saved.LastCorrect.Should().BeTrue(); saved.Explanation.Should().Be(body.Practice.Explanation);
+            }
+            (await owner.PostAsJsonAsync(attempts, answer with { selectedChoice = 0 })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await reviewer.GetFromJsonAsync<GuidancePublishedPracticeDto>(versionPath))!.Explanation.Should().BeNull();
+            (await outsider.GetFromJsonAsync<GuidancePublishedPracticeDto>(versionPath))!.AttemptCount.Should().Be(0);
+            (await reviewer.GetFromJsonAsync<List<GuidancePublishedPracticeProgressDto>>($"{Root}/practice-progress"))!.Should().BeEmpty();
+            (await outsider.GetFromJsonAsync<List<GuidancePublishedPracticeProgressDto>>($"{Root}/practice-progress"))!.Should().NotContain(x => x.ContentKey == key);
+            var concurrent = await Task.WhenAll(owner.PostAsJsonAsync(attempts, answer with { expectedAttemptCount = 1, attemptId = Guid.NewGuid() }),
+                owner.PostAsJsonAsync(attempts, answer with { expectedAttemptCount = 1, attemptId = Guid.NewGuid() }));
+            concurrent.Count(x => x.StatusCode == HttpStatusCode.OK).Should().Be(1);
+            concurrent.Count(x => x.StatusCode == HttpStatusCode.Conflict).Should().Be(1);
+            var forkBody = body with { Practice = body.Practice with { Question = "Yeni sürümün sorusu", CorrectChoice = 0 } };
+            var fork = await owner.PostAsJsonAsync($"{Root}/editorial", new { contentKey = key, processKey = "personnel-entry", basedOnId = item.Content.Id, body = forkBody });
+            var next = (await fork.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            next = await ChangeAsync(owner, next, "submit");
+            next = (await (await PublishAsync(reviewer, next)).Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            (await owner.PostAsJsonAsync(attempts, answer with { expectedAttemptCount = 2, attemptId = Guid.NewGuid() })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var old = (await owner.GetFromJsonAsync<GuidancePublishedPracticeDto>(versionPath))!;
+            old.IsCurrent.Should().BeFalse(); old.Question.Should().Be(body.Practice.Question); old.AttemptCount.Should().Be(2);
+            var current = (await owner.GetFromJsonAsync<GuidancePublishedPracticeDto>($"{Root}/steps/personnel-entry/tab-kimlik"))!;
+            current.ContentRevisionId.Should().Be(next.Content.Id); current.AttemptCount.Should().Be(0); current.Explanation.Should().BeNull();
+            var history = (await owner.GetFromJsonAsync<List<GuidancePublishedPracticeProgressDto>>($"{Root}/practice-progress"))!;
+            history.Should().ContainSingle().Which.IsCurrent.Should().BeFalse();
+            using var export = System.Text.Json.JsonDocument.Parse(await (await owner.GetAsync("/api/me/data-export")).Content.ReadAsStringAsync());
+            export.RootElement.GetProperty("guidancePublishedPractices").GetArrayLength().Should().Be(1);
+            export.RootElement.GetProperty("guidancePublishedPractices")[0].GetProperty("lastAnsweredAtUtc").GetString().Should().EndWith("Z");
+            export.RootElement.GetProperty("guidanceDecisionProgresses").GetArrayLength().Should().Be(0);
+            export.RootElement.GetProperty("guidanceContentReadings").GetArrayLength().Should().Be(0);
+            export.RootElement.GetProperty("employeeCreationEvidences").GetArrayLength().Should().Be(0);
+            using (var scope = Factory.Services.GetRequiredService<ITenantScopeFactory>().Create(team.TenantId))
+            {
+                var db = scope.Services.GetRequiredService<AppDbContext>();
+                var guard = new Ekipzen.Infrastructure.Persistence.Migrations.AddGuidancePublishedPractices().DownOperations.OfType<SqlOperation>().Single().Sql;
+                Func<Task> rollback = () => db.Database.ExecuteSqlRawAsync(guard);
+                (await rollback.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(51000);
+                (await db.GuidancePublishedPracticeProgresses.CountAsync()).Should().Be(1);
+            }
+            await ChangeAsync(reviewer, next, "retire", "Test yayından kaldırma");
+            (await owner.GetFromJsonAsync<GuidancePublishedPracticeDto?>($"{Root}/steps/personnel-entry/tab-kimlik")).Should().BeNull("eski sürüme geri dönülmez");
+            (await owner.PostAsJsonAsync($"{Root}/versions/{next.Content.Id}/practice/attempts", answer)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+        finally { await CleanupAsync(key); }
+    }
+
+    [Fact]
+    public async Task Practice_BindingAndQuestionAreValidatedBeforeReview()
+    {
+        var team = await TeamAsync(); await using var host = team.Host; var author = team.Clients[0];
+        const string key = "recruitment-candidate-create";
+        var body = CompleteBody("Eksik soru") with { StepKey = "candidate-create", Practice = new("", ["", ""], 0, "") };
+        try
+        {
+            (await author.PostAsJsonAsync($"{Root}/editorial", new { contentKey = "wrong-step-key", processKey = "recruitment", body })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var created = await author.PostAsJsonAsync($"{Root}/editorial", new { contentKey = key, processKey = "recruitment", body });
+            created.StatusCode.Should().Be(HttpStatusCode.Created);
+            var item = (await created.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            (await author.PostAsJsonAsync($"{Root}/editorial/{item.Content.Id}/submit", new { expectedRevision = item.Revision })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var invalid = body with { Practice = new("Soru", ["A", "B"], 2, "Açıklama") };
+            (await author.PutAsJsonAsync($"{Root}/editorial/{item.Content.Id}", new { expectedRevision = item.Revision, body = invalid })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            invalid = body with { Practice = new("Soru", ["A", " a "], 0, "Açıklama") };
+            var saved = await author.PutAsJsonAsync($"{Root}/editorial/{item.Content.Id}", new { expectedRevision = item.Revision, body = invalid });
+            item = (await saved.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            (await author.PostAsJsonAsync($"{Root}/editorial/{item.Content.Id}/submit", new { expectedRevision = item.Revision })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+        finally { await CleanupAsync(key); }
+    }
+
+    [Fact]
+    public async Task LeavePractice_AllowsManagerButDoesNotGrantEmployeeDecisionAccess()
+    {
+        var team = await TeamAsync(); await using var host = team.Host;
+        var owner = team.Clients[0]; var reviewer = team.Clients[1];
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        const string key = "leave-review-request";
+        var body = CompleteBody("İzin kapsamı") with { Audience = Roles.All, StepKey = "review-request",
+            Practice = new("Çelişki nasıl çözülür?", ["Tahmin", "Netleştirme"], 1, "Talebi netleştirin.") };
+        try
+        {
+            var created = await owner.PostAsJsonAsync($"{Root}/editorial", new { contentKey = key, processKey = "leave", body });
+            var item = (await created.Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            item = await ChangeAsync(owner, item, "submit");
+            item = (await (await PublishAsync(reviewer, item)).Content.ReadFromJsonAsync<GuidanceEditorialDto>())!;
+            var path = $"{Root}/versions/{item.Content.Id}/practice";
+            (await manager.GetFromJsonAsync<GuidancePublishedPracticeDto>($"{Root}/steps/leave/review-request"))!.ContentRevisionId.Should().Be(item.Content.Id);
+            var answer = new { selectedChoice = 1, expectedAttemptCount = 0, attemptId = Guid.NewGuid() };
+            (await manager.PostAsJsonAsync(path + "/attempts", answer)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await employee.GetAsync($"{Root}/versions/{item.Content.Id}")).StatusCode.Should().Be(HttpStatusCode.OK,
+                "içerik okuma yetkisi tek başına yönetici alıştırması yetkisi değildir");
+            (await employee.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await employee.PostAsJsonAsync(path + "/attempts", answer)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await owner.GetFromJsonAsync<List<GuidancePublishedPracticeProgressDto>>($"{Root}/practice-progress"))!.Should().BeEmpty();
+            (await manager.GetFromJsonAsync<List<GuidancePublishedPracticeProgressDto>>($"{Root}/practice-progress"))!.Should().ContainSingle(x => x.ContentKey == key);
+        }
+        finally { await CleanupAsync(key); }
+    }
+
+    [Fact]
     public async Task Reading_IsExplicitIdempotentPersonalAndVersioned_WithoutCreatingWorkEvidence()
     {
         var team = await TeamAsync();

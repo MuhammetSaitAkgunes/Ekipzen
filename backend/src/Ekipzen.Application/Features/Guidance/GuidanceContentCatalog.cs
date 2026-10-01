@@ -14,7 +14,9 @@ public sealed record GuidanceContentBody(
     string Action, string Why, string Example, string CounterExample, string Terms,
     string Outcome, string CompletionEvidence, string NextStep, string Correction,
     string ExpertEscalation, string SourceKind, string SourceReference, string Provision,
-    string Applicability, DateOnly EffectiveFrom, DateOnly? EffectiveTo);
+    string Applicability, DateOnly EffectiveFrom, DateOnly? EffectiveTo,
+    string? StepKey = null, GuidancePracticeDefinition? Practice = null);
+public sealed record GuidancePracticeDefinition(string Question, string[] Choices, int CorrectChoice, string Explanation);
 public sealed record GuidanceExpertReview(
     string Name, string Role, string Reference, DateOnly ReviewedOn, DateOnly ReviewDueOn, bool Confirmed);
 public sealed record GuidanceContributor(string UserId, string Name);
@@ -45,11 +47,11 @@ public static class GuidanceContentCatalog
         item.State == "published" && item.EffectiveFrom <= today
         && (item.EffectiveTo is null || item.EffectiveTo >= today) && item.ReviewDueOn >= today;
     public static GuidanceContentDto ToDto(GuidanceContentRevision item, bool current) => new(
-        item.Id, item.ContentKey, item.ProcessKey, item.ContentVersion, item.State, Body(item),
+        item.Id, item.ContentKey, item.ProcessKey, item.ContentVersion, item.State, Body(item) with { Practice = null },
         item.ExpertName, item.ExpertRole, item.ReviewedOn, item.ReviewDueOn,
         item.PublishedAtUtc is null ? null : DateTime.SpecifyKind(item.PublishedAtUtc.Value, DateTimeKind.Utc), current);
     public static GuidanceEditorialDto ToEditorial(GuidanceContentRevision item, string userId, bool? current = null) => new(
-        ToDto(item, current ?? IsUsable(item, Today)), item.Revision, item.BasedOnId, Contributors(item),
+        ToDto(item, current ?? IsUsable(item, Today)) with { Body = Body(item) }, item.Revision, item.BasedOnId, Contributors(item),
         item.ExpertReference, item.State == "in-review" && !Contributors(item).Any(x => x.UserId == userId),
         item.Events.OrderByDescending(x => x.Revision).Select(x => new GuidanceContentEventDto(
             x.Revision, x.Action, x.ActorName, x.Reason, DateTime.SpecifyKind(x.AtUtc, DateTimeKind.Utc))).ToList());
@@ -60,6 +62,7 @@ public static class GuidanceContentCatalog
     }
     public static void ApplyBody(GuidanceContentRevision item, GuidanceContentBody body, ICurrentUser user)
     {
+        GuidancePublishedSteps.ValidateBinding(item.ContentKey, item.ProcessKey, body);
         item.BodyJson = JsonSerializer.Serialize(body);
         item.EffectiveFrom = body.EffectiveFrom;
         item.EffectiveTo = body.EffectiveTo;
@@ -102,6 +105,12 @@ public sealed class GuidanceContentBodyValidator : AbstractValidator<GuidanceCon
         RuleFor(x => x.SourceReference).MaximumLength(2000);
         RuleFor(x => x.Provision).MaximumLength(2000);
         RuleFor(x => x.Applicability).MaximumLength(4000);
+        RuleFor(x => x.StepKey).MaximumLength(64);
+        When(x => x.Practice is not null, () =>
+        {
+            RuleFor(x => x.StepKey).NotEmpty();
+            RuleFor(x => x.Practice!).SetValidator(new GuidancePracticeDefinitionValidator(complete));
+        });
         if (!complete) return;
         RuleFor(x => x.LearningGoal).NotEmpty(); RuleFor(x => x.Prerequisites).NotEmpty();
         RuleFor(x => x.Action).NotEmpty(); RuleFor(x => x.Why).NotEmpty();

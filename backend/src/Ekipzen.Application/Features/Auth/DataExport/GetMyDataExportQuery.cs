@@ -22,6 +22,8 @@ public sealed record PayslipExportItem(string PeriodName, string ApprovalStatus)
 public sealed record GuidanceBookmarkExportItem(string ProcessKey, string StepKey, int ContentVersion);
 public sealed record GuidanceContentReadingExportItem(
     int ContentRevisionId, string ContentKey, string ProcessKey, int ContentVersion, string Title, DateTime FirstReadAtUtc);
+public sealed record GuidancePublishedPracticeExportItem(int ContentRevisionId, string ContentKey, string ProcessKey,
+    string StepKey, int ContentVersion, string Title, int AttemptCount, int LastSelectedChoice, bool LastCorrect, DateTime LastAnsweredAtUtc);
 public sealed record EmployeeCreationEvidenceExportItem(int EmployeeId, DateTime CreatedAtUtc);
 public sealed record CandidateReviewEvidenceExportItem(int CandidateId, string DecisionStatus, DateTime CreatedAtUtc);
 public sealed record GuidanceDecisionProgressExportItem(
@@ -41,6 +43,7 @@ public sealed record MyDataExportDto(
     IReadOnlyList<CandidateReviewEvidenceExportItem> CandidateReviewEvidences,
     IReadOnlyList<GuidanceDecisionProgressExportItem> GuidanceDecisionProgresses,
     IReadOnlyList<GuidanceContentReadingExportItem> GuidanceContentReadings,
+    IReadOnlyList<GuidancePublishedPracticeExportItem> GuidancePublishedPractices,
     DateTime ExportedAtUtc);
 
 /// <summary>
@@ -72,6 +75,11 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         IReadOnlyList<PayslipExportItem> payslips = Array.Empty<PayslipExportItem>();
 
         var userId = currentUser.UserId ?? string.Empty;
+        var publishedPractices = await context.GuidancePublishedPracticeProgresses.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new GuidancePublishedPracticeExportItem(item.ContentRevisionId, item.ContentKey,
+                item.ProcessKey, item.StepKey, item.ContentVersion, item.Title, item.AttemptCount, item.LastSelectedChoice,
+                item.LastCorrect, DateTime.SpecifyKind(item.LastAnsweredAtUtc, DateTimeKind.Utc))).ToListAsync(cancellationToken);
         var guidanceReadings = await context.GuidanceContentReadings.AsNoTracking()
             .Where(item => item.UserId == userId)
             .Select(item => new GuidanceContentReadingExportItem(item.ContentRevisionId, item.ContentKey,
@@ -149,7 +157,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         var dto = new MyDataExportDto(
             account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
             guidanceBookmarks, employeeCreationEvidences, candidateReviewEvidences,
-            guidanceDecisionProgresses, guidanceReadings, DateTime.UtcNow);
+            guidanceDecisionProgresses, guidanceReadings, publishedPractices, DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
         var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";
