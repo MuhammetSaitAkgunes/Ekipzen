@@ -89,6 +89,30 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 )));
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+            var personnelGaps = await context.Employees.AsNoTracking()
+                .Where(x => x.Status == EmployeeStatus.Active && x.HireDate <= today)
+                .Select(x => new { x.Id, x.FirstName, x.LastName, x.HireDate,
+                    NoContact = x.Profile == null || (string.IsNullOrEmpty(x.Profile.MobilePhone) && string.IsNullOrEmpty(x.Profile.PersonalEmail)),
+                    NoDocuments = !x.Documents.Any(d => d.WithdrawnAtUtc == null),
+                    InvalidManager = x.ManagerId != null && (x.Manager == null || x.Manager.Status != EmployeeStatus.Active || x.Manager.UserId == null)
+                }).ToListAsync(ct);
+            foreach (var employee in personnelGaps)
+            {
+                var name = employee.FirstName + " " + employee.LastName;
+                var dateNote = $"İşe giriş: {employee.HireDate:dd.MM.yyyy}. Bu kontrol için kayıtlı son tarih yok.";
+                if (employee.NoContact) tasks.Add(new DailyGuidanceTaskDto($"employee-contact:{employee.Id}", "employee-contact", employee.Id,
+                    name + " iletişim kaydını incele", "Kartta cep telefonu veya kişisel e-posta kaydı yok; ulaşılabilir bilgi doğrulanamıyor.",
+                    "Şirketin ihtiyacı ve çalışanın doğruladığı bilgilerle uygun iletişim kanalını kaydedin; bilinmeyen bilgi uydurmayın. Bu iş hukuki bir zorunluluk kararı değildir.",
+                    null, dateNote, $"/personnel/{employee.Id}?edit=1&guide=1&tab=tab-iletisim"));
+                if (employee.NoDocuments) tasks.Add(new DailyGuidanceTaskDto($"employee-documents:{employee.Id}", "employee-documents", employee.Id,
+                    name + " evrak envanterini incele", "Çalışan kartında geri çekilmemiş evrak kaydı bulunmuyor.",
+                    "Gereken belge ve işleme amacını şirket politikasına ve yetkili incelemeye göre doğrulayın; yalnız uygun belgeyi yükleyin. Bir dosya yüklemek tüm belgelerin tamamlandığını göstermez.",
+                    null, dateNote, $"/personnel/{employee.Id}?edit=1&guide=1&tab=tab-evrak"));
+                if (employee.InvalidManager) tasks.Add(new DailyGuidanceTaskDto($"employee-manager:{employee.Id}", "employee-manager", employee.Id,
+                    name + " yönetici bağlantısını incele", "Atanmış yönetici aktif değil veya bağlı giriş hesabı yok; mevcut bağlantı doğrulanamıyor.",
+                    "Yetkili organizasyon kararını doğrulayın; uygun aktif yönetici seçin veya gerekli değilse bağlantıyı kaldırın. Yönetici ataması rol ve erişim eşitlemesi başlatabilir.",
+                    null, dateNote, $"/personnel/{employee.Id}?edit=1&guide=1&tab=tab-is"));
+            }
             var missingCompensation = await context.Employees.AsNoTracking()
                 .Where(employee =>
                     employee.Status == EmployeeStatus.Active &&

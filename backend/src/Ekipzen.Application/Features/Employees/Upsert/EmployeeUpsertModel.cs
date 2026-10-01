@@ -19,7 +19,9 @@ public sealed record EmployeeUpsertModel(
     string ContractType = "indefinite",
     EmployeeProfileUpsertModel? Profile = null,
     int? GuidanceContentRevisionId = null,
-    Guid? CreationRequestId = null);
+    Guid? CreationRequestId = null,
+    string? ExpectedRecordToken = null,
+    string? CorrectionReason = null);
 
 public sealed record EmployeeProfileUpsertModel(
     // Kimlik

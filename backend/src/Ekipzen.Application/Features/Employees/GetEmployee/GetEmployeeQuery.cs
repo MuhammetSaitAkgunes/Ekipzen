@@ -1,6 +1,7 @@
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Employees.Employment;
+using Ekipzen.Application.Features.Employees.Upsert;
 using Ekipzen.Domain.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -88,6 +89,6 @@ public sealed class GetEmployeeQueryHandler(IApplicationDbContext context, ICurr
                 .OrderByDescending(d => d.CreatedAtUtc)
                 .Select(d => new EmployeeDocumentDto(
                     d.Id, d.DocumentType, d.FileName, d.ContentType, d.SizeBytes, d.CreatedAtUtc))
-                .ToList());
+                .ToList(), currentUser.Roles.Contains(Roles.HrAdmin) ? EmployeeRecordChanges.Token(employee) : null);
     }
 }

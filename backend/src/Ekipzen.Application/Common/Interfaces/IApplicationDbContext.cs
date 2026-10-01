@@ -98,6 +98,7 @@ public interface IApplicationDbContext
     DbSet<GuidanceLeaveDecisionEvidence> GuidanceLeaveDecisionEvidences { get; }
     DbSet<GuidancePublishedPracticeProgress> GuidancePublishedPracticeProgresses { get; }
     DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences { get; }
+    DbSet<GuidancePersonnelEvidence> GuidancePersonnelEvidences { get; }
     DbSet<CandidateReviewEvidence> CandidateReviewEvidences { get; }
     DbSet<GuidanceDecisionProgress> GuidanceDecisionProgresses { get; }
 

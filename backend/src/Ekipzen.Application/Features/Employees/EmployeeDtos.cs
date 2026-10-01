@@ -88,7 +88,8 @@ public sealed record EmployeeDetailDto(
     int? ManagerId,
     string? ManagerName,
     EmployeeProfileDto Profile,
-    IReadOnlyList<EmployeeDocumentDto> Documents);
+    IReadOnlyList<EmployeeDocumentDto> Documents,
+    string? RecordToken = null);
 
 /// <summary>Frontend değerleri ↔ enum eşlemeleri (status: active|passive, çalışma şekli Türkçe etiket).</summary>
 public static class EmployeeMappings

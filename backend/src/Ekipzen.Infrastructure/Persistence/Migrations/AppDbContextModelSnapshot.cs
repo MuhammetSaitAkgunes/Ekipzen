@@ -1030,6 +1030,67 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("GuidancePayrollRowEvidences");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidancePersonnelEvidence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChangedFieldsJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("GuidancePersonnelEvidences");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidancePublishedPracticeProgress", b =>
                 {
                     b.Property<int>("Id")
@@ -4695,6 +4756,17 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("PayrollEmployee");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidancePersonnelEvidence", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Identity.IdentityProvisioningOperation", b =>

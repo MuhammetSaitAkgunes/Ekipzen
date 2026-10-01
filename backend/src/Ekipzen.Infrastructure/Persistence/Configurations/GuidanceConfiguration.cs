@@ -106,6 +106,20 @@ public sealed class GuidanceDecisionProgressConfiguration : IEntityTypeConfigura
     }
 }
 
+public sealed class GuidancePersonnelEvidenceConfiguration : IEntityTypeConfiguration<GuidancePersonnelEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidancePersonnelEvidence> builder)
+    {
+        builder.Property(x => x.UserId).HasMaxLength(450).IsRequired();
+        builder.Property(x => x.OperationKey).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.ChangedFieldsJson).HasMaxLength(4000).IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(500);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class GuidanceSetupEvidenceConfiguration : IEntityTypeConfiguration<GuidanceSetupEvidence>
 {
     public void Configure(EntityTypeBuilder<GuidanceSetupEvidence> builder)

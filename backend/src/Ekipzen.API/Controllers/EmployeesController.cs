@@ -101,6 +101,18 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public async Task<ActionResult<EmployeeDetailDto?>> CreationResult(Guid requestId, CancellationToken ct)
         => Ok(await sender.Send(new GetEmployeeCreationResultQuery(requestId), ct));
 
+    [HttpGet("manager-choices")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<IReadOnlyList<EmployeeManagerChoiceDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<EmployeeManagerChoiceDto>>> ManagerChoices([FromQuery] int? exceptEmployeeId, CancellationToken ct)
+        => Ok(await sender.Send(new GetEmployeeManagerChoicesQuery(exceptEmployeeId), ct));
+
+    [HttpGet("{id:int}/personnel-history")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<IReadOnlyList<EmployeePersonnelHistoryDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<EmployeePersonnelHistoryDto>>> PersonnelHistory(int id, CancellationToken ct)
+        => Ok(await sender.Send(new GetEmployeePersonnelHistoryQuery(id), ct));
+
     [HttpPost]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<EmployeeDetailDto>(StatusCodes.Status201Created)]
@@ -530,11 +542,12 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     [ProducesResponseType<EmployeeDocumentDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<EmployeeDocumentDto>> UploadDocument(
-        int id, IFormFile file, [FromForm] string documentType, CancellationToken cancellationToken)
+        int id, IFormFile file, [FromForm] string documentType, [FromForm] int? guidanceContentRevisionId,
+        CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
         var document = await sender.Send(
-            new UploadEmployeeDocumentCommand(id, documentType, stream, file.FileName, file.Length),
+            new UploadEmployeeDocumentCommand(id, documentType, stream, file.FileName, file.Length, guidanceContentRevisionId),
             cancellationToken);
         return CreatedAtAction(nameof(GetDocuments), new { id }, document);
     }
@@ -560,9 +573,9 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public async Task<ActionResult<WithdrawnEmployeeDocumentDto>> WithdrawDocument(
         int id, int documentId, WithdrawDocumentBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(
-            new WithdrawEmployeeDocumentCommand(id, documentId, body.Reason), cancellationToken));
+            new WithdrawEmployeeDocumentCommand(id, documentId, body.Reason, body.GuidanceContentRevisionId), cancellationToken));
 
-    public sealed record WithdrawDocumentBody(string Reason);
+    public sealed record WithdrawDocumentBody(string Reason, int? GuidanceContentRevisionId = null);
 
     public sealed record SaveCompensationPackageBody(
         DateOnly EffectiveFrom,
