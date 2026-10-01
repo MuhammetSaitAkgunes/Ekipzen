@@ -236,6 +236,15 @@ export const useEmployees = (filters: EmployeeFilters) =>
 export const useDepartments = () =>
   useQuery({ queryKey: ["departments"], queryFn: () => apiFetch<DepartmentDto[]>("/departments") });
 
+export const useEmployeeManagerChoices = (id: number | null, enabled: boolean) => useQuery({
+  queryKey: ["employee-manager-choices", id], enabled,
+  queryFn: () => apiFetch<components["schemas"]["EmployeeManagerChoiceDto"][]>("/employees/manager-choices" + (id === null ? "" : "?exceptEmployeeId=" + id)),
+});
+export const useEmployeePersonnelHistory = (id: number | null, enabled: boolean) => useQuery({
+  queryKey: ["employees", id, "personnel-history"], enabled: id !== null && enabled,
+  queryFn: () => apiFetch<components["schemas"]["EmployeePersonnelHistoryDto"][]>(`/employees/${id}/personnel-history`),
+});
+
 export const useEmployee = (id: number | null) =>
   useQuery({
     queryKey: ["employees", id],
@@ -283,7 +292,8 @@ export const useSaveEmployee = () => {
         queryClient.invalidateQueries({ queryKey: ["employees"] }),
         queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
         ...(id === null ? [queryClient.invalidateQueries({ queryKey: personnelEntryJourneyKey })] : []),
-        ...(id === null ? [queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })] : []),
+        queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+        queryClient.invalidateQueries({ queryKey: ["employee-manager-choices"] }),
       ]);
     },
   });
@@ -762,26 +772,35 @@ export const useUploadPhoto = () =>
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, file, documentType }: { id: number; file: File; documentType: string }) => {
+    mutationFn: ({ id, file, documentType, guidanceContentRevisionId }: { id: number; file: File; documentType: string; guidanceContentRevisionId?: number | null }) => {
       const form = new FormData();
       form.append("file", file);
       form.append("documentType", documentType);
+      if (guidanceContentRevisionId != null) form.append("guidanceContentRevisionId", String(guidanceContentRevisionId));
       return apiFetch<EmployeeDocumentDto>(`/employees/${id}/documents`, { method: "POST", body: form });
     },
-    onSuccess: (_data, { id }) =>
+    onSuccess: (_data, { id }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", id, "documents"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", id, "personnel-history"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+    ]),
   });
 };
 
 export const useWithdrawDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, documentId, reason }: { id: number; documentId: number; reason: string }) =>
+    mutationFn: ({ id, documentId, reason, guidanceContentRevisionId }: { id: number; documentId: number; reason: string; guidanceContentRevisionId?: number | null }) =>
       apiFetch<WithdrawnEmployeeDocumentDto>(`/employees/${id}/documents/${documentId}/withdraw`, {
-        method: "POST", body: JSON.stringify({ reason }),
+        method: "POST", body: JSON.stringify({ reason, ...(guidanceContentRevisionId != null ? { guidanceContentRevisionId } : {}) }),
       }),
-    onSuccess: (_result, { id }) =>
+    onSuccess: (_result, { id }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", id, "documents"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", id, "personnel-history"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+    ]),
   });
 };
 

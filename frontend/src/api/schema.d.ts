@@ -2128,6 +2128,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/manager-choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    exceptEmployeeId?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeManagerChoiceDto"][];
+                        "application/json": components["schemas"]["EmployeeManagerChoiceDto"][];
+                        "text/json": components["schemas"]["EmployeeManagerChoiceDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/personnel-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeePersonnelHistoryDto"][];
+                        "application/json": components["schemas"]["EmployeePersonnelHistoryDto"][];
+                        "text/json": components["schemas"]["EmployeePersonnelHistoryDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/employment-foundation": {
         parameters: {
             query?: never;
@@ -3997,6 +4075,8 @@ export interface paths {
                         /** Format: binary */
                         file?: string;
                         documentType?: string;
+                        /** Format: int32 */
+                        guidanceContentRevisionId?: number;
                     };
                 };
             };
@@ -9779,6 +9859,7 @@ export interface components {
             managerName?: string | null;
             profile?: components["schemas"]["EmployeeProfileDto"];
             documents?: components["schemas"]["EmployeeDocumentDto"][] | null;
+            recordToken?: string | null;
         };
         EmployeeDocumentDto: {
             /** Format: int32 */
@@ -9833,6 +9914,12 @@ export interface components {
             pageSize?: number;
             /** Format: int32 */
             readonly totalPages?: number;
+        };
+        EmployeeManagerChoiceDto: {
+            /** Format: int32 */
+            id?: number;
+            name?: string | null;
+            title?: string | null;
         };
         EmployeeOffboardingCaseDto: {
             /** Format: int32 */
@@ -9931,6 +10018,17 @@ export interface components {
             token?: string | null;
             readonly canApply?: boolean;
         };
+        EmployeePersonnelHistoryDto: {
+            /** Format: int32 */
+            id?: number;
+            operationKey?: string | null;
+            /** Format: int32 */
+            documentId?: number | null;
+            /** Format: date-time */
+            occurredAtUtc?: string;
+            changedFields?: string[] | null;
+            reason?: string | null;
+        };
         EmployeeProfileDto: {
             /** Format: date */
             birthDate?: string | null;
@@ -10008,6 +10106,8 @@ export interface components {
             guidanceContentRevisionId?: number | null;
             /** Format: uuid */
             creationRequestId?: string | null;
+            expectedRecordToken?: string | null;
+            correctionReason?: string | null;
         };
         EmployeeVoiceDto: {
             /** Format: int32 */
@@ -10165,6 +10265,7 @@ export interface components {
             content?: components["schemas"]["GuidanceOperationSnapshot"];
             evidenceKey?: string | null;
             setupChanges?: components["schemas"]["GuidanceSetupChangesDto"];
+            personnelChanges?: components["schemas"]["GuidancePersonnelChangesDto"];
         };
         GuidanceOperationHistoryDto: {
             evidence?: components["schemas"]["GuidanceOperationEvidenceDto"];
@@ -10179,6 +10280,14 @@ export interface components {
             /** Format: int32 */
             contentVersion?: number;
             title?: string | null;
+        };
+        GuidancePersonnelChangesDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            /** Format: int32 */
+            documentId?: number | null;
+            changedFields?: string[] | null;
+            reason?: string | null;
         };
         GuidancePracticeDefinition: {
             question?: string | null;
@@ -11799,6 +11908,8 @@ export interface components {
         };
         WithdrawDocumentBody: {
             reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         WithdrawnEmployeeDocumentDto: {
             /** Format: int32 */

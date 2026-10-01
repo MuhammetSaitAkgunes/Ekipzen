@@ -4,13 +4,14 @@ import { appPath } from "../../paths";
 import { useGuidanceOperations } from "./operationQueries";
 
 const operationTitles: Record<string, string> = {
+  "employee-update": "Personel kartı düzeltme", "employee-document-upload": "Özlük belgesi yükleme", "employee-document-withdraw": "Özlük belgesi geri çekme",
   "payroll-period-create": "Bordro dönemi oluşturma", "payroll-row-approve": "Bordro satırı onayı", "payroll-period-submit": "Bordro dönemi onayı",
   "offboarding-complete": "Ayrılış dosyası tamamlama", "offboarding-reverse": "Ayrılışı kontrollü geri alma",
   "tenant-setup": "Şirket başlangıç kayıtları", "attendance-create": "Puantaj oluşturma", "attendance-update": "Puantaj düzeltme",
   "compliance-create": "Uyum takip kaydı oluşturma", "compliance-update": "Uyum kayıt bilgilerini düzeltme", "compliance-status": "Uyum durumu değiştirme", "compliance-owner": "Uyum sorumlusu atama",
   "employee-create": "Çalışan kartı oluşturma", "candidate-first-review": "Aday ilk aşama kararı", "leave-decision": "İzin kararı",
 };
-const outcomes: Record<string, string> = { created: "Kayıt oluşturuldu", "draft-created": "Taslak dönem oluşturuldu", approved: "Onaylandı", completed: "Dosya tamamlandı", reversed: "Kontrollü geri alındı", initialized: "Eksik başlangıç kayıtları eklendi", updated: "Kayıt düzeltildi", "owner-assigned": "Sorumlu değişti", Missing: "Eksik", InReview: "İncelemede", DueSoon: "Süresi Yaklaşıyor", Completed: "Tamamlandı", Interview: "Mülakat", Offer: "Teklif", Rejected: "Ret", Approved: "Onay" };
+const outcomes: Record<string, string> = { uploaded: "Dosya yüklendi", withdrawn: "Gerekçeyle geri çekildi", created: "Kayıt oluşturuldu", "draft-created": "Taslak dönem oluşturuldu", approved: "Onaylandı", completed: "Dosya tamamlandı", reversed: "Kontrollü geri alındı", initialized: "Eksik başlangıç kayıtları eklendi", updated: "Kayıt düzeltildi", "owner-assigned": "Sorumlu değişti", Missing: "Eksik", InReview: "İncelemede", DueSoon: "Süresi Yaklaşıyor", Completed: "Tamamlandı", Interview: "Mülakat", Offer: "Teklif", Rejected: "Ret", Approved: "Onay" };
 export function GuidanceOperationJourney() {
   const { user } = useAuth(); const query = useGuidanceOperations(user?.id);
   return <section className="ez-panel" aria-labelledby="guidance-operation-journey">
@@ -22,6 +23,7 @@ export function GuidanceOperationJourney() {
           <strong>{operationTitles[item.operationKey] ?? item.operationKey}</strong> · {item.operationKey === "tenant-setup" ? `Şablon yılı ${item.resourceId}` : `Kayıt #${item.resourceId}`} · {outcomes[item.outcome] ?? item.outcome}
           {item.setupChanges && <p>Şirket profili: {item.setupChanges.addedCompanyProfile ? "eklendi" : "korundu"} · İzin türü: {item.setupChanges.addedLeaveTypeCount} eklendi · Tam gün tatil: {item.setupChanges.addedHolidayCount} eklendi · Bordro taslağı: {item.setupChanges.addedPayrollSettings ? "eklendi" : "korundu"}. Uzman onayı veya hukuki doğrulama değildir.</p>}
           <p>{new Date(item.occurredAtUtc).toLocaleString("tr-TR")} · {item.content.title} · Sürüm {item.content.contentVersion}</p>
+          {item.personnelChanges && <p>Çalışan #{item.personnelChanges.employeeId}{item.personnelChanges.documentId ? ` · Belge #${item.personnelChanges.documentId}` : ""} · {item.personnelChanges.changedFields?.join(", ")}{item.personnelChanges.reason ? ` · Gerekçe: ${item.personnelChanges.reason}` : ""}</p>}
           {!isCurrent && <p>İşlemde kullanılan sürüm bugün güncel değil; geçmiş kanıt yeni sürüme aktarılmadı.</p>}
           <Link to={appPath(`/guidance/catalog?version=${item.content.contentRevisionId}`)}>İşlemde kullanılan açıklama ve dayanağı aç</Link>
         </li>)}</ul>}

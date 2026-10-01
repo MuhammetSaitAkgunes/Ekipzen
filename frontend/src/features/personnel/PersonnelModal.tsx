@@ -4,6 +4,7 @@ import { ApiError, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
+import { PersonnelChangeHistory } from "./PersonnelChangeHistory";
 import { DocumentsTab } from "./DocumentsTab";
 import { CompensationCorrectionPanel } from "./CompensationCorrectionPanel";
 import { PersonnelGuide } from "./PersonnelGuide";
@@ -11,6 +12,7 @@ import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { usePersonnelEntryBookmark, useSavePersonnelEntryBookmark } from "./guidanceQueries";
 import {
   useDepartments,
+  useEmployeeManagerChoices,
   useEmployee,
   useEmployeeEmploymentFoundation,
   useRehireEmployee,
@@ -37,7 +39,7 @@ type FormState = {
   gender: string; maritalStatus: string; bloodType: string;
   mobilePhone: string; personalEmail: string; homeAddress: string;
   emergencyContactName: string; emergencyContactPhone: string;
-  departmentId: string; title: string; hireDate: string; employmentType: string; contractType: string;
+  departmentId: string; managerId: string; title: string; hireDate: string; employmentType: string; contractType: string;
   rehireEligibility: string; exitCode: string;
   iban: string; bankName: string; salaryType: string; pensionStatus: string; mealCard: string;
   tshirtSize: string; pantsSize: string; coatSize: string; shoeSize: string;
@@ -49,7 +51,7 @@ const emptyForm: FormState = {
   gender: "", maritalStatus: "", bloodType: "",
   mobilePhone: "", personalEmail: "", homeAddress: "",
   emergencyContactName: "", emergencyContactPhone: "",
-  departmentId: "", title: "", hireDate: "", employmentType: "", contractType: "",
+  departmentId: "", managerId: "", title: "", hireDate: "", employmentType: "", contractType: "",
   rehireEligibility: "Değerlendirilmedi", exitCode: "Yok",
   iban: "", bankName: "", salaryType: "", pensionStatus: "", mealCard: "",
   tshirtSize: "", pantsSize: "", coatSize: "", shoeSize: "",
@@ -62,6 +64,7 @@ const formFrom = (detail: EmployeeDetailDto): FormState => ({
   firstName: detail.firstName ?? "",
   lastName: detail.lastName ?? "",
   departmentId: String(detail.departmentId ?? ""),
+  managerId: String(detail.managerId ?? ""),
   title: detail.title ?? "",
   hireDate: detail.hireDate ?? "",
   birthDate: detail.profile?.birthDate ?? "",
@@ -75,8 +78,8 @@ const formFrom = (detail: EmployeeDetailDto): FormState => ({
   emergencyContactPhone: detail.profile?.emergencyContactPhone ?? "",
   employmentType: detail.profile?.employmentType ?? emptyForm.employmentType,
   contractType: detail.contractType ?? emptyForm.contractType,
-  rehireEligibility: detail.profile?.rehireEligibility ?? emptyForm.rehireEligibility,
-  exitCode: detail.profile?.exitCode ?? emptyForm.exitCode,
+  rehireEligibility: detail.profile?.rehireEligibility ?? "",
+  exitCode: detail.profile?.exitCode ?? "",
   iban: detail.profile?.iban ?? "",
   bankName: detail.profile?.bankName ?? "",
   salaryType: detail.profile?.salaryType ?? emptyForm.salaryType,
@@ -98,8 +101,8 @@ const modelFrom = (form: FormState, existing: EmployeeDetailDto | undefined): Em
   title: form.title,
   departmentId: Number(form.departmentId) || undefined,
   hireDate: form.hireDate || undefined,
-  nationalId: form.nationalId,
-  managerId: existing?.managerId ?? null,
+  nationalId: form.nationalId || null,
+  managerId: form.managerId ? Number(form.managerId) : null,
   status: existing?.status ?? "active",
   contractType: form.contractType,
   profile: {
@@ -108,10 +111,10 @@ const modelFrom = (form: FormState, existing: EmployeeDetailDto | undefined): Em
     mobilePhone: form.mobilePhone || null, personalEmail: form.personalEmail || null,
     homeAddress: form.homeAddress || null,
     emergencyContactName: form.emergencyContactName || null,
-    emergencyContactRelation: null,
+    emergencyContactRelation: existing?.profile?.emergencyContactRelation ?? null,
     emergencyContactPhone: form.emergencyContactPhone || null,
     employmentType: form.employmentType || null,
-    rehireEligibility: form.rehireEligibility, exitCode: form.exitCode,
+    rehireEligibility: form.rehireEligibility || null, exitCode: form.exitCode || null,
     iban: form.iban || null, bankName: form.bankName || null,
     salaryType: form.salaryType || null, pensionStatus: form.pensionStatus || null,
     mealCard: form.mealCard || null,
@@ -157,8 +160,10 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "tab-kimlik");
   const selectedGuideStep = useRef(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const loadedCard = useRef<EmployeeDetailDto | null>(null);
   const creationRequestId = useRef(crypto.randomUUID());
   const [recoveringCreation, setRecoveringCreation] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
@@ -170,6 +175,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
 
   const detailQ = useEmployee(employeeId);
   const departmentsQ = useDepartments();
+  const managerChoicesQ = useEmployeeManagerChoices(employeeId, !readOnly && activeTab === "tab-is");
   const foundationQ = useEmployeeEmploymentFoundation(employeeId);
   const save = useSaveEmployee();
   const bookmarkQ = usePersonnelEntryBookmark(guided && employeeId === null && !readOnly);
@@ -179,8 +185,18 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const uploadPhoto = useUploadPhoto();
 
   useEffect(() => {
-    if (detailQ.data) setForm(formFrom(detailQ.data));
-  }, [detailQ.data]);
+    if (detailQ.data && (readOnly || loadedCard.current?.id !== detailQ.data.id)) {
+      loadedCard.current = detailQ.data;
+      setForm(formFrom(detailQ.data));
+    }
+  }, [detailQ.data, readOnly]);
+
+  const reloadCard = async () => {
+    const refreshed = await detailQ.refetch();
+    if (!refreshed.data || refreshed.isError) { setError("Güncel kart okunamadı; taslağınız korundu."); return; }
+    loadedCard.current = refreshed.data;
+    setForm(formFrom(refreshed.data)); setCorrectionReason(""); setError(null);
+  };
 
   useEffect(() => {
     if (employeeId === null && guided && bookmarkQ.data && !selectedGuideStep.current) {
@@ -243,9 +259,12 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
       return;
     }
     try {
-      const model = { ...modelFrom(form, detailQ.data), ...(!isEdit ? { creationRequestId: creationRequestId.current } : {}) };
+      if (isEdit && guidanceVersion !== null && !correctionReason.trim()) { setError("Rehberli düzeltmede gerekçe yazın."); return; }
+      const model = { ...modelFrom(form, loadedCard.current ?? undefined), ...(!isEdit ? { creationRequestId: creationRequestId.current } : {
+        expectedRecordToken: loadedCard.current?.recordToken ?? null, correctionReason: correctionReason.trim() || null,
+      }) };
       const saved = await save.mutateAsync({ id: employeeId,
-        model: !isEdit && guidanceVersion !== null ? { ...model, guidanceContentRevisionId: guidanceVersion } : model });
+        model: guidanceVersion !== null ? { ...model, guidanceContentRevisionId: guidanceVersion } : model });
       showToast(isEdit ? "Personel kaydı güncellendi." : "Personel kaydı başarıyla oluşturuldu.", "success");
       if (!isEdit && guided) {
         saveBookmark.mutate("tab-kimlik", {
@@ -359,6 +378,11 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
           <h2>{title}</h2>
           <p>{description}</p>
           {error && <><p className="form-error" role="alert">{error}</p>
+              {isEdit && !readOnly && <>
+                <p>Taslak korunur. Güncel kaydı ayrı sekmede inceleyebilir veya taslağı bırakıp yeniden hazırlayabilirsiniz.</p>
+                <Link to={appPath(`/personnel/${employeeId}`)} target="_blank" rel="noopener noreferrer">Güncel kartı incele</Link>
+                <button type="button" className="btn btn-secondary" onClick={reloadCard} disabled={save.isPending || detailQ.isFetching}>Taslağı bırakıp güncel kartı yükle</button>
+              </>}
               {!isEdit && <button type="button" className="btn btn-secondary" onClick={recoverCreation} disabled={save.isPending || recoveringCreation}>
                 {recoveringCreation ? "Kayıt sonucu kontrol ediliyor…" : "Önceki kayıt sonucunu kontrol et"}
               </button>}
@@ -385,8 +409,14 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
         </aside>
 
         <section className="modal-content-area">
-          {!isEdit && !readOnly && <GuidanceOperationSource process="personnel-entry" step="tab-is"
+          {!readOnly && activeTab !== "tab-evrak" && <GuidanceOperationSource process={isEdit ? "personnel" : "personnel-entry"} step={isEdit ? "record-review" : "tab-is"}
             value={guidanceVersion} onChange={setGuidanceVersion} disabled={save.isPending} />}
+          {isEdit && !readOnly && <section className="ez-document-review" aria-label="Personel düzeltme açıklaması">
+            <p>Değişiklik yoksa işlem kanıtı oluşmaz. Departman/yönetici değişikliğini yetkili organizasyon kararıyla doğrulayın; yönetici ataması rol eşitlemesi başlatabilir. Durum değişikliği ve parasal düzeltme ayrı süreçlerdir.</p>
+            <label className="input-label" htmlFor="pm-correction-reason">Düzeltme gerekçesi (rehber bağlantısında zorunlu)</label>
+            <textarea id="pm-correction-reason" className="input-control" maxLength={500} value={correctionReason} onChange={e => setCorrectionReason(e.target.value)} disabled={save.isPending} />
+            <PersonnelChangeHistory employeeId={employeeId!} />
+          </section>}
           {bookmarkQ.isError && guided && employeeId === null && <p role="status">Rehber konumu yüklenemedi; ilk adımdan devam edebilirsiniz.</p>}
           {!isEdit && departmentsQ.isSuccess && departmentsQ.data.length === 0 && <p className="ez-personnel-precondition" role="status">
             Çalışan kartı için önce departman oluşturun. <Link to={appPath("/settings")}>Ayarlar bölümüne git</Link>.
@@ -481,6 +511,17 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   {(departmentsQ.data ?? []).map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
                 </select>
               </div>
+              <div className="input-group col-6">
+                <label className="input-label" htmlFor="pm-manager">Yönetici</label>
+                <select id="pm-manager" className="input-control" value={form.managerId} disabled={readOnly || managerChoicesQ.isPending || managerChoicesQ.isError}
+                  onChange={e => set("managerId", e.target.value)}>
+                  <option value="">Atanmamış</option>
+                  {detailQ.data?.managerId && !(Array.isArray(managerChoicesQ.data) && managerChoicesQ.data.some(x => x.id === detailQ.data?.managerId)) && <option value={detailQ.data.managerId}>{detailQ.data.managerName ?? "Mevcut yönetici"} (bağlantıyı kontrol edin)</option>}
+                  {(Array.isArray(managerChoicesQ.data) ? managerChoicesQ.data : []).map(item => <option key={item.id} value={item.id}>{item.name} · {item.title}</option>)}
+                </select>
+                {!readOnly && <small>Yalnız aktif ve giriş hesabı bağlı çalışanlar seçilebilir. Yönetici ataması her çalışan için zorunlu değildir; döngü ve erişim kontrolleri kaydederken yapılır.</small>}
+                {managerChoicesQ.isError && !readOnly && <p role="status">Yönetici adayları okunamadı; mevcut bağlantıyı değiştirmeyin.</p>}
+              </div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-title">Ünvan / Görev</label><input id="pm-title" type="text" className="input-control" value={form.title} disabled={readOnly} onChange={(e) => set("title", e.target.value)} /></div>
               <div className="input-group col-6"><label className="input-label" htmlFor="pm-hire">İşe Giriş Tarihi</label><input id="pm-hire" type="date" className="input-control" value={form.hireDate} disabled={readOnly} onChange={(e) => set("hireDate", e.target.value)} /></div>
               <div className="input-group col-6">
@@ -504,13 +545,13 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   <div className="input-group">
                     <label className="input-label" htmlFor="pm-rehire">Tekrar Çalışma Durumu</label>
                     <select id="pm-rehire" className="input-control" value={form.rehireEligibility} disabled={readOnly} onChange={(e) => set("rehireEligibility", e.target.value)}>
-                      <option>Değerlendirilmedi</option><option>Çalışılabilir</option><option>Kararsız</option><option>Çalışılmaz</option>
+                  <option value="">Belirtilmedi</option><option>Değerlendirilmedi</option><option>Çalışılabilir</option><option>Kararsız</option><option>Çalışılmaz</option>
                     </select>
                   </div>
                   <div className="input-group">
                     <label className="input-label" htmlFor="pm-exit">Eski Çıkış Kodu</label>
                     <select id="pm-exit" className="input-control" value={form.exitCode} disabled={readOnly} onChange={(e) => set("exitCode", e.target.value)}>
-                      <option>Yok</option><option>Kod-03 (İstifa)</option>
+                      <option value="">Belirtilmedi</option><option>Yok</option><option>Kod-03 (İstifa)</option>
                     </select>
                   </div>
                 </div>

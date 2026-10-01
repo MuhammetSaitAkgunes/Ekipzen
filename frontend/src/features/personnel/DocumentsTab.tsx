@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { ApiError, apiDownload } from "../../api/client";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useToast } from "../../layout/ToastProvider";
 import { useEmployeeDocuments, useUploadDocument, useWithdrawDocument, useWithdrawnEmployeeDocuments } from "./queries";
 import type { EmployeeDocumentDto } from "./queries";
@@ -14,6 +15,8 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
   const upload = useUploadDocument();
   const withdraw = useWithdrawDocument();
   const [documentType, setDocumentType] = useState("");
+  const [uploadGuidanceVersion, setUploadGuidanceVersion] = useState<number | null>(null);
+  const [withdrawGuidanceVersion, setWithdrawGuidanceVersion] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [withdrawTarget, setWithdrawTarget] = useState<EmployeeDocumentDto | null>(null);
   const [withdrawReason, setWithdrawReason] = useState("");
@@ -36,8 +39,9 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
       return;
     }
     try {
-      await upload.mutateAsync({ id: employeeId, file: selectedFile, documentType: documentType.trim() });
+      await upload.mutateAsync({ id: employeeId, file: selectedFile, documentType: documentType.trim(), guidanceContentRevisionId: uploadGuidanceVersion });
       setSelectedFile(null);
+      setUploadGuidanceVersion(null);
       setDocumentType("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       showToast("Evrak yüklendi. Listedeki dosyayı indirip içeriğini kontrol edin.", "success");
@@ -65,9 +69,10 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
     if (!withdrawTarget?.id || !withdrawReason.trim() || withdraw.isPending) return;
     try {
       await withdraw.mutateAsync({
-        id: employeeId, documentId: withdrawTarget.id, reason: withdrawReason.trim(),
+        id: employeeId, documentId: withdrawTarget.id, reason: withdrawReason.trim(), guidanceContentRevisionId: withdrawGuidanceVersion,
       });
       setWithdrawTarget(null);
+      setWithdrawGuidanceVersion(null);
       setWithdrawReason("");
       showToast("Evrak geri çekildi. Doğru dosyayı ayrıca yükleyebilirsiniz.", "success");
     } catch (e) {
@@ -92,7 +97,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
-            if (!upload.isPending) setSelectedFile(e.dataTransfer.files?.[0] ?? null);
+            if (!upload.isPending) { setSelectedFile(e.dataTransfer.files?.[0] ?? null); setUploadGuidanceVersion(null); }
           }}
         >
           <i aria-hidden="true" className="fa-solid fa-cloud-arrow-up" />
@@ -108,13 +113,14 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
           </div>
           <div className="input-group col-6">
             <label className="input-label" htmlFor="pm-doc-file">Evrak dosyası seç</label>
-            <input id="pm-doc-file" ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" disabled={upload.isPending} className="input-control" aria-label="Evrak dosyası seç" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)} />
+            <input id="pm-doc-file" ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" disabled={upload.isPending} className="input-control" aria-label="Evrak dosyası seç" onChange={(e) => { setSelectedFile(e.target.files?.[0] ?? null); setUploadGuidanceVersion(null); }} />
           </div>
         </div>
       )}
 
       {!readOnly && selectedFile && <section className="ez-document-review" aria-labelledby="document-review-title" aria-live="polite">
         <h4 id="document-review-title">Yüklemeden önce kontrol edin</h4>
+        <GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={uploadGuidanceVersion} onChange={setUploadGuidanceVersion} disabled={upload.isPending} />
         <p><strong>Dosya:</strong> {selectedFile.name} · {formatSize(selectedFile.size)}</p>
         <p><strong>Evrak türü:</strong> {documentType.trim() || "Girilmedi"}</p>
         <p>Doğru çalışanın kartında olduğunuzu ve dosyanın gerçekten bu belgeye ait olduğunu doğrulayın. Gereksiz hassas bilgi yüklemeyin.</p>
@@ -150,7 +156,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
                     <i aria-hidden="true" className="fa-solid fa-download" />
                   </button>
                   {!readOnly && <button className="btn-icon-sm" title="Geri çek" aria-label={`${doc.fileName} dosyasını geri çek`}
-                    onClick={() => { setWithdrawTarget(doc); setWithdrawReason(""); }}>
+                    onClick={() => { setWithdrawTarget(doc); setWithdrawReason(""); setWithdrawGuidanceVersion(null); }}>
                     <i aria-hidden="true" className="fa-solid fa-rotate-left" />
                   </button>}
                 </td>
@@ -167,6 +173,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
         )}
       </div>}
       {!readOnly && withdrawTarget && <section className="ez-document-review" aria-labelledby="document-withdraw-title">
+        <GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={withdrawGuidanceVersion} onChange={setWithdrawGuidanceVersion} disabled={withdraw.isPending} />
         <h4 id="document-withdraw-title">Evrakı geri çekmeden önce kontrol edin</h4>
         <p><strong>Dosya:</strong> {withdrawTarget.fileName} · <strong>Tür:</strong> {withdrawTarget.documentType}</p>
         <p>Bu evrak normal listeden ve indirmeden çıkar; gerekçe ve işlem geçmişi korunur. Geri çekme dosyayı kalıcı olarak silmez. Doğru dosyayı daha sonra yükleyin.</p>

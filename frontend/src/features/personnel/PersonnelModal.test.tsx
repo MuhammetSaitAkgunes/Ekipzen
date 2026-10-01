@@ -57,6 +57,7 @@ beforeEach(() => {
   localStorage.clear();
   stubApi({
     "/api/departments": departments,
+    "/api/employees/manager-choices": [],
     "/api/guidance/employee-entry/bookmark": { processKey: "personnel-entry", stepKey: "tab-mali", contentVersion: 1 },
     ...Object.fromEntries(
       ["tab-kimlik", "tab-iletisim", "tab-is", "tab-mali", "tab-ozluk", "tab-evrak"].map((stepKey) => [

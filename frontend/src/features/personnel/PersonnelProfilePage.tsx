@@ -19,7 +19,8 @@ export function PersonnelProfilePage() {
   const returnTo = typeof location.state?.returnTo === "string" && /^\/app\/personnel(?:\?|$)/.test(location.state.returnTo) ? location.state.returnTo : appPath("/personnel");
   const guideActive = isNew || params.get("guide") === "1";
   const requestedTab = params.get("tab");
-  const initialTab = requestedTab === "tab-evrak" || requestedTab === "tab-mali" ? requestedTab : undefined;
+  const initialTab = requestedTab === "tab-kimlik" || requestedTab === "tab-iletisim" || requestedTab === "tab-is"
+    || requestedTab === "tab-mali" || requestedTab === "tab-ozluk" || requestedTab === "tab-evrak" ? requestedTab : undefined;
   const evidenceQ = useEmployeeCreationEvidence(id, !isNew && guideActive && user?.role === "hr-admin");
   const goBack = () => navigate(returnTo, { state: { scroll: location.state?.scroll ?? 0 } });
   const openFollowUpTab = (tab: "tab-evrak" | "tab-mali") =>

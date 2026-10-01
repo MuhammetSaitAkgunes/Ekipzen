@@ -7,6 +7,7 @@ import { GuidanceStepLessons } from "./GuidanceStepLessons";
 
 const dateLabel = (date: string): string => date.split("-").reverse().join(".");
 const taskLabels: Record<string, string> = {
+  "employee-contact": "İLETİŞİM KAYDI", "employee-documents": "EVRAK ENVANTERİ", "employee-manager": "YÖNETİCİ BAĞLANTISI",
   "action-followup": "AKSİYON TAKİBİ",
   "company-setup": "ŞİRKET HAZIRLIĞI",
   "payroll-settings-review": "BORDRO AYAR İNCELEMESİ",
@@ -30,7 +31,7 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
   return <div className="ez-guidance-tasks">
     <GuidanceSourceLink processKey="daily" />
     <GuidanceStepLessons process="daily" />
-    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını ve açık aksiyonları; İK yöneticileri için eksik başlangıç kayıtlarını, taslak bordro ayarlarını, eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. Diğer İK işleri burada henüz üretilmez.</p>
+    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını ve açık aksiyonları; İK yöneticileri için eksik başlangıç kayıtlarını, taslak bordro ayarlarını, eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, iletişim kanalı veya aktif evrak kaydı olmayan ve atanmış yönetici bağlantısı uygun görünmeyen etkin çalışanları, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. İletişim ve evrak işleri envanter kontrolüdür; yasal eksiklik veya tüm belgelerin tamamlanması kararı değildir. Yönetici ataması her çalışan için zorunlu değildir. Diğer İK işleri burada henüz üretilmez.</p>
     {tasks.map((task) => <article className="ez-guidance-task" key={task.key}>
       <span className="ez-overline">{taskLabels[task.kind] ?? "BELGE TAKİBİ"}</span>
       <h3>{task.title}</h3>

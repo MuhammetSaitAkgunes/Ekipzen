@@ -5,6 +5,7 @@ import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { DocumentsTab } from "./DocumentsTab";
+import { AuthProvider } from "../../auth/AuthContext";
 
 const documents = [
   { id: 9, documentType: "Kimlik", fileName: "kimlik.pdf", contentType: "application/pdf", sizeBytes: 1024, createdAtUtc: "2026-07-14T10:00:00Z" },
@@ -22,9 +23,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderTab = (employeeId: number | null, readOnly = false) =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <DocumentsTab employeeId={employeeId} readOnly={readOnly} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("evrak listesi dolar", async () => {

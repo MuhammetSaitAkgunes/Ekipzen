@@ -6,6 +6,7 @@ export const guidanceOperationsKey = ["guidance", "operations"] as const;
 export type GuidanceOperationEvidence = {
   evidenceKey: string;
   setupChanges?: { addedCompanyProfile: boolean; addedLeaveTypeCount: number; addedHolidayCount: number; addedPayrollSettings: boolean } | null;
+  personnelChanges?: { employeeId: number; documentId?: number | null; changedFields: string[]; reason?: string | null } | null;
   operationKey: string; resourceId: number; outcome: string; occurredAtUtc: string;
   content: { contentRevisionId: number; contentKey: string; processKey: string; stepKey: string; contentVersion: number; title: string };
 };
