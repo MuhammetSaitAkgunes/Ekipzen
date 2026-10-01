@@ -62,7 +62,7 @@ export type CompensationCorrectionContext = {
   history: Array<{ fromVersion: number; toVersion: number; before: CompensationPackageValues;
     after: CompensationPackageValues; reason: string; actorUserId: string; correctedAtUtc: string }>;
 };
-export type CorrectCompensationPackageBody = CompensationPackageValues & { expectedVersion: number; reason: string };
+export type CorrectCompensationPackageBody = CompensationPackageValues & { expectedVersion: number; reason: string; guidanceContentRevisionId?: number | null };
 export type CompensationRemediationImpact = {
   potentialPayrollRows: Array<{ rowId: number; periodId: number; year: number; month: number;
     periodStatus: string; rowStatus: string; recordedGrossSalary: number }>;
@@ -303,13 +303,14 @@ export const useRehireEmployee = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ employeeId, body }: { employeeId: number; body: RehireEmployeeBody }) =>
-      apiFetch<EmployeeDetailDto>(`/employees/${employeeId}/rehire`, {
+      apiFetch<EmployeeEmploymentFoundationDto>(`/employees/${employeeId}/rehire`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -324,6 +325,8 @@ export const useSaveCompensationPackage = () => {
       }),
     onSuccess: (_foundation, { employeeId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "personnel-history"] }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
   });
@@ -345,6 +348,8 @@ export const useCorrectCompensationPackage = () => {
       { method: "PUT", body: JSON.stringify(body) }),
     onSuccess: (_foundation, { employeeId, packageId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "personnel-history"] }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "compensation-packages", packageId, "correction-context"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
@@ -662,17 +667,19 @@ export const useCorrectCompensationDate = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ employeeId, packageId, proposedEffectiveFrom, expectedPackageVersion,
-      expectedPreviousPackageId, expectedPreviousPackageVersion, reason }: {
+      expectedPreviousPackageId, expectedPreviousPackageVersion, reason, guidanceContentRevisionId }: {
       employeeId: number; packageId: number; proposedEffectiveFrom: string;
       expectedPackageVersion: number; expectedPreviousPackageId: number | null;
-      expectedPreviousPackageVersion: number | null; reason: string;
+      expectedPreviousPackageVersion: number | null; reason: string; guidanceContentRevisionId?: number | null;
     }) => apiFetch<EmployeeEmploymentFoundationDto>(
       `/employees/${employeeId}/compensation-packages/${packageId}/effective-date`,
       { method: "PUT", body: JSON.stringify({ proposedEffectiveFrom, expectedPackageVersion,
-        expectedPreviousPackageId, expectedPreviousPackageVersion, reason }) }),
+        expectedPreviousPackageId, expectedPreviousPackageVersion, reason, ...(guidanceContentRevisionId != null ? { guidanceContentRevisionId } : {}) }) }),
     onSuccess: (_foundation, { employeeId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "employment-foundation"] }),
       queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "compensation-packages"] }),
+      queryClient.invalidateQueries({ queryKey: ["employees", employeeId, "personnel-history"] }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
   });

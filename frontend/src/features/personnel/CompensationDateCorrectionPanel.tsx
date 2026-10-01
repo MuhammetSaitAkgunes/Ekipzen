@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useToast } from "../../layout/ToastProvider";
 import {
   useCorrectCompensationDate,
@@ -17,6 +18,7 @@ export function CompensationDateCorrectionPanel({ employeeId, packageId, current
   const correct = useCorrectCompensationDate();
   const [proposedDate, setProposedDate] = useState(currentPackage.effectiveFrom);
   const [reason, setReason] = useState("");
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const check = async () => {
@@ -41,7 +43,7 @@ export function CompensationDateCorrectionPanel({ employeeId, packageId, current
         expectedPackageVersion: checked.package.version,
         expectedPreviousPackageId: checked.previousPackage?.id ?? null,
         expectedPreviousPackageVersion: checked.previousPackage?.version ?? null,
-        reason: reason.trim() });
+        reason: reason.trim(), ...(guidanceVersion != null ? { guidanceContentRevisionId: guidanceVersion } : {}) });
       showToast("Yürürlük tarihi düzeltildi; eski tarih ve gerekçe geçmişte korundu.", "success");
       onSaved();
     } catch (cause) {
@@ -53,6 +55,8 @@ export function CompensationDateCorrectionPanel({ employeeId, packageId, current
   return <section className="ez-compensation-review" aria-label="Yürürlük tarihi düzeltme">
     <h4>Yürürlük tarihini ayrı işlemle düzelt</h4>
     <p>Yalnız açık çalışma döneminin son paketi düzeltilebilir. Paket veya değişecek tarih aralığı bordro ya da ayrılışta kullanılmışsa kayıt korunur ve işlem kilitlenir.</p>
+    <GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Tarih düzeltmede kullandığım rehber sürümü"
+      value={guidanceVersion} onChange={id => { setGuidanceVersion(id); preview.reset(); }} disabled={correct.isPending} />
     <div className="form-grid-2">
       <div className="input-group">
         <label className="input-label" htmlFor="pm-date-correction-date">Önerilen yeni yürürlük tarihi</label>

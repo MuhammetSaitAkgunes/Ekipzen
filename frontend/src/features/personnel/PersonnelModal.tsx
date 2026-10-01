@@ -170,7 +170,11 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [compensationReview, setCompensationReview] = useState<CompensationForm | null>(null);
   const [correctionPackageId, setCorrectionPackageId] = useState<number | null>(null);
   const [rehireDate, setRehireDate] = useState("");
-  const [rehireContractType, setRehireContractType] = useState("indefinite");
+  const [rehireContractType, setRehireContractType] = useState("");
+  const [rehireReason, setRehireReason] = useState("");
+  const [rehireReview, setRehireReview] = useState(false);
+  const [rehireGuidanceVersion, setRehireGuidanceVersion] = useState<number | null>(null);
+  const [compensationGuidanceVersion, setCompensationGuidanceVersion] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const detailQ = useEmployee(employeeId);
@@ -328,9 +332,11 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
           mealAllowance: tryNumber(compensationReview.mealAllowance),
           otherRegularBenefits: tryNumber(compensationReview.otherRegularBenefits),
           sourceReference: compensationReview.sourceReference.trim(),
+          ...(compensationGuidanceVersion != null ? { guidanceContentRevisionId: compensationGuidanceVersion } : {}),
         },
       });
       setCompensation(emptyCompensation);
+      setCompensationGuidanceVersion(null);
       setCompensationReview(null);
       showToast("Yeni ücret paketi yürürlük tarihiyle kaydedildi.", "success");
     } catch (cause) {
@@ -338,23 +344,37 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     }
   };
 
+  const rehireIssue = () => {
+    if (!foundationQ.isSuccess || detailQ.data?.status !== "passive") return "Güncel pasif kart ve çalışma geçmişi doğrulanamadı; yeniden yükleyin.";
+    if (!rehireDate || !rehireContractType) return "İşe dönüş tarihi ve doğrulanmış yeni sözleşme türünü seçin.";
+    if (!rehireReason.trim() || rehireReason.trim().length > 500) return "Yeniden işe alma gerekçesi / karar referansı zorunludur; 500 karakteri geçemez.";
+    const periods = foundationQ.data.employmentPeriods;
+    if (!Array.isArray(periods)) return "Çalışma geçmişi okunamadı; yeniden yükleyin.";
+    if (periods.some(period => period.endDate === null)) return "Açık çalışma dönemi var; yeni dönem açılamaz.";
+    const latestEnd = periods.map(period => period.endDate ?? "").sort().at(-1);
+    if (latestEnd && rehireDate <= latestEnd) return "İşe dönüş tarihi önceki çalışma döneminden sonra olmalıdır.";
+    const baseline = loadedCard.current;
+    if (baseline && JSON.stringify(modelFrom(form, baseline)) !== JSON.stringify(modelFrom(formFrom(baseline), baseline)))
+      return "Kartta kaydedilmemiş değişiklik var. Yeniden işe alma öncesinde kart düzeltmesini tamamlayın veya taslağı bırakın.";
+    return null;
+  };
+  const prepareRehire = () => { const issue = rehireIssue(); setError(issue); setRehireReview(issue === null); };
   const handleRehire = async () => {
-    if (employeeId === null) return;
+    if (employeeId === null || !rehireReview || rehire.isPending) return;
+    const issue = rehireIssue(); if (issue) { setError(issue); setRehireReview(false); return; }
     setError(null);
-    if (!rehireDate) {
-      setError("İşe dönüş tarihi zorunludur.");
-      return;
-    }
-
     try {
-      await rehire.mutateAsync({
-        employeeId,
-        body: { rehireDate, contractType: rehireContractType },
-      });
-      showToast("Yeni çalışma dönemi açıldı; eski izin ve ücret kayıtları taşınmadı.", "success");
-      setRehireDate("");
+      await rehire.mutateAsync({ employeeId, body: { rehireDate, contractType: rehireContractType, reason: rehireReason.trim(),
+        ...(rehireGuidanceVersion != null ? { guidanceContentRevisionId: rehireGuidanceVersion } : {}) } });
+      setRehireReview(false); setRehireDate(""); setRehireReason(""); setRehireContractType(""); setRehireGuidanceVersion(null);
+      setGuidanceVersion(null); setCorrectionReason("");
+      const refreshed = await detailQ.refetch();
+      if (refreshed.data && !refreshed.isError) { loadedCard.current = refreshed.data; setForm(formFrom(refreshed.data)); }
+      else setError("Yeni çalışma dönemi kaydedildi; güncel kart okunamadı. Yeniden işlem yapmadan kartı yükleyin.");
+      showToast("Yeni çalışma dönemi açıldı; eski izin ve ücret kayıtları taşınmadı. Erişim eşitlemesi ayrıca işlenir.", "success");
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "İşe dönüş işlemi tamamlanamadı.");
+      setRehireReview(false);
+      setError(cause instanceof ApiError ? cause.message : "İşe dönüş işlemi tamamlanamadı; güncel kaydı kontrol edin.");
     }
   };
 
@@ -564,20 +584,30 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                     <div className="input-group">
                       <label className="input-label" htmlFor="pm-rehire-date">İşe dönüş tarihi</label>
                       <input id="pm-rehire-date" type="date" className="input-control" value={rehireDate}
-                        onChange={(event) => setRehireDate(event.target.value)} />
+                        onChange={(event) => { setRehireDate(event.target.value); setRehireReview(false); }} />
                     </div>
                     <div className="input-group">
                       <label className="input-label" htmlFor="pm-rehire-contract">Yeni sözleşme türü</label>
                       <select id="pm-rehire-contract" className="input-control" value={rehireContractType}
-                        onChange={(event) => setRehireContractType(event.target.value)}>
+                        onChange={(event) => { setRehireContractType(event.target.value); setRehireReview(false); }}>
+                        <option value="">Yeni sözleşmeden seçin</option>
                         <option value="indefinite">Belirsiz süreli</option>
                         <option value="fixed-term">Belirli süreli</option>
                       </select>
                     </div>
                   </div>
-                  <button type="button" className="btn btn-secondary" onClick={handleRehire} disabled={rehire.isPending}>
-                    Yeni çalışma dönemini başlat
-                  </button>
+                  <label className="input-label" htmlFor="pm-rehire-reason">Yeniden işe alma gerekçesi / karar referansı</label>
+                  <textarea id="pm-rehire-reason" className="input-control" maxLength={500} value={rehireReason}
+                    onChange={event => { setRehireReason(event.target.value); setRehireReview(false); }} />
+                  <GuidanceOperationSource process="personnel" step="rehire" label="Yeniden işe alma işleminde kullandığım rehber sürümü"
+                    value={rehireGuidanceVersion} onChange={id => { setRehireGuidanceVersion(id); setRehireReview(false); }} disabled={rehire.isPending} />
+                  <button type="button" className="btn btn-secondary" onClick={prepareRehire} disabled={rehire.isPending}>İşe dönüşü kontrol et</button>
+                  {rehireReview && <section className="ez-compensation-review" aria-label="Yeniden işe alma ön kontrolü">
+                    <h4>Yeniden işe alma ön kontrolü</h4><p>Çalışan: {detailQ.data?.name} · Yeni başlangıç: {rehireDate}</p>
+                    <p>Sözleşme: {rehireContractType === "fixed-term" ? "Belirli süreli" : "Belirsiz süreli"} · Karar: {rehireReason.trim()}</p>
+                    <p>Personel aktif olur, yeni çalışma dönemi açılır ve erişim eşitlemesi kuyruğa eklenir. Eski dönem, ayrılış ve ücret/izin geçmişi korunur; yeni dönem için ücret hazırlığı ayrıca gerekir. Erişim kuyruğu tamamlanmış sayılmaz.</p>
+                    <button type="button" className="btn btn-secondary" onClick={handleRehire} disabled={rehire.isPending}>Yeni çalışma dönemini başlat</button>
+                  </section>}
                 </div>
               )}
             </div>
@@ -672,6 +702,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   </button>
                   {compensationReview && <section className="ez-compensation-review" aria-labelledby="compensation-review-title" aria-live="polite">
                     <h4 id="compensation-review-title">Ücret paketi ön kontrolü</h4>
+                    <GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Ücret paketi eklemede kullandığım rehber sürümü"
+                      value={compensationGuidanceVersion} onChange={setCompensationGuidanceVersion} disabled={saveCompensation.isPending} />
                     <p><strong>Çalışan:</strong> {detailQ.data?.name}</p>
                     <p><strong>Yürürlük:</strong> {compensationReview.effectiveFrom} · <strong>Aylık brüt:</strong> {currency.format(tryNumber(compensationReview.monthlyGrossSalary))}</p>
                     <p><strong>Düzenli toplam:</strong> {currency.format([

@@ -9617,6 +9617,8 @@ export interface components {
             /** Format: int32 */
             expectedPreviousPackageVersion?: number | null;
             reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CorrectCompensationPackageBody: {
             /** Format: int32 */
@@ -9633,6 +9635,8 @@ export interface components {
             otherRegularBenefits?: number;
             sourceReference?: string | null;
             reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CorrectPositionBody: {
             /** Format: int32 */
@@ -10028,6 +10032,16 @@ export interface components {
             occurredAtUtc?: string;
             changedFields?: string[] | null;
             reason?: string | null;
+            /** Format: int32 */
+            employmentPeriodId?: number | null;
+            /** Format: int32 */
+            compensationPackageId?: number | null;
+            /** Format: int32 */
+            relatedPackageId?: number | null;
+            /** Format: int32 */
+            fromVersion?: number | null;
+            /** Format: int32 */
+            toVersion?: number | null;
         };
         EmployeeProfileDto: {
             /** Format: date */
@@ -10288,6 +10302,16 @@ export interface components {
             documentId?: number | null;
             changedFields?: string[] | null;
             reason?: string | null;
+            /** Format: int32 */
+            employmentPeriodId?: number | null;
+            /** Format: int32 */
+            compensationPackageId?: number | null;
+            /** Format: int32 */
+            relatedPackageId?: number | null;
+            /** Format: int32 */
+            fromVersion?: number | null;
+            /** Format: int32 */
+            toVersion?: number | null;
         };
         GuidancePracticeDefinition: {
             question?: string | null;
@@ -11392,6 +11416,9 @@ export interface components {
             /** Format: date */
             rehireDate?: string;
             contractType?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            reason?: string | null;
         };
         /** @description Davet yeniden gönderme isteği gövdesi. */
         ResendInviteRequest: {
@@ -11486,6 +11513,8 @@ export interface components {
             /** Format: double */
             otherRegularBenefits?: number;
             sourceReference?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         SaveCompensationRemediationBody: {
             /** Format: int32 */

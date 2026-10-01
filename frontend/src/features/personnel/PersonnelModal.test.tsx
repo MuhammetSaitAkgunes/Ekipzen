@@ -542,6 +542,8 @@ test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderili
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
   await userEvent.type(screen.getByLabelText("İşe dönüş tarihi"), "2026-09-15");
   await userEvent.selectOptions(screen.getByLabelText("Yeni sözleşme türü"), "fixed-term");
+  await userEvent.type(screen.getByLabelText("Yeniden işe alma gerekçesi / karar referansı"), "Yeni sözleşme kararı");
+  await userEvent.click(screen.getByRole("button", { name: "İşe dönüşü kontrol et" }));
   await userEvent.click(screen.getByRole("button", { name: "Yeni çalışma dönemini başlat" }));
 
   await waitFor(() => {
@@ -551,6 +553,7 @@ test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderili
     expect(JSON.parse(String(posted?.[1]?.body))).toEqual({
       rehireDate: "2026-09-15",
       contractType: "fixed-term",
+      reason: "Yeni sözleşme kararı",
     });
   });
 });

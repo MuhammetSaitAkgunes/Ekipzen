@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useEmployeePersonnelHistory } from "./queries";
 
-const titles: Record<string, string> = { "employee-update": "Kart düzeltme", "employee-document-upload": "Belge yükleme", "employee-document-withdraw": "Belge geri çekme" };
+const titles: Record<string, string> = { "employee-update": "Kart düzeltme", "employee-document-upload": "Belge yükleme", "employee-document-withdraw": "Belge geri çekme",
+  "employee-rehire": "Yeni çalışma dönemi", "employee-compensation-create": "Ücret paketi ekleme", "employee-compensation-correct": "Ücret tutarı/kaynak düzeltme", "employee-compensation-date": "Ücret yürürlük tarihi düzeltme" };
 export function PersonnelChangeHistory({ employeeId }: { employeeId: number }) {
   const [open, setOpen] = useState(false);
   const query = useEmployeePersonnelHistory(employeeId, open);
@@ -12,6 +13,10 @@ export function PersonnelChangeHistory({ employeeId }: { employeeId: number }) {
         <ul>{query.data?.map(item => <li key={item.id}><strong>{titles[item.operationKey ?? ""] ?? "Personel işlemi"}</strong>
           {item.occurredAtUtc && <> · {new Date(item.occurredAtUtc).toLocaleString("tr-TR")}</>}
           {item.documentId != null && <> · Belge #{item.documentId}</>}
+          {item.employmentPeriodId != null && <> · Çalışma dönemi #{item.employmentPeriodId}</>}
+          {item.compensationPackageId != null && <> · Ücret paketi #{item.compensationPackageId}</>}
+          {item.relatedPackageId != null && <> · Önceki paket #{item.relatedPackageId}</>}
+          {item.toVersion != null && <> · Sürüm {item.fromVersion != null ? `${item.fromVersion} → ` : ""}{item.toVersion}</>}
           <p>{item.changedFields?.join(", ")}</p><p>Gerekçe: {item.reason || "Kaydedilmemiş"}</p>
         </li>)}</ul></>)}
   </details>;

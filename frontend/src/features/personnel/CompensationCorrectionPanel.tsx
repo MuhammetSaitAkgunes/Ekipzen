@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useToast } from "../../layout/ToastProvider";
 import { CompensationRemediationPanel } from "./CompensationRemediationPanel";
 import { CompensationDateCorrectionPanel } from "./CompensationDateCorrectionPanel";
@@ -46,10 +47,12 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
     sourceReference: context.package.sourceReference,
   }));
   const [reason, setReason] = useState("");
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
+  const [baseline] = useState(context.package);
   const [review, setReview] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const changed = fields.some(({ key }) => values[key] !== context.package[key])
-    || values.sourceReference.trim() !== context.package.sourceReference;
+  const changed = fields.some(({ key }) => values[key] !== baseline[key])
+    || values.sourceReference.trim() !== baseline.sourceReference;
 
   const prepare = () => {
     setError(null);
@@ -72,7 +75,8 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
     try {
       await correct.mutateAsync({ employeeId, packageId, body: {
         ...values, sourceReference: values.sourceReference.trim(),
-        expectedVersion: context.package.version, reason: reason.trim(),
+        expectedVersion: baseline.version, reason: reason.trim(),
+        ...(guidanceVersion != null ? { guidanceContentRevisionId: guidanceVersion } : {}),
       } });
       showToast("Ücret paketi düzeltildi; önceki değerler geçmişte korundu.", "success");
       onClose();
@@ -83,11 +87,14 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
   };
 
   return <>
-    <p><strong>Yürürlük:</strong> {context.package.effectiveFrom}{context.package.effectiveTo ? ` – ${context.package.effectiveTo}` : " – güncel"} · <strong>Sürüm:</strong> {context.package.version}</p>
+    <p><strong>Yürürlük:</strong> {baseline.effectiveFrom}{baseline.effectiveTo ? ` – ${baseline.effectiveTo}` : " – güncel"} · <strong>Taslağın sürümü:</strong> {baseline.version}</p>
+    {context.package.version !== baseline.version && <p role="alert">Paket bu sırada değişti. Taslağınız ilk açtığınız sürüme aittir; güncel paketi yeniden açarak hazırlayın.</p>}
     <p>Bu işlem yalnızca tutarları ve kaynak referansını düzeltir. Yürürlük tarihi ayrı bir işlemdir. Bordro veya ayrılışta kullanılan değerler kayıt geçmişi olduğu için doğrudan değiştirilemez; böyle bir durumda telafi akışı gerekir.</p>
     {!context.canCorrect && <div role="alert"><strong>Doğrudan düzeltme kilitli.</strong><ul>{context.blockingReasons.map((item) => <li key={item}>{item}</li>)}</ul></div>}
     {!context.canCorrect && <CompensationRemediationPanel employeeId={employeeId} packageId={packageId} />}
     {context.canCorrect && <>
+      <GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Tutar düzeltmede kullandığım rehber sürümü"
+        value={guidanceVersion} onChange={id => { setGuidanceVersion(id); setReview(false); }} disabled={correct.isPending} />
       <div className="form-grid-2">
         {fields.map(({ key, label }) => <div className="input-group" key={key}>
           <label className="input-label" htmlFor={`pm-correct-${key}`}>{label}</label>
@@ -109,8 +116,8 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
       <button type="button" className="btn btn-secondary" onClick={prepare} disabled={correct.isPending}>Düzeltmeyi kontrol et</button>
       {review && <section aria-label="Düzeltme ön kontrolü" className="ez-compensation-review">
         <h4>Düzeltme ön kontrolü</h4>
-        <p><strong>Brüt maaş:</strong> {currency.format(context.package.monthlyGrossSalary)} → {currency.format(values.monthlyGrossSalary)}</p>
-        <p><strong>Kaynak:</strong> {context.package.sourceReference} → {values.sourceReference.trim()}</p>
+        <p><strong>Brüt maaş:</strong> {currency.format(baseline.monthlyGrossSalary)} → {currency.format(values.monthlyGrossSalary)}</p>
+        <p><strong>Kaynak:</strong> {baseline.sourceReference} → {values.sourceReference.trim()}</p>
         <p><strong>Gerekçe:</strong> {reason.trim()}</p>
         <p>Kaydettiğinizde eski ve yeni tutarların tamamı, gerekçe ve işlemi yapan kişi denetim geçmişine eklenir.</p>
         <button type="button" className="btn btn-primary" onClick={save} disabled={correct.isPending}>Düzeltmeyi onayla ve kaydet</button>
