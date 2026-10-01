@@ -30,10 +30,10 @@ GET /api/guidance/catalog/versions/{id}: rolüne uygun yayımlanmış/kaldırıl
 
 GET .../access yayın ekibi yetkisini, GET/POST .../editorial yönetim listesi/oluşturmayı; PUT .../editorial/{id} taslak düzenlemeyi; POST .../editorial/{id}/submit|return|publish|retire durum işlemlerini sunar. Yönetim ekranında yazılmış ancak kaydedilmemiş değişiklikler incelemeye gönderilemez. Çakışmada form girişi korunur; güncel kayıt kullanıcı isteğiyle yeniden yüklenir. Arka plan yenilemesi açık taslağı sessizce değiştirmez.
 
-Rehber içerikleri sayfası bütün rollere açıktır; yayın paneli yalnız Ekipzen ekibine görünür. Okumak yer imi, alıştırma, gerçek iş veya yeterlilik kanıtı üretmez. Mevcut üç karar alıştırması bu yeni metin sürümlerine kendiliğinden bağlanmaz; süreç ekranlarına ve öğrenme sürümlerine bağlantı sonraki teslimdir.
+Rehber içerikleri sayfası bütün rollere açıktır; yayın paneli yalnız Ekipzen ekibine görünür. Ekranı açmak yer imi, alıştırma, gerçek iş veya yeterlilik kanıtı üretmez. 1 Ekim tesliminde süreç/katalog geçişleri ve kullanıcı açıkça teyit ettiğinde kendi kiracısında saklanan sürüme bağlı inceleme beyanı eklendi; bu beyan gerçek iş/yeterlilik değildir. Mevcut üç karar alıştırması metin sürümlerine kendiliğinden bağlanmaz. [Kaynaklı başlangıç ve inceleme sözleşmesi](2026-10-01-ik-rehberi-kaynakli-ogrenme.md).
 
 ## Yayın işletimi ve açık işler
 
 Üretimde otomatik migration/seed eklenmedi. AddCentralGuidanceContentCatalog platform migrationı, ekip yetki ayarı ve gerçek iki hesabın yayın denemesi canlı kontrol listesine dahildir. Migration Down, herhangi bir içerik kaydı varken içerik ve inceleme geçmişini silmeye izin vermez. Katalogda otomatik onaylı hukuki içerik veya uydurulmuş uzman kaydı tohumlanmaz.
 
-Tam süreç metinlerinin hazırlanması, resmî kaynakların araştırılması, gerçek uzman incelemesi, süreç/adım ekranlarına bağlanması ve öğrenme kanıtlarının içerik sürümüne ilişkilendirilmesi açıktır. Teknik katalog teslimi, tam kapsam rehberin veya ilk canlı yayın kabulünün bitmesi değildir.
+1 Ekim'de on süreç için resmî kaynakları araştırılmış başlangıç taslakları ve süreç ekranı bağlantıları eklendi. Bütün alt adımların içerik envanteri, gerçek uzman incelemesi/yayın, karar alıştırmalarının ve gerçek iş kanıtlarının katalog sürümüne bağlanması açıktır. Teknik katalog ve inceleme beyanı teslimi, tam kapsam rehberin veya ilk canlı yayın kabulünün bitmesi değildir.
