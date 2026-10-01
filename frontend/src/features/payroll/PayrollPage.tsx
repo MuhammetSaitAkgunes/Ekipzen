@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { appPath } from "../../paths";
@@ -101,6 +102,7 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
         </div>
       </div>
 
+      <GuidanceStepLessons process="payroll" />
       <div className="payroll-tabs">
         {TABS.map((item) => (
           <button

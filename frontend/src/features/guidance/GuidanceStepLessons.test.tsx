@@ -15,6 +15,39 @@ function setRole(role: string) {
 beforeEach(() => { localStorage.clear(); setRole("hr-admin"); });
 afterEach(() => vi.unstubAllGlobals());
 
+test.each([
+  { process: "payroll", title: "Bordro", first: "Hesap ayarlarının kaynak ve sürümünü inceleme", step: "settings-review", count: 6 },
+  { process: "compliance", title: "Uyum ve belgeler", first: "Gerçek belgeyi ve takip kaydını inceleme", step: "record-review", count: 3 },
+  { process: "offboarding", title: "İşten ayrılış", first: "Ayrılış dosyasını hazırlama", step: "preparation", count: 5 },
+])("$title adımları gerçek işlem yapmadan sırayla açılır", async ({ process, title, first, step, count }) => {
+  stubApi({ [`/api/guidance/catalog/steps/${process}/${step}`]: null });
+  renderPage(<AuthProvider><GuidanceStepLessons process={process} /></AuthProvider>);
+  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByText(`${title} · Adım adım öğren`));
+  const list = screen.getByRole("list");
+  const headings = within(list).getAllByRole("heading");
+  expect(headings).toHaveLength(count); expect(headings[0]).toHaveTextContent(first);
+  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.click(within(list).getAllByText("Kaynaklı adım ve sürümlü alıştırma")[0]);
+  await screen.findByText(/henüz yayımlanmadı/);
+  expect(vi.mocked(fetch).mock.calls).toHaveLength(1);
+  expect(vi.mocked(fetch).mock.calls[0][0]).toBe(`/api/guidance/catalog/steps/${process}/${step}`);
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
+test("ekip yöneticisi yalnız uyum incelemesini görür; bordro/ayrılış işlemi ve uyum değişikliği önerilmez", async () => {
+  setRole("manager"); stubApi({});
+  renderPage(<AuthProvider><GuidanceStepLessons process="compliance" /><GuidanceStepLessons process="payroll" /><GuidanceStepLessons process="offboarding" /></AuthProvider>);
+  await userEvent.click(screen.getByText("Uyum ve belgeler · Adım adım öğren"));
+  expect(screen.getAllByRole("heading")).toHaveLength(1);
+  expect(screen.getByText("Gerçek belgeyi ve takip kaydını inceleme")).toBeInTheDocument();
+  expect(screen.queryByText("Doğrulanmış belge durumunu işleme")).not.toBeInTheDocument();
+  expect(screen.queryByText("Belge bilgisi ve sorumlu hatasını düzeltme")).not.toBeInTheDocument();
+  expect(screen.queryByText("Bordro · Adım adım öğren")).not.toBeInTheDocument();
+  expect(screen.queryByText("İşten ayrılış · Adım adım öğren")).not.toBeInTheDocument();
+  expect(fetch).not.toHaveBeenCalled();
+});
+
 test("şirket rehberi sırayı gösterir; adımı açmak kurulum veya kayıt işlemi göndermez", async () => {
   stubApi({ "/api/guidance/catalog/steps/company/initial-setup": null });
   renderPage(<AuthProvider><GuidanceStepLessons process="company" /></AuthProvider>);

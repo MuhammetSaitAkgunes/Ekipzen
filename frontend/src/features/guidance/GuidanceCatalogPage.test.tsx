@@ -8,6 +8,25 @@ import { stubApi } from "../../test/apiStub";
 import { GuidanceCatalogPage } from "./GuidanceCatalogPage";
 import type { GuidanceContent, GuidanceEditorial } from "./catalogQueries";
 
+test.each([
+  { button: "Bordro · Hesap ayarlarının kaynak ve sürümünü inceleme taslağını hazırla", key: "payroll-settings-review", step: "settings-review", kind: "good-practice", correct: "1" },
+  { button: "Uyum ve belgeler · Doğrulanmış belge durumunu işleme taslağını hazırla", key: "compliance-status-review", step: "status-review", kind: "legislation", correct: "0" },
+  { button: "İşten ayrılış · Ayrılışı tamamlayıp dış işlemi ayırma taslağını hazırla", key: "offboarding-completion", step: "completion", kind: "legislation", correct: "2" },
+])("$key içeriği ve sorusu bağımsız inceleme için hazırlanır; otomatik yayımlanmaz", async ({ button, key, step, kind, correct }) => {
+  stubApi(routes(true, [])); renderCatalog();
+  await userEvent.click(await screen.findByRole("button", { name: "İçerik yayınını yönet" }));
+  await userEvent.click(screen.getByText("Alt adım ve alıştırma taslakları"));
+  const prepare = await screen.findByRole("button", { name: button });
+  await waitFor(() => expect(prepare).toBeEnabled());
+  await userEvent.click(prepare);
+  expect(screen.getByLabelText("İçerik kimliği")).toHaveValue(key);
+  expect(screen.getByLabelText("Alt adım (isteğe bağlı)")).toHaveValue(step);
+  expect(screen.getByLabelText("Dayanak türü")).toHaveValue(kind);
+  expect(screen.getByLabelText("Doğru seçenek")).toHaveValue(correct);
+  expect(screen.getByLabelText("Alıştırma sorusu")).not.toHaveValue("");
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
 test("alt adım taslağı soru ve doğru yanıtı yayın incelemesine taşır; seçim otomatik kayıt yapmaz", async () => {
   stubApi(routes(true, [])); renderCatalog();
   await userEvent.click(await screen.findByRole("button", { name: "İçerik yayınını yönet" }));

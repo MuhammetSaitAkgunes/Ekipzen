@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -111,6 +112,7 @@ export function CompliancePage() {
         <div className="stat-box"><span className="sb-label">Denetim Riski</span><strong className="sb-val text-orange">{readiness.readinessRisk}</strong></div>
       </div>
 
+      <GuidanceStepLessons process="compliance" />
       <div className="toolbar-actions compliance-toolbar">
         <div className="search-wrap">
           <i aria-hidden="true" className="fa-solid fa-magnifying-glass" />

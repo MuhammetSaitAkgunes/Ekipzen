@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
@@ -329,6 +330,7 @@ export function OffboardingModal({ employeeId, onClose }: {
             <p>Kaynaklı metinler inceleme ve yayın onayından sonra katalogda görünür. Gerekli dış bildirim ve ödemeleri ayrıca takip edin; tamamlanan uygulama kaydı bunları doğrulamaz.</p>
           </section>}
 
+          {context && <GuidanceStepLessons process="offboarding" />}
           {context && completedCase && (
             <>
               <div className="notice-card">
