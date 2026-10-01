@@ -11,8 +11,8 @@ import { SESSION_KEY } from "../../api/session";
 import { CompliancePage } from "./CompliancePage";
 
 const documents = [
-  { id: 1, employeeId: 3, employee: "Ahmet Yılmaz", dept: "Yazılım", document: "İş Sözleşmesi", owner: "Ayşe Demir", dueDate: "2026-07-20", dueLabel: "4 gün", status: "Süresi Yaklaşıyor", level: "high" },
-  { id: 2, employeeId: 4, employee: "Ece Arslan", dept: "Yazılım", document: "SGK Girişi", owner: null, dueDate: null, dueLabel: "-", status: "Eksik", level: "medium" },
+  { id: 1, revision: "document-v1", employeeId: 3, employee: "Ahmet Yılmaz", dept: "Yazılım", document: "İş Sözleşmesi", owner: "Ayşe Demir", dueDate: "2026-07-20", dueLabel: "4 gün", status: "Süresi Yaklaşıyor", level: "high" },
+  { id: 2, revision: "document-v2", employeeId: 4, employee: "Ece Arslan", dept: "Yazılım", document: "SGK Girişi", owner: null, dueDate: null, dueLabel: "-", status: "Eksik", level: "medium" },
 ];
 const readiness = {
   totalCount: 12, completedCount: 7, missingCount: 3, dueSoonCount: 2, inReviewCount: 1, ownedCount: 9,

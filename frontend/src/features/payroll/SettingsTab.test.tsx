@@ -69,6 +69,7 @@ beforeEach(() => {
       draftsStatus === 200 ? openDrafts : { title: "Taslaklar okunamadı" }, { status: draftsStatus });
     if (path === "/api/payroll/settings") return Response.json(
       settingsStatus === 200 ? settings : { title: "Mevzuat seti bulunamadı" }, { status: settingsStatus });
+    if (path === "/api/setup/preview") return Response.json({ token: "setup-v1", status: { needsInitialization: true }, companyName: "Test şirketi", leaveTypes: [{ code: "Yıllık", name: "Yıllık İzin", deductsFromAnnualBalance: true, requiresApproval: true }], holidays: [{ date: "2026-01-01", name: "Yılbaşı" }], payrollDraft: { ...settings, status: "draft" } });
     if (path === "/api/setup") {
       if (init?.method === "POST") openDrafts = [{ ...settings, id: 9, version: 1, status: "draft", reviewNotes: "" }];
       return Response.json({
@@ -211,6 +212,7 @@ test("boş şirket kurulumdan sonra ilk bordro taslağını açar", async () => 
   await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
     String(url) === "/api/setup" && init?.method === "POST")).toBe(false);
+  await waitFor(() => expect(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ })).toBeEnabled());
   await userEvent.click(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ }));
   await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByLabelText("Brüt asgari ücret / SGK alt sınırı")).toHaveValue(33030);

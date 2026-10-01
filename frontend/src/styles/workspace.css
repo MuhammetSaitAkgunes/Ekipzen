@@ -731,3 +731,16 @@
 .ez-personnel-record-guide small { color: var(--muted); line-height: 1.5; }
 @media (max-width: 800px) { .ez-personnel-record-guide ol { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .ez-personnel-record-guide { padding: 18px; } }
+
+/* Güncel içerik sürümünde kişisel kanıtlar, süreç başına okunabilir kartlarda. */
+.ez-guidance-coverage { margin-block: 20px; }
+.ez-guidance-coverage > summary { cursor: pointer; font-weight: 650; color: var(--ink); }
+.ez-guidance-coverage > summary:focus-visible, .ez-guidance-coverage a:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.ez-guidance-coverage > p { margin-block: 16px; }
+.ez-guidance-coverage section { padding-block: 18px; border-top: 1px solid var(--line); }
+.ez-guidance-coverage h3 { margin: 0 0 8px; font-size: 18px; color: var(--ink); }
+.ez-guidance-coverage a { color: var(--primary); overflow-wrap: anywhere; }
+.ez-guidance-coverage ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0 0; padding: 0; list-style: none; }
+.ez-guidance-coverage li { min-width: 0; padding: 16px; border-radius: 8px; background: var(--surface-soft); overflow-wrap: anywhere; }
+.ez-guidance-coverage li p { margin-block: 8px; }
+@media (max-width: 720px) { .ez-guidance-coverage ul { grid-template-columns: minmax(0, 1fr); } }

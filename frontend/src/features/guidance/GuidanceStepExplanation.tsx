@@ -23,7 +23,7 @@ export function GuidanceStepExplanation({ id }: { id: number }) {
   if (query.isError) return <p role="alert">Adım açıklaması yüklenemedi. <button type="button" onClick={() => void query.refetch()}>Açıklamayı tekrar yükle</button></p>;
   const content = query.data;
   const fields = [["prerequisites", "Başlamadan önce"], ["action", "Ne yapacağız?"], ["why", "Neden yapacağız?"],
-    ["example", "Ayrıntılı örnek"], ["correction", "Hata düzeltme yolu"], ["expertEscalation", "Ne zaman uzmana danışmalı?"]] as const;
+    ["example", "Ayrıntılı örnek"], ["correction", "Hata düzeltme yolu"], ["expertEscalation", "Ne zaman uzmana danışmalı?"], ["counterExample", "Kaçınılacak örnek"], ["terms", "Terimler"], ["outcome", "İşlem sonrası ne değişir?"], ["completionEvidence", "Sonucu nasıl doğrularız?"], ["nextStep", "Sonraki adım"]] as const;
   return <section aria-label="Seçilen adımın açıklaması">
     <GuidanceHelpControl process={content.processKey} adaptiveReady={adaptiveReady}>{compact => <>
     {fields.map(([key, title]) => key === "example" && compact

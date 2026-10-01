@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dailyTasksKey } from "../guidance/queries";
 import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
 
@@ -38,7 +39,7 @@ export const useCreateGlobalAction = () => {
         method: "POST",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["actions"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
   });
 };
 
@@ -50,7 +51,7 @@ export const useSetActionStatus = () => {
         method: "PATCH",
         body: JSON.stringify({ status }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["actions"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
   });
 };
 
@@ -59,6 +60,6 @@ export const useDeleteGlobalAction = () => {
   return useMutation({
     mutationFn: (id: number) =>
       apiFetch<null>(`/actions/${id}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["actions"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
   });
 };

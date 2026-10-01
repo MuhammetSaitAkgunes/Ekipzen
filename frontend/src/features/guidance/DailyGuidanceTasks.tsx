@@ -7,6 +7,9 @@ import { GuidanceStepLessons } from "./GuidanceStepLessons";
 
 const dateLabel = (date: string): string => date.split("-").reverse().join(".");
 const taskLabels: Record<string, string> = {
+  "action-followup": "AKSİYON TAKİBİ",
+  "company-setup": "ŞİRKET HAZIRLIĞI",
+  "payroll-settings-review": "BORDRO AYAR İNCELEMESİ",
   "leave-approval": "İZİN ONAYI",
   "payroll-period": "BORDRO DÖNEMİ",
   "candidate-review": "ADAY İNCELEMESİ",
@@ -27,7 +30,7 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
   return <div className="ez-guidance-tasks">
     <GuidanceSourceLink processKey="daily" />
     <GuidanceStepLessons process="daily" />
-    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını; İK yöneticileri için eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. Diğer İK işleri burada henüz üretilmez.</p>
+    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını ve açık aksiyonları; İK yöneticileri için eksik başlangıç kayıtlarını, taslak bordro ayarlarını, eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. Diğer İK işleri burada henüz üretilmez.</p>
     {tasks.map((task) => <article className="ez-guidance-task" key={task.key}>
       <span className="ez-overline">{taskLabels[task.kind] ?? "BELGE TAKİBİ"}</span>
       <h3>{task.title}</h3>
@@ -36,7 +39,7 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
       <small>{task.dueDate ? `Kayıtlı son tarih: ${dateLabel(task.dueDate)}` : task.dateNote}</small>
       <Link to={appPath(task.targetPath)}>Kaydı incele <span aria-hidden="true">→</span></Link>
     </article>)}
-    {query.data.length === 0 && <div className="ez-empty"><h3>Bu alanlarda bekleyen iş yok</h3><p>Açık izin onayı, eksik belge, ayrılış taslağı, dış işlem kanıtı, ücret hazırlığı, açık bordro dönemi veya Yeni aşamasında aday görünmüyor. Diğer işleri İş Kutusu'ndan kontrol edin.</p></div>}
+    {query.data.length === 0 && <div className="ez-empty"><h3>Bu alanlarda bekleyen iş yok</h3><p>Açık aksiyon, eksik şirket hazırlığı, taslak bordro ayarı, izin onayı, eksik belge, ayrılış taslağı, dış işlem kanıtı, ücret hazırlığı, açık bordro dönemi veya Yeni aşamasında aday görünmüyor. Diğer işleri İş Kutusu'ndan kontrol edin.</p></div>}
     {limit && query.data.length > limit && <Link className="ez-section-link" to={appPath("/inbox?tab=daily")}>Tüm {query.data.length} işi gör <span aria-hidden="true">→</span></Link>}
   </div>;
 }

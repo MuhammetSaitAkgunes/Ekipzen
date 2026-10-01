@@ -9,10 +9,10 @@ import type {
 } from "../personnel/queries";
 
 export type PayrollPeriodListItemDto = components["schemas"]["PayrollPeriodListItemDto"];
-export type PayrollPeriodDetailDto = components["schemas"]["PayrollPeriodDetailDto"];
-export type PayrollRowDto = components["schemas"]["PayrollRowDto"] & { revisionNumber?: number };
+export type PayrollPeriodDetailDto = Omit<components["schemas"]["PayrollPeriodDetailDto"], "rows"> & { rows?: PayrollRowDto[] };
+export type PayrollRowDto = components["schemas"]["PayrollRowDto"] & { revisionNumber?: number; revision?: string | null };
 export type PayrollControlDto = components["schemas"]["PayrollControlDto"];
-export type PayrollRowInputModel = components["schemas"]["PayrollRowInputModel"];
+export type PayrollRowInputModel = components["schemas"]["PayrollRowInputModel"] & { expectedRevision?: string };
 export type PayrollCalculation = components["schemas"]["PayrollCalculation"];
 export type PreviewPayrollCommand = components["schemas"]["PreviewPayrollCommand"];
 export type PayrollSettingsDto = components["schemas"]["PayrollSettingsDto"];
@@ -85,10 +85,10 @@ export const useRunPayrollCheck = () => {
 export const useApprovePayrollRow = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ periodId, rowId, guidanceContentRevisionId }: { periodId: number; rowId: number; guidanceContentRevisionId?: number }) =>
+    mutationFn: ({ periodId, rowId, guidanceContentRevisionId, expectedRevision }: { periodId: number; rowId: number; guidanceContentRevisionId?: number; expectedRevision: string }) =>
       apiFetch<PayrollRowDto>(`/payroll/periods/${periodId}/rows/${rowId}/approve`, {
         method: "POST",
-        body: JSON.stringify({ guidanceContentRevisionId }),
+        body: JSON.stringify({ guidanceContentRevisionId, expectedRevision }),
       }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),

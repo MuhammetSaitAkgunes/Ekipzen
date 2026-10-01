@@ -2527,6 +2527,318 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/approved-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApprovedCompensationPayrollImpactDto"];
+                        "application/json": components["schemas"]["ApprovedCompensationPayrollImpactDto"];
+                        "text/json": components["schemas"]["ApprovedCompensationPayrollImpactDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/approved-impact/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApplyApprovedPayrollRevisionBody"];
+                    "text/json": components["schemas"]["ApplyApprovedPayrollRevisionBody"];
+                    "application/*+json": components["schemas"]["ApplyApprovedPayrollRevisionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApprovedPayrollRevisionDto"];
+                        "application/json": components["schemas"]["ApprovedPayrollRevisionDto"];
+                        "text/json": components["schemas"]["ApprovedPayrollRevisionDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/approved-impact/revise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApplyApprovedPayrollNextRevisionBody"];
+                    "text/json": components["schemas"]["ApplyApprovedPayrollNextRevisionBody"];
+                    "application/*+json": components["schemas"]["ApplyApprovedPayrollNextRevisionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApprovedPayrollRevisionDto"];
+                        "application/json": components["schemas"]["ApprovedPayrollRevisionDto"];
+                        "text/json": components["schemas"]["ApprovedPayrollRevisionDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/approved-impact/chain/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ApplyApprovedPayrollChainBody"];
+                    "text/json": components["schemas"]["ApplyApprovedPayrollChainBody"];
+                    "application/*+json": components["schemas"]["ApplyApprovedPayrollChainBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApprovedPayrollRevisionBatchDto"];
+                        "application/json": components["schemas"]["ApprovedPayrollRevisionBatchDto"];
+                        "text/json": components["schemas"]["ApprovedPayrollRevisionBatchDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/revisions/{revisionId}/external-reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                    revisionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PayrollRevisionExternalReconciliationDto"];
+                        "application/json": components["schemas"]["PayrollRevisionExternalReconciliationDto"];
+                        "text/json": components["schemas"]["PayrollRevisionExternalReconciliationDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    packageId: number;
+                    caseId: number;
+                    periodId: number;
+                    rowId: number;
+                    revisionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["RecordOffboardingExternalActionBody"];
+                    "text/json": components["schemas"]["RecordOffboardingExternalActionBody"];
+                    "application/*+json": components["schemas"]["RecordOffboardingExternalActionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PayrollRevisionExternalActionDto"];
+                        "application/json": components["schemas"]["PayrollRevisionExternalActionDto"];
+                        "text/json": components["schemas"]["PayrollRevisionExternalActionDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/compensation-packages/{packageId}/remediation-case/{caseId}/payroll-periods/{periodId}/rows/{rowId}/apply": {
         parameters: {
             query?: never;
@@ -3951,6 +4263,638 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/guidance/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    processKey?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceContentDto"][];
+                        "application/json": components["schemas"]["GuidanceContentDto"][];
+                        "text/json": components["schemas"]["GuidanceContentDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/versions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceContentDto"];
+                        "application/json": components["schemas"]["GuidanceContentDto"];
+                        "text/json": components["schemas"]["GuidanceContentDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceEditorialAccessDto"];
+                        "application/json": components["schemas"]["GuidanceEditorialAccessDto"];
+                        "text/json": components["schemas"]["GuidanceEditorialAccessDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceContentReadingDto"][];
+                        "application/json": components["schemas"]["GuidanceContentReadingDto"][];
+                        "text/json": components["schemas"]["GuidanceContentReadingDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/versions/{id}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReadingBody"];
+                    "text/json": components["schemas"]["ReadingBody"];
+                    "application/*+json": components["schemas"]["ReadingBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceContentReadingDto"];
+                        "application/json": components["schemas"]["GuidanceContentReadingDto"];
+                        "text/json": components["schemas"]["GuidanceContentReadingDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/steps/{processKey}/{stepKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    processKey: string;
+                    stepKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidancePublishedPracticeDto"];
+                        "application/json": components["schemas"]["GuidancePublishedPracticeDto"];
+                        "text/json": components["schemas"]["GuidancePublishedPracticeDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/versions/{id}/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidancePublishedPracticeDto"];
+                        "application/json": components["schemas"]["GuidancePublishedPracticeDto"];
+                        "text/json": components["schemas"]["GuidancePublishedPracticeDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/versions/{id}/practice/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["PracticeAttemptBody"];
+                    "text/json": components["schemas"]["PracticeAttemptBody"];
+                    "application/*+json": components["schemas"]["PracticeAttemptBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidancePublishedPracticeDto"];
+                        "application/json": components["schemas"]["GuidancePublishedPracticeDto"];
+                        "text/json": components["schemas"]["GuidancePublishedPracticeDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/practice-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidancePublishedPracticeProgressDto"][];
+                        "application/json": components["schemas"]["GuidancePublishedPracticeProgressDto"][];
+                        "text/json": components["schemas"]["GuidancePublishedPracticeProgressDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/editorial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceEditorialDto"][];
+                        "application/json": components["schemas"]["GuidanceEditorialDto"][];
+                        "text/json": components["schemas"]["GuidanceEditorialDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateGuidanceContentCommand"];
+                    "text/json": components["schemas"]["CreateGuidanceContentCommand"];
+                    "application/*+json": components["schemas"]["CreateGuidanceContentCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceEditorialDto"];
+                        "application/json": components["schemas"]["GuidanceEditorialDto"];
+                        "text/json": components["schemas"]["GuidanceEditorialDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/editorial/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["EditBody"];
+                    "text/json": components["schemas"]["EditBody"];
+                    "application/*+json": components["schemas"]["EditBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceEditorialDto"];
+                        "application/json": components["schemas"]["GuidanceEditorialDto"];
+                        "text/json": components["schemas"]["GuidanceEditorialDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/catalog/editorial/{id}/{operation}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    operation: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["TransitionBody"];
+                    "text/json": components["schemas"]["TransitionBody"];
+                    "application/*+json": components["schemas"]["TransitionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceEditorialDto"];
+                        "application/json": components["schemas"]["GuidanceEditorialDto"];
+                        "text/json": components["schemas"]["GuidanceEditorialDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/help-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceHelpPreferenceDto"][];
+                        "application/json": components["schemas"]["GuidanceHelpPreferenceDto"][];
+                        "text/json": components["schemas"]["GuidanceHelpPreferenceDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/help-preferences/{processKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    processKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["HelpPreferenceBody"];
+                    "text/json": components["schemas"]["HelpPreferenceBody"];
+                    "application/*+json": components["schemas"]["HelpPreferenceBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceHelpPreferenceDto"];
+                        "application/json": components["schemas"]["GuidanceHelpPreferenceDto"];
+                        "text/json": components["schemas"]["GuidanceHelpPreferenceDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guidance/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceOperationHistoryDto"][];
+                        "application/json": components["schemas"]["GuidanceOperationHistoryDto"][];
+                        "text/json": components["schemas"]["GuidanceOperationHistoryDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/guidance/leave-approval/journey": {
         parameters: {
             query?: never;
@@ -4989,6 +5933,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payroll/periods/{id}/rows/{rowId}/approval-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PayrollRowApprovalPreviewDto"];
+                        "application/json": components["schemas"]["PayrollRowApprovalPreviewDto"];
+                        "text/json": components["schemas"]["PayrollRowApprovalPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/payroll/periods/{id}/rows/{rowId}/approve": {
         parameters: {
             query?: never;
@@ -5008,7 +5992,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GuidanceOperationBody"];
+                    "text/json": components["schemas"]["GuidanceOperationBody"];
+                    "application/*+json": components["schemas"]["GuidanceOperationBody"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -5058,7 +6048,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GuidanceOperationBody"];
+                    "text/json": components["schemas"]["GuidanceOperationBody"];
+                    "application/*+json": components["schemas"]["GuidanceOperationBody"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -5349,7 +6345,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    original?: boolean;
+                };
                 header?: never;
                 path: {
                     id: number;
@@ -5569,7 +6567,58 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CorrectCandidateBody"];
+                    "text/json": components["schemas"]["CorrectCandidateBody"];
+                    "application/*+json": components["schemas"]["CorrectCandidateBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CandidateDetailDto"];
+                        "application/json": components["schemas"]["CandidateDetailDto"];
+                        "text/json": components["schemas"]["CandidateDetailDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;
@@ -5631,6 +6680,45 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/candidates/{id}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CandidateCorrectionDto"][];
+                        "application/json": components["schemas"]["CandidateCorrectionDto"][];
+                        "text/json": components["schemas"]["CandidateCorrectionDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/candidates/{id}/notes": {
@@ -5713,6 +6801,190 @@ export interface paths {
                         "text/plain": components["schemas"]["CandidateEvaluationDto"];
                         "application/json": components["schemas"]["CandidateEvaluationDto"];
                         "text/json": components["schemas"]["CandidateEvaluationDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidates/{id}/notes/{noteId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    noteId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CandidateEvidenceHistoryDto"];
+                        "application/json": components["schemas"]["CandidateEvidenceHistoryDto"];
+                        "text/json": components["schemas"]["CandidateEvidenceHistoryDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    noteId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReviseNoteBody"];
+                    "text/json": components["schemas"]["ReviseNoteBody"];
+                    "application/*+json": components["schemas"]["ReviseNoteBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CandidateDetailDto"];
+                        "application/json": components["schemas"]["CandidateDetailDto"];
+                        "text/json": components["schemas"]["CandidateDetailDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/candidates/{id}/evaluations/{evaluationId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    evaluationId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CandidateEvidenceHistoryDto"];
+                        "application/json": components["schemas"]["CandidateEvidenceHistoryDto"];
+                        "text/json": components["schemas"]["CandidateEvidenceHistoryDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    evaluationId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReviseEvaluationBody"];
+                    "text/json": components["schemas"]["ReviseEvaluationBody"];
+                    "application/*+json": components["schemas"]["ReviseEvaluationBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CandidateDetailDto"];
+                        "application/json": components["schemas"]["CandidateDetailDto"];
+                        "text/json": components["schemas"]["CandidateDetailDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
             };
@@ -5915,6 +7187,101 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/positions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CorrectPositionBody"];
+                    "text/json": components["schemas"]["CorrectPositionBody"];
+                    "application/*+json": components["schemas"]["CorrectPositionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PositionDto"];
+                        "application/json": components["schemas"]["PositionDto"];
+                        "text/json": components["schemas"]["PositionDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/positions/{id}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PositionCorrectionDto"][];
+                        "application/json": components["schemas"]["PositionCorrectionDto"][];
+                        "text/json": components["schemas"]["PositionCorrectionDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6282,7 +7649,13 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["InitializeTenantSetupCommand"];
+                    "text/json": components["schemas"]["InitializeTenantSetupCommand"];
+                    "application/*+json": components["schemas"]["InitializeTenantSetupCommand"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -6297,6 +7670,43 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSetupPreviewDto"];
+                        "application/json": components["schemas"]["TenantSetupPreviewDto"];
+                        "text/json": components["schemas"]["TenantSetupPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7194,6 +8604,30 @@ export interface components {
             priority?: string | null;
             recommendedAction?: string | null;
         };
+        ApplyApprovedPayrollChainBody: {
+            expectedPreviewToken?: string | null;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            confirmSourceLink?: boolean;
+            confirmChainImpact?: boolean;
+            confirmExternalReconciliation?: boolean;
+        };
+        ApplyApprovedPayrollNextRevisionBody: {
+            /** Format: int32 */
+            expectedCurrentRevisionId?: number;
+            expectedPreviewToken?: string | null;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            confirmSourceLink?: boolean;
+            confirmExternalReconciliation?: boolean;
+        };
+        ApplyApprovedPayrollRevisionBody: {
+            expectedPreviewToken?: string | null;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            confirmSourceLink?: boolean;
+            confirmExternalReconciliation?: boolean;
+        };
         ApplyCompensationPayrollBody: {
             expectedPreviewToken?: string | null;
             confirmSourceLink?: boolean;
@@ -7223,6 +8657,122 @@ export interface components {
             /** Format: int32 */
             expectedVersion?: number;
         };
+        ApprovedCompensationPayrollImpactDto: {
+            /** Format: int32 */
+            periodId?: number;
+            /** Format: int32 */
+            rowId?: number;
+            periodStatus?: string | null;
+            /** Format: int32 */
+            remediationCaseId?: number;
+            expertReviewReference?: string | null;
+            /** Format: date-time */
+            reviewedAtUtc?: string;
+            canEstimate?: boolean;
+            reviewWarnings?: string[] | null;
+            recorded?: components["schemas"]["ApprovedPayrollAmountDto"];
+            hypothetical?: components["schemas"]["ApprovedPayrollAmountDto"];
+            laterSameYearRows?: components["schemas"]["ApprovedPayrollImpactPeriodDto"][] | null;
+            laterApprovedRows?: components["schemas"]["ApprovedPayrollImpactPeriodDto"][] | null;
+            canApply?: boolean;
+            blockingReasons?: string[] | null;
+            previewToken?: string | null;
+            revision?: components["schemas"]["ApprovedPayrollRevisionDto"];
+            chainImpact?: components["schemas"]["ApprovedPayrollChainImpactDto"];
+            canApplyChain?: boolean;
+            batchRevisions?: components["schemas"]["ApprovedPayrollRevisionBatchRowDto"][] | null;
+            canApplyNext?: boolean;
+            revisionHistory?: components["schemas"]["ApprovedPayrollRevisionDto"][] | null;
+        };
+        ApprovedPayrollAmountDto: {
+            /** Format: double */
+            grossEarnings?: number;
+            /** Format: double */
+            incomeTaxBase?: number;
+            /** Format: double */
+            incomeTax?: number;
+            /** Format: double */
+            netPay?: number;
+            /** Format: double */
+            employerCost?: number;
+        };
+        ApprovedPayrollChainImpactDto: {
+            canEstimate?: boolean;
+            blockingReasons?: string[] | null;
+            laterApprovedRows?: components["schemas"]["ApprovedPayrollChainRowDto"][] | null;
+            previewToken?: string | null;
+        };
+        ApprovedPayrollChainRowDto: {
+            /** Format: int32 */
+            periodId?: number;
+            /** Format: int32 */
+            rowId?: number;
+            /** Format: int32 */
+            year?: number;
+            /** Format: int32 */
+            month?: number;
+            /** Format: double */
+            recordedPreviousTaxBase?: number;
+            /** Format: double */
+            projectedPreviousTaxBase?: number | null;
+            recorded?: components["schemas"]["ApprovedPayrollAmountDto"];
+            projected?: components["schemas"]["ApprovedPayrollAmountDto"];
+            blockingReason?: string | null;
+        };
+        ApprovedPayrollImpactPeriodDto: {
+            /** Format: int32 */
+            periodId?: number;
+            /** Format: int32 */
+            rowId?: number;
+            /** Format: int32 */
+            year?: number;
+            /** Format: int32 */
+            month?: number;
+            status?: string | null;
+        };
+        ApprovedPayrollRevisionBatchDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            employeeId?: number;
+            /** Format: int32 */
+            sourcePayrollRowId?: number;
+            /** Format: int32 */
+            year?: number;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            approvedByUserId?: string | null;
+            /** Format: date-time */
+            approvedAtUtc?: string;
+            rows?: components["schemas"]["ApprovedPayrollRevisionBatchRowDto"][] | null;
+        };
+        ApprovedPayrollRevisionBatchRowDto: {
+            /** Format: int32 */
+            periodId?: number;
+            revision?: components["schemas"]["ApprovedPayrollRevisionDto"];
+        };
+        ApprovedPayrollRevisionDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            revisionNumber?: number;
+            /** Format: int32 */
+            payrollRowId?: number;
+            /** Format: int32 */
+            remediationCaseId?: number;
+            before?: components["schemas"]["PayrollRowDto"];
+            after?: components["schemas"]["PayrollRowDto"];
+            reason?: string | null;
+            expertReviewReference?: string | null;
+            reviewNotes?: string | null;
+            approvedByUserId?: string | null;
+            /** Format: date-time */
+            approvedAtUtc?: string;
+            /** Format: int32 */
+            batchId?: number | null;
+            /** Format: int32 */
+            basedOnRevisionId?: number | null;
+        };
         AttendanceEntryModel: {
             /** Format: date */
             workDate?: string;
@@ -7234,6 +8784,8 @@ export interface components {
             breakMinutes?: number;
             type?: string | null;
             note?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         AttendanceEntryPreviewDto: {
             /** Format: int32 */
@@ -7294,6 +8846,39 @@ export interface components {
             /** Format: date */
             terminationDate?: string | null;
         };
+        CandidateCorrectionDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            candidateId?: number;
+            /** Format: int32 */
+            fromVersion?: number;
+            /** Format: int32 */
+            toVersion?: number;
+            before?: components["schemas"]["CandidateStateDto"];
+            after?: components["schemas"]["CandidateStateDto"];
+            reason?: string | null;
+            evidenceReviewConfirmed?: boolean;
+            changedByUserId?: string | null;
+            changedByName?: string | null;
+            /** Format: date-time */
+            changedAtUtc?: string;
+        };
+        CandidateDecisionEvidenceDto: {
+            kind?: string | null;
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            version?: number;
+            state?: components["schemas"]["CandidateEvidenceStateDto"];
+        };
+        CandidateDecisionEvidenceReference: {
+            kind?: string | null;
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            version?: number;
+        };
         CandidateDetailDto: {
             /** Format: int32 */
             id?: number;
@@ -7304,7 +8889,7 @@ export interface components {
             positionTitle?: string | null;
             status?: string | null;
             /** Format: int32 */
-            score?: number;
+            score?: number | null;
             initials?: string | null;
             /** Format: date-time */
             appliedAtUtc?: string;
@@ -7318,6 +8903,16 @@ export interface components {
             evaluations?: components["schemas"]["CandidateEvaluationDto"][] | null;
             history?: components["schemas"]["CandidateHistoryDto"][] | null;
             provisioning?: components["schemas"]["IdentityProvisioningDto"];
+            /** Format: int32 */
+            version?: number;
+            stageDecisions?: components["schemas"]["CandidateStageDecisionDto"][] | null;
+            linkedEmployee?: components["schemas"]["CandidateEmployeeLinkDto"];
+        };
+        CandidateEmployeeLinkDto: {
+            /** Format: int32 */
+            id?: number;
+            name?: string | null;
+            isActive?: boolean;
         };
         CandidateEvaluationBody: {
             criterion?: string | null;
@@ -7334,6 +8929,38 @@ export interface components {
             score?: number;
             /** Format: int32 */
             maxScore?: number;
+            /** Format: int32 */
+            version?: number;
+        };
+        CandidateEvidenceHistoryDto: {
+            original?: components["schemas"]["CandidateEvidenceStateDto"];
+            revisions?: components["schemas"]["CandidateEvidenceRevisionDto"][] | null;
+        };
+        CandidateEvidenceRevisionDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            version?: number;
+            /** Format: int32 */
+            fromCandidateVersion?: number;
+            /** Format: int32 */
+            toCandidateVersion?: number;
+            before?: components["schemas"]["CandidateEvidenceStateDto"];
+            after?: components["schemas"]["CandidateEvidenceStateDto"];
+            reason?: string | null;
+            changedByUserId?: string | null;
+            changedByName?: string | null;
+            /** Format: date-time */
+            changedAtUtc?: string;
+        };
+        CandidateEvidenceStateDto: {
+            noteType?: string | null;
+            text?: string | null;
+            criterion?: string | null;
+            /** Format: int32 */
+            score?: number | null;
+            /** Format: int32 */
+            maxScore?: number | null;
         };
         CandidateExperienceDto: {
             /** Format: int32 */
@@ -7372,7 +8999,7 @@ export interface components {
             appliedRole?: string | null;
             status?: string | null;
             /** Format: int32 */
-            score?: number;
+            score?: number | null;
             initials?: string | null;
             /** Format: date-time */
             appliedAtUtc?: string;
@@ -7386,8 +9013,44 @@ export interface components {
             id?: number;
             name?: string | null;
         };
+        CandidateStageDecisionDto: {
+            /** Format: int32 */
+            id?: number;
+            fromStatus?: string | null;
+            toStatus?: string | null;
+            /** Format: int32 */
+            fromVersion?: number;
+            /** Format: int32 */
+            toVersion?: number;
+            reason?: string | null;
+            evidence?: components["schemas"]["CandidateDecisionEvidenceDto"][] | null;
+            decidedByUserId?: string | null;
+            decidedByName?: string | null;
+            /** Format: date-time */
+            decidedAtUtc?: string;
+        };
+        CandidateStateDto: {
+            name?: string | null;
+            appliedRole?: string | null;
+            /** Format: int32 */
+            positionId?: number | null;
+            positionTitle?: string | null;
+            /** Format: int32 */
+            score?: number | null;
+            location?: string | null;
+            /** Format: int32 */
+            experienceYears?: number;
+            summary?: string | null;
+            status?: string | null;
+        };
         CandidateStatusBody: {
             status?: string | null;
+            /** Format: int32 */
+            expectedVersion?: number;
+            reason?: string | null;
+            evidence?: components["schemas"]["CandidateDecisionEvidenceReference"][] | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ChangePasswordCommand: {
             currentPassword?: string | null;
@@ -7540,6 +9203,7 @@ export interface components {
             currentImpact?: components["schemas"]["CompensationRemediationImpactDto"];
             canOpen?: boolean;
             case?: components["schemas"]["CompensationRemediationCaseDto"];
+            history?: components["schemas"]["CompensationRemediationCaseDto"][] | null;
         };
         CompensationRemediationImpactDto: {
             potentialPayrollRows?: components["schemas"]["CompensationPayrollImpactDto"][] | null;
@@ -7567,9 +9231,13 @@ export interface components {
             dueLabel?: string | null;
             status?: string | null;
             level?: string | null;
+            revision?: string | null;
         };
         ComplianceOwnerBody: {
             ownerName?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            expectedRevision?: string | null;
         };
         ComplianceReadinessDto: {
             /** Format: int32 */
@@ -7618,12 +9286,38 @@ export interface components {
         };
         ComplianceStatusBody: {
             status?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            expectedRevision?: string | null;
         };
         ComplianceUpdateBody: {
             documentName?: string | null;
             /** Format: date */
             dueDate?: string | null;
             level?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            expectedRevision?: string | null;
+            ownerName?: string | null;
+            updateOwner?: boolean;
+        };
+        CorrectCandidateBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
+            name?: string | null;
+            appliedRole?: string | null;
+            /** Format: int32 */
+            positionId?: number | null;
+            /** Format: int32 */
+            expectedPositionVersion?: number | null;
+            /** Format: int32 */
+            score?: number | null;
+            location?: string | null;
+            /** Format: int32 */
+            experienceYears?: number;
+            summary?: string | null;
+            reason?: string | null;
+            confirmExistingEvidenceReview?: boolean;
         };
         CorrectCompensationDateBody: {
             /** Format: date */
@@ -7652,13 +9346,24 @@ export interface components {
             sourceReference?: string | null;
             reason?: string | null;
         };
+        CorrectPositionBody: {
+            /** Format: int32 */
+            expectedVersion?: number;
+            title?: string | null;
+            /** Format: int32 */
+            departmentId?: number | null;
+            /** Format: int32 */
+            openCount?: number;
+            isOpen?: boolean;
+            reason?: string | null;
+        };
         CreateCandidateCommand: {
             name?: string | null;
             appliedRole?: string | null;
             /** Format: int32 */
             positionId?: number | null;
             /** Format: int32 */
-            score?: number;
+            score?: number | null;
             location?: string | null;
             /** Format: int32 */
             experienceYears?: number;
@@ -7675,6 +9380,9 @@ export interface components {
             dueDate?: string | null;
             status?: string | null;
             level?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         CreateDepartmentCommand: {
             name?: string | null;
@@ -7695,6 +9403,13 @@ export interface components {
             priority?: string | null;
             recommendedAction?: string | null;
         };
+        CreateGuidanceContentCommand: {
+            contentKey?: string | null;
+            processKey?: string | null;
+            /** Format: int32 */
+            basedOnId?: number | null;
+            body?: components["schemas"]["GuidanceContentBody"];
+        };
         CreateLeaveRequestCommand: {
             /** Format: int32 */
             leaveTypeId?: number;
@@ -7711,6 +9426,9 @@ export interface components {
             year?: number;
             /** Format: int32 */
             month?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         CreatePositionCommand: {
             title?: string | null;
@@ -7758,6 +9476,8 @@ export interface components {
         };
         DecisionBody: {
             note?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         DecisionCheckAnswerBody: {
             /** Format: int32 */
@@ -7788,6 +9508,11 @@ export interface components {
             highAttritionCount?: number;
             /** Format: int32 */
             highBurnoutCount?: number;
+        };
+        EditBody: {
+            /** Format: int32 */
+            expectedRevision?: number;
+            body?: components["schemas"]["GuidanceContentBody"];
         };
         EmployeeCompensationPackageDto: {
             /** Format: int32 */
@@ -8044,6 +9769,8 @@ export interface components {
             status?: string | null;
             contractType?: string | null;
             profile?: components["schemas"]["EmployeeProfileUpsertModel"];
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         EmployeeVoiceDto: {
             /** Format: int32 */
@@ -8086,6 +9813,193 @@ export interface components {
             /** Format: int32 */
             contentVersion?: number;
         };
+        GuidanceContentBody: {
+            title?: string | null;
+            audience?: string[] | null;
+            learningGoal?: string | null;
+            prerequisites?: string | null;
+            action?: string | null;
+            why?: string | null;
+            example?: string | null;
+            counterExample?: string | null;
+            terms?: string | null;
+            outcome?: string | null;
+            completionEvidence?: string | null;
+            nextStep?: string | null;
+            correction?: string | null;
+            expertEscalation?: string | null;
+            sourceKind?: string | null;
+            sourceReference?: string | null;
+            provision?: string | null;
+            applicability?: string | null;
+            /** Format: date */
+            effectiveFrom?: string;
+            /** Format: date */
+            effectiveTo?: string | null;
+            stepKey?: string | null;
+            practice?: components["schemas"]["GuidancePracticeDefinition"];
+        };
+        GuidanceContentDto: {
+            /** Format: int32 */
+            id?: number;
+            contentKey?: string | null;
+            processKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            state?: string | null;
+            body?: components["schemas"]["GuidanceContentBody"];
+            expertName?: string | null;
+            expertRole?: string | null;
+            /** Format: date */
+            reviewedOn?: string | null;
+            /** Format: date */
+            reviewDueOn?: string | null;
+            /** Format: date-time */
+            publishedAtUtc?: string | null;
+            isCurrent?: boolean;
+        };
+        GuidanceContentEventDto: {
+            /** Format: int32 */
+            revision?: number;
+            action?: string | null;
+            actorName?: string | null;
+            reason?: string | null;
+            /** Format: date-time */
+            atUtc?: string;
+        };
+        GuidanceContentReadingDto: {
+            /** Format: int32 */
+            contentRevisionId?: number;
+            contentKey?: string | null;
+            processKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            title?: string | null;
+            /** Format: date-time */
+            firstReadAtUtc?: string;
+            isCurrent?: boolean;
+        };
+        GuidanceContributor: {
+            userId?: string | null;
+            name?: string | null;
+        };
+        GuidanceEditorialAccessDto: {
+            canManage?: boolean;
+        };
+        GuidanceEditorialDto: {
+            content?: components["schemas"]["GuidanceContentDto"];
+            /** Format: int32 */
+            revision?: number;
+            /** Format: int32 */
+            basedOnId?: number | null;
+            contributors?: components["schemas"]["GuidanceContributor"][] | null;
+            expertReference?: string | null;
+            canPublish?: boolean;
+            events?: components["schemas"]["GuidanceContentEventDto"][] | null;
+        };
+        GuidanceExpertReview: {
+            name?: string | null;
+            role?: string | null;
+            reference?: string | null;
+            /** Format: date */
+            reviewedOn?: string;
+            /** Format: date */
+            reviewDueOn?: string;
+            confirmed?: boolean;
+        };
+        GuidanceHelpPreferenceDto: {
+            processKey?: string | null;
+            mode?: string | null;
+            /** Format: int32 */
+            revision?: number;
+        };
+        GuidanceOperationBody: {
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            expectedRevision?: string | null;
+        };
+        GuidanceOperationEvidenceDto: {
+            operationKey?: string | null;
+            /** Format: int32 */
+            resourceId?: number;
+            outcome?: string | null;
+            /** Format: date-time */
+            occurredAtUtc?: string;
+            content?: components["schemas"]["GuidanceOperationSnapshot"];
+            evidenceKey?: string | null;
+            setupChanges?: components["schemas"]["GuidanceSetupChangesDto"];
+        };
+        GuidanceOperationHistoryDto: {
+            evidence?: components["schemas"]["GuidanceOperationEvidenceDto"];
+            isCurrent?: boolean;
+        };
+        GuidanceOperationSnapshot: {
+            /** Format: int32 */
+            contentRevisionId?: number;
+            contentKey?: string | null;
+            processKey?: string | null;
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            title?: string | null;
+        };
+        GuidancePracticeDefinition: {
+            question?: string | null;
+            choices?: string[] | null;
+            /** Format: int32 */
+            correctChoice?: number;
+            explanation?: string | null;
+        };
+        GuidancePublishedPracticeDto: {
+            /** Format: int32 */
+            contentRevisionId?: number;
+            contentKey?: string | null;
+            processKey?: string | null;
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            title?: string | null;
+            isCurrent?: boolean;
+            question?: string | null;
+            choices?: string[] | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            /** Format: int32 */
+            lastSelectedChoice?: number | null;
+            lastCorrect?: boolean | null;
+            explanation?: string | null;
+        };
+        GuidancePublishedPracticeProgressDto: {
+            /** Format: int32 */
+            contentRevisionId?: number;
+            contentKey?: string | null;
+            processKey?: string | null;
+            stepKey?: string | null;
+            /** Format: int32 */
+            contentVersion?: number;
+            title?: string | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            /** Format: int32 */
+            lastSelectedChoice?: number;
+            lastCorrect?: boolean;
+            /** Format: date-time */
+            lastAnsweredAtUtc?: string;
+            isCurrent?: boolean;
+        };
+        GuidanceSetupChangesDto: {
+            addedCompanyProfile?: boolean;
+            /** Format: int32 */
+            addedLeaveTypeCount?: number;
+            /** Format: int32 */
+            addedHolidayCount?: number;
+            addedPayrollSettings?: boolean;
+        };
+        HelpPreferenceBody: {
+            mode?: string | null;
+            /** Format: int32 */
+            expectedRevision?: number | null;
+        };
         HireResultDto: {
             /** Format: int32 */
             candidateId?: number;
@@ -8126,6 +10040,12 @@ export interface components {
             alan?: string | null;
             mesaj?: string | null;
         };
+        InitializeTenantSetupCommand: {
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            expectedPreviewToken?: string | null;
+            readonly guidanceOperationKey?: string | null;
+        };
         InterviewNoteDto: {
             /** Format: int32 */
             id?: number;
@@ -8134,6 +10054,8 @@ export interface components {
             text?: string | null;
             /** Format: date-time */
             createdAtUtc?: string;
+            /** Format: int32 */
+            version?: number;
         };
         LeaveApprovalCheckAnswerBody: {
             /** Format: int32 */
@@ -8318,6 +10240,7 @@ export interface components {
             /** Format: double */
             netPay?: number;
             approvalStatus?: string | null;
+            hasRevision?: boolean;
         };
         NotificationSettingsDto: {
             newPersonnelEmail?: boolean;
@@ -8425,6 +10348,8 @@ export interface components {
         OffboardingVersionBody: {
             /** Format: int32 */
             expectedVersion?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         OpenOffboardingSettlementRevisionBody: {
             /** Format: int32 */
@@ -8549,6 +10474,45 @@ export interface components {
             /** Format: double */
             totalEmployerCost?: number;
         };
+        PayrollRevisionExternalActionDto: {
+            /** Format: int32 */
+            id?: number;
+            kind?: string | null;
+            outcome?: string | null;
+            /** Format: int32 */
+            previousRecordId?: number | null;
+            responsibleName?: string | null;
+            evidenceReference?: string | null;
+            /** Format: date */
+            actionDate?: string | null;
+            /** Format: double */
+            recordedAmount?: number | null;
+            notes?: string | null;
+            recordedByUserId?: string | null;
+            /** Format: date-time */
+            recordedAtUtc?: string;
+        };
+        PayrollRevisionExternalReconciliationDto: {
+            /** Format: int32 */
+            revisionId?: number;
+            /** Format: int32 */
+            revisionNumber?: number;
+            /** Format: double */
+            originalNetPay?: number;
+            /** Format: double */
+            revisedNetPay?: number;
+            /** Format: double */
+            calculatedNetDifference?: number;
+            isCurrent?: boolean;
+            payment?: components["schemas"]["PayrollRevisionExternalActionDto"];
+            notification?: components["schemas"]["PayrollRevisionExternalActionDto"];
+            history?: components["schemas"]["PayrollRevisionExternalActionDto"][] | null;
+        };
+        PayrollRowApprovalPreviewDto: {
+            row?: components["schemas"]["PayrollRowDto"];
+            blockingReasons?: string[] | null;
+            readonly canApprove?: boolean;
+        };
         PayrollRowDto: {
             /** Format: int32 */
             id?: number;
@@ -8639,6 +10603,9 @@ export interface components {
             /** Format: double */
             disabilityIncomeTaxBaseDeduction?: number;
             warnings?: string[] | null;
+            /** Format: int32 */
+            revisionNumber?: number;
+            revision?: string | null;
         };
         PayrollRowInputModel: {
             /** Format: double */
@@ -8676,6 +10643,7 @@ export interface components {
             specialDeductions?: number;
             ibanComplete?: boolean;
             notes?: string | null;
+            expectedRevision?: string | null;
         };
         PayrollSettingsDto: {
             /** Format: int32 */
@@ -8772,6 +10740,22 @@ export interface components {
             /** Format: int32 */
             correctChecks?: number;
         };
+        PositionCorrectionDto: {
+            /** Format: int32 */
+            id?: number;
+            /** Format: int32 */
+            positionId?: number;
+            /** Format: int32 */
+            fromVersion?: number;
+            /** Format: int32 */
+            toVersion?: number;
+            before?: components["schemas"]["PositionStateDto"];
+            after?: components["schemas"]["PositionStateDto"];
+            reason?: string | null;
+            changedByUserId?: string | null;
+            /** Format: date-time */
+            changedAtUtc?: string;
+        };
         PositionDto: {
             /** Format: int32 */
             id?: number;
@@ -8784,6 +10768,24 @@ export interface components {
             openCount?: number;
             /** Format: int32 */
             candidateCount?: number;
+            /** Format: int32 */
+            version?: number;
+        };
+        PositionStateDto: {
+            title?: string | null;
+            /** Format: int32 */
+            departmentId?: number | null;
+            isOpen?: boolean;
+            /** Format: int32 */
+            openCount?: number;
+        };
+        PracticeAttemptBody: {
+            /** Format: int32 */
+            selectedChoice?: number;
+            /** Format: int32 */
+            expectedAttemptCount?: number;
+            /** Format: uuid */
+            attemptId?: string;
         };
         PreviewAttendanceEntryQuery: {
             /** Format: int32 */
@@ -8866,6 +10868,9 @@ export interface components {
             tenantId?: number;
             slug?: string | null;
             dosyalarSilinemedi?: boolean;
+        };
+        ReadingBody: {
+            confirmed?: boolean;
         };
         RebuildDirectoryResult: {
             /** Format: int32 */
@@ -8964,6 +10969,29 @@ export interface components {
         ReverseOffboardingBody: {
             /** Format: int32 */
             expectedVersion?: number;
+            reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+        };
+        ReviseEvaluationBody: {
+            /** Format: int32 */
+            expectedCandidateVersion?: number;
+            /** Format: int32 */
+            expectedRecordVersion?: number;
+            criterion?: string | null;
+            /** Format: int32 */
+            score?: number;
+            /** Format: int32 */
+            maxScore?: number;
+            reason?: string | null;
+        };
+        ReviseNoteBody: {
+            /** Format: int32 */
+            expectedCandidateVersion?: number;
+            /** Format: int32 */
+            expectedRecordVersion?: number;
+            noteType?: string | null;
+            text?: string | null;
             reason?: string | null;
         };
         RiskDetailDto: {
@@ -9144,6 +11172,17 @@ export interface components {
             security?: components["schemas"]["SecuritySettingsDto"];
             subscription?: components["schemas"]["SubscriptionDto"];
         };
+        SetupHolidayDto: {
+            /** Format: date */
+            date?: string;
+            name?: string | null;
+        };
+        SetupLeaveTypeDto: {
+            code?: string | null;
+            name?: string | null;
+            deductsFromAnnualBalance?: boolean;
+            requiresApproval?: boolean;
+        };
         StuckTenantDto: {
             /** Format: int32 */
             tenantId?: number;
@@ -9219,6 +11258,14 @@ export interface components {
             guncel?: boolean;
             bekleyenMigrationlar?: string[] | null;
             hata?: string | null;
+        };
+        TenantSetupPreviewDto: {
+            status?: components["schemas"]["TenantSetupStatusDto"];
+            companyName?: string | null;
+            leaveTypes?: components["schemas"]["SetupLeaveTypeDto"][] | null;
+            holidays?: components["schemas"]["SetupHolidayDto"][] | null;
+            payrollDraft?: components["schemas"]["PayrollSettingsDto"];
+            token?: string | null;
         };
         TenantSetupStatusDto: {
             /** Format: int32 */
@@ -9317,6 +11364,12 @@ export interface components {
             status?: string | null;
             note?: string | null;
             revision?: string | null;
+        };
+        TransitionBody: {
+            /** Format: int32 */
+            expectedRevision?: number;
+            reason?: string | null;
+            review?: components["schemas"]["GuidanceExpertReview"];
         };
         UpdateCompanyProfileCommand: {
             name?: string | null;

@@ -9,7 +9,7 @@ import { PayrollDetailPanel } from "./PayrollDetailPanel";
 import type { PayrollRowDto } from "./queries";
 
 const baseRow: PayrollRowDto = {
-  id: 7, employeeId: 3, name: "Ahmet Yılmaz", title: "Dev", department: "Yazılım",
+  id: 7, revision: "row-v1", employeeId: 3, name: "Ahmet Yılmaz", title: "Dev", department: "Yazılım",
   grossSalary: 118000, statutoryProfile: "domesticPrivateSectorStandardFourA",
   workedDays: 30, sgkPremiumDaysConfirmed: true,
   overtimeHours: 12, overtimeTreatmentConfirmed: true, premiumPay: 3500,
@@ -38,6 +38,7 @@ const baseRow: PayrollRowDto = {
 beforeEach(() => stubApi({
   "/api/payroll/periods/3": { id: 3, name: "Temmuz 2026", rows: [baseRow] },
   "/api/payroll/periods/3/rows/7": { ...baseRow },
+  "/api/payroll/periods/3/rows/7/approval-preview": { row: baseRow, blockingReasons: [], canApprove: true },
   "/api/payroll/periods/3/rows/7/approve": { ...baseRow, approvalStatus: "Onaylandı" },
   "/api/payroll/periods/3/rows/7/payslip": {},
 }));
@@ -113,10 +114,7 @@ test("satır onayı güncel kayıt incelemesi ve açık teyitten sonra gider", a
 
 test("ön kontrolde ekran açıldıktan sonra sunucuda değişen tutarı gösterir", async () => {
   stubApi({
-    "/api/payroll/periods/3": {
-      id: 3, name: "Temmuz 2026",
-      rows: [{ ...baseRow, grossEarnings: 130000, netPay: 91000 }],
-    },
+    "/api/payroll/periods/3/rows/7/approval-preview": { row: { ...baseRow, grossEarnings: 130000, netPay: 91000 }, blockingReasons: [], canApprove: true },
     "/api/payroll/periods/3/rows/7/approve": { ...baseRow, approvalStatus: "Onaylandı" },
   });
   renderPanel();
@@ -125,7 +123,7 @@ test("ön kontrolde ekran açıldıktan sonra sunucuda değişen tutarı göster
   expect(within(dialog).getByText(/130.000/)).toBeInTheDocument();
   expect(within(dialog).getByText(/91.000/)).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url]) =>
-    String(url) === "/api/payroll/periods/3",
+    String(url) === "/api/payroll/periods/3/rows/7/approval-preview",
   )).toBe(true);
 });
 

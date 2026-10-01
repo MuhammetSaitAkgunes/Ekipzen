@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useSearchParams } from "react-router-dom";
-import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -73,11 +72,12 @@ export function CompliancePage() {
 
   const changeStatus = async (doc: ComplianceDocumentDto, status: string) => {
     try {
-      await setDocumentStatus.mutateAsync({ id: doc.id!, status, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
+      if (!doc.revision) throw new Error("Güncel belge sürümü bulunamadı. Listeyi yeniden yükleyin.");
+      await setDocumentStatus.mutateAsync({ id: doc.id!, status, expectedRevision: doc.revision!, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
       setPendingStatus(null);
       showToast(`${doc.document} durumu "${status}" yapıldı.`, "success");
     } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Durum güncellenemedi.", "error");
+      showToast(e instanceof Error ? e.message : "Durum güncellenemedi.", "error");
     }
   };
 

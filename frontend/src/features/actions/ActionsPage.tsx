@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
@@ -22,12 +22,15 @@ const routePathFor = (routeKey?: string | null): string | null =>
 export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const requestedId = Number(params.get("actionId"));
   const { showToast } = useToast();
   const isMgmt = user?.role === "hr-admin" || user?.role === "manager";
   const isAdmin = user?.role === "hr-admin";
   const setStatus = useSetActionStatus();
   const deleteAction = useDeleteGlobalAction();
   const [tab, setTab] = useState("open");
+  const [followedId, setFollowedId] = useState<number | null>(null);
   const [filters, setFilters] = useState({ priority: "", source: "", owner: "" });
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -37,6 +40,14 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
   const auditQ = useAuditLogs(isMgmt && tab === "audit");
 
   const actions = useMemo(() => actionsQ.data ?? [], [actionsQ.data]);
+  useEffect(() => {
+    if (requestedId <= 0 || followedId === requestedId) return;
+    const selected = actions.find(action => action.id === requestedId);
+    if (selected?.status) { setTab(selected.status); setFilters({ priority: "", source: "", owner: "" }); setFollowedId(requestedId); }
+  }, [actions, requestedId, followedId]);
+  useEffect(() => {
+    if (followedId) document.getElementById("action-" + followedId)?.focus();
+  }, [followedId, tab]);
   const kpis = {
     today: actions.filter((item) => item.due === "Bugün").length,
     overdue: actions.filter((item) => item.due === "Gecikti").length,
@@ -84,7 +95,7 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
   const renderCard = (action: GlobalActionDto) => {
     const sourcePath = routePathFor(action.sourceRoute);
     return (
-      <article key={action.id} className={`global-action-card ${action.priority}`}>
+      <article key={action.id} id={"action-" + action.id} tabIndex={-1} aria-label={action.title ?? "Aksiyon"} className={`global-action-card ${action.priority}`}>
         <div className="global-action-top">
           <span className={`status-pill ${actionPillClass(action.priority)}`}>{actionLevelText(action.priority)}</span>
           <span>{action.due}</span>

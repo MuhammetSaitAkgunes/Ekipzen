@@ -143,20 +143,21 @@ test("izin kararı sürüm ve notu birlikte gönderir; eski sürümde inceleme k
 
 test("kurulum kaynağı seçimi ön kontrolü yeniler; eski sürüm hatasında seçim korunur", async () => {
   const missing = { templateYear: 2026, companyProfileExists: false, missingLeaveTypeCount: 4, missingFullDayHolidayCount: 14, payrollSettingsExists: false, hasEffectiveApprovedPayrollSettings: false, needsInitialization: true };
-  stubApi({ ...routes("company", "initial-setup"), "/api/setup": missing });
+  stubApi({ ...routes("company", "initial-setup"), "/api/setup": missing, "/api/setup/preview": { status: missing, token: "setup-v1", companyName: null, leaveTypes: [], holidays: [], payrollDraft: null } });
   const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
   mock.mockImplementation(async (input, init) => String(input) === "/api/setup" && init?.method === "POST"
     ? Response.json({ title: "Seçilen sürüm güncel değil" }, { status: 409 }) : original(input, init));
   render(<TenantSetupPanel />);
   await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
   const ack = screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ });
+  await waitFor(() => expect(ack).toBeEnabled());
   await userEvent.click(ack); await chooseSource(); expect(ack).not.toBeChecked();
   expect(mock.mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
   await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Seçilen sürüm güncel değil");
   expect(screen.getByText(/rehber sürümü · seçildi/)).toBeInTheDocument();
   const posted = mock.mock.calls.find(([u, i]) => String(u) === "/api/setup" && i?.method === "POST")!;
-  expect(JSON.parse(String(posted[1]?.body))).toEqual({ guidanceContentRevisionId: 22 });
+  expect(JSON.parse(String(posted[1]?.body))).toEqual({ guidanceContentRevisionId: 22, expectedPreviewToken: "setup-v1" });
 });
 
 const attendanceRow = { id: 33, workDate: "2026-10-01", type: "Tam", checkIn: "09:00:00", checkOut: "18:00:00", breakMinutes: 60, workedMinutes: 480, overtimeMinutes: 0, status: "ok", note: null, revision: "638000000000000000" };
@@ -178,22 +179,20 @@ test.each([false, true])("puantaj kaynağı yalnız son yazıma gider; önizleme
   expect(JSON.parse(String(saved[1]?.body)).model.guidanceContentRevisionId).toBe(22);
 });
 
-const complianceDocument = { id: 7, employeeId: 1, employee: "Gerçek Personel", dept: "İK", document: "Sözleşme", owner: "İK", dueDate: null, dueLabel: "-", status: "Eksik", level: "medium" };
-test("uyumda seçilen kaynak iki bağımsız isteğe gider; ikinci hata ilk kaydı gizlemez", async () => {
+const complianceDocument = { id: 7, revision: "document-v1", employeeId: 1, employee: "Gerçek Personel", dept: "İK", document: "Sözleşme", owner: "İK", dueDate: null, dueLabel: "-", status: "Eksik", level: "medium" };
+test("uyum düzeltmesi tek sürümlü istektir; 409 bütün formu korur", async () => {
   stubApi({ ...routes("compliance", "record-correction"), "/api/employees": { items: [] }, "/api/compliance/documents/7": complianceDocument });
   const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
-  mock.mockImplementation(async (input, init) => String(input) === "/api/compliance/documents/7/owner" && init?.method === "PATCH"
+  mock.mockImplementation(async (input, init) => String(input) === "/api/compliance/documents/7" && init?.method === "PUT"
     ? Response.json({ title: "Rehber sürümü değişti" }, { status: 409 }) : original(input, init));
   const close = vi.fn(); render(<DocumentModal document={complianceDocument} onClose={close} />); await chooseSource();
   await userEvent.clear(screen.getByLabelText("Sorumlu")); await userEvent.type(screen.getByLabelText("Sorumlu"), "Yeni sorumlu");
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" })); await userEvent.click(screen.getByRole("checkbox", { name: /Personel, belge, durum, risk/ }));
   await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("sorumlu değişikliği tamamlanamadı"); expect(close).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "Onayla ve kaydet" })).toBeDisabled();
-  for (const path of ["/api/compliance/documents/7", "/api/compliance/documents/7/owner"]) {
-    const write = mock.mock.calls.find(([u, i]) => String(u) === path && (i?.method === "PUT" || i?.method === "PATCH"))!;
-    expect(JSON.parse(String(write[1]?.body)).guidanceContentRevisionId).toBe(22);
-  }
+  expect(await screen.findByRole("alert")).toHaveTextContent("Rehber sürümü değişti"); expect(close).not.toHaveBeenCalled();
+  const write = mock.mock.calls.find(([u, i]) => String(u) === "/api/compliance/documents/7" && i?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({ guidanceContentRevisionId: 22, expectedRevision: "document-v1", ownerName: "Yeni sorumlu", updateOwner: true });
+  expect(mock.mock.calls.some(([u]) => String(u).endsWith("/owner"))).toBe(false);
 });
 
 test("uyum oluşturma seçilen sürümle POST gönderir", async () => {

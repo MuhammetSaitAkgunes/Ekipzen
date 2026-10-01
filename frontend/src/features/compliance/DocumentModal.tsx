@@ -6,7 +6,7 @@ import { useEmployees } from "../personnel/queries";
 import { getLevelText } from "../dashboard/format";
 import {
   COMPLIANCE_STATUSES, RISK_LEVELS,
-  useAssignComplianceOwner, useCreateComplianceDocument, useUpdateComplianceDocument,
+  useCreateComplianceDocument, useUpdateComplianceDocument,
   type ComplianceDocumentDto,
 } from "./queries";
 
@@ -18,7 +18,6 @@ export function DocumentModal({ document: doc, onClose }: {
   const isEdit = doc !== null;
   const createDocument = useCreateComplianceDocument();
   const updateDocument = useUpdateComplianceDocument();
-  const assignOwner = useAssignComplianceOwner();
   const employeesQ = useEmployees({ search: "", departmentId: "", status: "" });
   const [form, setForm] = useState({
     employeeId: doc ? String(doc.employeeId ?? "") : "",
@@ -32,8 +31,7 @@ export function DocumentModal({ document: doc, onClose }: {
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [partialSave, setPartialSave] = useState(false);
-  const isBusy = createDocument.isPending || updateDocument.isPending || assignOwner.isPending;
+  const isBusy = createDocument.isPending || updateDocument.isPending;
   const selectedEmployee = (employeesQ.data?.items ?? []).find((employee) => String(employee.id) === form.employeeId);
 
   const set = (key: keyof typeof form) =>
@@ -47,7 +45,7 @@ export function DocumentModal({ document: doc, onClose }: {
     if (!isEdit && (!form.employeeId || !selectedEmployee)) return "Belge kaydının ait olduğu personeli seçin.";
     if (!form.documentName.trim() || form.documentName.trim().length > 200) return "Belge adını doğrulayın (1–200 karakter).";
     if (form.ownerName.trim().length > 128) return "Sorumlu adı 128 karakteri geçemez.";
-    if (isEdit && doc.owner && !form.ownerName.trim()) return "Mevcut sorumlu bu ekrandan kaldırılamaz; bir isim girin veya değişikliği geri alın.";
+    if (isEdit && !doc.revision) return "Güncel belge sürümü bulunamadı. Kaydı yeniden açın.";
     if (!isEdit && !form.status) return "Belgenin gerçek durumunu açıkça seçin.";
     if (!form.level) return "Risk seviyesini kayıt kaynağına göre açıkça seçin.";
     return null;
@@ -67,21 +65,17 @@ export function DocumentModal({ document: doc, onClose }: {
     const validationError = validate();
     if (validationError) { setError(validationError); return; }
     actionInFlight.current = true;
-    let detailsPersisted = false;
     try {
       if (isEdit) {
         await updateDocument.mutateAsync({
           id: doc.id!,
+          expectedRevision: doc.revision!,
+          updateOwner: true, ownerName: form.ownerName.trim() || null,
           documentName: form.documentName.trim(),
           dueDate: form.dueDate || null,
           level: form.level,
           ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
         });
-        detailsPersisted = true;
-        const newOwner = form.ownerName.trim();
-        if (newOwner && newOwner !== (doc.owner ?? "")) {
-          await assignOwner.mutateAsync({ id: doc.id!, ownerName: newOwner, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
-        }
         showToast("Belge güncellendi.", "success");
       } else {
         await createDocument.mutateAsync({
@@ -98,10 +92,7 @@ export function DocumentModal({ document: doc, onClose }: {
       onClose();
     } catch (e) {
       const message = e instanceof ApiError ? e.message : "Belge kaydedilemedi.";
-      if (detailsPersisted) setPartialSave(true);
-      setError(detailsPersisted
-        ? "Belge adı, tarih ve risk kaydedildi; sorumlu değişikliği tamamlanamadı: " + message + " Pencereyi kapatıp güncel kaydı yeniden açın."
-        : message);
+      setError(message);
     } finally {
       actionInFlight.current = false;
     }
@@ -121,14 +112,14 @@ export function DocumentModal({ document: doc, onClose }: {
         </div>
         <div className="modal-body-scroll">
           <p className="ez-compliance-modal-note">Burada bir belge takip kaydı açılır veya düzenlenir; dosya yüklenmez. Son tarih, durum ve risk düzeyini kaynağına göre doğrulayın. “Tamamlandı” seçimi günlük iş görünümünü etkiler ama belgenin kendisini veya dış bildirimi doğrulamaz.</p>
-          <GuidanceOperationSource process="compliance" step={isEdit ? "record-correction" : "record-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={isBusy || partialSave} />
-          {isEdit && <p>Belge bilgileri ve sorumlu ayrı kaydedilir. Rehber kanıtı yalnız gerçekten değişen her işlem için ayrı oluşur.</p>}
+          <GuidanceOperationSource process="compliance" step={isEdit ? "record-correction" : "record-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={isBusy} />
+          {isEdit && <p>Belge bilgileri ve sorumlu birlikte kaydedilir; güncel sürüm değişmişse kayıt durdurulur. Sorumlu boş bırakılırsa atama kaldırılır.</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
           {reviewing ? <section className="ez-compliance-document-review" role="region" aria-label="Belge kaydını kaydetmeden önce kontrol edin">
             <h4>Belge kaydını kaydetmeden önce kontrol edin</h4>
             <p><strong>Personel:</strong> {isEdit ? doc.employee : selectedEmployee?.name} · <strong>Belge:</strong> {form.documentName.trim()}</p>
             <p><strong>Durum:</strong> {form.status} · <strong>Risk:</strong> {getLevelText(form.level)} · <strong>Son tarih:</strong> {form.dueDate || "Kayıtlı değil"}</p>
-            <p><strong>Sorumlu:</strong> {form.ownerName.trim() || "Atanmadı"}{isEdit && form.ownerName.trim() !== (doc.owner ?? "") ? " (ayrı işlemle güncellenecek)" : ""}</p>
+            <p><strong>Sorumlu:</strong> {form.ownerName.trim() || "Atanmadı"}{isEdit && form.ownerName.trim() !== (doc.owner ?? "") ? " (birlikte güncellenecek)" : ""}</p>
             <p>Bu kayıt bir takip kaydıdır; belge dosyasını yüklemez. Son tarih yoksa hukuki süre varsaymayın. Yanlış adı, tarihi veya riski daha sonra düzenleyebilir; durumu listeden değiştirebilirsiniz.</p>
             <label><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /> Personel, belge, durum, risk ve kaynak bilgisini kontrol ettim.</label>
           </section> : <div className="form-grid-2">
@@ -175,9 +166,9 @@ export function DocumentModal({ document: doc, onClose }: {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose} disabled={isBusy}>Vazgeç</button>
-          {reviewing && <button className="btn btn-ghost" onClick={() => { setReviewing(false); setAcknowledged(false); }} disabled={isBusy || partialSave}>Bilgileri düzelt</button>}
+          {reviewing && <button className="btn btn-ghost" onClick={() => { setReviewing(false); setAcknowledged(false); }} disabled={isBusy}>Bilgileri düzelt</button>}
           <button className="btn btn-primary" onClick={reviewing ? submit : startReview}
-            disabled={isBusy || partialSave || (reviewing && !acknowledged)}>
+            disabled={isBusy || (reviewing && !acknowledged)}>
             <i aria-hidden="true" className="fa-solid fa-check" /> {reviewing ? "Onayla ve kaydet" : "Kaydı gözden geçir"}
           </button>
         </div>

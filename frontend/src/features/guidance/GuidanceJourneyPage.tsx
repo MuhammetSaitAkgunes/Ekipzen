@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
+import { GuidanceCoverageJourney } from "./GuidanceCoverageJourney";
 import { GuidanceHelpSettings } from "./GuidanceHelpControl";
 import { PageError, PageLoading } from "../shared/PageState";
 import { useLeaveApprovalJourney, usePersonnelEntryJourney, useRecruitmentJourney, type LeaveApprovalJourney, type PersonnelEntryJourney, type RecruitmentJourney } from "./journeyQueries";
@@ -93,6 +94,7 @@ export function GuidanceJourneyPage() {
       : leaveQ.isError
         ? <p role="alert">İzin onayı yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
         : <LeaveApprovalEvidence journey={leaveQ.data} />}
+    <GuidanceCoverageJourney />
     <GuidanceHelpSettings />
     <GuidanceOperationJourney />
     <GuidanceReadingJourney />

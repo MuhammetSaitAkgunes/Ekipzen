@@ -4,7 +4,7 @@ import { apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
 import type { components } from "../../api/schema";
 
-export type ComplianceDocumentDto = components["schemas"]["ComplianceDocumentDto"];
+export type ComplianceDocumentDto = components["schemas"]["ComplianceDocumentDto"] & { revision?: string };
 export type ComplianceReadinessDto = components["schemas"]["ComplianceReadinessDto"];
 export type CreateComplianceDocumentCommand = components["schemas"]["CreateComplianceDocumentCommand"] & { guidanceContentRevisionId?: number };
 
@@ -53,12 +53,12 @@ export const useCreateComplianceDocument = () => {
 export const useUpdateComplianceDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, documentName, dueDate, level, guidanceContentRevisionId }: {
-      id: number; documentName: string; dueDate: string | null; level: string; guidanceContentRevisionId?: number;
+    mutationFn: ({ id, documentName, dueDate, level, guidanceContentRevisionId, expectedRevision, ownerName, updateOwner }: {
+      id: number; documentName: string; dueDate: string | null; level: string; guidanceContentRevisionId?: number; expectedRevision: string; ownerName?: string | null; updateOwner?: boolean;
     }) =>
       apiFetch<ComplianceDocumentDto>(`/compliance/documents/${id}`, {
         method: "PUT",
-        body: JSON.stringify({ documentName, dueDate, level, guidanceContentRevisionId }),
+        body: JSON.stringify({ documentName, dueDate, level, guidanceContentRevisionId, expectedRevision, ownerName, updateOwner }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });
@@ -71,10 +71,10 @@ export const useUpdateComplianceDocument = () => {
 export const useSetComplianceStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status, guidanceContentRevisionId }: { id: number; status: string; guidanceContentRevisionId?: number }) =>
+    mutationFn: ({ id, status, guidanceContentRevisionId, expectedRevision }: { id: number; status: string; guidanceContentRevisionId?: number; expectedRevision: string }) =>
       apiFetch<ComplianceDocumentDto>(`/compliance/documents/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status, guidanceContentRevisionId }),
+        body: JSON.stringify({ status, guidanceContentRevisionId, expectedRevision }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });
@@ -87,10 +87,10 @@ export const useSetComplianceStatus = () => {
 export const useAssignComplianceOwner = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ownerName, guidanceContentRevisionId }: { id: number; ownerName: string; guidanceContentRevisionId?: number }) =>
+    mutationFn: ({ id, ownerName, guidanceContentRevisionId, expectedRevision }: { id: number; ownerName: string; guidanceContentRevisionId?: number; expectedRevision: string }) =>
       apiFetch<ComplianceDocumentDto>(`/compliance/documents/${id}/owner`, {
         method: "PATCH",
-        body: JSON.stringify({ ownerName, guidanceContentRevisionId }),
+        body: JSON.stringify({ ownerName, guidanceContentRevisionId, expectedRevision }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });

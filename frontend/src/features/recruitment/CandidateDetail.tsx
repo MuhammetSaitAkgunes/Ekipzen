@@ -538,11 +538,11 @@ export function CandidateDetail({ id }: { id: number }) {
               {(candidate.stageDecisions ?? []).map(decision => <details key={decision.id}>
                 <summary>{decision.fromStatus} → {decision.toStatus} · {decision.reason}</summary>
                 <p>{decision.decidedByName} · {decision.decidedAtUtc} · aday sürümü {decision.fromVersion} → {decision.toVersion}</p>
-                {decision.evidence.length === 0 && <p>Bu karara kayıtlı not/değerlendirme bağlanmadı.</p>}
-                {decision.evidence.map(item => <div key={`${item.kind}-${item.id}`}>
+                {(decision.evidence ?? []).length === 0 && <p>Bu karara kayıtlı not/değerlendirme bağlanmadı.</p>}
+                {(decision.evidence ?? []).map(item => <div key={`${item.kind}-${item.id}`}>
                   <strong>{item.kind === "note" ? "Not" : "Değerlendirme"} #{item.id} · karar anındaki sürüm {item.version}</strong>
-                  <p>{item.kind === "note" ? `${item.state.noteType}: ${item.state.text}`
-                    : `${item.state.criterion}: ${item.state.score}/${item.state.maxScore}`}</p>
+                  <p>{!item.state ? "Karar anındaki dayanak ayrıntısı bulunamadı." : item.kind === "note" ? `${item.state.noteType}: ${item.state.text}`
+                    : `${item.state?.criterion}: ${item.state?.score}/${item.state?.maxScore}`}</p>
                 </div>)}
               </details>)}
             </section>

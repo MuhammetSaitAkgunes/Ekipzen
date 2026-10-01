@@ -35,13 +35,13 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const renderShell = () =>
+const renderShell = (initialEntries?: string[]) =>
   renderPage(
     <AuthProvider>
       <ToastProvider>
         <ActionsPage />
       </ToastProvider>
-    </AuthProvider>,
+    </AuthProvider>, initialEntries,
   );
 
 test("KPI'lar listeden türetilir, açık sekme kartları gösterir", async () => {
@@ -121,4 +121,15 @@ test("employee kartlarda ilerletme/silme görmez", async () => {
   await screen.findByText("SGK matrah kontrolü");
   expect(screen.queryByRole("button", { name: "Bu haftaya al" })).not.toBeInTheDocument();
   expect(screen.queryByLabelText(/aksiyonunu sil/)).not.toBeInTheDocument();
+});
+
+
+test("günlük iş bağlantısı ilgili aksiyonun sekmesini açar ve klavye odağını kayda taşır", async () => {
+  renderShell(["/actions?actionId=2"]);
+  const selected = await screen.findByText("Eksik evrak takibi");
+  await waitFor(() => expect(document.getElementById("action-2")).toHaveFocus());
+  expect(selected).toBeInTheDocument();
+  expect(screen.queryByText("SGK matrah kontrolü")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Açık" }));
+  expect(screen.getByText("SGK matrah kontrolü")).toBeInTheDocument();
 });

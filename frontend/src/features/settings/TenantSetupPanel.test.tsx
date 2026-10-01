@@ -10,6 +10,8 @@ const missing = {
   missingFullDayHolidayCount: 14, payrollSettingsExists: false,
   hasEffectiveApprovedPayrollSettings: false, needsInitialization: true,
 };
+const preview = { status: missing, token: "setup-v1", companyName: "Örnek şirket", leaveTypes: [{ code: "Yıllık", name: "Yıllık izin", requiresApproval: true, deductsFromAnnualBalance: true }], holidays: [{ date: "2026-10-29", name: "Cumhuriyet Bayramı" }], payrollDraft: null };
+
 afterEach(() => vi.unstubAllGlobals());
 
 test("durum okuması otomatik kurulum veya onay yapmaz", async () => {
@@ -23,13 +25,14 @@ test("durum okuması otomatik kurulum veya onay yapmaz", async () => {
 test("açık kurulumdan sonra durum yenilenir ve uzman onayı beklenir", async () => {
   const done = vi.fn();
   vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
-    Response.json(init?.method === "POST" ? { ...missing, needsInitialization: false } : missing)));
+    Response.json(String(_input) === "/api/setup/preview" ? preview : init?.method === "POST" ? { ...missing, needsInitialization: false } : missing)));
   renderPage(<AuthProvider><TenantSetupPanel onInitialized={done} /></AuthProvider>);
   await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
   expect(screen.getByRole("region", { name: "Başlangıç kayıtlarını oluşturmadan önce kontrol edin" })).toBeInTheDocument();
   expect(screen.getByText(/4 eksik tür eklenecek/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" })).toBeDisabled();
   expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  await waitFor(() => expect(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ })).toBeEnabled());
   await userEvent.click(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ }));
   await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByText("Başlangıç kayıtları mevcut.")).toBeInTheDocument();
@@ -40,7 +43,7 @@ test("açık kurulumdan sonra durum yenilenir ve uzman onayı beklenir", async (
 
 test("kurulum hatası görünür ve yeniden denemeye izin verir", async () => {
   vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
-    init?.method === "POST" ? Response.json({ title: "Kurulum başarısız" }, { status: 500 }) : Response.json(missing)));
+    init?.method === "POST" ? Response.json({ title: "Kurulum başarısız" }, { status: 500 }) : Response.json(String(_input) === "/api/setup/preview" ? preview : missing)));
   renderPage(<AuthProvider><TenantSetupPanel /></AuthProvider>);
   await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
   await userEvent.click(screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ }));

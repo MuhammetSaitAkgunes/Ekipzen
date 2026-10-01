@@ -13,7 +13,7 @@ const employees = {
 };
 const existing = {
   id: 1, employeeId: 3, employee: "Ahmet Yılmaz", dept: "Yazılım", document: "İş Sözleşmesi",
-  owner: "Ayşe Demir", dueDate: "2026-07-20", dueLabel: "4 gün", status: "Eksik", level: "high",
+  owner: "Ayşe Demir", dueDate: "2026-07-20", dueLabel: "4 gün", status: "Eksik", level: "high", revision: "document-v1",
 };
 
 beforeEach(() =>
@@ -61,46 +61,40 @@ test("oluşturma modu POST documents ucuna tam gövdeyle gider", async () => {
   });
 });
 
-test("düzenleme modu PUT atar, sorumlu değişince owner PATCH'i de gider", async () => {
+
+test("düzenleme sorumlu ve bilgileri güncel sürümle tek PUT içinde kaydeder", async () => {
   renderModal(existing);
-  const name = await screen.findByLabelText("Belge adı");
-  expect(name).toHaveValue("İş Sözleşmesi");
+  await screen.findByLabelText("Belge adı");
   await userEvent.clear(screen.getByLabelText("Sorumlu"));
   await userEvent.type(screen.getByLabelText("Sorumlu"), "Ece Arslan");
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
-  expect(screen.getByText(/ayrı işlemle güncellenecek/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("checkbox", { name: /Personel, belge, durum, risk/ }));
   await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
   await waitFor(() => {
-    const put = vi.mocked(fetch).mock.calls.find(
-      ([u, i]) => String(u) === "/api/compliance/documents/1" && i?.method === "PUT",
-    );
-    expect(put).toBeTruthy();
-    expect(JSON.parse(String(put![1]?.body))).toMatchObject({ documentName: "İş Sözleşmesi", level: "high" });
-    const owner = vi.mocked(fetch).mock.calls.find(
-      ([u, i]) => String(u) === "/api/compliance/documents/1/owner" && i?.method === "PATCH",
-    );
-    expect(owner).toBeTruthy();
-    expect(JSON.parse(String(owner![1]?.body))).toMatchObject({ ownerName: "Ece Arslan" });
+    const put = vi.mocked(fetch).mock.calls.find(([u,i]) => String(u) === "/api/compliance/documents/1" && i?.method === "PUT");
+    expect(JSON.parse(String(put![1]?.body))).toMatchObject({ documentName: "İş Sözleşmesi", ownerName: "Ece Arslan", updateOwner: true, expectedRevision: "document-v1" });
+    expect(vi.mocked(fetch).mock.calls.some(([u,i]) => String(u).endsWith("/owner") && i?.method === "PATCH")).toBe(false);
   });
 });
 
-test("mevcut sorumluyu boşaltmayı kaydedilmiş gibi göstermez", async () => {
+test("mevcut sorumlu boşaltıldığında tek sürümlü işlemde kaldırılır", async () => {
   renderModal(existing);
   await screen.findByLabelText("Sorumlu");
   await userEvent.clear(screen.getByLabelText("Sorumlu"));
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
-  expect(screen.getByRole("alert")).toHaveTextContent("Mevcut sorumlu bu ekrandan kaldırılamaz");
-  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
-    String(url) === "/api/compliance/documents/1" && init?.method === "PUT")).toBe(false);
+  await userEvent.click(screen.getByRole("checkbox", { name: /Personel, belge, durum, risk/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
+  await waitFor(() => {
+    const put = vi.mocked(fetch).mock.calls.find(([u,i]) => String(u) === "/api/compliance/documents/1" && i?.method === "PUT");
+    expect(JSON.parse(String(put![1]?.body))).toMatchObject({ ownerName: null, updateOwner: true, expectedRevision: "document-v1" });
+  });
 });
 
-test("sorumlu ataması başarısızsa ilk güncellemenin kaydedildiğini açıklar", async () => {
+test("kaydetme reddedildiğinde kısmi başarı gösterilmez ve form korunur", async () => {
   const original = vi.mocked(fetch).getMockImplementation()!;
   vi.mocked(fetch).mockImplementation((input, init) =>
-    String(input) === "/api/compliance/documents/1/owner" && init?.method === "PATCH"
-      ? Promise.resolve(Response.json({ title: "Sorumlu atanamadı" }, { status: 500 }))
-      : original(input, init));
+    String(input) === "/api/compliance/documents/1" && init?.method === "PUT"
+      ? Promise.resolve(Response.json({ title: "Kaydetme reddedildi" }, { status: 409 })) : original(input, init));
   renderModal(existing);
   await screen.findByLabelText("Sorumlu");
   await userEvent.clear(screen.getByLabelText("Sorumlu"));
@@ -108,9 +102,8 @@ test("sorumlu ataması başarısızsa ilk güncellemenin kaydedildiğini açıkl
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
   await userEvent.click(screen.getByRole("checkbox", { name: /Personel, belge, durum, risk/ }));
   await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
-
-  expect(await screen.findByRole("alert")).toHaveTextContent("Belge adı, tarih ve risk kaydedildi; sorumlu değişikliği tamamlanamadı");
-  expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
-    String(url) === "/api/compliance/documents/1" && init?.method === "PUT")).toBe(true);
-  expect(screen.getByRole("button", { name: "Onayla ve kaydet" })).toBeDisabled();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Kaydetme reddedildi");
+  await userEvent.click(screen.getByRole("button", { name: "Bilgileri düzelt" }));
+  expect(screen.getByLabelText("Sorumlu")).toHaveValue("Ece Arslan");
+  expect(screen.queryByText(/kaydedildi; sorumlu/)).not.toBeInTheDocument();
 });

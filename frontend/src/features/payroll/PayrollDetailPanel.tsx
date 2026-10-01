@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ApiError, apiDownload, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { formatPayrollMoney, formatPayrollNumber, payrollStatusClass } from "./format";
-import { useApprovePayrollRow, useUpdatePayrollRow, type PayrollPeriodDetailDto, type PayrollRowDto } from "./queries";
+import { useApprovePayrollRow, useUpdatePayrollRow, type PayrollRowDto } from "./queries";
 
 const Line = ({ label, value, tone = "" }: { label: string; value?: number; tone?: string }) => (
   <div className={`payroll-line ${tone}`}><span>{label}</span><strong>{formatPayrollMoney(value)}</strong></div>
@@ -93,6 +93,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   const save = async () => {
     setError(null);
     try {
+      if (!row.revision) throw new Error("Satır sürümü bulunamadı. Güncel bordro satırını yeniden açın.");
       await updateRow.mutateAsync({
         periodId,
         rowId,
@@ -122,12 +123,13 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           specialDeductions: parse(form.specialDeductions),
           ibanComplete: form.ibanComplete,
           notes: form.notes.trim() || null,
+          expectedRevision: row.revision ?? undefined,
         },
       });
       showToast(`${row.name} bordro girdileri kaydedildi.`, "success");
       onClose();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Girdiler kaydedilemedi.");
+      setError(caught instanceof Error ? caught.message : "Girdiler kaydedilemedi.");
     }
   };
 
@@ -140,10 +142,12 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
     }
     setReviewLoading(true);
     try {
-      const detail = await apiFetch<PayrollPeriodDetailDto>("/payroll/periods/" + periodId);
-      const current = detail.rows?.find((item) => item.id === rowId);
+      const preview = await apiFetch<{ row: PayrollRowDto; blockingReasons: string[]; canApprove: boolean }>(`/payroll/periods/${periodId}/rows/${rowId}/approval-preview`);
+      const current = preview.row;
+      if (!preview.canApprove) throw new Error("Onay ön koşulları: " + preview.blockingReasons.join("; "));
       if (!current) throw new Error("Satır artık bu dönemde bulunamadı.");
       if (current.approvalStatus === "Onaylandı") throw new Error("Satır başka bir işlemde onaylandı. Dönem listesini yenileyin.");
+      if (!current.revision) throw new Error("Satır sürümü bulunamadı. Güncel satırı yeniden açın.");
       setReviewRow(current);
       setReviewConfirmed(false);
     } catch (caught) {
@@ -156,10 +160,10 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   };
 
   const approve = async () => {
-    if (!reviewRow || !reviewConfirmed || hasUnsavedChanges) return;
+    if (!reviewRow?.revision || !reviewConfirmed || hasUnsavedChanges) return;
     setError(null);
     try {
-      await approveRow.mutateAsync({ periodId, rowId, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
+      await approveRow.mutateAsync({ periodId, rowId, expectedRevision: reviewRow.revision, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
       showToast(`${row.name} bordrosu kanuni kapılardan geçerek onaylandı.`, "success");
       onClose();
     } catch (caught) {
