@@ -4,6 +4,8 @@ import type { GuidanceContent } from "./catalogQueries";
 
 export const guidanceOperationsKey = ["guidance", "operations"] as const;
 export type GuidanceOperationEvidence = {
+  evidenceKey: string;
+  setupChanges?: { addedCompanyProfile: boolean; addedLeaveTypeCount: number; addedHolidayCount: number; addedPayrollSettings: boolean } | null;
   operationKey: string; resourceId: number; outcome: string; occurredAtUtc: string;
   content: { contentRevisionId: number; contentKey: string; processKey: string; stepKey: string; contentVersion: number; title: string };
 };

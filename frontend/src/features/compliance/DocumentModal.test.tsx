@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -27,9 +28,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderModal = (doc: typeof existing | null) =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <DocumentModal document={doc} onClose={() => {}} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("oluşturma modu POST documents ucuna tam gövdeyle gider", async () => {

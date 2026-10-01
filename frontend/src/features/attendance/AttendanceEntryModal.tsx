@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -27,6 +28,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
   const [breakMinutes, setBreakMinutes] = useState(initial ? String(initial.breakMinutes ?? "") : "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [preview, setPreview] = useState<AttendanceEntryPreviewDto | null>(null);
 
@@ -104,7 +106,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
       await save.mutateAsync({
         id: rowId,
         employeeId: Number(employeeId) || 0,
-        model: buildModel(),
+        model: { ...buildModel(), ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) },
         expectedRevision: initial?.revision ?? null,
       });
       showToast(isEdit ? "Puantaj kaydı güncellendi." : "Manuel giriş eklendi.", "success");
@@ -130,6 +132,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
         </div>
 
         <div className="modal-body-scroll">
+          <GuidanceOperationSource process="attendance" step={isEdit ? "entry-correction" : "entry-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); formRevision.current += 1; setReviewing(false); setPreview(null); }} disabled={save.isPending || previewEntry.isPending} />
           {error && <p className="form-error" role="alert">{error}</p>}
           <p className="ez-attendance-guide-note">Bu form gerçek puantaj kaydı oluşturur veya mevcut günü düzeltir. Gün tipini ve molayı gerçek kaynağa göre seçin: “Tam” veya “Mesai” seçimi tek başına çalışılan süre ya da yasal fazla çalışma kararı oluşturmaz. Süre sunucuda saatlerden hesaplanır; “Rapor” başka bir sisteme bildirim yapmaz.</p>
           {reviewing ? (

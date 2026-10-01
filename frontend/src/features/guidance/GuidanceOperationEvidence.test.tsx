@@ -12,6 +12,10 @@ import { CandidateDetail } from "../recruitment/CandidateDetail";
 import { ApprovalsList } from "../inbox/ApprovalsList";
 import { GuidanceOperationSource } from "./GuidanceOperationSource";
 import { GuidanceOperationJourney } from "./GuidanceOperationJourney";
+import { TenantSetupPanel } from "../settings/TenantSetupPanel";
+import { AttendanceEntryModal } from "../attendance/AttendanceEntryModal";
+import { DocumentModal } from "../compliance/DocumentModal";
+import { CompliancePage } from "../compliance/CompliancePage";
 
 const source = (process = "leave", step = "decision-effect", id = 22) => ({ id, contentKey: `${process}-${step}`, processKey: process,
   contentVersion: id - 21, isCurrent: true, body: { title: "Kaynaklı işlem", stepKey: step, prerequisites: "Ön koşulu incele",
@@ -65,7 +69,7 @@ test("yanlış adım veya yüklenemeyen kaynak kendiliğinden seçilmez", async 
 });
 
 test("yolculuk eski işlem sürümünü korur; yeni içerik veya bütün süreç başarısı diye göstermez", async () => {
-  stubApi({ "/api/guidance/operations": [{ isCurrent: false, evidence: { operationKey: "leave-decision", resourceId: 8,
+  stubApi({ "/api/guidance/operations": [{ isCurrent: false, evidence: { evidenceKey: "leave-decision:1", operationKey: "leave-decision", resourceId: 8,
     outcome: "Rejected", occurredAtUtc: "2026-10-01T10:00:00Z", content: { contentRevisionId: 22, contentVersion: 1, title: "Eski karar açıklaması" } } }] });
   render(<GuidanceOperationJourney />);
   await screen.findByText(/Eski karar açıklaması · Sürüm 1/);
@@ -132,4 +136,92 @@ test("izin kararı sürüm ve notu birlikte gönderir; eski sürümde inceleme k
   expect(JSON.parse(String(request[1]?.body))).toEqual({ note: "Kaynak kontrol edildi.", guidanceContentRevisionId: 22 });
   expect(screen.getByLabelText("Karar notu (isteğe bağlı)")).toHaveValue("Kaynak kontrol edildi.");
   expect(screen.getByText(/Gerçek işlemde kullandığım rehber sürümü · seçildi/)).toBeInTheDocument();
+});
+
+
+test("kurulum kaynağı seçimi ön kontrolü yeniler; eski sürüm hatasında seçim korunur", async () => {
+  const missing = { templateYear: 2026, companyProfileExists: false, missingLeaveTypeCount: 4, missingFullDayHolidayCount: 14, payrollSettingsExists: false, hasEffectiveApprovedPayrollSettings: false, needsInitialization: true };
+  stubApi({ ...routes("company", "initial-setup"), "/api/setup": missing });
+  const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (input, init) => String(input) === "/api/setup" && init?.method === "POST"
+    ? Response.json({ title: "Seçilen sürüm güncel değil" }, { status: 409 }) : original(input, init));
+  render(<TenantSetupPanel />);
+  await userEvent.click(await screen.findByRole("button", { name: "Kurulumu gözden geçir" }));
+  const ack = screen.getByRole("checkbox", { name: /Eksik kayıtların oluşturulacağını/ });
+  await userEvent.click(ack); await chooseSource(); expect(ack).not.toBeChecked();
+  expect(mock.mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
+  await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Seçilen sürüm güncel değil");
+  expect(screen.getByText(/rehber sürümü · seçildi/)).toBeInTheDocument();
+  const posted = mock.mock.calls.find(([u, i]) => String(u) === "/api/setup" && i?.method === "POST")!;
+  expect(JSON.parse(String(posted[1]?.body))).toEqual({ guidanceContentRevisionId: 22 });
+});
+
+const attendanceRow = { id: 33, workDate: "2026-10-01", type: "Tam", checkIn: "09:00:00", checkOut: "18:00:00", breakMinutes: 60, workedMinutes: 480, overtimeMinutes: 0, status: "ok", note: null, revision: "638000000000000000" };
+const attendancePreview = { workedMinutes: 480, overtimeMinutes: 0, status: "ok", effectiveType: "Tam", canSave: true, blockReason: null, warnings: [] };
+test.each([false, true])("puantaj kaynağı yalnız son yazıma gider; önizleme bağımsız kalır (düzenleme %s)", async (edit) => {
+  stubApi({ ...routes("attendance", edit ? "entry-correction" : "entry-review"), "/api/employees": { items: [{ id: 1, name: "Gerçek Personel" }] }, "/api/attendance/preview": attendancePreview, "/api/attendance": attendanceRow, "/api/attendance/33": attendanceRow });
+  const close = vi.fn(); render(<AttendanceEntryModal rowId={edit ? 33 : null} initial={edit ? attendanceRow : undefined} defaultEmployeeId={1} onClose={close} />);
+  await chooseSource();
+  if (!edit) {
+    await userEvent.selectOptions(screen.getByLabelText("Personel"), "1"); await userEvent.selectOptions(screen.getByLabelText("Tip"), "Tam");
+    await userEvent.type(screen.getByLabelText("Tarih"), "2026-10-01"); await userEvent.type(screen.getByLabelText("Mola (dk)"), "60");
+  }
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
+  await screen.findByRole("heading", { name: "Kaydetmeden önce kontrol edin" });
+  const preview = vi.mocked(fetch).mock.calls.find(([u]) => String(u) === "/api/attendance/preview")!;
+  expect(JSON.parse(String(preview[1]?.body)).model.guidanceContentRevisionId).toBeUndefined(); expect(close).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" })); await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  const saved = vi.mocked(fetch).mock.calls.find(([u, i]) => String(u) === (edit ? "/api/attendance/33" : "/api/attendance") && i?.method === (edit ? "PUT" : "POST"))!;
+  expect(JSON.parse(String(saved[1]?.body)).model.guidanceContentRevisionId).toBe(22);
+});
+
+const complianceDocument = { id: 7, employeeId: 1, employee: "Gerçek Personel", dept: "İK", document: "Sözleşme", owner: "İK", dueDate: null, dueLabel: "-", status: "Eksik", level: "medium" };
+test("uyumda seçilen kaynak iki bağımsız isteğe gider; ikinci hata ilk kaydı gizlemez", async () => {
+  stubApi({ ...routes("compliance", "record-correction"), "/api/employees": { items: [] }, "/api/compliance/documents/7": complianceDocument });
+  const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (input, init) => String(input) === "/api/compliance/documents/7/owner" && init?.method === "PATCH"
+    ? Response.json({ title: "Rehber sürümü değişti" }, { status: 409 }) : original(input, init));
+  const close = vi.fn(); render(<DocumentModal document={complianceDocument} onClose={close} />); await chooseSource();
+  await userEvent.clear(screen.getByLabelText("Sorumlu")); await userEvent.type(screen.getByLabelText("Sorumlu"), "Yeni sorumlu");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" })); await userEvent.click(screen.getByRole("checkbox", { name: /Personel, belge, durum, risk/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("sorumlu değişikliği tamamlanamadı"); expect(close).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Onayla ve kaydet" })).toBeDisabled();
+  for (const path of ["/api/compliance/documents/7", "/api/compliance/documents/7/owner"]) {
+    const write = mock.mock.calls.find(([u, i]) => String(u) === path && (i?.method === "PUT" || i?.method === "PATCH"))!;
+    expect(JSON.parse(String(write[1]?.body)).guidanceContentRevisionId).toBe(22);
+  }
+});
+
+test("uyum oluşturma seçilen sürümle POST gönderir", async () => {
+  stubApi({ ...routes("compliance", "record-review"), "/api/employees": { items: [{ id: 1, name: "Gerçek Personel" }] }, "/api/compliance/documents": complianceDocument });
+  const close = vi.fn(); render(<DocumentModal document={null} onClose={close} />); await chooseSource();
+  await userEvent.selectOptions(screen.getByLabelText("Personel"), "1"); await userEvent.type(screen.getByLabelText("Belge adı"), "Sözleşme");
+  await userEvent.selectOptions(screen.getByLabelText("Durum"), "Eksik"); await userEvent.selectOptions(screen.getByLabelText("Risk seviyesi"), "medium");
+  await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" })); await userEvent.click(screen.getByRole("checkbox", { name: /Personel, belge, durum, risk/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Onayla ve kaydet" })); await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  const post = vi.mocked(fetch).mock.calls.find(([u, i]) => String(u) === "/api/compliance/documents" && i?.method === "POST")!;
+  expect(JSON.parse(String(post[1]?.body)).guidanceContentRevisionId).toBe(22);
+});
+
+test("uyum durum ön kontrolü kaynakla kaydeder; yeni işlem eski seçimi taşımaz", async () => {
+  stubApi({ ...routes("compliance", "status-review"), "/api/compliance/documents": [complianceDocument], "/api/compliance/readiness": {}, "/api/compliance/documents/7/status": complianceDocument });
+  render(<CompliancePage />);
+  const status = await screen.findByLabelText("Belge durumu"); await userEvent.selectOptions(status, "İncelemede"); await chooseSource();
+  await userEvent.click(screen.getByRole("button", { name: "Durumu kaydet" }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Durumu kaydet" })).not.toBeInTheDocument());
+  const patch = vi.mocked(fetch).mock.calls.find(([u, i]) => String(u) === "/api/compliance/documents/7/status" && i?.method === "PATCH")!;
+  expect(JSON.parse(String(patch[1]?.body)).guidanceContentRevisionId).toBe(22);
+  await userEvent.selectOptions(status, "Tamamlandı"); expect(screen.queryByText(/rehber sürümü · seçildi/)).not.toBeInTheDocument();
+});
+
+test("aynı satırın iki düzeltmesi ayrı görünür; kurulum kanıtında gerçek eklenen sayılar gösterilir", async () => {
+  const content = { contentRevisionId: 22, contentVersion: 1, title: "Kaynaklı işlem" };
+  stubApi({ "/api/guidance/operations": [
+    ...[1, 2].map(id => ({ isCurrent: true, evidence: { evidenceKey: "attendance-update:" + id, operationKey: "attendance-update", resourceId: 33, outcome: "updated", occurredAtUtc: "2026-10-01T10:00:00Z", content } })),
+    { isCurrent: true, evidence: { evidenceKey: "tenant-setup:1", operationKey: "tenant-setup", resourceId: 2026, outcome: "initialized", occurredAtUtc: "2026-10-01T10:00:00Z", content, setupChanges: { addedCompanyProfile: false, addedLeaveTypeCount: 2, addedHolidayCount: 3, addedPayrollSettings: true } } },
+  ] });
+  render(<GuidanceOperationJourney />); await screen.findByText(/Şablon yılı 2026/);
+  expect(screen.getAllByText("Puantaj düzeltme")).toHaveLength(2); expect(screen.getByText(/İzin türü: 2 eklendi/)).toBeInTheDocument();
 });

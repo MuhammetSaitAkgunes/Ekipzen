@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
@@ -31,6 +32,7 @@ export function CompliancePage() {
   const [documentModal, setDocumentModal] = useState<
     { mode: "create" } | { mode: "edit"; document: ComplianceDocumentDto } | null
   >(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [pendingStatus, setPendingStatus] = useState<{ document: ComplianceDocumentDto; status: string } | null>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const guideRef = useRef<HTMLElement>(null);
@@ -71,7 +73,7 @@ export function CompliancePage() {
 
   const changeStatus = async (doc: ComplianceDocumentDto, status: string) => {
     try {
-      await setDocumentStatus.mutateAsync({ id: doc.id!, status });
+      await setDocumentStatus.mutateAsync({ id: doc.id!, status, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
       setPendingStatus(null);
       showToast(`${doc.document} durumu "${status}" yapıldı.`, "success");
     } catch (e) {
@@ -170,6 +172,7 @@ export function CompliancePage() {
             : pendingStatus.status === "İncelemede"
               ? "Bu seçim kaydı günlük iş listesinden çıkarır; incelemenin sonucunu ayrıca takip edin. Hata varsa durumu yeniden açabilirsiniz."
               : "Bu seçim kaydı günlük iş listesine getirir. Risk seviyesini ve sorumluyu tekrar kontrol edin."}</p>
+          <GuidanceOperationSource process="compliance" step="status-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={setDocumentStatus.isPending} />
           <div className="ez-compliance-confirm-actions">
             <button className="btn btn-ghost" onClick={cancelStatusChange} disabled={setDocumentStatus.isPending}>Vazgeç</button>
             <button ref={confirmButtonRef} className="btn btn-primary" onClick={() => changeStatus(pendingStatus.document, pendingStatus.status)} disabled={setDocumentStatus.isPending}>Durumu kaydet</button>
@@ -199,7 +202,7 @@ export function CompliancePage() {
                           id={`doc-status-${doc.id}`}
                           className="input-control input-sm"
                           value={doc.status ?? "Eksik"}
-                          onChange={(e) => setPendingStatus({ document: doc, status: e.target.value })}
+                          onChange={(e) => { setGuidanceVersion(null); setPendingStatus({ document: doc, status: e.target.value }); }}
                           disabled={setDocumentStatus.isPending}
                         >
                           {COMPLIANCE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}

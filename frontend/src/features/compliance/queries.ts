@@ -1,3 +1,4 @@
+import { guidanceOperationsKey } from "../guidance/operationQueries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
@@ -5,7 +6,7 @@ import type { components } from "../../api/schema";
 
 export type ComplianceDocumentDto = components["schemas"]["ComplianceDocumentDto"];
 export type ComplianceReadinessDto = components["schemas"]["ComplianceReadinessDto"];
-export type CreateComplianceDocumentCommand = components["schemas"]["CreateComplianceDocumentCommand"];
+export type CreateComplianceDocumentCommand = components["schemas"]["CreateComplianceDocumentCommand"] & { guidanceContentRevisionId?: number };
 
 export type ComplianceFilters = { search: string; status: string; level: string };
 
@@ -44,6 +45,7 @@ export const useCreateComplianceDocument = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
     },
   });
 };
@@ -51,16 +53,17 @@ export const useCreateComplianceDocument = () => {
 export const useUpdateComplianceDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, documentName, dueDate, level }: {
-      id: number; documentName: string; dueDate: string | null; level: string;
+    mutationFn: ({ id, documentName, dueDate, level, guidanceContentRevisionId }: {
+      id: number; documentName: string; dueDate: string | null; level: string; guidanceContentRevisionId?: number;
     }) =>
       apiFetch<ComplianceDocumentDto>(`/compliance/documents/${id}`, {
         method: "PUT",
-        body: JSON.stringify({ documentName, dueDate, level }),
+        body: JSON.stringify({ documentName, dueDate, level, guidanceContentRevisionId }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
     },
   });
 };
@@ -68,14 +71,15 @@ export const useUpdateComplianceDocument = () => {
 export const useSetComplianceStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
+    mutationFn: ({ id, status, guidanceContentRevisionId }: { id: number; status: string; guidanceContentRevisionId?: number }) =>
       apiFetch<ComplianceDocumentDto>(`/compliance/documents/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, guidanceContentRevisionId }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
     },
   });
 };
@@ -83,14 +87,15 @@ export const useSetComplianceStatus = () => {
 export const useAssignComplianceOwner = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ownerName }: { id: number; ownerName: string }) =>
+    mutationFn: ({ id, ownerName, guidanceContentRevisionId }: { id: number; ownerName: string; guidanceContentRevisionId?: number }) =>
       apiFetch<ComplianceDocumentDto>(`/compliance/documents/${id}/owner`, {
         method: "PATCH",
-        body: JSON.stringify({ ownerName }),
+        body: JSON.stringify({ ownerName, guidanceContentRevisionId }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
     },
   });
 };

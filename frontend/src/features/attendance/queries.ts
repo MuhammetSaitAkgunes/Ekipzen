@@ -1,3 +1,4 @@
+import { guidanceOperationsKey } from "../guidance/operationQueries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -6,7 +7,7 @@ export type LiveBoardCardDto = components["schemas"]["LiveBoardCardDto"];
 export type TimesheetRowDto = components["schemas"]["TimesheetRowDto"] & { revision: string };
 export type TimesheetDto = Omit<components["schemas"]["TimesheetDto"], "rows"> & { rows: TimesheetRowDto[] };
 export type AttendanceSummaryDto = components["schemas"]["AttendanceSummaryDto"];
-export type AttendanceEntryModel = components["schemas"]["AttendanceEntryModel"];
+export type AttendanceEntryModel = components["schemas"]["AttendanceEntryModel"] & { guidanceContentRevisionId?: number };
 export type AttendanceEntryPreviewDto = {
   workedMinutes: number;
   overtimeMinutes: number;
@@ -53,6 +54,8 @@ export const useSaveAttendanceEntry = () => {
       id === null
         ? apiFetch<TimesheetRowDto>("/attendance", { method: "POST", body: JSON.stringify({ employeeId, model }) })
         : apiFetch<TimesheetRowDto>(`/attendance/${id}`, { method: "PUT", body: JSON.stringify({ model, expectedRevision }) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+    onSuccess: async () => {
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ["attendance"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]);
+    },
   });
 };

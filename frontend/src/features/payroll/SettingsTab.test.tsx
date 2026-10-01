@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { renderPage } from "../../test/renderPage";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { SettingsTab } from "./SettingsTab";
+import { AuthProvider } from "../../auth/AuthContext";
 
 const settings = {
   id: 1,
@@ -81,7 +82,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const renderTab = () => renderPage(<ToastProvider><SettingsTab /></ToastProvider>);
+const renderTab = () => renderPage(<AuthProvider><ToastProvider><SettingsTab /></ToastProvider></AuthProvider>);
 
 test("alanlar son onaylı mevzuat setinden dolar", async () => {
   renderTab();

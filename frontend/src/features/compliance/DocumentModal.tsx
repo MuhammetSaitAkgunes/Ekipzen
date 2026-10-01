@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -28,6 +29,7 @@ export function DocumentModal({ document: doc, onClose }: {
     level: doc?.level ?? "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [partialSave, setPartialSave] = useState(false);
@@ -73,11 +75,12 @@ export function DocumentModal({ document: doc, onClose }: {
           documentName: form.documentName.trim(),
           dueDate: form.dueDate || null,
           level: form.level,
+          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
         });
         detailsPersisted = true;
         const newOwner = form.ownerName.trim();
         if (newOwner && newOwner !== (doc.owner ?? "")) {
-          await assignOwner.mutateAsync({ id: doc.id!, ownerName: newOwner });
+          await assignOwner.mutateAsync({ id: doc.id!, ownerName: newOwner, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
         }
         showToast("Belge güncellendi.", "success");
       } else {
@@ -88,6 +91,7 @@ export function DocumentModal({ document: doc, onClose }: {
           dueDate: form.dueDate || null,
           status: form.status,
           level: form.level,
+          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
         });
         showToast("Uyum belgesi oluşturuldu.", "success");
       }
@@ -117,6 +121,8 @@ export function DocumentModal({ document: doc, onClose }: {
         </div>
         <div className="modal-body-scroll">
           <p className="ez-compliance-modal-note">Burada bir belge takip kaydı açılır veya düzenlenir; dosya yüklenmez. Son tarih, durum ve risk düzeyini kaynağına göre doğrulayın. “Tamamlandı” seçimi günlük iş görünümünü etkiler ama belgenin kendisini veya dış bildirimi doğrulamaz.</p>
+          <GuidanceOperationSource process="compliance" step={isEdit ? "record-correction" : "record-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={isBusy || partialSave} />
+          {isEdit && <p>Belge bilgileri ve sorumlu ayrı kaydedilir. Rehber kanıtı yalnız gerçekten değişen her işlem için ayrı oluşur.</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
           {reviewing ? <section className="ez-compliance-document-review" role="region" aria-label="Belge kaydını kaydetmeden önce kontrol edin">
             <h4>Belge kaydını kaydetmeden önce kontrol edin</h4>

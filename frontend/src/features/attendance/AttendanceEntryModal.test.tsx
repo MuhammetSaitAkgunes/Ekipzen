@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -17,9 +18,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderModal = (rowId: number | null, initial?: typeof savedRow) =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <AttendanceEntryModal rowId={rowId} initial={initial} defaultEmployeeId={1} onClose={() => {}} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("yeni kayıt POST /attendance gövdesiyle gider", async () => {

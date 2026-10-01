@@ -1,3 +1,5 @@
+import { guidanceOperationsKey } from "../guidance/operationQueries";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "../../api/client";
@@ -9,15 +11,17 @@ type SetupStatus = components["schemas"]["TenantSetupStatusDto"];
 export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void }) {
   const queryClient = useQueryClient();
   const actionInFlight = useRef(false);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const status = useQuery({ queryKey: ["tenant-setup"], queryFn: () => apiFetch<SetupStatus>("/setup") });
   const initialize = useMutation({
-    mutationFn: () => apiFetch<SetupStatus>("/setup", { method: "POST" }),
+    mutationFn: () => apiFetch<SetupStatus>("/setup", { method: "POST", ...(guidanceVersion === null ? {} : { body: JSON.stringify({ guidanceContentRevisionId: guidanceVersion }) }) }),
     onSuccess: async (data) => {
       queryClient.setQueryData(["tenant-setup"], data);
       await Promise.all(["settings", "payroll", "leaves"].map((key) =>
         queryClient.invalidateQueries({ queryKey: [key] })));
+      await queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
       onInitialized?.();
     },
   });
@@ -60,6 +64,7 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
             <p><strong>İzin türleri:</strong> {data.missingLeaveTypeCount} eksik tür eklenecek. <strong>Tam gün tatiller:</strong> {data.missingFullDayHolidayCount} eksik tarih eklenecek.</p>
             <p><strong>Bordro ayarı:</strong> {data.payrollSettingsExists ? "Mevcut set korunacak" : "Onaysız taslak oluşturulacak"}.</p>
             <p>Bu işlem mevcut kayıtları değiştirmez. Şablon yılı {data.templateYear} için başlangıç verisidir; hukuki doğrulama veya bordro onayı değildir. Kurulumdan sonra izin türlerini, tatilleri ve bordro kurallarını şirketinizin gerçek durumuyla karşılaştırın.</p>
+            <GuidanceOperationSource process="company" step="initial-setup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={initialize.isPending} />
             <label><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /> Eksik kayıtların oluşturulacağını ve uzman kontrolünün ayrıca gerektiğini anladım.</label>
           </section>}
           {reviewing
