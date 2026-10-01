@@ -13,9 +13,23 @@ public static class EmployeeImportParser
     public static (IReadOnlyList<ImportRow> Satirlar, IReadOnlyList<ImportRowIssueDto> Sorunlar)
         Ayristir(Stream stream)
     {
+        try { return Oku(stream); }
+        catch (Exception exception) when (exception is IOException or ArgumentException
+            or DocumentFormat.OpenXml.Packaging.OpenXmlPackageException or System.Xml.XmlException
+            or FormatException or NotSupportedException)
+        {
+            return ([], [new ImportRowIssueDto(1, "Dosya", "Dosya okunamadı. Geçerli, şifresiz bir .xlsx dosyasını şablona uygun yükleyin.")]);
+        }
+    }
+
+    private static (IReadOnlyList<ImportRow> Satirlar, IReadOnlyList<ImportRowIssueDto> Sorunlar)
+        Oku(Stream stream)
+    {
         var sorunlar = new List<ImportRowIssueDto>();
 
         using var workbook = new XLWorkbook(stream);
+        if (workbook.Worksheets.Count != 1)
+            return ([], [new ImportRowIssueDto(1, "Dosya", "Tek çalışma sayfası kullanın; diğer sayfalardaki personeller aktarılmaz.")]);
         var sheet = workbook.Worksheet(1);
 
         // Eşleme konuma değil BAŞLIĞA bağlanır: kullanıcı sütunları taşıyabilir.
@@ -25,9 +39,12 @@ public static class EmployeeImportParser
             var baslik = cell.GetString().Trim();
             if (baslik.Length > 0)
             {
-                sutunlar[baslik] = cell.Address.ColumnNumber;
+                if (!sutunlar.TryAdd(baslik, cell.Address.ColumnNumber))
+                    sorunlar.Add(new ImportRowIssueDto(1, "Başlık", $"'{baslik}' başlığı birden fazla sütunda var. Tek sütun bırakın."));
             }
         }
+
+        if (sorunlar.Count > 0) return ([], sorunlar);
 
         var eksik = EmployeeImportTemplate.ZorunluSutunlar
             .Where(s => !sutunlar.ContainsKey(s))
@@ -48,11 +65,9 @@ public static class EmployeeImportParser
         }
 
         var satirlar = new List<ImportRow>();
-        var sonSatir = sheet.LastRowUsed()?.RowNumber() ?? 1;
-
-        for (var r = 2; r <= sonSatir; r++)
+        foreach (var row in sheet.RowsUsed(XLCellsUsedOptions.AllContents).Where(row => row.RowNumber() >= 2))
         {
-            var row = sheet.Row(r);
+            var r = row.RowNumber();
             var satir = new ImportRow(
                 r,
                 Deger(row, "Ad"),

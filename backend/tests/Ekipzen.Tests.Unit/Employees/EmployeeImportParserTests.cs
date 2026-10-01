@@ -100,4 +100,26 @@ public class EmployeeImportParserTests
         satirlar[0].Ad.Should().Be("Ayşe");
         satirlar[0].Departman.Should().Be("Yazılım");
     }
+
+    [Fact]
+    public void Ayristir_ExcelOlmayanDosyayiAnlasilirSorunaDonusturur()
+    {
+        using var stream = new MemoryStream("xlsx değil"u8.ToArray());
+        var (rows, issues) = EmployeeImportParser.Ayristir(stream);
+        rows.Should().BeEmpty(); issues.Should().ContainSingle(x => x.Alan == "Dosya");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Ayristir_MukerrerBaslikVeyaBirdenFazlaSayfayiSessizceYorumlamaz(bool duplicateHeader)
+    {
+        using var source = DosyaUret(["Ayşe", "Demir", "Analist", "Yazılım", "01.03.2026"]);
+        using var workbook = new XLWorkbook(source);
+        if (duplicateHeader) workbook.Worksheet(1).Cell(1, 11).Value = "Ad";
+        else workbook.Worksheets.Add("Diğer çalışanlar");
+        using var stream = new MemoryStream(); workbook.SaveAs(stream); stream.Position = 0;
+        var (rows, issues) = EmployeeImportParser.Ayristir(stream);
+        rows.Should().BeEmpty(); issues.Should().ContainSingle();
+    }
 }

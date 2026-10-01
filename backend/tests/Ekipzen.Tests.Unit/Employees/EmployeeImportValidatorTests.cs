@@ -127,4 +127,40 @@ public class EmployeeImportValidatorTests
 
         sonuc.Sorunlar.Should().ContainSingle(s => s.Alan == "Durum");
     }
+
+    [Fact]
+    public void PasifPersonelVeBelirsizDepartman_AyrilisVeYanlisEslemeyiAtlayamaz()
+    {
+        Dogrula(Satir(durum: "passive")).Satirlar.Single().Preview.Durum.Should().Be("invalid");
+        var ambiguous = EmployeeImportValidator.Dogrula([Satir()], new Dictionary<string, int>
+        { [EmployeeImportValidator.Normalize("Yazılım")] = 0 }, new HashSet<string>());
+        ambiguous.Gecerli.Should().BeEmpty();
+        ambiguous.Sorunlar.Single().Mesaj.Should().Contain("birden fazla departman");
+    }
+
+    [Fact]
+    public void SatirSonuclari_GercekExcelNumarasiVeKimliksizRaporUretir()
+    {
+        var result = EmployeeImportValidator.Dogrula([
+            Satir(no: 2, tc: "12345678901", iban: "TR330006100519786457841326"),
+            Satir(no: 4, ad: null), Satir(no: 7, tc: "98765432109")],
+            Departmanlar, new HashSet<string> { "98765432109" });
+        result.Satirlar.Select(x => x.Preview.SatirNo).Should().Equal(2, 4, 7);
+        result.Satirlar.Select(x => x.Preview.Durum).Should().Equal("ready", "invalid", "duplicate");
+        var json = System.Text.Json.JsonSerializer.Serialize(result.Satirlar.Select(x => x.Preview));
+        json.Should().NotContain("12345678901").And.NotContain("TR330006100519786457841326");
+    }
+
+    [Theory]
+    [InlineData("ad")]
+    [InlineData("eposta")]
+    [InlineData("telefon")]
+    public void VeritabaniAlanSinirlari_OnizlemedeYakalanir(string field)
+    {
+        var row = Satir();
+        row = field switch { "ad" => row with { Ad = new string('a', 129) },
+            "eposta" => row with { KisiselEposta = new string('a', 198) + "@b.c" },
+            _ => row with { Telefon = new string('1', 33) } };
+        Dogrula(row).Gecerli.Should().BeEmpty();
+    }
 }

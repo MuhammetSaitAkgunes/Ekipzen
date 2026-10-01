@@ -54,18 +54,26 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
 
     /// <summary>
     /// Geçerli satırları kaydeder; hatalı ve mükerrer satırları atlar.
-    /// Önizlemeyle aynı doğrulamayı kullanır, bu yüzden sonuçlar ayrışamaz.
+    /// Önizleme değişmişse kaydetmez; aynı gönderim tekrarı kayıtlı sonucu döner.
     /// </summary>
     [HttpPost("import")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [RequestSizeLimit(5 * 1024 * 1024)]
     [ProducesResponseType<ImportResultDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<ImportResultDto>> Import(
-        IFormFile file, CancellationToken cancellationToken)
+        IFormFile file, [FromForm] Guid importRequestId, [FromForm] string expectedPreviewToken,
+        CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
-        return Ok(await sender.Send(new ImportEmployeesCommand(stream), cancellationToken));
+        return Ok(await sender.Send(new ImportEmployeesCommand(stream, importRequestId, expectedPreviewToken), cancellationToken));
     }
+
+    [HttpGet("import/results/{requestId:guid}")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<ImportResultDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<ActionResult<ImportResultDto?>> ImportResult(Guid requestId, CancellationToken ct)
+        => Ok(await sender.Send(new GetEmployeeImportResultQuery(requestId), ct));
 
     [HttpGet]
     [Authorize(Policy = Policies.Management)]

@@ -23,6 +23,12 @@ public sealed record ImportRow(
 /// </summary>
 public sealed record ImportRowIssueDto(int SatirNo, string Alan, string Mesaj);
 
+/// <summary>Kimlik ve banka değerleri rapora taşınmaz; gerçek Excel satırı korunur.</summary>
+public sealed record ImportRowPreviewDto(
+    int SatirNo, string AdSoyad, string Unvan, string Departman,
+    DateOnly? IseGirisTarihi, string Durum, string Aciklama,
+    IReadOnlyList<ImportRowIssueDto> Sorunlar, int? EmployeeId = null);
+
 /// <summary>Önizleme raporu: hiçbir şey kaydedilmeden ne olacağını gösterir.</summary>
 public sealed record ImportPreviewDto(
     int ToplamSatir,
@@ -30,10 +36,14 @@ public sealed record ImportPreviewDto(
     int HataliSatir,
     int MukerrerSatir,
     IReadOnlyList<string> BilinmeyenDepartmanlar,
-    IReadOnlyList<ImportRowIssueDto> Sorunlar);
+    IReadOnlyList<ImportRowIssueDto> Sorunlar,
+    IReadOnlyList<ImportRowPreviewDto> Satirlar,
+    string? PreviewToken);
 
 /// <summary>Aktarım sonucu.</summary>
 public sealed record ImportResultDto(
     int OlusturulanSatir,
     int AtlananSatir,
-    IReadOnlyList<ImportRowIssueDto> Sorunlar);
+    IReadOnlyList<ImportRowIssueDto> Sorunlar,
+    IReadOnlyList<ImportRowPreviewDto> Satirlar,
+    Guid ImportRequestId);

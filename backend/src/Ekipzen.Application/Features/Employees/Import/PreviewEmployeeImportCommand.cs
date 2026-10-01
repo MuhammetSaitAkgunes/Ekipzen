@@ -30,9 +30,8 @@ public static class ImportLookups
         var sozluk = new Dictionary<string, int>();
         foreach (var departman in departmanlar)
         {
-            // Aynı normalize ada sahip iki departman varsa ilki kazanır; doğrulayıcı
-            // yine de deterministik davranır.
-            sozluk.TryAdd(EmployeeImportValidator.Normalize(departman.Name), departman.Id);
+            var name = EmployeeImportValidator.Normalize(departman.Name);
+            if (!sozluk.TryAdd(name, departman.Id)) sozluk[name] = 0;
         }
 
         return (sozluk, tcler.ToHashSet());
@@ -45,22 +44,7 @@ public sealed class PreviewEmployeeImportCommandHandler(IApplicationDbContext co
     public async Task<ImportPreviewDto> Handle(
         PreviewEmployeeImportCommand request, CancellationToken cancellationToken)
     {
-        var (satirlar, ayristirmaSorunlari) = EmployeeImportParser.Ayristir(request.Dosya);
-        if (ayristirmaSorunlari.Count > 0)
-        {
-            // Başlık bozuk ya da satır sınırı aşıldı: satır bazlı rapor anlamsız.
-            return new ImportPreviewDto(0, 0, 0, 0, [], ayristirmaSorunlari);
-        }
-
-        var (departmanlar, tcler) = await ImportLookups.YukleAsync(context, cancellationToken);
-        var sonuc = EmployeeImportValidator.Dogrula(satirlar, departmanlar, tcler);
-
-        return new ImportPreviewDto(
-            ToplamSatir: satirlar.Count,
-            GecerliSatir: sonuc.Gecerli.Count,
-            HataliSatir: satirlar.Count - sonuc.Gecerli.Count - sonuc.MukerrerSatir,
-            MukerrerSatir: sonuc.MukerrerSatir,
-            BilinmeyenDepartmanlar: sonuc.BilinmeyenDepartmanlar,
-            Sorunlar: sonuc.Sorunlar);
+        var file = await ImportPreparation.ReadAsync(request.Dosya, cancellationToken);
+        return (await ImportPreparation.PrepareAsync(file, context, cancellationToken)).Preview;
     }
 }

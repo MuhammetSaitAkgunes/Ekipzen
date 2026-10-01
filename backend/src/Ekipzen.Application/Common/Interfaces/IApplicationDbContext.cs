@@ -22,6 +22,7 @@ public interface IApplicationDbContext
     // Organization
     DbSet<Department> Departments { get; }
     DbSet<Employee> Employees { get; }
+    DbSet<EmployeeImportReceipt> EmployeeImportReceipts { get; }
     DbSet<EmployeeProfile> EmployeeProfiles { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
     DbSet<EmployeeOffboardingCase> EmployeeOffboardingCases { get; }

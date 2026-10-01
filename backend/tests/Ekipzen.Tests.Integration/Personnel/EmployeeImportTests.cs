@@ -104,6 +104,7 @@ public sealed class EmployeeImportTests(EkipzenApiFactory factory)
         var oncekiSayi = await PersonelSayisiAsync(admin);
 
         using var ilk = DosyaIcerigi(satir);
+        await AktarimHazirlaAsync(admin, ilk);
         var ilkYanit = await admin.PostAsync("/api/employees/import", ilk);
         ilkYanit.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ilkYanit.Content.ReadFromJsonAsync<ImportResultDto>())!
@@ -112,6 +113,7 @@ public sealed class EmployeeImportTests(EkipzenApiFactory factory)
 
         // Aynı dosya ikinci kez (sık rastlanan kaza): mükerrer atlanmalı.
         using var ikinci = DosyaIcerigi(satir);
+        await AktarimHazirlaAsync(admin, ikinci);
         var ikinciYanit = await admin.PostAsync("/api/employees/import", ikinci);
         var sonuc = (await ikinciYanit.Content.ReadFromJsonAsync<ImportResultDto>())!;
 
@@ -130,6 +132,7 @@ public sealed class EmployeeImportTests(EkipzenApiFactory factory)
         using var content = DosyaIcerigi(
             ["Kerem", "Şahin", "Uzman", "Yazılım", "01.04.2026", "", "", "", "", ""],
             ["", "Eksik", "Uzman", "Yazılım", "01.04.2026", "", "", "", "", ""]);
+        await AktarimHazirlaAsync(admin, content);
 
         var response = await admin.PostAsync("/api/employees/import", content);
 
@@ -150,6 +153,17 @@ public sealed class EmployeeImportTests(EkipzenApiFactory factory)
     }
 
     // --- yardımcılar ---
+
+    private static async Task AktarimHazirlaAsync(HttpClient client, MultipartFormDataContent content)
+    {
+        var bytes = await content.First().ReadAsByteArrayAsync();
+        using var previewContent = DosyaGovdesi(bytes);
+        var response = await client.PostAsync("/api/employees/import/preview", previewContent);
+        response.EnsureSuccessStatusCode();
+        var preview = (await response.Content.ReadFromJsonAsync<ImportPreviewDto>())!;
+        content.Add(new StringContent(Guid.NewGuid().ToString()), "importRequestId");
+        content.Add(new StringContent(preview.PreviewToken!), "expectedPreviewToken");
+    }
 
     private static MultipartFormDataContent DosyaIcerigi(params string[][] satirlar)
     {

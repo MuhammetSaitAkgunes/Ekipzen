@@ -115,6 +115,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<GuidanceLeaveDecisionEvidence> GuidanceLeaveDecisionEvidences => Set<GuidanceLeaveDecisionEvidence>();
     public DbSet<GuidancePublishedPracticeProgress> GuidancePublishedPracticeProgresses => Set<GuidancePublishedPracticeProgress>();
     public DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences => Set<EmployeeCreationEvidence>();
+    public DbSet<EmployeeImportReceipt> EmployeeImportReceipts => Set<EmployeeImportReceipt>();
     public DbSet<CandidateReviewEvidence> CandidateReviewEvidences => Set<CandidateReviewEvidence>();
     public DbSet<GuidanceDecisionProgress> GuidanceDecisionProgresses => Set<GuidanceDecisionProgress>();
 
