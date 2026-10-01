@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -39,9 +40,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderAttendance = () =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <AttendancePage />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("istatistik şeridi özet toplamlarından türetilir", async () => {

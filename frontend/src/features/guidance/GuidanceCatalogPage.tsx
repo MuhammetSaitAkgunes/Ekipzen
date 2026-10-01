@@ -234,7 +234,7 @@ export function GuidanceCatalogPage() {
         </li>)}</ul>
       </details>
       <details><summary>Alt adım ve alıştırma taslakları</summary>
-        <p>İşe girişte altı, işe alımda iki ve izin kararında iki alt adım. Metin, kaynak ve soru birlikte bağımsız incelemeye sunulur; hazırlamak veya kaydetmek yayımlamaz.</p>
+        <p>İşe giriş, işe alım, izin, şirket hazırlığı, personel ve puantaj alt adımları. Metin, kaynak ve soru birlikte bağımsız incelemeye sunulur; hazırlamak veya kaydetmek yayımlamaz.</p>
         <ul>{guidanceStepDrafts.map(draft => <li key={draft.contentKey}><button type="button" className="btn btn-secondary"
           disabled={!editorial.isSuccess || editorial.data.some(item => item.content.contentKey === draft.contentKey)}
           onClick={() => { setCreation({ ...draft, body: structuredClone(draft.body) }); setSelected(null); setMessage(""); }}>

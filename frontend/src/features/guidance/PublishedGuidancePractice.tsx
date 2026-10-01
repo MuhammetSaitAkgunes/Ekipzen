@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { appPath } from "../../paths";
 import { usePublishedPractice, usePublishedStep, useSubmitPublishedPractice } from "./publishedPracticeQueries";
+import { GuidanceStepExplanation } from "./GuidanceStepExplanation";
 
 function PinnedPractice({ id }: { id: number }) {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ function PinnedPractice({ id }: { id: number }) {
   return <section aria-label="Seçilen sürüm alıştırması">
     <p>{shown.title} · Sürüm {shown.contentVersion}</p>
     <Link target="_blank" rel="noopener noreferrer" to={appPath(`/guidance/catalog?version=${id}`)}>Bu sürümün açıklama ve dayanağını aç</Link>
+    <GuidanceStepExplanation id={id} />
     {!query.data.isCurrent && <p role="status">Bu sürüm güncel değil. Yeni deneme kaydedilemez; güncel adımı yeniden yükleyin.</p>}
     <fieldset disabled={submit.isPending || !query.data.isCurrent}>
       <legend>{shown.question}</legend>

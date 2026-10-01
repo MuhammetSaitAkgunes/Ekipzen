@@ -12,6 +12,11 @@ import type { PublishedPractice } from "./publishedPracticeQueries";
 const practice: PublishedPractice = { contentRevisionId: 21, contentKey: "personnel-entry-tab-kimlik", processKey: "personnel-entry",
   stepKey: "tab-kimlik", contentVersion: 1, title: "Kimlik kontrolü", isCurrent: true, question: "İlk sürüm sorusu",
   choices: ["Tahmin", "Doğrulama"], attemptCount: 0, lastSelectedChoice: null, lastCorrect: null, explanation: null };
+const source = { id: 21, contentVersion: 1, isCurrent: true, reviewedOn: "2026-10-01", reviewDueOn: "2026-11-01", body: {
+  prerequisites: "Doğru kişiyi bul", action: "İlk sürümün kaynak kontrolünü yap", why: "Yanlış kişiyi değiştirmemek için", example: "Aynı adlı kişileri karşılaştır",
+  correction: "Doğru kaydı yeniden incele", expertEscalation: "Çelişkide uzmana ilet", provision: "Doğruluk ilkesi", applicability: "Olağan bilgi kontrolü",
+  sourceReference: "https://www.kvkk.gov.tr/Icerik/6606/General-Principles-in-Processing-of-Personal-Data",
+} };
 const stepPath = "/api/guidance/catalog/steps/personnel-entry/tab-kimlik";
 beforeEach(() => {
   localStorage.clear(); localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "T", refreshToken: "R",
@@ -22,7 +27,7 @@ const renderPractice = () => renderPage(<AuthProvider><PublishedGuidancePractice
 
 test("yeni yayın açık alıştırmanın sorusunu ve seçilen yanıtını değiştirmez; eski sürüm çakışmada korunur", async () => {
   let latest = practice;
-  stubApi({ [stepPath]: practice, "/api/guidance/catalog/versions/21/practice": practice });
+  stubApi({ [stepPath]: practice, "/api/guidance/catalog/versions/21/practice": practice, "/api/guidance/catalog/versions/21": source });
   const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
   mock.mockImplementation(async (input, init) => {
     if (String(input) === stepPath) return new Response(JSON.stringify(latest));
@@ -37,6 +42,7 @@ test("yeni yayın açık alıştırmanın sorusunu ve seçilen yanıtını deği
   await userEvent.click(screen.getByRole("button", { name: "Güncel adımı yeniden yükle" }));
   await screen.findByText(/Güncel içerik:.*Sürüm 2/);
   expect(screen.getByText("İlk sürüm sorusu")).toBeInTheDocument();
+  expect(await screen.findByText("İlk sürümün kaynak kontrolünü yap")).toBeInTheDocument();
   expect(screen.getByRole("radio", { name: "Doğrulama" })).toBeChecked();
   await userEvent.click(screen.getByRole("button", { name: "Sürümlü yanıtı kaydet" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("sürümü güncel değil");
@@ -48,7 +54,7 @@ test("yeni yayın açık alıştırmanın sorusunu ve seçilen yanıtını deği
 });
 
 test("ağ hatasında aynı deneme kimliğiyle tekrar gönderilir; açıklama kayıt sonucundan gelir", async () => {
-  stubApi({ [stepPath]: practice, "/api/guidance/catalog/versions/21/practice": practice });
+  stubApi({ [stepPath]: practice, "/api/guidance/catalog/versions/21/practice": practice, "/api/guidance/catalog/versions/21": source });
   const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
   let attempts = 0;
   mock.mockImplementation(async (input, init) => {

@@ -4,6 +4,7 @@ import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
 import { appPath } from "../../paths";
 import { useDepartments } from "../personnel/queries";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 
 type SetupStatus = components["schemas"]["TenantSetupStatusDto"];
 
@@ -45,5 +46,6 @@ export function CompanyPreparationGuide({ companyName }: { companyName: string }
       </li>
     </ol>
     <p className="ez-company-preparation-next">Bu kontrollerden sonra <Link to={appPath("/personnel/new")}>çalışan kartı rehberine geçin</Link>. Buradaki durumlar kişisel öğrenme ilerlemesi veya kurulum onayı değildir.</p>
+    <GuidanceStepLessons process="company" />
   </section>;
 }

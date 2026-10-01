@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
@@ -117,6 +118,7 @@ export function PersonnelPage() {
           )}
         </div>
 
+        <GuidanceStepLessons process="personnel" />
         <PersonnelRecordGuide
           resultCount={employeesQ.data.total ?? items.length}
           singleMatch={employeesQ.data.total === 1 && items.length === 1 && items[0].id != null

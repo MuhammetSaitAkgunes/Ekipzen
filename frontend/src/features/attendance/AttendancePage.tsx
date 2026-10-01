@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useToast } from "../../layout/ToastProvider";
 import { AttendanceEntryModal } from "./AttendanceEntryModal";
 import { downloadCsv, tableToCsvLines } from "../shared/csv";
@@ -91,6 +92,7 @@ export function AttendancePage() {
         <div className="stat-box"><span className="sb-label">Geç Kalma</span><strong className="sb-val text-red">{lateCount} <small>kişi</small></strong></div>
         <div className="stat-box"><span className="sb-label">Devamsızlık</span><strong className="sb-val">{absentDays} <small>gün</small></strong></div>
       </div>
+      <GuidanceStepLessons process="attendance" />
 
       <section className="ez-panel ez-attendance-guide" aria-labelledby="attendance-guide-title">
         <span className="ez-overline">PUANTAJ İŞ AKIŞI</span>

@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -27,9 +28,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderShell = () =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <SettingsPage />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("şirket formu backend verisiyle dolar ve kaydet PUT atar", async () => {
