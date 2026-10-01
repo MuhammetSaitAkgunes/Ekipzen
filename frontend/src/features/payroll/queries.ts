@@ -37,7 +37,7 @@ export const usePayrollPeriod = (id: number | null) =>
 export const useCreatePayrollPeriod = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (command: { year: number; month: number; guidanceContentRevisionId?: number }) =>
+    mutationFn: (command: { year: number; month: number; expectedPreviewToken: string; guidanceContentRevisionId?: number }) =>
       apiFetch<PayrollPeriodDetailDto>("/payroll/periods", {
         method: "POST",
         body: JSON.stringify(command),

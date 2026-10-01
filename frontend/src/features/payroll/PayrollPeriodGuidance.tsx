@@ -1,12 +1,23 @@
 import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
-import { useState } from "react";
-import { ApiError } from "../../api/client";
+import { useRef, useState } from "react";
+import { ApiError, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
   useCreatePayrollPeriod,
   type PayrollPeriodDetailDto,
   type PayrollPeriodListItemDto,
 } from "./queries";
+
+type PeriodCreationPreview = {
+  year: number; month: number; name: string; token: string;
+  settings: { version: number; effectiveFrom: string; sourceReference: string };
+  minimumWageIncomeTaxBaseBefore: number;
+  rows: Array<{ employeeId: number; name: string; employmentPeriodId: number | null; compensationPackageId: number | null;
+    compensationVersion: number | null; sourceReference: string | null; hireDate?: string; terminationDate?: string | null; grossSalary: number; premiumPay: number;
+    roadAllowance: number; mealAllowance: number; benefitPay: number; workedDays: number; overtimeHours: number;
+    previousTaxBase: number; ibanComplete: boolean; timesheetComplete: boolean }>;
+};
+const money = (value: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(value);
 
 export function CreatePeriodModal({ latest, onClose, onCreated }: {
   latest: PayrollPeriodListItemDto | null;
@@ -20,6 +31,10 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
   const [year, setYear] = useState(String(next.getFullYear()));
   const [month, setMonth] = useState(String(next.getMonth() + 1));
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
+  const [preview, setPreview] = useState<PeriodCreationPreview | null>(null);
+  const [previewPending, setPreviewPending] = useState(false);
+  const requestNumber = useRef(0);
+  const invalidatePreview = () => { requestNumber.current++; setPreview(null); setConfirmed(false); setPreviewPending(false); };
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const validDate = Number.isInteger(Number(year)) && Number(year) >= 2000 && Number(year) <= 2100;
@@ -27,16 +42,35 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
   const latestReady = !latest || latest.status === "approved" || latest.status === "closed";
   const canCreate = validDate && laterThanLatest && latestReady;
 
+  const loadPreview = async () => {
+    if (!canCreate || previewPending || createPeriod.isPending) return;
+    const attempt = ++requestNumber.current;
+    setConfirmed(false); setPreview(null); setError(null); setPreviewPending(true);
+    try {
+      const result = await apiFetch<PeriodCreationPreview>("/payroll/periods/creation-preview?year=" + year + "&month=" + month);
+      if (!result?.token || result.year !== Number(year) || result.month !== Number(month)
+        || !Array.isArray(result.rows) || !result.settings?.version
+        || !result.rows.every(row => row && Number.isInteger(row.employeeId) && typeof row.name === "string"
+          && [row.grossSalary, row.premiumPay, row.roadAllowance, row.mealAllowance, row.benefitPay,
+            row.workedDays, row.overtimeHours, row.previousTaxBase].every(Number.isFinite)
+          && typeof row.ibanComplete === "boolean" && typeof row.timesheetComplete === "boolean")) throw new Error("Önizleme yanıtı eksik; tekrar yükleyin.");
+      if (attempt === requestNumber.current) setPreview(result);
+    } catch (cause) {
+      if (attempt === requestNumber.current) setError(cause instanceof Error ? cause.message : "Önizleme yüklenemedi.");
+    } finally { if (attempt === requestNumber.current) setPreviewPending(false); }
+  };
+
   const submit = async () => {
-    if (!canCreate || !confirmed) return;
+    if (!canCreate || !confirmed || !preview || previewPending || createPeriod.isPending) return;
     setError(null);
     try {
-      const period = await createPeriod.mutateAsync({ year: Number(year), month: Number(month), ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
+      const period = await createPeriod.mutateAsync({ year: Number(year), month: Number(month), expectedPreviewToken: preview.token, ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
       showToast((period.name ?? "Yeni") + " bordro dönemi oluşturuldu.", "success");
       if (period.id !== undefined) onCreated(period.id);
       onClose();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Dönem oluşturulamadı.");
+      invalidatePreview();
+      setError(e instanceof ApiError ? e.message : "Dönem oluşturulamadı; kayıt listesini kontrol edip önizlemeyi yeniden yükleyin.");
     }
   };
 
@@ -58,11 +92,11 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
           <div className="form-grid-2">
             <div className="input-group">
               <label className="input-label" htmlFor="pp-year">Yıl</label>
-              <input id="pp-year" type="number" min={2000} max={2100} className="input-control" value={year} onChange={(e) => { setYear(e.target.value); setConfirmed(false); }} />
+              <input id="pp-year" disabled={createPeriod.isPending} type="number" min={2000} max={2100} className="input-control" value={year} onChange={(e) => { setYear(e.target.value); invalidatePreview(); }} />
             </div>
             <div className="input-group">
               <label className="input-label" htmlFor="pp-month">Ay</label>
-              <select id="pp-month" className="input-control" value={month} onChange={(e) => { setMonth(e.target.value); setConfirmed(false); }}>
+              <select id="pp-month" disabled={createPeriod.isPending} className="input-control" value={month} onChange={(e) => { setMonth(e.target.value); invalidatePreview(); }}>
                 {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
               </select>
             </div>
@@ -70,17 +104,33 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
           <div className="ez-payroll-review">
             <h4>Oluşturmadan önce</h4>
             <p><strong>Ne olacak?</strong> Dönem taslak açılır; ay başında geçerli ücret paketi ve onaylı hesap parametreleri başlangıç girdisine alınır. Puantaj tamlığı ayrıca kontrol edilir.</p>
-            <p><strong>Neden kontrol ediyoruz?</strong> Son dönem onaylanmadan veya kapatılmadan yeni dönem açılamaz. Bu ekran kesin satır sayısını veya bordro sonucunu önceden hesaplamaz.</p>
+            <p><strong>Neden kontrol ediyoruz?</strong> Son dönem onaylanmadan veya kapatılmadan yeni dönem açılamaz. Önizleme gerçek başlangıç girdilerini gösterir; kesin ödeme ve satır onayı ayrıca kontrol edilir.</p>
             {latest && <p><strong>Son dönem:</strong> {latest.name} · {latest.status === "approved" ? "Onaylandı" : latest.status === "closed" ? "Kapandı" : latest.status === "control" ? "Kontrol" : "Taslak"}</p>}
             {!latestReady && <p role="alert">Önce son dönemin satırlarını ve dönem onayını tamamlayın.</p>}
             {!laterThanLatest && <p role="alert">Yeni dönem son dönemden sonraki bir ay olmalı.</p>}
             {!validDate && <p role="alert">2000 ile 2100 arasında geçerli bir yıl girin.</p>}
-            <label><input type="checkbox" checked={confirmed} disabled={!canCreate} onChange={(e) => setConfirmed(e.target.checked)} /> Ayı ve son dönem durumunu kontrol ettim.</label>
+            <button className="btn btn-secondary" onClick={loadPreview} disabled={!canCreate || previewPending || createPeriod.isPending}>
+              {previewPending ? "Başlangıç girdileri yükleniyor…" : "Gerçek başlangıç girdilerini önizle"}
+            </button>
+            {preview && <section aria-label="Bordro başlangıç etki önizlemesi">
+              <p><strong>{preview.name}:</strong> {preview.rows.length} personel satırı taslak oluşturulacak.</p>
+              <p><strong>Onaylı parametre sürümü:</strong> #{preview.settings.version} · {preview.settings.effectiveFrom} · {preview.settings.sourceReference}</p>
+              <p><strong>Önceki asgari ücret vergi matrahı:</strong> {money(preview.minimumWageIncomeTaxBaseBefore)}</p>
+              {preview.rows.length === 0 && <p>Bu ay için uygun personel bulunamadı; boş dönem oluşturulacak.</p>}
+              <ul>{preview.rows.map(row => <li key={row.employeeId}>
+                <strong>{row.name}</strong> · {row.compensationPackageId === null ? "Ay başında ücret paketi yok; ilk ücret girdileri sıfır." : "Ücret paketi #" + row.compensationPackageId + " / sürüm " + row.compensationVersion + " · " + row.sourceReference}
+                <p>Brüt: {money(row.grossSalary)} · Prim: {money(row.premiumPay)} · Yol: {money(row.roadAllowance)} · Yemek: {money(row.mealAllowance)} · Diğer: {money(row.benefitPay)}</p>
+                {row.hireDate && <p>İşe giriş: {row.hireDate} · Ayrılış: {row.terminationDate ?? "Kayıt yok"}. Ay içinde giriş/ayrılış varsa başlangıç gün sayısını gerçek çalışma süresine göre düzeltin.</p>}
+                <p>Başlangıç gün sayısı: {row.workedDays} (ayrıca doğrulayın) · Fazla mesai: {row.overtimeHours} saat · Önceki matrah: {money(row.previousTaxBase)}</p>
+                <p>IBAN: {row.ibanComplete ? "Kayıtlı" : "Eksik"} · Puantaj: {row.timesheetComplete ? "Tam" : "Eksik"}. Kanuni sınıflandırmalar ve gün/istisna kabulleri satırda ayrıca doğrulanır.</p>
+              </li>)}</ul>
+            </section>}
+            <label><input type="checkbox" checked={confirmed} disabled={!canCreate || !preview || previewPending || createPeriod.isPending} onChange={(e) => setConfirmed(e.target.checked)} /> Ayı, personel satırlarını, kaynakları ve eksikleri kontrol ettim.</label>
           </div>
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
-          <button className="btn btn-primary" onClick={submit} disabled={!canCreate || !confirmed || createPeriod.isPending}>
+          <button className="btn btn-primary" onClick={submit} disabled={!canCreate || !confirmed || !preview || previewPending || createPeriod.isPending}>
             <i aria-hidden="true" className="fa-solid fa-check" /> Oluştur
           </button>
         </div>

@@ -58,6 +58,14 @@ beforeEach(() => {
       successors: [{ id: 2, name: "Selin Koç", title: "UI Designer", isDirectReport: true }],
     },
     "/api/employees/1/offboarding-draft": draftCase,
+    "/api/employees/1/offboarding/10/completion-preview": { action: "complete", caseId: 10, caseVersion: 1, token: "complete-preview", canApply: true,
+      employeeName: "Personel", terminationDate: "2026-08-15", employmentPeriodId: 1, compensationPackageId: null,
+      totalSettlement: 12000, settlementReference: "MM-2026-18", teamTransfers: [], pendingLeaveRequestCount: 1,
+      accessOperations: [], blockingReasons: [] },
+    "/api/employees/2/offboarding/20/reversal-preview": { action: "reverse", caseId: 20, caseVersion: 2, token: "reverse-preview", canApply: true,
+      employeeName: "Personel", terminationDate: "2026-08-15", employmentPeriodId: 1, compensationPackageId: null,
+      totalSettlement: 12000, settlementReference: "MM-2026-18", teamTransfers: [], pendingLeaveRequestCount: 1,
+      accessOperations: [], blockingReasons: [] },
     "/api/employees/1/offboarding/10/complete": { ...draftCase, status: "completed", version: 2 },
     "/api/employees/2/offboarding-context": {
       employeeId: 2, employeeName: "Selin Koç", directReportCount: 0, pendingLeaveRequestCount: 0,
@@ -129,10 +137,10 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
   await userEvent.clear(screen.getByLabelText("İzin ödemesi (₺)"));
   await userEvent.type(screen.getByLabelText("İzin ödemesi (₺)"), "12000");
   await userEvent.type(screen.getByLabelText("Uzman/harici hesap referansı"), "MM-2026-18");
-  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı gözden geçir" }));
-  expect(screen.getByRole("region", { name: "Tamamlamadan önce kontrol edin" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Taslağı kaydet ve ayrılış etkisini incele" }));
+  expect(await screen.findByRole("region", { name: "Tamamlamadan önce kontrol edin" })).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
-    String(url) === "/api/employees/1/offboarding-draft" && init?.method === "PUT")).toBe(false);
+    String(url) === "/api/employees/1/offboarding-draft" && init?.method === "PUT")).toBe(true);
   expect(screen.getByRole("button", { name: "İşten çıkışı onayla ve tamamla" })).toBeDisabled();
   await userEvent.click(screen.getByRole("checkbox", { name: /Vaka bilgilerini, uzman hesap referansını/ }));
   await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı onayla ve tamamla" }));
@@ -156,7 +164,7 @@ test("işten çıkış taslağını kaydedip sürümüyle tamamlar", async () =>
 
     const finished = vi.mocked(fetch).mock.calls.find(([url, init]) =>
       String(url) === "/api/employees/1/offboarding/10/complete" && init?.method === "POST");
-    expect(JSON.parse(String(finished?.[1]?.body))).toEqual({ expectedVersion: 1 });
+    expect(JSON.parse(String(finished?.[1]?.body))).toEqual({ expectedVersion: 1, expectedPreviewToken: "complete-preview" });
   });
 });
 
@@ -177,7 +185,7 @@ test("geçersiz finansal tutarı kaydetmeden kullanıcıya düzeltme ister", asy
   await userEvent.clear(screen.getByLabelText("İzin ödemesi (₺)"));
   await userEvent.type(screen.getByLabelText("İzin ödemesi (₺)"), "-1");
 
-  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı gözden geçir" }));
+  await userEvent.click(screen.getByRole("button", { name: "Taslağı kaydet ve ayrılış etkisini incele" }));
   expect(screen.getByRole("alert")).toHaveTextContent("İzin ödemesi boş, geçersiz veya negatif olamaz");
   expect(screen.queryByRole("region", { name: "Tamamlamadan önce kontrol edin" })).not.toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
@@ -195,9 +203,11 @@ test("tamamlanmış dosyayı gerekçeli ve sürümlü geri alır", async () => {
 
   await userEvent.type(screen.getByLabelText("Geri alma gerekçesi"), "Yanlış personel seçildi");
   await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı geri almayı gözden geçir" }));
-  expect(screen.getByRole("region", { name: "Geri almadan önce kontrol edin" })).toBeInTheDocument();
+  expect(await screen.findByRole("region", { name: "Geri almadan önce kontrol edin" })).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
     String(url) === "/api/employees/2/offboarding/20/reverse" && init?.method === "POST")).toBe(false);
+  expect(screen.getByRole("button", { name: "Geri almayı onayla" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("checkbox", { name: "Geri alma etkilerini kontrol ettim." }));
   await userEvent.click(screen.getByRole("button", { name: "Geri almayı onayla" }));
 
   await waitFor(() => {
@@ -206,6 +216,7 @@ test("tamamlanmış dosyayı gerekçeli ve sürümlü geri alır", async () => {
     expect(JSON.parse(String(reversed?.[1]?.body))).toEqual({
       expectedVersion: 2,
       reason: "Yanlış personel seçildi",
+      expectedPreviewToken: "reverse-preview",
     });
   });
 });
@@ -227,4 +238,24 @@ test("arama filtresi query paramına yansır", async () => {
   await waitFor(() => {
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("search=ahmet"))).toBe(true);
   }, { timeout: 2000 });
+});
+
+test("geri alma önizlemesi engel döndürürse teyit ve parasal geçmişi değiştiren gönderim açılmaz", async () => {
+  setRole("hr-admin"); const baseFetch = fetch;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith("/reversal-preview")) return new Response(JSON.stringify({
+      action: "reverse", caseId: 20, caseVersion: 2, token: "blocked", canApply: false,
+      employeeName: "Selin Koç", terminationDate: "2026-08-15", employmentPeriodId: 1, compensationPackageId: null,
+      totalSettlement: 12000, settlementReference: "MM", teamTransfers: [], pendingLeaveRequestCount: 0,
+      accessOperations: [], blockingReasons: ["Parasal düzeltme geçmişi var; uzman incelemesi gerekir."] }), { status: 200 });
+    return baseFetch(input, init);
+  }));
+  renderPersonnel();
+  await userEvent.click(await screen.findByRole("button", { name: "Selin Koç için işten çıkış dosyasını aç" }));
+  await userEvent.type(await screen.findByLabelText("Geri alma gerekçesi"), "Hata doğrulandı");
+  await userEvent.click(screen.getByRole("button", { name: "İşten çıkışı geri almayı gözden geçir" }));
+  expect(await screen.findByText("Parasal düzeltme geçmişi var; uzman incelemesi gerekir.")).toBeInTheDocument();
+  expect(screen.getByRole("checkbox", { name: "Geri alma etkilerini kontrol ettim." })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Geri almayı onayla" })).toBeDisabled();
+  expect(vi.mocked(fetch).mock.calls.some(([url, init]) => String(url).endsWith("/reverse") && init?.method === "POST")).toBe(false);
 });

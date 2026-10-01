@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError } from "../../api/client";
+import { ApiError, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -157,6 +157,8 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "tab-kimlik");
   const selectedGuideStep = useRef(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const creationRequestId = useRef(crypto.randomUUID());
+  const [recoveringCreation, setRecoveringCreation] = useState(false);
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compensation, setCompensation] = useState<CompensationForm>(emptyCompensation);
@@ -214,7 +216,24 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     ? "Kayıtlı özlük bilgilerini görüntüleyin ve güncelleyin."
     : "Gerekli alanları tamamlayarak özlük kaydını oluşturun.";
 
+  const finishSave = (saved: EmployeeDetailDto) => {
+    if (!isEdit && onCreated && typeof saved.id === "number" && saved.id > 0) { onCreated(saved.id); return; }
+    onClose();
+  };
+  const recoverCreation = async () => {
+    if (isEdit || save.isPending || recoveringCreation) return;
+    setRecoveringCreation(true);
+    try {
+      const saved = await apiFetch<EmployeeDetailDto | null>("/employees/creation-results/" + creationRequestId.current);
+      if (saved?.id) {
+        showToast("Bu gönderimle personel kaydedilmiş; mevcut kaydı açıp kontrol edin.", "success");
+        finishSave(saved);
+      } else setError("Bu gönderim için kayıt bulunamadı. Aynı formu yeniden gönderebilirsiniz; sunucu aynı gönderimi iki kez kaydetmez.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Önceki kayıt sonucu doğrulanamadı."); }
+    finally { setRecoveringCreation(false); }
+  };
   const handleSave = async () => {
+    if (save.isPending || recoveringCreation) return;
     setError(null);
     if (!isEdit && (!form.contractType || !form.employmentType)) {
       setActiveTab("tab-is");
@@ -224,7 +243,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
       return;
     }
     try {
-      const model = modelFrom(form, detailQ.data);
+      const model = { ...modelFrom(form, detailQ.data), ...(!isEdit ? { creationRequestId: creationRequestId.current } : {}) };
       const saved = await save.mutateAsync({ id: employeeId,
         model: !isEdit && guidanceVersion !== null ? { ...model, guidanceContentRevisionId: guidanceVersion } : model });
       showToast(isEdit ? "Personel kaydı güncellendi." : "Personel kaydı başarıyla oluşturuldu.", "success");
@@ -233,11 +252,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
           onError: () => showToast("Rehber konumu sıfırlanamadı.", "error"),
         });
       }
-      if (!isEdit && onCreated && typeof saved.id === "number" && saved.id > 0) {
-        onCreated(saved.id);
-        return;
-      }
-      onClose();
+      finishSave(saved);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Beklenmeyen bir hata oluştu.");
     }
@@ -343,7 +358,11 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
         <div>
           <h2>{title}</h2>
           <p>{description}</p>
-          {error && <p className="form-error" role="alert">{error}</p>}
+          {error && <><p className="form-error" role="alert">{error}</p>
+              {!isEdit && <button type="button" className="btn btn-secondary" onClick={recoverCreation} disabled={save.isPending || recoveringCreation}>
+                {recoveringCreation ? "Kayıt sonucu kontrol ediliyor…" : "Önceki kayıt sonucunu kontrol et"}
+              </button>}
+            </>}
         </div>
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={onClose}>{readOnly ? "Listeye dön" : "Vazgeç"}</button>

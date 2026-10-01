@@ -710,14 +710,15 @@ export const useGenerateOffboardingCalculationDraft = () => {
 export const useCompleteOffboarding = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, caseId, expectedVersion, guidanceContentRevisionId }: {
+    mutationFn: ({ employeeId, caseId, expectedVersion, expectedPreviewToken, guidanceContentRevisionId }: {
       employeeId: number;
       caseId: number;
       expectedVersion: number;
+      expectedPreviewToken: string;
       guidanceContentRevisionId?: number;
     }) => apiFetch<EmployeeOffboardingCaseDto>(
       `/employees/${employeeId}/offboarding/${caseId}/complete`,
-      { method: "POST", body: JSON.stringify({ expectedVersion, guidanceContentRevisionId }) },
+      { method: "POST", body: JSON.stringify({ expectedVersion, expectedPreviewToken, guidanceContentRevisionId }) },
     ),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),
@@ -730,15 +731,16 @@ export const useCompleteOffboarding = () => {
 export const useReverseOffboarding = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, caseId, expectedVersion, reason, guidanceContentRevisionId }: {
+    mutationFn: ({ employeeId, caseId, expectedVersion, expectedPreviewToken, reason, guidanceContentRevisionId }: {
       employeeId: number;
       caseId: number;
       expectedVersion: number;
+      expectedPreviewToken: string;
       guidanceContentRevisionId?: number;
       reason: string;
     }) => apiFetch<EmployeeOffboardingCaseDto>(
       `/employees/${employeeId}/offboarding/${caseId}/reverse`,
-      { method: "POST", body: JSON.stringify({ expectedVersion, reason, guidanceContentRevisionId }) },
+      { method: "POST", body: JSON.stringify({ expectedVersion, expectedPreviewToken, reason, guidanceContentRevisionId }) },
     ),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),

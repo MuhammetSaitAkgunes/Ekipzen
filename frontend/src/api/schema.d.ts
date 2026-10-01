@@ -2040,6 +2040,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/creation-results/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeDetailDto"];
+                        "application/json": components["schemas"]["EmployeeDetailDto"];
+                        "text/json": components["schemas"]["EmployeeDetailDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{id}/employment-foundation": {
         parameters: {
             query?: never;
@@ -3248,6 +3287,86 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/offboarding/{caseId}/completion-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingImpactPreviewDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingImpactPreviewDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingImpactPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/employees/{id}/offboarding/{caseId}/reversal-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EmployeeOffboardingImpactPreviewDto"];
+                        "application/json": components["schemas"]["EmployeeOffboardingImpactPreviewDto"];
+                        "text/json": components["schemas"]["EmployeeOffboardingImpactPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5742,6 +5861,46 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/periods/creation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    year?: number;
+                    month?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PayrollPeriodCreationPreviewDto"];
+                        "application/json": components["schemas"]["PayrollPeriodCreationPreviewDto"];
+                        "text/json": components["schemas"]["PayrollPeriodCreationPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9428,6 +9587,7 @@ export interface components {
             month?: number;
             /** Format: int32 */
             guidanceContentRevisionId?: number | null;
+            expectedPreviewToken?: string | null;
             readonly guidanceOperationKey?: string | null;
         };
         CreatePositionCommand: {
@@ -9696,6 +9856,32 @@ export interface components {
             effectiveSettlementRevision?: components["schemas"]["OffboardingSettlementRevisionDto"];
             hasSettlementRevisions?: boolean;
         };
+        EmployeeOffboardingImpactPreviewDto: {
+            action?: string | null;
+            /** Format: int32 */
+            caseId?: number;
+            /** Format: int32 */
+            caseVersion?: number;
+            employeeName?: string | null;
+            /** Format: date */
+            terminationDate?: string;
+            /** Format: int32 */
+            employmentPeriodId?: number | null;
+            /** Format: int32 */
+            compensationPackageId?: number | null;
+            /** Format: date */
+            nextCompensationEndDate?: string | null;
+            /** Format: double */
+            totalSettlement?: number;
+            settlementReference?: string | null;
+            teamTransfers?: components["schemas"]["OffboardingTeamImpactDto"][] | null;
+            /** Format: int32 */
+            pendingLeaveRequestCount?: number;
+            accessOperations?: components["schemas"]["OffboardingAccessImpactDto"][] | null;
+            blockingReasons?: string[] | null;
+            token?: string | null;
+            readonly canApply?: boolean;
+        };
         EmployeeProfileDto: {
             /** Format: date */
             birthDate?: string | null;
@@ -9771,6 +9957,8 @@ export interface components {
             profile?: components["schemas"]["EmployeeProfileUpsertModel"];
             /** Format: int32 */
             guidanceContentRevisionId?: number | null;
+            /** Format: uuid */
+            creationRequestId?: string | null;
         };
         EmployeeVoiceDto: {
             /** Format: int32 */
@@ -10247,6 +10435,12 @@ export interface components {
             leaveRequestEmail?: boolean;
             weeklyReportEmail?: boolean;
         };
+        OffboardingAccessImpactDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            name?: string | null;
+            operation?: string | null;
+        };
         OffboardingExternalActionDto: {
             /** Format: int32 */
             id?: number;
@@ -10345,11 +10539,23 @@ export interface components {
             settlementReference?: string | null;
             settlementNotes?: string | null;
         };
+        OffboardingTeamImpactDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            name?: string | null;
+            /** Format: int32 */
+            previousManagerId?: number | null;
+            previousManagerName?: string | null;
+            /** Format: int32 */
+            nextManagerId?: number | null;
+            nextManagerName?: string | null;
+        };
         OffboardingVersionBody: {
             /** Format: int32 */
             expectedVersion?: number;
             /** Format: int32 */
             guidanceContentRevisionId?: number | null;
+            expectedPreviewToken?: string | null;
         };
         OpenOffboardingSettlementRevisionBody: {
             /** Format: int32 */
@@ -10430,6 +10636,57 @@ export interface components {
         PayrollDisabilityReliefType: "unspecified" | "none" | "firstDegree" | "secondDegree" | "thirdDegree";
         /** @enum {string} */
         PayrollMealTreatment: "unspecified" | "cashExemptWhereNoMealProvided" | "fullyTaxable";
+        PayrollPeriodCreationPreviewDto: {
+            /** Format: int32 */
+            year?: number;
+            /** Format: int32 */
+            month?: number;
+            name?: string | null;
+            settings?: components["schemas"]["PayrollSettingsDto"];
+            /** Format: double */
+            minimumWageIncomeTaxBaseBefore?: number;
+            rows?: components["schemas"]["PayrollPeriodCreationRowDto"][] | null;
+            token?: string | null;
+        };
+        PayrollPeriodCreationRowDto: {
+            /** Format: int32 */
+            employeeId?: number;
+            name?: string | null;
+            /** Format: int32 */
+            employmentPeriodId?: number | null;
+            /** Format: int32 */
+            compensationPackageId?: number | null;
+            /** Format: int32 */
+            compensationVersion?: number | null;
+            sourceReference?: string | null;
+            /** Format: date */
+            hireDate?: string;
+            /** Format: date */
+            terminationDate?: string | null;
+            /** Format: date */
+            compensationEffectiveFrom?: string | null;
+            /** Format: date */
+            compensationEffectiveTo?: string | null;
+            employeeStatus?: string | null;
+            /** Format: double */
+            grossSalary?: number;
+            /** Format: double */
+            premiumPay?: number;
+            /** Format: double */
+            roadAllowance?: number;
+            /** Format: double */
+            mealAllowance?: number;
+            /** Format: double */
+            benefitPay?: number;
+            /** Format: int32 */
+            workedDays?: number;
+            /** Format: int32 */
+            overtimeHours?: number;
+            /** Format: double */
+            previousTaxBase?: number;
+            ibanComplete?: boolean;
+            timesheetComplete?: boolean;
+        };
         PayrollPeriodDetailDto: {
             /** Format: int32 */
             id?: number;
@@ -10972,6 +11229,7 @@ export interface components {
             reason?: string | null;
             /** Format: int32 */
             guidanceContentRevisionId?: number | null;
+            expectedPreviewToken?: string | null;
         };
         ReviseEvaluationBody: {
             /** Format: int32 */

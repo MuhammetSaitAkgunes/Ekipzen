@@ -228,19 +228,23 @@ test("aynı satırın iki düzeltmesi ayrı görünür; kurulum kanıtında ger�
 });
 
 test("bordro açılışında kaynak değişimi teyidi sıfırlar; 409 tarih ve seçimi korur", async () => {
-  stubApi(routes("payroll", "period-create")); const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
+  stubApi({ ...routes("payroll", "period-create"), "/api/payroll/periods/creation-preview": {
+    year: 2026, month: 10, name: "Ekim", token: "period-token", rows: [],
+    settings: { version: 1 }, minimumWageIncomeTaxBaseBefore: 0 } }); const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
   mock.mockImplementation(async (input, init) => String(input) === "/api/payroll/periods" && init?.method === "POST"
     ? Response.json({ title: "Rehber sürümü değişti" }, { status: 409 }) : original(input, init));
   const onCreated = vi.fn(); render(<CreatePeriodModal latest={null} onClose={() => {}} onCreated={onCreated} />);
   await userEvent.clear(screen.getByLabelText("Yıl")); await userEvent.type(screen.getByLabelText("Yıl"), "2026");
   await userEvent.selectOptions(screen.getByLabelText("Ay"), "10");
-  const ack = screen.getByRole("checkbox", { name: "Ayı ve son dönem durumunu kontrol ettim." });
+  await userEvent.click(screen.getByRole("button", { name: "Gerçek başlangıç girdilerini önizle" }));
+  await screen.findByText(/0 personel satırı taslak/);
+  const ack = screen.getByRole("checkbox", { name: "Ayı, personel satırlarını, kaynakları ve eksikleri kontrol ettim." });
   await userEvent.click(ack); await chooseSource(); expect(ack).not.toBeChecked();
   expect(mock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
   await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Oluştur" }));
   await screen.findByText("Rehber sürümü değişti");
   const request = mock.mock.calls.find(([url, init]) => String(url) === "/api/payroll/periods" && init?.method === "POST")!;
-  expect(JSON.parse(String(request[1]?.body))).toEqual({ year: 2026, month: 10, guidanceContentRevisionId: 22 });
+  expect(JSON.parse(String(request[1]?.body))).toEqual({ year: 2026, month: 10, expectedPreviewToken: "period-token", guidanceContentRevisionId: 22 });
   expect(screen.getByLabelText("Yıl")).toHaveValue(2026); expect(screen.getByLabelText("Ay")).toHaveValue("10");
   expect(onCreated).not.toHaveBeenCalled(); expect(screen.getByText(/rehber sürümü · seçildi/)).toBeInTheDocument();
 });

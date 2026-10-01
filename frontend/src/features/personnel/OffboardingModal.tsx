@@ -1,8 +1,9 @@
+import { OffboardingImpactDetails, type EmployeeOffboardingImpactPreview } from "./OffboardingImpactPreview";
 import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
-import { ApiError } from "../../api/client";
+import { ApiError, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
   useCompleteOffboarding,
@@ -53,6 +54,7 @@ export function OffboardingModal({ employeeId, onClose }: {
 }) {
   const { showToast } = useToast();
   const actionInFlight = useRef(false);
+  const reviewedCase = useRef<{ id: number; version: number; status: string } | null>(null);
   const contextQ = useEmployeeOffboardingContext(employeeId);
   const rulesQ = useTerminationCalculationRules();
   const saveDraft = useSaveOffboardingDraft();
@@ -79,6 +81,10 @@ export function OffboardingModal({ employeeId, onClose }: {
   const [error, setError] = useState<string | null>(null);
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [reverseGuidanceVersion, setReverseGuidanceVersion] = useState<number | null>(null);
+  const [completionImpact, setCompletionImpact] = useState<EmployeeOffboardingImpactPreview | null>(null);
+  const [reverseImpact, setReverseImpact] = useState<EmployeeOffboardingImpactPreview | null>(null);
+  const [previewPending, setPreviewPending] = useState(false);
+  const [reverseAcknowledged, setReverseAcknowledged] = useState(false);
   const [completionReview, setCompletionReview] = useState(false);
   const [completionAcknowledged, setCompletionAcknowledged] = useState(false);
   const [reverseReview, setReverseReview] = useState(false);
@@ -98,7 +104,7 @@ export function OffboardingModal({ employeeId, onClose }: {
     ?.filter((rule) => rule.status === "approved" && rule.effectiveFrom <= terminationDate)
     .sort((left, right) => right.effectiveFrom.localeCompare(left.effectiveFrom))[0];
   const isBusy = saveDraft.isPending || generateCalculation.isPending
-    || complete.isPending || reverse.isPending;
+    || complete.isPending || reverse.isPending || previewPending;
 
   useEffect(() => {
     if (currentCase?.status !== "draft") return;
@@ -117,9 +123,11 @@ export function OffboardingModal({ employeeId, onClose }: {
   }, [currentCase]);
 
   useEffect(() => {
-    setCompletionReview(false);
-    setCompletionAcknowledged(false);
-    setReverseReview(false);
+    const pinned = reviewedCase.current;
+    if (pinned && (pinned.id !== currentCase?.id || pinned.version !== currentCase?.version || pinned.status !== currentCase?.status)) {
+      setCompletionReview(false); setCompletionAcknowledged(false); setCompletionImpact(null);
+      setReverseReview(false); setReverseAcknowledged(false); setReverseImpact(null); reviewedCase.current = null;
+    }
   }, [currentCase?.id, currentCase?.version, currentCase?.status]);
 
   const validateDraft = (): string | null => {
@@ -161,69 +169,57 @@ export function OffboardingModal({ employeeId, onClose }: {
     settlementNotes: settlementNotes.trim() || null,
   });
 
-  const prepareCompletion = () => {
-    setError(null);
+  const readImpact = async (item: EmployeeOffboardingCaseDto, action: "complete" | "reverse") => {
+    if (item.id == null || item.version == null) throw new Error("Dosya kimliği ve sürümü doğrulanamadı.");
+    const result = await apiFetch<EmployeeOffboardingImpactPreview>(
+      "/employees/" + employeeId + "/offboarding/" + item.id + (action === "complete" ? "/completion-preview" : "/reversal-preview"));
+    if (!result?.token || result.action !== action || result.caseId !== item.id || result.caseVersion !== item.version
+      || !Array.isArray(result.teamTransfers) || !Array.isArray(result.accessOperations)
+      || !Array.isArray(result.blockingReasons) || typeof result.canApply !== "boolean"
+      || result.canApply !== (result.blockingReasons.length === 0)) throw new Error("Etki önizlemesi doğrulanamadı; güncel dosyayı yeniden yükleyin.");
+    return result;
+  };
+  const prepareCompletion = async () => {
+    if (isBusy || actionInFlight.current) return;
+    setError(null); setCompletionAcknowledged(false); setCompletionImpact(null);
     const validationError = validateDraft();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-    setCompletionAcknowledged(false);
-    setCompletionReview(true);
+    if (validationError) { setError(validationError); return; }
+    actionInFlight.current = true; setPreviewPending(true);
+    let saved = false;
+    try {
+      const item = calculationLocked && currentCase?.status === "draft" ? currentCase
+        : await saveDraft.mutateAsync({ employeeId, body: draftBody() });
+      saved = true;
+      await contextQ.refetch();
+      const preview = await readImpact(item, "complete");
+      reviewedCase.current = { id: preview.caseId, version: preview.caseVersion, status: "draft" };
+      setCompletionImpact(preview); setCompletionReview(true);
+    } catch (cause) {
+      setError((saved ? "Taslak kayıtlı; personel pasife alınmadı. " : "") + (cause instanceof Error ? cause.message : "Önizleme yüklenemedi."));
+    } finally { actionInFlight.current = false; setPreviewPending(false); }
   };
 
   const save = async (finish: boolean) => {
-    if (isBusy || actionInFlight.current || (finish && (!completionReview || !completionAcknowledged))) return;
+    if (isBusy || actionInFlight.current || (finish && (!completionReview || !completionAcknowledged || !completionImpact?.canApply))) return;
     setError(null);
     const validationError = validateDraft();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
+    if (validationError) { setError(validationError); return; }
     actionInFlight.current = true;
-    let draftPersisted = false;
     try {
-      if (finish && calculationLocked && currentCase?.status === "draft") {
-        if (currentCase.id == null || currentCase.version == null) {
-          throw new Error("Hesap taslağı kimlik veya sürüm bilgisi döndürmedi.");
-        }
-        await complete.mutateAsync({
-          employeeId,
-          caseId: currentCase.id,
-          expectedVersion: currentCase.version,
-          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
-        });
-        showToast("İşten çıkış dosyası tamamlandı; erişim ve rol işleri güvenli kuyruğa alındı.", "success");
-        onClose();
-        return;
-      }
-
-      const saved = await saveDraft.mutateAsync({ employeeId, body: draftBody() });
-      draftPersisted = true;
-      if (finish) {
-        if (saved.id == null || saved.version == null) {
-          throw new Error("İşten çıkış taslağı kimlik veya sürüm bilgisi döndürmedi.");
-        }
-        await complete.mutateAsync({
-          employeeId,
-          caseId: saved.id,
-          expectedVersion: saved.version,
-          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }),
-        });
+      if (finish && completionImpact) {
+        await complete.mutateAsync({ employeeId, caseId: completionImpact.caseId,
+          expectedVersion: completionImpact.caseVersion, expectedPreviewToken: completionImpact.token,
+          ...(guidanceVersion === null ? {} : { guidanceContentRevisionId: guidanceVersion }) });
         showToast("İşten çıkış dosyası tamamlandı; erişim ve rol işleri güvenli kuyruğa alındı.", "success");
       } else {
+        await saveDraft.mutateAsync({ employeeId, body: draftBody() });
         showToast("İşten çıkış taslağı kaydedildi; personel durumu değişmedi.", "success");
       }
       onClose();
     } catch (cause) {
-      const message = cause instanceof ApiError ? cause.message : "İşten çıkış işlemi tamamlanamadı.";
-      setError(draftPersisted
-        ? "Taslak kaydedildi, ancak sonraki adım tamamlanamadı: " + message + " Dosyanın güncel durumunu kontrol edin."
-        : message);
-    } finally {
-      actionInFlight.current = false;
-    }
+      setCompletionAcknowledged(false); setCompletionReview(false); setCompletionImpact(null);
+      setError(cause instanceof Error ? cause.message : "İşten çıkış işlemi tamamlanamadı; güncel dosyayı kontrol edin.");
+    } finally { actionInFlight.current = false; }
   };
 
   const calculateDraft = async () => {
@@ -267,17 +263,23 @@ export function OffboardingModal({ employeeId, onClose }: {
     }
   };
 
-  const prepareReverse = () => {
-    setError(null);
+  const prepareReverse = async () => {
+    if (!completedCase || isBusy || actionInFlight.current) return;
+    setError(null); setReverseAcknowledged(false); setReverseImpact(null);
     if (!reversalReason.trim() || reversalReason.trim().length > 1000) {
-      setError("Geri alma gerekçesini doğrulayın (1–1000 karakter).");
-      return;
+      setError("Geri alma gerekçesini doğrulayın (1–1000 karakter)."); return;
     }
-    setReverseReview(true);
+    actionInFlight.current = true; setPreviewPending(true);
+    try {
+      const preview = await readImpact(completedCase, "reverse");
+      reviewedCase.current = { id: preview.caseId, version: preview.caseVersion, status: "completed" };
+      setReverseImpact(preview); setReverseReview(true);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Önizleme yüklenemedi."); }
+    finally { actionInFlight.current = false; setPreviewPending(false); }
   };
 
   const reverseCompleted = async () => {
-    if (!completedCase || !reverseReview || isBusy || actionInFlight.current) return;
+    if (!completedCase || !reverseReview || !reverseAcknowledged || !reverseImpact?.canApply || isBusy || actionInFlight.current) return;
     setError(null);
     if (!reversalReason.trim() || reversalReason.trim().length > 1000) {
       setError("Geri alma gerekçesini doğrulayın (1–1000 karakter).");
@@ -292,13 +294,15 @@ export function OffboardingModal({ employeeId, onClose }: {
       await reverse.mutateAsync({
         employeeId,
         caseId: completedCase.id,
-        expectedVersion: completedCase.version,
+        expectedVersion: reverseImpact.caseVersion,
+        expectedPreviewToken: reverseImpact.token,
         reason: reversalReason.trim(),
         ...(reverseGuidanceVersion === null ? {} : { guidanceContentRevisionId: reverseGuidanceVersion }),
       });
       showToast("İşten çıkış kontrollü biçimde geri alındı; erişim işlemlerinin durumunu kontrol edin.", "success");
       onClose();
     } catch (cause) {
+      setReverseAcknowledged(false); setReverseReview(false); setReverseImpact(null);
       setError(cause instanceof ApiError ? cause.message : "İşten çıkış geri alınamadı. Dosyanın güncel durumunu kontrol edin.");
     } finally {
       actionInFlight.current = false;
@@ -401,9 +405,11 @@ export function OffboardingModal({ employeeId, onClose }: {
               </div>}
               {!context.hasSettlementRevisions && reverseReview && <section className="ez-offboarding-review" role="region" aria-label="Geri almadan önce kontrol edin">
                 <h4>Geri almadan önce kontrol edin</h4>
-                <GuidanceOperationSource process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={setReverseGuidanceVersion} disabled={isBusy} />
+                <GuidanceOperationSource process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={(id) => { setReverseGuidanceVersion(id); setReverseAcknowledged(false); }} disabled={isBusy} />
                 <p><strong>Personel:</strong> {context.employeeName} · <strong>Dosya:</strong> #{completedCase.id} · <strong>Gerekçe:</strong> {reversalReason.trim()}</p>
                 <p>Sunucu, personel durumunu ve kapanan istihdam/ücret dönemini geri açmayı, değişmeyen ekip bağlarını geri kurmayı ve erişim işlemlerini kuyruğa almayı dener. Arada değişmiş kayıt varsa güvenli geri almayı reddeder.</p>
+                {reverseImpact && <OffboardingImpactDetails preview={reverseImpact} />}
+                <label className="checkbox-line"><input type="checkbox" checked={reverseAcknowledged} disabled={!reverseImpact?.canApply || isBusy} onChange={event => setReverseAcknowledged(event.target.checked)} /> Geri alma etkilerini kontrol ettim.</label>
                 <p>Uygulama dışındaki bildirimler ve yapılmış ödemeler otomatik geri alınmaz; bunları ilgili uzmanla ayrıca değerlendirin.</p>
               </section>}
             </>
@@ -554,7 +560,9 @@ export function OffboardingModal({ employeeId, onClose }: {
                 <p><strong>Hesap kaynağı:</strong> {calculationLocked ? "Onaylı kural sürümlü taslak" : "Harici uzman girişi"} · <strong>Referans:</strong> {settlementReference.trim()}</p>
                 <p><strong>Kalan izin:</strong> {unusedLeaveDays} gün · <strong>İzin ödemesi:</strong> {money.format(Number(unusedLeavePayment))} · <strong>Kıdem:</strong> {money.format(Number(severancePayment))} · <strong>İhbar:</strong> {money.format(Number(noticePayment))}</p>
                 <p>Tamamlama personeli pasife alır, istihdam dönemini kapatır ve erişim/rol işlerini kuyruğa alır. Taslak ve tamamlanmış kayıt aynı şey değildir; dış ödeme veya bildirimin tamamlandığı sonucunu çıkarmayın.</p>
-                <label className="checkbox-line"><input type="checkbox" checked={completionAcknowledged} onChange={(event) => setCompletionAcknowledged(event.target.checked)} /> Vaka bilgilerini, uzman hesap referansını ve dış adımları ayrıca kontrol ettiğimi onaylıyorum.</label>
+                {completionImpact && <OffboardingImpactDetails preview={completionImpact} />}
+                <p>Taslak kaydedildi; personel henüz pasife alınmadı. Son onay yalnız bu etki önizlemesini uygular.</p>
+                <label className="checkbox-line"><input type="checkbox" disabled={!completionImpact?.canApply || isBusy} checked={completionAcknowledged} onChange={(event) => setCompletionAcknowledged(event.target.checked)} /> Vaka bilgilerini, uzman hesap referansını ve dış adımları ayrıca kontrol ettiğimi onaylıyorum.</label>
               </section>}
 
               {requiresSuccessor && !hasEligibleSuccessor && (
@@ -571,7 +579,7 @@ export function OffboardingModal({ employeeId, onClose }: {
           {completedCase && !context?.hasSettlementRevisions ? (
             reverseReview ? <>
               <button className="btn btn-ghost" onClick={() => setReverseReview(false)} disabled={isBusy}>Bilgileri düzelt</button>
-              <button className="btn btn-danger" onClick={reverseCompleted} disabled={isBusy}>
+              <button className="btn btn-danger" onClick={reverseCompleted} disabled={isBusy || !reverseAcknowledged || !reverseImpact?.canApply}>
                 <i aria-hidden="true" className="fa-solid fa-rotate-left" /> Geri almayı onayla
               </button>
             </> : <button className="btn btn-danger" onClick={prepareReverse} disabled={isBusy}>
@@ -592,12 +600,12 @@ export function OffboardingModal({ employeeId, onClose }: {
               {completionReview ? <>
                 <button className="btn btn-ghost" onClick={() => setCompletionReview(false)} disabled={isBusy}>Bilgileri düzelt</button>
                 <button className="btn btn-danger" onClick={() => save(true)}
-                  disabled={!completionAcknowledged || !context || !hasEligibleSuccessor || isBusy}>
+                  disabled={!completionAcknowledged || !completionImpact?.canApply || !context || !hasEligibleSuccessor || isBusy}>
                   <i aria-hidden="true" className="fa-solid fa-user-slash" /> İşten çıkışı onayla ve tamamla
                 </button>
               </> : <button className="btn btn-danger" onClick={prepareCompletion}
                 disabled={!context || !hasEligibleSuccessor || isBusy}>
-                İşten çıkışı gözden geçir
+                Taslağı kaydet ve ayrılış etkisini incele
               </button>}
             </>
           )}

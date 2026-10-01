@@ -672,3 +672,55 @@ test("departman yoksa yeni çalışan için hazırlık adımına yönlendirir", 
   expect(screen.getByRole("link", { name: "Ayarlar bölümüne git" })).toHaveAttribute("href", "/app/settings");
   expect(screen.getByText(/Kaydedilmemiş form alanları bu geçişte korunmaz/)).toBeInTheDocument();
 });
+
+test("ağ hatasından sonraki tekrar aynı personel gönderim kimliğini kullanır", async () => {
+  const onCreated = vi.fn(); const baseFetch = fetch; let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === "/api/employees" && init?.method === "POST") {
+      writes++;
+      if (writes === 1) throw new TypeError("Bağlantı kesildi");
+      return new Response(JSON.stringify(detail), { status: 201 });
+    }
+    return baseFetch(input, init);
+  }));
+  renderModal(null, false, onCreated);
+  await screen.findByText("Yeni Personel Kartı");
+  await userEvent.type(screen.getByLabelText("Adı"), "Yeni");
+  await userEvent.type(screen.getByLabelText("Soyadı"), "Kişi");
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.selectOptions(screen.getByLabelText("Departman"), "1");
+  await userEvent.selectOptions(screen.getByLabelText("Sözleşme Türü"), "indefinite");
+  await userEvent.selectOptions(screen.getByLabelText("Çalışma Şekli"), "Tam Zamanlı");
+  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+  await screen.findByRole("alert");
+  expect(onCreated).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+  await waitFor(() => expect(onCreated).toHaveBeenCalledWith(1));
+  const posted = vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url) === "/api/employees" && init?.method === "POST");
+  expect(posted).toHaveLength(2);
+  const first = JSON.parse(String(posted[0][1]?.body));
+  expect(first.creationRequestId).toMatch(/^[\da-f-]{36}$/);
+  expect(JSON.parse(String(posted[1][1]?.body))).toEqual(first);
+});
+
+test("yanıt kaybolmuşsa önceki personel kaydını bulur ve ikinci POST yapmadan açar", async () => {
+  const onCreated = vi.fn(); const baseFetch = fetch;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === "/api/employees" && init?.method === "POST") throw new TypeError("Yanıt kayboldu");
+    if (String(input).includes("/employees/creation-results/")) return new Response(JSON.stringify(detail), { status: 200 });
+    return baseFetch(input, init);
+  }));
+  renderModal(null, false, onCreated);
+  await screen.findByText("Yeni Personel Kartı");
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.selectOptions(screen.getByLabelText("Sözleşme Türü"), "indefinite");
+  await userEvent.selectOptions(screen.getByLabelText("Çalışma Şekli"), "Tam Zamanlı");
+  await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
+  const recover = await screen.findByRole("button", { name: "Önceki kayıt sonucunu kontrol et" });
+  await userEvent.click(recover);
+  await waitFor(() => expect(onCreated).toHaveBeenCalledWith(1));
+  const posts = vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url) === "/api/employees" && init?.method === "POST");
+  expect(posts).toHaveLength(1);
+  const id = JSON.parse(String(posts[0][1]?.body)).creationRequestId;
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/employees/creation-results/" + id)).toBe(true);
+});

@@ -85,6 +85,7 @@ test("onaylı son dönemden sonraki ayı seçer ve kontrol sonrası oluşturur",
   setRole("hr-admin");
   stubApi({
     "/api/payroll/periods": [{ ...periods[0], status: "approved" }, periods[1]],
+    "/api/payroll/periods/creation-preview": { year: 2026, month: 8, name: "Ağustos 2026", token: "period-preview", rows: [], settings: { version: 1, effectiveFrom: "2026-01-01", sourceReference: "Uzman" }, minimumWageIncomeTaxBaseBefore: 0 },
     "/api/payroll/periods/3": { ...detail, status: "approved" },
     "/api/payroll/my": [],
   });
@@ -93,11 +94,13 @@ test("onaylı son dönemden sonraki ayı seçer ve kontrol sonrası oluşturur",
   const dialog = screen.getByRole("dialog", { name: "Yeni bordro dönemi" });
   expect(within(dialog).getByLabelText("Ay")).toHaveValue("8");
   expect(within(dialog).getByRole("button", { name: "Oluştur" })).toBeDisabled();
-  await userEvent.click(within(dialog).getByLabelText("Ayı ve son dönem durumunu kontrol ettim."));
+  await userEvent.click(within(dialog).getByRole("button", { name: "Gerçek başlangıç girdilerini önizle" }));
+  await within(dialog).findByText(/0 personel satırı taslak/);
+  await userEvent.click(within(dialog).getByLabelText("Ayı, personel satırlarını, kaynakları ve eksikleri kontrol ettim."));
   await userEvent.click(within(dialog).getByRole("button", { name: "Oluştur" }));
   await waitFor(() => {
     const hit = vi.mocked(fetch).mock.calls.find(([url, init]) => String(url) === "/api/payroll/periods" && init?.method === "POST");
-    expect(JSON.parse(String(hit?.[1]?.body))).toEqual({ year: 2026, month: 8 });
+    expect(JSON.parse(String(hit?.[1]?.body))).toEqual({ year: 2026, month: 8, expectedPreviewToken: "period-preview" });
   });
 });
 
