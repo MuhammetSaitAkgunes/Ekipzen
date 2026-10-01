@@ -135,3 +135,39 @@ public sealed class GuidanceComplianceEvidenceConfiguration : IEntityTypeConfigu
         builder.HasOne(x => x.ComplianceDocument).WithMany().HasForeignKey(x => x.ComplianceDocumentId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public sealed class GuidancePayrollPeriodEvidenceConfiguration : IEntityTypeConfiguration<GuidancePayrollPeriodEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidancePayrollPeriodEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.Property(x => x.OperationKey).IsRequired().HasMaxLength(64);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasOne(x => x.PayrollPeriod).WithMany().HasForeignKey(x => x.PayrollPeriodId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class GuidancePayrollRowEvidenceConfiguration : IEntityTypeConfiguration<GuidancePayrollRowEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidancePayrollRowEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasOne(x => x.PayrollEmployee).WithMany().HasForeignKey(x => x.PayrollEmployeeId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class GuidanceOffboardingEvidenceConfiguration : IEntityTypeConfiguration<GuidanceOffboardingEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidanceOffboardingEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.Property(x => x.OperationKey).IsRequired().HasMaxLength(64);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasOne(x => x.OffboardingCase).WithMany().HasForeignKey(x => x.OffboardingCaseId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -265,10 +266,9 @@ public sealed class SaveEmployeeOffboardingDraftCommandHandler(
 }
 
 public sealed record CompleteEmployeeOffboardingCommand(
-    int EmployeeId,
-    int CaseId,
-    int ExpectedVersion)
-    : IRequest<EmployeeOffboardingCaseDto>;
+    int EmployeeId, int CaseId, int ExpectedVersion, int? GuidanceContentRevisionId = null)
+    : IRequest<EmployeeOffboardingCaseDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-complete"; }
 
 public sealed class CompleteEmployeeOffboardingCommandValidator
     : AbstractValidator<CompleteEmployeeOffboardingCommand>
@@ -284,7 +284,7 @@ public sealed class CompleteEmployeeOffboardingCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IDatabaseLock databaseLock,
-    IIdentityProvisioningProcessor provisioningProcessor)
+    IIdentityProvisioningProcessor provisioningProcessor, GuidanceOperationContext guidance)
     : IRequestHandler<CompleteEmployeeOffboardingCommand, EmployeeOffboardingCaseDto>
 {
     public async Task<EmployeeOffboardingCaseDto> Handle(
@@ -417,6 +417,7 @@ public sealed class CompleteEmployeeOffboardingCommandHandler(
 
         try
         {
+            FinancialOperationEvidence.RecordOffboarding(context, currentUser, guidance, item, request.GuidanceOperationKey);
             await context.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
@@ -544,8 +545,9 @@ public sealed record ReverseEmployeeOffboardingCommand(
     int EmployeeId,
     int CaseId,
     int ExpectedVersion,
-    string Reason)
-    : IRequest<EmployeeOffboardingCaseDto>;
+    string Reason, int? GuidanceContentRevisionId = null)
+    : IRequest<EmployeeOffboardingCaseDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-reverse"; }
 
 public sealed class ReverseEmployeeOffboardingCommandValidator
     : AbstractValidator<ReverseEmployeeOffboardingCommand>
@@ -562,7 +564,7 @@ public sealed class ReverseEmployeeOffboardingCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IDatabaseLock databaseLock,
-    IIdentityProvisioningProcessor provisioningProcessor)
+    IIdentityProvisioningProcessor provisioningProcessor, GuidanceOperationContext guidance)
     : IRequestHandler<ReverseEmployeeOffboardingCommand, EmployeeOffboardingCaseDto>
 {
     public async Task<EmployeeOffboardingCaseDto> Handle(
@@ -728,6 +730,7 @@ public sealed class ReverseEmployeeOffboardingCommandHandler(
 
         try
         {
+            FinancialOperationEvidence.RecordOffboarding(context, currentUser, guidance, item, request.GuidanceOperationKey);
             await context.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)

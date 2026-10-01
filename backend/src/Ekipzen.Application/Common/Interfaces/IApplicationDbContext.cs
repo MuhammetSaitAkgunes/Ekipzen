@@ -88,6 +88,9 @@ public interface IApplicationDbContext
     DbSet<GuidanceBookmark> GuidanceBookmarks { get; }
     DbSet<GuidanceContentReading> GuidanceContentReadings { get; }
     DbSet<GuidanceHelpPreference> GuidanceHelpPreferences { get; }
+    DbSet<GuidancePayrollPeriodEvidence> GuidancePayrollPeriodEvidences { get; }
+    DbSet<GuidancePayrollRowEvidence> GuidancePayrollRowEvidences { get; }
+    DbSet<GuidanceOffboardingEvidence> GuidanceOffboardingEvidences { get; }
     DbSet<GuidanceSetupEvidence> GuidanceSetupEvidences { get; }
     DbSet<GuidanceAttendanceEvidence> GuidanceAttendanceEvidences { get; }
     DbSet<GuidanceComplianceEvidence> GuidanceComplianceEvidences { get; }

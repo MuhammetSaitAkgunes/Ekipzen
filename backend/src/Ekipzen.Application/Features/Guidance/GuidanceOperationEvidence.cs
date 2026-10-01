@@ -53,6 +53,10 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "employee-create" => ("personnel-entry", "tab-is"),
             "candidate-first-review" => ("recruitment", "first-review"),
             "leave-decision" => ("leave", "decision-effect"),
+            "payroll-period-create" => ("payroll", "period-create"),
+            "payroll-row-approve" or "payroll-period-submit" => ("payroll", "approval"),
+            "offboarding-complete" => ("offboarding", "completion"),
+            "offboarding-reverse" => ("offboarding", "reversal-review"),
             "tenant-setup" => ("company", "initial-setup"),
             "attendance-create" => ("attendance", "entry-review"),
             "attendance-update" => ("attendance", "entry-correction"),
@@ -94,13 +98,19 @@ public static class GuidanceOperationEvidenceReader
         var setups = await db.GuidanceSetupEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var attendance = await db.GuidanceAttendanceEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var compliance = await db.GuidanceComplianceEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var periods = await db.GuidancePayrollPeriodEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var rows = await db.GuidancePayrollRowEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var offboarding = await db.GuidanceOffboardingEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var result = employees.Select(x => Item("employee-create", x.Id, x.EmployeeId, "created", x.CreatedAtUtc, x.GuidanceSnapshotJson!))
             .Concat(candidates.Select(x => Item("candidate-first-review", x.Id, x.CandidateId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
             .Concat(leaves.Select(x => Item("leave-decision", x.Id, x.LeaveRequestId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
             .Concat(setups.Select(x => Item("tenant-setup", x.Id, x.TemplateYear, "initialized", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with
                 { SetupChanges = new(x.AddedCompanyProfile, x.AddedLeaveTypeCount, x.AddedHolidayCount, x.AddedPayrollSettings) }))
             .Concat(attendance.Select(x => Item(x.OperationKey, x.Id, x.AttendanceRecordId, x.OperationKey == "attendance-create" ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
-            .Concat(compliance.Select(x => Item(x.OperationKey, x.Id, x.ComplianceDocumentId, x.Outcome, x.CreatedAtUtc, x.GuidanceSnapshotJson!)));
+            .Concat(compliance.Select(x => Item(x.OperationKey, x.Id, x.ComplianceDocumentId, x.Outcome, x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
+            .Concat(periods.Select(x => Item(x.OperationKey, x.Id, x.PayrollPeriodId, x.OperationKey == "payroll-period-create" ? "draft-created" : "approved", x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
+            .Concat(rows.Select(x => Item("payroll-row-approve", x.Id, x.PayrollEmployeeId, "approved", x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
+            .Concat(offboarding.Select(x => Item(x.OperationKey, x.Id, x.OffboardingCaseId, x.OperationKey == "offboarding-complete" ? "completed" : "reversed", x.CreatedAtUtc, x.GuidanceSnapshotJson!)));
         return result.OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
     }
     private static GuidanceOperationEvidenceDto Item(string operation, int evidenceId, int id, string outcome, DateTime at, string json) =>

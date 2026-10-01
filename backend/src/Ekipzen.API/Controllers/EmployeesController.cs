@@ -370,7 +370,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public async Task<ActionResult<EmployeeOffboardingCaseDto>> CompleteOffboarding(
         int id, int caseId, OffboardingVersionBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(
-            new CompleteEmployeeOffboardingCommand(id, caseId, body.ExpectedVersion),
+            new CompleteEmployeeOffboardingCommand(id, caseId, body.ExpectedVersion, body.GuidanceContentRevisionId),
             cancellationToken));
 
     [HttpPost("{id:int}/offboarding/{caseId:int}/reverse")]
@@ -382,7 +382,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int id, int caseId, ReverseOffboardingBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(
             new ReverseEmployeeOffboardingCommand(
-                id, caseId, body.ExpectedVersion, body.Reason),
+                id, caseId, body.ExpectedVersion, body.Reason, body.GuidanceContentRevisionId),
             cancellationToken));
 
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions")]
@@ -616,9 +616,9 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         bool ConfirmNoticeEligibility,
         string ExpertReviewReference);
 
-    public sealed record OffboardingVersionBody(int ExpectedVersion);
+    public sealed record OffboardingVersionBody(int ExpectedVersion, int? GuidanceContentRevisionId = null);
 
-    public sealed record ReverseOffboardingBody(int ExpectedVersion, string Reason);
+    public sealed record ReverseOffboardingBody(int ExpectedVersion, string Reason, int? GuidanceContentRevisionId = null);
 
     public sealed record OpenOffboardingSettlementRevisionBody(int ExpectedOffboardingVersion);
     public sealed record SaveOffboardingSettlementRevisionBody(

@@ -62,6 +62,13 @@ public sealed partial class GuidanceCatalogTests(EkipzenApiFactory factory) : Te
         export.RootElement.GetProperty("guidanceHelpPreferences")[0].GetProperty("mode").GetString().Should().Be("detailed");
         export.RootElement.GetProperty("guidancePublishedPractices").GetArrayLength().Should().Be(0);
         export.RootElement.GetProperty("guidanceContentReadings").GetArrayLength().Should().Be(0);
+        (await owner.PutAsJsonAsync(path + "/daily", new { mode = "adaptive", expectedRevision = 2 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await owner.PutAsJsonAsync(path + "/daily", new { mode = "adaptive", expectedRevision = 2 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await owner.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Single().Should().Be(new GuidanceHelpPreferenceDto("daily", "adaptive", 3));
+        (await colleague.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Single().Mode.Should().Be("compact");
+        using var adaptiveExport = System.Text.Json.JsonDocument.Parse(await (await owner.GetAsync("/api/me/data-export")).Content.ReadAsStringAsync());
+        adaptiveExport.RootElement.GetProperty("guidanceHelpPreferences")[0].GetProperty("mode").GetString().Should().Be("adaptive");
+        adaptiveExport.RootElement.GetProperty("guidancePublishedPractices").GetArrayLength().Should().Be(0);
     }
 
     [Theory]

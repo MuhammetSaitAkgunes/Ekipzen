@@ -1,3 +1,5 @@
+using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Domain.Entities.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -206,12 +208,13 @@ public sealed class RunPayrollCheckCommandHandler(
 
 // --- satır onayı (sonuç snapshot'ı) ---
 
-public sealed record ApprovePayrollRowCommand(int PeriodId, int RowId) : IRequest<PayrollRowDto>;
+public sealed record ApprovePayrollRowCommand(int PeriodId, int RowId, int? GuidanceContentRevisionId = null) : IRequest<PayrollRowDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-row-approve"; }
 
 public sealed class ApprovePayrollRowCommandHandler(
     IApplicationDbContext context,
     IPayrollEngine engine,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<ApprovePayrollRowCommand, PayrollRowDto>
 {
     public Task<PayrollRowDto> Handle(
@@ -268,6 +271,11 @@ public sealed class ApprovePayrollRowCommandHandler(
 
         row.Result = result;
         row.ApprovalStatus = PayrollApprovalStatus.Approved;
+        if (guidance.IsGuided)
+        {
+            var evidence = new GuidancePayrollRowEvidence { UserId = PersonnelEntryGuide.RequireUserId(user), PayrollEmployee = row };
+            guidance.Stamp(evidence); context.GuidancePayrollRowEvidences.Add(evidence);
+        }
 
         await context.SaveChangesAsync(cancellationToken);
         return PayrollPeriodProjector.ToRow(
@@ -278,12 +286,13 @@ public sealed class ApprovePayrollRowCommandHandler(
 // --- dönem gönderimi ---
 
 /// <summary>Tüm satırlar onaylıysa dönemi kapatır (Approved).</summary>
-public sealed record SubmitPayrollPeriodCommand(int PeriodId) : IRequest<PayrollPeriodDetailDto>;
+public sealed record SubmitPayrollPeriodCommand(int PeriodId, int? GuidanceContentRevisionId = null) : IRequest<PayrollPeriodDetailDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-period-submit"; }
 
 public sealed class SubmitPayrollPeriodCommandHandler(
     IApplicationDbContext context,
     IPayrollEngine engine,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<SubmitPayrollPeriodCommand, PayrollPeriodDetailDto>
 {
     public Task<PayrollPeriodDetailDto> Handle(
@@ -310,6 +319,7 @@ public sealed class SubmitPayrollPeriodCommandHandler(
         }
 
         period.Status = PayrollPeriodStatus.Approved;
+        FinancialOperationEvidence.RecordPeriod(context, user, guidance, period, request.GuidanceOperationKey);
         await context.SaveChangesAsync(cancellationToken);
 
         return await PayrollPeriodProjector.BuildDetailAsync(context, engine, period.Id, cancellationToken);

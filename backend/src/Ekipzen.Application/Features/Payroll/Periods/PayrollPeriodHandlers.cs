@@ -1,3 +1,5 @@
+using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Domain.Entities.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -40,7 +42,8 @@ public sealed class GetPayrollPeriodsQueryHandler(IApplicationDbContext context)
 /// Kümülatif matrah aynı yılın önceki onaylı sonuçlarından, fazla mesai saati
 /// aylık puantaj özetinden (vw_MonthlyAttendanceSummary), IBAN durumu profilden gelir.
 /// </summary>
-public sealed record CreatePayrollPeriodCommand(int Year, int Month) : IRequest<PayrollPeriodDetailDto>;
+public sealed record CreatePayrollPeriodCommand(int Year, int Month, int? GuidanceContentRevisionId = null) : IRequest<PayrollPeriodDetailDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-period-create"; }
 
 public sealed class CreatePayrollPeriodCommandValidator : AbstractValidator<CreatePayrollPeriodCommand>
 {
@@ -54,7 +57,7 @@ public sealed class CreatePayrollPeriodCommandValidator : AbstractValidator<Crea
 public sealed class CreatePayrollPeriodCommandHandler(
     IApplicationDbContext context,
     IPayrollEngine engine,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<CreatePayrollPeriodCommand, PayrollPeriodDetailDto>
 {
     public Task<PayrollPeriodDetailDto> Handle(
@@ -173,6 +176,7 @@ public sealed class CreatePayrollPeriodCommandHandler(
             context, period.Employees.ToList(), request.Year, request.Month, cancellationToken);
 
         context.PayrollPeriods.Add(period);
+        FinancialOperationEvidence.RecordPeriod(context, user, guidance, period, request.GuidanceOperationKey);
         await context.SaveChangesAsync(cancellationToken);
 
         return await PayrollPeriodProjector.BuildDetailAsync(context, engine, period.Id, cancellationToken);

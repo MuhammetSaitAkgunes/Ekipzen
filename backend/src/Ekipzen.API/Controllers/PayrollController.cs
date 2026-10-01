@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Ekipzen.Application.Common.Security;
 using Ekipzen.Application.Features.Payroll;
 using Ekipzen.Application.Features.Payroll.Payslips;
@@ -74,15 +75,17 @@ public sealed class PayrollController(ISender sender) : ControllerBase
     [ProducesResponseType<PayrollRowDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<PayrollRowDto>> ApproveRow(
-        int id, int rowId, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new ApprovePayrollRowCommand(id, rowId), cancellationToken));
+        int id, int rowId, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GuidanceOperationBody? body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new ApprovePayrollRowCommand(id, rowId, body?.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("periods/{id:int}/submit")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<PayrollPeriodDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<PayrollPeriodDetailDto>> Submit(int id, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new SubmitPayrollPeriodCommand(id), cancellationToken));
+    public async Task<ActionResult<PayrollPeriodDetailDto>> Submit(int id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GuidanceOperationBody? body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new SubmitPayrollPeriodCommand(id, body?.GuidanceContentRevisionId), cancellationToken));
+
+    public sealed record GuidanceOperationBody(int? GuidanceContentRevisionId = null);
 
     // --- tekil hesap (hr-admin) ---
 

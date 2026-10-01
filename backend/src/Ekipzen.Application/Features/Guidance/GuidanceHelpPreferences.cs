@@ -26,7 +26,7 @@ public sealed class SaveGuidanceHelpPreferenceCommandValidator : AbstractValidat
     public SaveGuidanceHelpPreferenceCommandValidator()
     {
         RuleFor(x => x.ProcessKey).Must(x => GuidanceContentCatalog.Processes.Contains(x));
-        RuleFor(x => x.Mode).Must(x => x is "detailed" or "compact");
+        RuleFor(x => x.Mode).Must(x => x is "detailed" or "compact" or "adaptive");
         RuleFor(x => x.ExpectedRevision).NotNull().GreaterThanOrEqualTo(0).LessThan(int.MaxValue);
     }
 }
