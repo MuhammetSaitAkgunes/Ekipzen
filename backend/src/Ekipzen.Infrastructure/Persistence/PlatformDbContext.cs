@@ -1,5 +1,6 @@
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Identity;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Settings;
 using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -7,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Ekipzen.Infrastructure.Persistence;
 
 /// <summary>
-/// Platform veritabanının (EkipzenPlatform) context'i. Yalnız kiracı kimliğini
-/// tutar; İK verisi <see cref="AppDbContext"/> tarafındadır.
+/// Platform veritabanının (EkipzenPlatform) context'i. Kiracı yönlendirmesini ve
+/// merkezî ürün içerik kataloğunu tutar; müşteri İK/öğrenme verisi AppDbContext'tedir.
 ///
 /// Migration'ları AYRI bir klasörde tutulur (Migrations/Platform) ve ayrı bir
 /// __EFMigrationsHistory tablosuna yazılır — iki context'in geçmişi birbirine
@@ -17,6 +18,7 @@ namespace Ekipzen.Infrastructure.Persistence;
 public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
     : DbContext(options), IPlatformDbContext
 {
+    public DbSet<GuidanceContentRevision> GuidanceContentRevisions => Set<GuidanceContentRevision>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
 
     public DbSet<TenantDirectoryEntry> Directory => Set<TenantDirectoryEntry>();
@@ -37,6 +39,32 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<GuidanceContentRevision>(b =>
+        {
+            b.Property(x => x.ContentKey).IsRequired().HasMaxLength(64);
+            b.Property(x => x.ProcessKey).IsRequired().HasMaxLength(64);
+            b.Property(x => x.State).IsRequired().HasMaxLength(32);
+            b.Property(x => x.BodyJson).IsRequired();
+            b.Property(x => x.ContributorsJson).IsRequired();
+            b.Property(x => x.ExpertName).HasMaxLength(200);
+            b.Property(x => x.ExpertRole).HasMaxLength(200);
+            b.Property(x => x.ExpertReference).HasMaxLength(2000);
+            b.Property(x => x.PublishedByName).HasMaxLength(200);
+            b.HasIndex(x => new { x.ContentKey, x.ContentVersion }).IsUnique();
+            b.HasIndex(x => new { x.ProcessKey, x.State, x.EffectiveFrom });
+            b.Property(x => x.Revision).IsConcurrencyToken();
+            b.HasMany(x => x.Events).WithOne(x => x.Content).HasForeignKey(x => x.ContentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<GuidanceContentEvent>(b =>
+        {
+            b.Property(x => x.Action).IsRequired().HasMaxLength(32);
+            b.Property(x => x.ActorUserId).IsRequired().HasMaxLength(450);
+            b.Property(x => x.ActorName).IsRequired().HasMaxLength(200);
+            b.Property(x => x.Reason).HasMaxLength(2000);
+            b.HasIndex(x => new { x.ContentId, x.Revision }).IsUnique();
+        });
 
         builder.Entity<Tenant>(b =>
         {

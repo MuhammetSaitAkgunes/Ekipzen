@@ -80,6 +80,8 @@ public static class DependencyInjection
             }));
 
         services.AddScoped<IPlatformDbContext>(sp => sp.GetRequiredService<PlatformDbContext>());
+        services.AddScoped<IGuidanceEditorialAccess, GuidanceEditorialAccess>();
+        services.AddScoped<IGuidanceCatalogLock, SqlServerGuidanceCatalogLock>();
         services.AddScoped<PlatformDbInitializer>();
 
         // Identity çekirdeği + roller + SignInManager (lockout kontrolü için).

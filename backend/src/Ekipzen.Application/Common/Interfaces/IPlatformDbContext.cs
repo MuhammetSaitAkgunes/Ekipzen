@@ -1,4 +1,5 @@
 using Ekipzen.Domain.Entities.Identity;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Settings;
 using Ekipzen.Domain.Entities.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Ekipzen.Application.Common.Interfaces;
 
 /// <summary>
-/// Platform veritabanı: kiracı kimliği ve yönlendirme. Kiracı İK verisi burada
+/// Platform veritabanı: kimlik/yönlendirme ve merkezî ürün içeriği. Kiracı İK verisi burada
 /// DEĞİLDİR — o <see cref="IApplicationDbContext"/> tarafındadır.
 ///
 /// Bu context'te global kiracı filtresi YOKTUR: platform tablolarının kendisi
@@ -15,6 +16,7 @@ namespace Ekipzen.Application.Common.Interfaces;
 /// </summary>
 public interface IPlatformDbContext
 {
+    DbSet<GuidanceContentRevision> GuidanceContentRevisions { get; }
     DbSet<Tenant> Tenants { get; }
 
     DbSet<TenantDirectoryEntry> Directory { get; }
