@@ -62,3 +62,7 @@ Bu dosya backend iş kuyruğudur. Frontend tarafındaki rehber, yalnız mevcut A
 ## 1 Ekim — uzman öncesi teknik kontrol teslimi
 
 Tüm yetkili süreç/adımların güncel kişisel inceleme, alıştırma ve gerçek işlem kanıtını birlikte gösteren öğrenme görünümü eklendi. Günlük iş kaynağı açık aksiyon, eksik şirket başlangıcı ve taslak bordro ayarını kapsar. Diğer olağan işlem kapıları ve bağımsız yeterlilik/pilot kabulü açık kalır. [Tamamlanan sözleşmeler ve kalan kapsam](2026-10-01-ik-rehberi-uzman-oncesi-teknik-kontroller.md).
+
+## 2 Ekim — etki önizlemesi ve personel tekrar güvenliği
+
+[Etki/tekrar sözleşmesi](2026-10-02-ik-rehberi-etki-onizleme-tekrar-guvenligi.md) bordro dönemi açılışının gerçek girdilerini ve ayrılış tamamlama/geri alma etkilerini sunucuda salt okunur hesaplar. Son yazımlar zorunlu önizleme belirteciyle aynı kaynakları yeniden doğrular. Personel oluşturma GUID gönderim kimliğiyle aynı kullanıcı/şirket kapsamında tekilleştirilir; mevcut formdan belirsiz sonucu bulma ucu vardır. Önceki tabloda bu üç başlık için belirtilen boşluklar kapandı; toplu personel aktarımının satır önizlemesi/sonuçları, diğer alt işlem kanıtları ve günlük görev/düzeltme kapsamı açık kalır. Kaynak rehber kapıları, uzman ve tam kapsam yayın koşulları korunur. Yeni istemci/API sözleşmesi ve tenant migration'ı birlikte teslim edilmelidir.

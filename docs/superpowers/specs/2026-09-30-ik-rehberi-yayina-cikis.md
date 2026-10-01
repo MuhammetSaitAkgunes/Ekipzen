@@ -49,3 +49,9 @@ Mevcut scripts/build-windows-pilot.ps1 betiği Release/win-x64, framework-depend
 ## 1 Ekim — uzman incelemesi öncesi teknik kontrol paketi
 
 [Teslim sözleşmesi](2026-10-01-ik-rehberi-uzman-oncesi-teknik-kontroller.md) tüm süreçlerde kişisel güncel öğrenme görünümünü, ayrıntılı adım alanlarını, açık aksiyon/şirket başlangıcı/taslak ayar günlük işlerini, bordro satırı önizlemesi ve zorunlu sürüm kontrolünü, atomik koşullu uyum düzeltmesini ve ayrıntılı koşullu kurulum önizlemesini ekler. Üç olağan API boşluğu kapandı; dönem açma/ayrılış etki önizlemesi, ağ tekrarı/aktarım, diğer alt işlem kanıtları ve günlük görev matrisi açık kalır. Uzman içeriği, pilot yeterlilik eşikleri ve deneyimsiz kullanıcı kabulü yapılmadı. Tam kapsam yayın koşulu korunur; bu paket yalnız teknik teslimdir.
+
+## 2 Ekim — bordro/ayrılış etkileri ve tekrar güvenliği
+
+[Bu teknik paket](2026-10-02-ik-rehberi-etki-onizleme-tekrar-guvenligi.md) dönem açmanın gerçek personel/kaynak girdilerini, ayrılış tamamlama/geri almanın ekip-dönem-erişim etkilerini ve personel oluşturmanın belirsiz ağ sonucundaki tekrar güvenliğini tamamlar. Önizleme ve teyit aynı kayıt sürümüne bağlanır; salt okunur önizleme öğrenme kanıtı üretmez. Manuel ayrılışta taslak kaydı açık bir aşamadır; son onay personeli pasife alır. Makbuz migration'ı kontrollü tenant şema yönetimine dahildir.
+
+Sıradaki paket toplu aktarımın satır bazında önizleme ve hata sonuçlarıdır. Diğer olağan alt işlemlerin öğrenme bağlantıları/günlük görevleri, pilot sonrası uygulama seviyeleri, gerçek uzman/editör yayını, deneyimsiz kullanıcı ve Turhost kabulü açık kalır. Tam kapsam yayın koşulu daraltılmadı; canlıya dosya veya migration gönderilmedi.
