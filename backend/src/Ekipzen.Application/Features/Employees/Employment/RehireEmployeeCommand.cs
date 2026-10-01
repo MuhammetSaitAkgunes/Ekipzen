@@ -1,4 +1,5 @@
 using FluentValidation;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Identity;
@@ -12,8 +13,11 @@ namespace Ekipzen.Application.Features.Employees.Employment;
 public sealed record RehireEmployeeCommand(
     int EmployeeId,
     DateOnly RehireDate,
-    string ContractType)
-    : IRequest<EmployeeEmploymentFoundationDto>;
+    string ContractType, int? GuidanceContentRevisionId = null, string? Reason = null)
+    : IRequest<EmployeeEmploymentFoundationDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "employee-rehire";
+}
 
 public sealed class RehireEmployeeCommandValidator : AbstractValidator<RehireEmployeeCommand>
 {
@@ -21,6 +25,8 @@ public sealed class RehireEmployeeCommandValidator : AbstractValidator<RehireEmp
     {
         RuleFor(item => item.EmployeeId).GreaterThan(0);
         RuleFor(item => item.RehireDate).NotEmpty();
+        RuleFor(item => item.Reason).MaximumLength(500);
+        RuleFor(item => item.Reason).NotEmpty().When(item => item.GuidanceContentRevisionId is not null);
         RuleFor(item => item.ContractType)
             .Must(value => value is "indefinite" or "fixed-term")
             .WithMessage("Sözleşme türü 'indefinite' veya 'fixed-term' olmalı.");
@@ -30,7 +36,7 @@ public sealed class RehireEmployeeCommandValidator : AbstractValidator<RehireEmp
 public sealed class RehireEmployeeCommandHandler(
     IApplicationDbContext context,
     IDatabaseLock databaseLock,
-    IIdentityProvisioningProcessor provisioningProcessor)
+    IIdentityProvisioningProcessor provisioningProcessor, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<RehireEmployeeCommand, EmployeeEmploymentFoundationDto>
 {
     public async Task<EmployeeEmploymentFoundationDto> Handle(
@@ -71,17 +77,19 @@ public sealed class RehireEmployeeCommandHandler(
             throw new ConflictException("Yeniden işe alma tarihi önceki istihdam döneminden sonra olmalıdır.");
         }
 
+        var previousContract = employee.ContractType;
         employee.Status = EmployeeStatus.Active;
         employee.TerminationDate = null;
         employee.HireDate = request.RehireDate;
         employee.ContractType = EmployeeEmploymentMappings.ParseContractType(request.ContractType);
-        employee.EmploymentPeriods.Add(new EmployeeEmploymentPeriod
+        var newPeriod = new EmployeeEmploymentPeriod
         {
             StartDate = request.RehireDate,
             ContractType = employee.ContractType,
             AnnualLeaveEntitlementDays = 24,
             LeaveAccrualManagedFrom = request.RehireDate,
-        });
+        };
+        employee.EmploymentPeriods.Add(newPeriod);
 
         var provisioning = new IdentityProvisioningOperation
         {
@@ -91,6 +99,12 @@ public sealed class RehireEmployeeCommandHandler(
             NextAttemptAtUtc = DateTime.UtcNow,
         };
         context.IdentityProvisioningOperations.Add(provisioning);
+        await context.SaveChangesAsync(cancellationToken);
+
+        var fields = new List<string> { "İş / Durum", "İş / İşe giriş", "İş / Yeni çalışma dönemi", "Erişim / Eşitleme isteği" };
+        if (previousContract != employee.ContractType) fields.Add("İş / Sözleşme");
+        PersonnelEmploymentEvidence.Add(context, user, guidance, employee.Id, request.GuidanceOperationKey,
+            fields.ToArray(), newPeriod.Id, reason: request.Reason);
         await context.SaveChangesAsync(cancellationToken);
 
         var foundation = await GetEmployeeEmploymentFoundationQueryHandler.BuildAsync(

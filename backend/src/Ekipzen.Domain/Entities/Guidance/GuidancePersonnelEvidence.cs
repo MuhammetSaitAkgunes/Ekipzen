@@ -10,6 +10,11 @@ public sealed class GuidancePersonnelEvidence : AuditableEntity, IGuidanceOperat
     public int EmployeeId { get; set; }
     public Employee Employee { get; set; } = null!;
     public int? DocumentId { get; set; }
+    public int? EmploymentPeriodId { get; set; }
+    public int? CompensationPackageId { get; set; }
+    public int? RelatedPackageId { get; set; }
+    public int? FromVersion { get; set; }
+    public int? ToVersion { get; set; }
     public string OperationKey { get; set; } = string.Empty;
     public string ChangedFieldsJson { get; set; } = "[]";
     public string? Reason { get; set; }

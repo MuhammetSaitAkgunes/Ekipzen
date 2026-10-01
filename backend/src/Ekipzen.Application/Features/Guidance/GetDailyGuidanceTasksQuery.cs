@@ -123,15 +123,16 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                             package.EffectiveFrom <= today &&
                             (package.EffectiveTo == null || package.EffectiveTo >= today))))
                 .Select(employee => new {
-                    employee.Id, employee.FirstName, employee.LastName, employee.HireDate
+                    employee.Id, employee.FirstName, employee.LastName, employee.HireDate,
+                    Rehired = employee.EmploymentPeriods.Any(period => period.EndDate != null)
                 })
                 .ToListAsync(ct);
             tasks.AddRange(missingCompensation.Select(employee => new DailyGuidanceTaskDto(
                 $"employee-compensation:{employee.Id}",
                 "employee-compensation",
                 employee.Id,
-                $"{employee.FirstName} {employee.LastName} ücret hazırlığını kontrol et",
-                "Açık çalışma dönemi için bugün yürürlükte ücret paketi yok. Bu durumda açılan bordro döneminin ilk ücret girdisi sıfır oluşabilir.",
+                $"{employee.FirstName} {employee.LastName} {(employee.Rehired ? "yeniden işe alım sonrası " : "")}ücret hazırlığını kontrol et",
+                (employee.Rehired ? "Önceki dönemin ücret paketi yeni çalışma dönemine taşınmaz. " : "") + "Açık çalışma dönemi için bugün yürürlükte ücret paketi yok. Bu durumda açılan bordro döneminin ilk ücret girdisi sıfır oluşabilir.",
                 "Tutarı, yürürlük tarihini ve kaynak referansını doğrulayın. Dayanak netleşmeden ücret girmeyin; sonra paketi kaydedin.",
                 null,
                 $"İşe giriş: {employee.HireDate:dd.MM.yyyy}. Bu tarih karar son tarihi değildir; kayıtlı son tarih yok.",

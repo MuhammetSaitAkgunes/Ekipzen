@@ -1043,6 +1043,9 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<int?>("CompensationPackageId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1053,6 +1056,12 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EmploymentPeriodId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("FromVersion")
                         .HasColumnType("int");
 
                     b.Property<string>("GuidanceSnapshotJson")
@@ -1068,7 +1077,13 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("RelatedPackageId")
+                        .HasColumnType("int");
+
                     b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ToVersion")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAtUtc")

@@ -19,7 +19,8 @@ public sealed record GuidanceOperationSnapshot(int ContentRevisionId, string Con
 public sealed record GuidanceOperationEvidenceDto(string OperationKey, int ResourceId, string Outcome,
     DateTime OccurredAtUtc, GuidanceOperationSnapshot Content, string EvidenceKey, GuidanceSetupChangesDto? SetupChanges = null,
     GuidancePersonnelChangesDto? PersonnelChanges = null);
-public sealed record GuidancePersonnelChangesDto(int EmployeeId, int? DocumentId, IReadOnlyList<string> ChangedFields, string? Reason);
+public sealed record GuidancePersonnelChangesDto(int EmployeeId, int? DocumentId, IReadOnlyList<string> ChangedFields, string? Reason,
+    int? EmploymentPeriodId = null, int? CompensationPackageId = null, int? RelatedPackageId = null, int? FromVersion = null, int? ToVersion = null);
 public sealed record GuidanceSetupChangesDto(bool AddedCompanyProfile, int AddedLeaveTypeCount, int AddedHolidayCount, bool AddedPayrollSettings);
 public sealed record GuidanceOperationHistoryDto(GuidanceOperationEvidenceDto Evidence, bool IsCurrent);
 
@@ -54,6 +55,8 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
         {
             "employee-create" => ("personnel-entry", "tab-is"),
             "employee-update" => ("personnel", "record-review"),
+            "employee-rehire" => ("personnel", "rehire"),
+            "employee-compensation-create" or "employee-compensation-correct" or "employee-compensation-date" => ("personnel-entry", "tab-mali"),
             "employee-document-upload" or "employee-document-withdraw" => ("personnel-entry", "tab-evrak"),
             "candidate-first-review" => ("recruitment", "first-review"),
             "leave-decision" => ("leave", "decision-effect"),
@@ -108,10 +111,12 @@ public static class GuidanceOperationEvidenceReader
         var rows = await db.GuidancePayrollRowEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var offboarding = await db.GuidanceOffboardingEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var result = employees.Select(x => Item("employee-create", x.Id, x.EmployeeId, "created", x.CreatedAtUtc, x.GuidanceSnapshotJson!))
-            .Concat(personnel.Select(x => Item(x.OperationKey, x.Id, x.DocumentId ?? x.EmployeeId,
-                x.OperationKey == "employee-update" ? "updated" : x.OperationKey == "employee-document-upload" ? "uploaded" : "withdrawn",
+            .Concat(personnel.Select(x => Item(x.OperationKey, x.Id, x.DocumentId ?? x.CompensationPackageId ?? x.EmploymentPeriodId ?? x.EmployeeId,
+                x.OperationKey switch { "employee-document-upload" => "uploaded", "employee-document-withdraw" => "withdrawn",
+                    "employee-rehire" => "rehired", "employee-compensation-create" => "created", _ => "updated" },
                 x.CreatedAtUtc, x.GuidanceSnapshotJson!) with
-                { PersonnelChanges = new(x.EmployeeId, x.DocumentId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!, x.Reason) }))
+                { PersonnelChanges = new(x.EmployeeId, x.DocumentId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!, x.Reason,
+                    x.EmploymentPeriodId, x.CompensationPackageId, x.RelatedPackageId, x.FromVersion, x.ToVersion) }))
             .Concat(candidates.Select(x => Item("candidate-first-review", x.Id, x.CandidateId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
             .Concat(leaves.Select(x => Item("leave-decision", x.Id, x.LeaveRequestId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
             .Concat(setups.Select(x => Item("tenant-setup", x.Id, x.TemplateYear, "initialized", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with

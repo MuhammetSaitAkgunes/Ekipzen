@@ -18,7 +18,8 @@ public sealed class GetEmployeeManagerChoicesQueryHandler(IApplicationDbContext 
             .Select(x => new EmployeeManagerChoiceDto(x.Id, x.FirstName + " " + x.LastName, x.Title)).ToListAsync(ct);
 }
 public sealed record EmployeePersonnelHistoryDto(int Id, string OperationKey, int? DocumentId,
-    DateTime OccurredAtUtc, IReadOnlyList<string> ChangedFields, string? Reason);
+    DateTime OccurredAtUtc, IReadOnlyList<string> ChangedFields, string? Reason,
+    int? EmploymentPeriodId = null, int? CompensationPackageId = null, int? RelatedPackageId = null, int? FromVersion = null, int? ToVersion = null);
 public sealed record GetEmployeePersonnelHistoryQuery(int EmployeeId) : IRequest<IReadOnlyList<EmployeePersonnelHistoryDto>>;
 public sealed class GetEmployeePersonnelHistoryQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetEmployeePersonnelHistoryQuery, IReadOnlyList<EmployeePersonnelHistoryDto>>
@@ -29,6 +30,7 @@ public sealed class GetEmployeePersonnelHistoryQueryHandler(IApplicationDbContex
         var rows = await db.GuidancePersonnelEvidences.AsNoTracking().Where(x => x.EmployeeId == request.EmployeeId)
             .OrderByDescending(x => x.CreatedAtUtc).ThenByDescending(x => x.Id).Take(100).ToListAsync(ct);
         return rows.Select(x => new EmployeePersonnelHistoryDto(x.Id, x.OperationKey, x.DocumentId,
-            DateTime.SpecifyKind(x.CreatedAtUtc, DateTimeKind.Utc), JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!, x.Reason)).ToArray();
+            DateTime.SpecifyKind(x.CreatedAtUtc, DateTimeKind.Utc), JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!, x.Reason,
+            x.EmploymentPeriodId, x.CompensationPackageId, x.RelatedPackageId, x.FromVersion, x.ToVersion)).ToArray();
     }
 }

@@ -1,4 +1,5 @@
 using Ekipzen.Application.Common.Exceptions;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Organization;
 using FluentValidation;
@@ -34,8 +35,11 @@ public sealed class PreviewCompensationDateCorrectionQueryHandler(IApplicationDb
 public sealed record CorrectEmployeeCompensationDateCommand(
     int EmployeeId, int PackageId, DateOnly ProposedEffectiveFrom,
     int ExpectedPackageVersion, int? ExpectedPreviousPackageId,
-    int? ExpectedPreviousPackageVersion, string Reason)
-    : IRequest<EmployeeEmploymentFoundationDto>;
+    int? ExpectedPreviousPackageVersion, string Reason, int? GuidanceContentRevisionId = null)
+    : IRequest<EmployeeEmploymentFoundationDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "employee-compensation-date";
+}
 
 public sealed class CorrectEmployeeCompensationDateCommandValidator
     : AbstractValidator<CorrectEmployeeCompensationDateCommand>
@@ -55,7 +59,7 @@ public sealed class CorrectEmployeeCompensationDateCommandValidator
 }
 
 public sealed class CorrectEmployeeCompensationDateCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<CorrectEmployeeCompensationDateCommand, EmployeeEmploymentFoundationDto>
 {
     public Task<EmployeeEmploymentFoundationDto> Handle(
@@ -110,6 +114,9 @@ public sealed class CorrectEmployeeCompensationDateCommandHandler(
         });
         try
         {
+            PersonnelEmploymentEvidence.Add(context, currentUser, guidance, request.EmployeeId, request.GuidanceOperationKey,
+                previous is null ? ["Ücret / Yürürlük başlangıcı"] : ["Ücret / Yürürlük başlangıcı", "Ücret / Önceki paket bitişi"],
+                package.EmploymentPeriodId, package.Id, request.Reason, previous?.Id, oldVersion, package.Version);
             await context.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)

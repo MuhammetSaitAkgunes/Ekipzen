@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Organization;
@@ -70,7 +71,10 @@ public sealed record CorrectEmployeeCompensationPackageCommand(
     decimal MealAllowance,
     decimal OtherRegularBenefits,
     string SourceReference,
-    string Reason) : IRequest<EmployeeEmploymentFoundationDto>;
+    string Reason, int? GuidanceContentRevisionId = null) : IRequest<EmployeeEmploymentFoundationDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "employee-compensation-correct";
+}
 
 public sealed class CorrectEmployeeCompensationPackageCommandValidator
     : AbstractValidator<CorrectEmployeeCompensationPackageCommand>
@@ -93,7 +97,7 @@ public sealed class CorrectEmployeeCompensationPackageCommandValidator
 public sealed class CorrectEmployeeCompensationPackageCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<CorrectEmployeeCompensationPackageCommand, EmployeeEmploymentFoundationDto>
 {
     public Task<EmployeeEmploymentFoundationDto> Handle(
@@ -150,6 +154,9 @@ public sealed class CorrectEmployeeCompensationPackageCommandHandler(
             CorrectedAtUtc = DateTime.UtcNow,
         });
 
+        PersonnelEmploymentEvidence.Add(context, currentUser, guidance, request.EmployeeId, request.GuidanceOperationKey,
+            PersonnelEmploymentEvidence.Changed(before, after), package.EmploymentPeriodId, package.Id,
+            request.Reason, fromVersion: oldVersion, toVersion: package.Version);
         await context.SaveChangesAsync(cancellationToken);
         var employee = await context.Employees.AsNoTracking()
             .SingleAsync(item => item.Id == request.EmployeeId, cancellationToken);

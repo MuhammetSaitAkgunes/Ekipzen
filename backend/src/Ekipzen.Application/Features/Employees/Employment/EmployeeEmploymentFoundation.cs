@@ -1,4 +1,5 @@
 using FluentValidation;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Organization;
@@ -91,8 +92,11 @@ public sealed record SaveEmployeeCompensationPackageCommand(
     decimal RoadAllowance,
     decimal MealAllowance,
     decimal OtherRegularBenefits,
-    string SourceReference)
-    : IRequest<EmployeeEmploymentFoundationDto>;
+    string SourceReference, int? GuidanceContentRevisionId = null)
+    : IRequest<EmployeeEmploymentFoundationDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "employee-compensation-create";
+}
 
 public sealed class SaveEmployeeCompensationPackageCommandValidator
     : AbstractValidator<SaveEmployeeCompensationPackageCommand>
@@ -112,7 +116,7 @@ public sealed class SaveEmployeeCompensationPackageCommandValidator
 
 public sealed class SaveEmployeeCompensationPackageCommandHandler(
     IApplicationDbContext context,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<SaveEmployeeCompensationPackageCommand, EmployeeEmploymentFoundationDto>
 {
     public Task<EmployeeEmploymentFoundationDto> Handle(
@@ -159,7 +163,7 @@ public sealed class SaveEmployeeCompensationPackageCommandHandler(
             previous.Version++;
         }
 
-        context.EmployeeCompensationPackages.Add(new EmployeeCompensationPackage
+        var package = new EmployeeCompensationPackage
         {
             EmploymentPeriodId = employmentPeriod.Id,
             EffectiveFrom = request.EffectiveFrom,
@@ -171,8 +175,13 @@ public sealed class SaveEmployeeCompensationPackageCommandHandler(
             OtherRegularBenefits = request.OtherRegularBenefits,
             Currency = "TRY",
             SourceReference = request.SourceReference.Trim(),
-        });
+        };
+        context.EmployeeCompensationPackages.Add(package);
 
+        await context.SaveChangesAsync(cancellationToken);
+        PersonnelEmploymentEvidence.Add(context, user, guidance, employee.Id, request.GuidanceOperationKey,
+            previous is null ? ["Ücret / Yeni paket", "Ücret / Yürürlük başlangıcı"] : ["Ücret / Yeni paket", "Ücret / Yürürlük başlangıcı", "Ücret / Önceki paket bitişi"],
+            employmentPeriod.Id, package.Id, relatedPackageId: previous?.Id, toVersion: package.Version);
         await context.SaveChangesAsync(cancellationToken);
         return await GetEmployeeEmploymentFoundationQueryHandler.BuildAsync(
             context, employee, cancellationToken);

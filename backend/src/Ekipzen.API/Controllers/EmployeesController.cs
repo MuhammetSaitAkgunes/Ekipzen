@@ -157,7 +157,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.RoadAllowance,
             body.MealAllowance,
             body.OtherRegularBenefits,
-            body.SourceReference), cancellationToken));
+            body.SourceReference, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/correction-context")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -179,7 +179,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new CorrectEmployeeCompensationPackageCommand(
             id, packageId, body.ExpectedVersion, body.MonthlyGrossSalary,
             body.RegularPremium, body.RoadAllowance, body.MealAllowance,
-            body.OtherRegularBenefits, body.SourceReference, body.Reason), cancellationToken));
+            body.OtherRegularBenefits, body.SourceReference, body.Reason, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -329,7 +329,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new CorrectEmployeeCompensationDateCommand(
             id, packageId, body.ProposedEffectiveFrom,
             body.ExpectedPackageVersion, body.ExpectedPreviousPackageId,
-            body.ExpectedPreviousPackageVersion, body.Reason), cancellationToken));
+            body.ExpectedPreviousPackageVersion, body.Reason, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/rehire")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -339,7 +339,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public async Task<ActionResult<EmployeeEmploymentFoundationDto>> Rehire(
         int id, RehireEmployeeBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(
-            new RehireEmployeeCommand(id, body.RehireDate, body.ContractType), cancellationToken));
+            new RehireEmployeeCommand(id, body.RehireDate, body.ContractType, body.GuidanceContentRevisionId, body.Reason), cancellationToken));
 
     [HttpGet("{id:int}/offboarding-context")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -584,7 +584,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal RoadAllowance,
         decimal MealAllowance,
         decimal OtherRegularBenefits,
-        string SourceReference);
+        string SourceReference, int? GuidanceContentRevisionId = null);
 
     public sealed record CorrectCompensationPackageBody(
         int ExpectedVersion,
@@ -594,7 +594,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal MealAllowance,
         decimal OtherRegularBenefits,
         string SourceReference,
-        string Reason);
+        string Reason, int? GuidanceContentRevisionId = null);
 
     public sealed record SaveCompensationRemediationBody(
         int ExpectedPackageVersion, int? ExpectedCaseVersion, string IssueDescription,
@@ -627,9 +627,9 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     public sealed record CorrectCompensationDateBody(
         DateOnly ProposedEffectiveFrom, int ExpectedPackageVersion,
         int? ExpectedPreviousPackageId, int? ExpectedPreviousPackageVersion,
-        string Reason);
+        string Reason, int? GuidanceContentRevisionId = null);
 
-    public sealed record RehireEmployeeBody(DateOnly RehireDate, string ContractType);
+    public sealed record RehireEmployeeBody(DateOnly RehireDate, string ContractType, int? GuidanceContentRevisionId = null, string? Reason = null);
 
     public sealed record SaveOffboardingDraftBody(
         int? ExpectedVersion,
