@@ -1,3 +1,5 @@
+using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Domain.Entities.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -16,7 +18,8 @@ public sealed record AttendanceEntryModel(
     TimeOnly? CheckOut = null,
     int BreakMinutes = 60,
     string? Type = null,
-    string? Note = null);
+    string? Note = null,
+    int? GuidanceContentRevisionId = null);
 
 public sealed class AttendanceEntryModelValidator : AbstractValidator<AttendanceEntryModel>
 {
@@ -39,7 +42,11 @@ public sealed class AttendanceEntryModelValidator : AbstractValidator<Attendance
 // --- manuel giriş ---
 
 public sealed record CreateAttendanceEntryCommand(int EmployeeId, AttendanceEntryModel Model)
-    : IRequest<TimesheetRowDto>;
+    : IRequest<TimesheetRowDto>, IGuidanceOperationCommand
+{
+    public int? GuidanceContentRevisionId => Model?.GuidanceContentRevisionId;
+    public string GuidanceOperationKey => "attendance-create";
+}
 
 public sealed class CreateAttendanceEntryCommandValidator : AbstractValidator<CreateAttendanceEntryCommand>
 {
@@ -50,7 +57,7 @@ public sealed class CreateAttendanceEntryCommandValidator : AbstractValidator<Cr
     }
 }
 
-public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext context, ICurrentUser currentUser)
+public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext context, ICurrentUser currentUser, GuidanceOperationContext guidance)
     : IRequestHandler<CreateAttendanceEntryCommand, TimesheetRowDto>
 {
     public async Task<TimesheetRowDto> Handle(
@@ -75,6 +82,7 @@ public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext co
         Apply(record, request.Model);
 
         context.AttendanceRecords.Add(record);
+        RecordEvidence(context, currentUser, guidance, record, request.GuidanceOperationKey);
         await context.SaveChangesAsync(cancellationToken);
 
         return ToRow(record);
@@ -100,6 +108,22 @@ public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext co
             : AttendanceMappings.ParseType(model.Type);
     }
 
+    internal static void RecordEvidence(IApplicationDbContext context, ICurrentUser user, GuidanceOperationContext guidance, AttendanceRecord record, string operation)
+    {
+        if (!guidance.IsGuided) return;
+        var evidence = new GuidanceAttendanceEvidence { UserId = PersonnelEntryGuide.RequireUserId(user), AttendanceRecord = record, OperationKey = operation };
+        guidance.Stamp(evidence);
+        context.GuidanceAttendanceEvidences.Add(evidence);
+    }
+
+    internal static bool IsUnchanged(AttendanceRecord record, AttendanceEntryModel model)
+    {
+        var target = new AttendanceRecord(); Apply(target, model);
+        return record.WorkDate == target.WorkDate && record.CheckIn == target.CheckIn && record.CheckOut == target.CheckOut
+            && record.BreakMinutes == target.BreakMinutes && record.Type == target.Type && record.Note == target.Note
+            && record.WorkedMinutes == target.WorkedMinutes && record.OvertimeMinutes == target.OvertimeMinutes && record.Status == target.Status;
+    }
+
     internal static TimesheetRowDto ToRow(AttendanceRecord a) => new(
         a.Id,
         a.WorkDate,
@@ -117,7 +141,11 @@ public sealed class CreateAttendanceEntryCommandHandler(IApplicationDbContext co
 // --- satır düzenleme ---
 
 public sealed record UpdateAttendanceEntryCommand(int Id, AttendanceEntryModel Model, string ExpectedRevision)
-    : IRequest<TimesheetRowDto>;
+    : IRequest<TimesheetRowDto>, IGuidanceOperationCommand
+{
+    public int? GuidanceContentRevisionId => Model?.GuidanceContentRevisionId;
+    public string GuidanceOperationKey => "attendance-update";
+}
 
 public sealed class UpdateAttendanceEntryCommandValidator : AbstractValidator<UpdateAttendanceEntryCommand>
 {
@@ -129,7 +157,7 @@ public sealed class UpdateAttendanceEntryCommandValidator : AbstractValidator<Up
 }
 
 public sealed class UpdateAttendanceEntryCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<UpdateAttendanceEntryCommand, TimesheetRowDto>
 {
     public Task<TimesheetRowDto> Handle(
@@ -169,7 +197,10 @@ public sealed class UpdateAttendanceEntryCommandHandler(
             }
         }
 
+        if (CreateAttendanceEntryCommandHandler.IsUnchanged(record, request.Model))
+            return CreateAttendanceEntryCommandHandler.ToRow(record);
         CreateAttendanceEntryCommandHandler.Apply(record, request.Model);
+        CreateAttendanceEntryCommandHandler.RecordEvidence(context, currentUser, guidance, record, request.GuidanceOperationKey);
         await context.SaveChangesAsync(cancellationToken);
 
         return CreateAttendanceEntryCommandHandler.ToRow(record);

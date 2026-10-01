@@ -17,7 +17,8 @@ public interface IGuidanceOperationCommand
 public sealed record GuidanceOperationSnapshot(int ContentRevisionId, string ContentKey, string ProcessKey,
     string StepKey, int ContentVersion, string Title);
 public sealed record GuidanceOperationEvidenceDto(string OperationKey, int ResourceId, string Outcome,
-    DateTime OccurredAtUtc, GuidanceOperationSnapshot Content);
+    DateTime OccurredAtUtc, GuidanceOperationSnapshot Content, string EvidenceKey, GuidanceSetupChangesDto? SetupChanges = null);
+public sealed record GuidanceSetupChangesDto(bool AddedCompanyProfile, int AddedLeaveTypeCount, int AddedHolidayCount, bool AddedPayrollSettings);
 public sealed record GuidanceOperationHistoryDto(GuidanceOperationEvidenceDto Evidence, bool IsCurrent);
 
 public sealed class GuidanceOperationContext
@@ -52,6 +53,12 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "employee-create" => ("personnel-entry", "tab-is"),
             "candidate-first-review" => ("recruitment", "first-review"),
             "leave-decision" => ("leave", "decision-effect"),
+            "tenant-setup" => ("company", "initial-setup"),
+            "attendance-create" => ("attendance", "entry-review"),
+            "attendance-update" => ("attendance", "entry-correction"),
+            "compliance-create" => ("compliance", "record-review"),
+            "compliance-update" or "compliance-owner" => ("compliance", "record-correction"),
+            "compliance-status" => ("compliance", "status-review"),
             _ => throw new ConflictException("Bu işlem için sürümlü rehber bağlantısı tanımlı değil."),
         };
         GuidancePublishedSteps.RequireAccess(process, step, user);
@@ -84,13 +91,20 @@ public static class GuidanceOperationEvidenceReader
             .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var leaves = await db.GuidanceLeaveDecisionEvidences.AsNoTracking()
             .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
-        var result = employees.Select(x => Item("employee-create", x.EmployeeId, "created", x.CreatedAtUtc, x.GuidanceSnapshotJson!))
-            .Concat(candidates.Select(x => Item("candidate-first-review", x.CandidateId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
-            .Concat(leaves.Select(x => Item("leave-decision", x.LeaveRequestId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)));
+        var setups = await db.GuidanceSetupEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var attendance = await db.GuidanceAttendanceEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var compliance = await db.GuidanceComplianceEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var result = employees.Select(x => Item("employee-create", x.Id, x.EmployeeId, "created", x.CreatedAtUtc, x.GuidanceSnapshotJson!))
+            .Concat(candidates.Select(x => Item("candidate-first-review", x.Id, x.CandidateId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
+            .Concat(leaves.Select(x => Item("leave-decision", x.Id, x.LeaveRequestId, x.DecisionStatus.ToString(), x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
+            .Concat(setups.Select(x => Item("tenant-setup", x.Id, x.TemplateYear, "initialized", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with
+                { SetupChanges = new(x.AddedCompanyProfile, x.AddedLeaveTypeCount, x.AddedHolidayCount, x.AddedPayrollSettings) }))
+            .Concat(attendance.Select(x => Item(x.OperationKey, x.Id, x.AttendanceRecordId, x.OperationKey == "attendance-create" ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
+            .Concat(compliance.Select(x => Item(x.OperationKey, x.Id, x.ComplianceDocumentId, x.Outcome, x.CreatedAtUtc, x.GuidanceSnapshotJson!)));
         return result.OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
     }
-    private static GuidanceOperationEvidenceDto Item(string operation, int id, string outcome, DateTime at, string json) =>
-        new(operation, id, outcome, DateTime.SpecifyKind(at, DateTimeKind.Utc), JsonSerializer.Deserialize<GuidanceOperationSnapshot>(json)!);
+    private static GuidanceOperationEvidenceDto Item(string operation, int evidenceId, int id, string outcome, DateTime at, string json) =>
+        new(operation, id, outcome, DateTime.SpecifyKind(at, DateTimeKind.Utc), JsonSerializer.Deserialize<GuidanceOperationSnapshot>(json)!, $"{operation}:{evidenceId}");
 }
 
 public sealed record GetMyGuidanceOperationsQuery : IRequest<IReadOnlyList<GuidanceOperationHistoryDto>>;

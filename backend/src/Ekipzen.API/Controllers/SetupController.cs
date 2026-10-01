@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Ekipzen.Application.Common.Security;
 using Ekipzen.Application.Features.Setup;
 using MediatR;
@@ -18,6 +19,6 @@ public sealed class SetupController(ISender sender) : ControllerBase
 
     [HttpPost]
     [ProducesResponseType<TenantSetupStatusDto>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<TenantSetupStatusDto>> Initialize(CancellationToken cancellationToken)
-        => Ok(await sender.Send(new InitializeTenantSetupCommand(), cancellationToken));
+    public async Task<ActionResult<TenantSetupStatusDto>> Initialize([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] InitializeTenantSetupCommand? command, CancellationToken cancellationToken)
+        => Ok(await sender.Send(command ?? new InitializeTenantSetupCommand(), cancellationToken));
 }

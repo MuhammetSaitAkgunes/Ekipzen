@@ -47,7 +47,7 @@ public sealed class ComplianceController(ISender sender) : ControllerBase
     public async Task<ActionResult<ComplianceDocumentDto>> Update(
         int id, ComplianceUpdateBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(
-            new UpdateComplianceDocumentCommand(id, body.DocumentName, body.DueDate, body.Level),
+            new UpdateComplianceDocumentCommand(id, body.DocumentName, body.DueDate, body.Level, body.GuidanceContentRevisionId),
             cancellationToken));
 
     [HttpPatch("documents/{id:int}/status")]
@@ -56,7 +56,7 @@ public sealed class ComplianceController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ComplianceDocumentDto>> SetStatus(
         int id, ComplianceStatusBody body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new SetComplianceStatusCommand(id, body.Status), cancellationToken));
+        => Ok(await sender.Send(new SetComplianceStatusCommand(id, body.Status, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPatch("documents/{id:int}/owner")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -64,9 +64,9 @@ public sealed class ComplianceController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ComplianceDocumentDto>> AssignOwner(
         int id, ComplianceOwnerBody body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new AssignComplianceOwnerCommand(id, body.OwnerName), cancellationToken));
+        => Ok(await sender.Send(new AssignComplianceOwnerCommand(id, body.OwnerName, body.GuidanceContentRevisionId), cancellationToken));
 
-    public sealed record ComplianceUpdateBody(string DocumentName, DateOnly? DueDate, string Level);
-    public sealed record ComplianceStatusBody(string Status);
-    public sealed record ComplianceOwnerBody(string OwnerName);
+    public sealed record ComplianceUpdateBody(string DocumentName, DateOnly? DueDate, string Level, int? GuidanceContentRevisionId = null);
+    public sealed record ComplianceStatusBody(string Status, int? GuidanceContentRevisionId = null);
+    public sealed record ComplianceOwnerBody(string OwnerName, int? GuidanceContentRevisionId = null);
 }

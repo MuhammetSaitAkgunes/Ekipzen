@@ -502,6 +502,55 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.ToTable("EmployeeCreationEvidences");
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceAttendanceEvidence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttendanceRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceRecordId");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("GuidanceAttendanceEvidences");
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceBookmark", b =>
                 {
                     b.Property<int>("Id")
@@ -549,6 +598,60 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("GuidanceBookmarks");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceComplianceEvidence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ComplianceDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComplianceDocumentId");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("GuidanceComplianceEvidences");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceContentReading", b =>
@@ -846,6 +949,60 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("GuidancePublishedPracticeProgresses");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceSetupEvidence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AddedCompanyProfile")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("AddedHolidayCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AddedLeaveTypeCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("AddedPayrollSettings")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("TemplateYear")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("GuidanceSetupEvidences");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Identity.IdentityProvisioningOperation", b =>
@@ -4263,6 +4420,28 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceAttendanceEvidence", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Attendance.AttendanceRecord", "AttendanceRecord")
+                        .WithMany()
+                        .HasForeignKey("AttendanceRecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceRecord");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceComplianceEvidence", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Compliance.ComplianceDocument", "ComplianceDocument")
+                        .WithMany()
+                        .HasForeignKey("ComplianceDocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ComplianceDocument");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceLeaveDecisionEvidence", b =>

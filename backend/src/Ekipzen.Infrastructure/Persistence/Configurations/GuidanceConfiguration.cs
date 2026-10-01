@@ -102,3 +102,36 @@ public sealed class GuidanceDecisionProgressConfiguration : IEntityTypeConfigura
         }).IsUnique();
     }
 }
+
+public sealed class GuidanceSetupEvidenceConfiguration : IEntityTypeConfiguration<GuidanceSetupEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidanceSetupEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+    }
+}
+public sealed class GuidanceAttendanceEvidenceConfiguration : IEntityTypeConfiguration<GuidanceAttendanceEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidanceAttendanceEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.OperationKey).IsRequired().HasMaxLength(64);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasOne(x => x.AttendanceRecord).WithMany().HasForeignKey(x => x.AttendanceRecordId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+public sealed class GuidanceComplianceEvidenceConfiguration : IEntityTypeConfiguration<GuidanceComplianceEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidanceComplianceEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.OperationKey).IsRequired().HasMaxLength(64);
+        builder.Property(x => x.Outcome).IsRequired().HasMaxLength(64);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+        builder.HasOne(x => x.ComplianceDocument).WithMany().HasForeignKey(x => x.ComplianceDocumentId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

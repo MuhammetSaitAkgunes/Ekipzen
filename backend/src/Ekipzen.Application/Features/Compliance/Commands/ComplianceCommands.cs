@@ -1,3 +1,5 @@
+using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Domain.Entities.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -16,7 +18,8 @@ public sealed record CreateComplianceDocumentCommand(
     string? OwnerName = null,
     DateOnly? DueDate = null,
     string Status = "Eksik",
-    string Level = "medium") : IRequest<ComplianceDocumentDto>;
+    string Level = "medium", int? GuidanceContentRevisionId = null) : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "compliance-create"; }
 
 public sealed class CreateComplianceDocumentCommandValidator
     : AbstractValidator<CreateComplianceDocumentCommand>
@@ -35,11 +38,13 @@ public sealed class CreateComplianceDocumentCommandValidator
     }
 }
 
-public sealed class CreateComplianceDocumentCommandHandler(IApplicationDbContext context)
+public sealed class CreateComplianceDocumentCommandHandler(IApplicationDbContext context, ICurrentUser user, GuidanceOperationContext guidance, IDatabaseLock databaseLock)
     : IRequestHandler<CreateComplianceDocumentCommand, ComplianceDocumentDto>
 {
-    public async Task<ComplianceDocumentDto> Handle(
-        CreateComplianceDocumentCommand request, CancellationToken cancellationToken)
+    public Task<ComplianceDocumentDto> Handle(CreateComplianceDocumentCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"compliance-create:{request.EmployeeId}", ct => ExecuteAsync(request, ct), cancellationToken);
+
+    private async Task<ComplianceDocumentDto> ExecuteAsync(CreateComplianceDocumentCommand request, CancellationToken cancellationToken)
     {
         var employee = await context.Employees
             .Include(e => e.Department)
@@ -71,6 +76,7 @@ public sealed class CreateComplianceDocumentCommandHandler(IApplicationDbContext
         };
 
         context.ComplianceDocuments.Add(document);
+        ComplianceOperationEvidence.Record(context, user, guidance, document, request.GuidanceOperationKey, "created");
         await context.SaveChangesAsync(cancellationToken);
 
         return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
@@ -83,7 +89,8 @@ public sealed record UpdateComplianceDocumentCommand(
     int Id,
     string DocumentName,
     DateOnly? DueDate,
-    string Level) : IRequest<ComplianceDocumentDto>;
+    string Level, int? GuidanceContentRevisionId = null) : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "compliance-update"; }
 
 public sealed class UpdateComplianceDocumentCommandValidator
     : AbstractValidator<UpdateComplianceDocumentCommand>
@@ -97,21 +104,27 @@ public sealed class UpdateComplianceDocumentCommandValidator
     }
 }
 
-public sealed class UpdateComplianceDocumentCommandHandler(IApplicationDbContext context)
+public sealed class UpdateComplianceDocumentCommandHandler(IApplicationDbContext context, ICurrentUser user, GuidanceOperationContext guidance, IDatabaseLock databaseLock)
     : IRequestHandler<UpdateComplianceDocumentCommand, ComplianceDocumentDto>
 {
-    public async Task<ComplianceDocumentDto> Handle(
-        UpdateComplianceDocumentCommand request, CancellationToken cancellationToken)
+    public Task<ComplianceDocumentDto> Handle(UpdateComplianceDocumentCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"compliance-document:{request.Id}", ct => ExecuteAsync(request, ct), cancellationToken);
+
+    private async Task<ComplianceDocumentDto> ExecuteAsync(UpdateComplianceDocumentCommand request, CancellationToken cancellationToken)
     {
         var document = await context.ComplianceDocuments
             .Include(d => d.Employee)!.ThenInclude(e => e!.Department)
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Uyum belgesi", request.Id);
 
+        if (document.DocumentName == request.DocumentName.Trim() && document.DueDate == request.DueDate
+            && document.Level == ComplianceMappings.ParseLevel(request.Level))
+            return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
         document.DocumentName = request.DocumentName.Trim();
         document.DueDate = request.DueDate;
         document.Level = ComplianceMappings.ParseLevel(request.Level);
 
+        ComplianceOperationEvidence.Record(context, user, guidance, document, request.GuidanceOperationKey, "updated");
         await context.SaveChangesAsync(cancellationToken);
         return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
     }
@@ -119,8 +132,9 @@ public sealed class UpdateComplianceDocumentCommandHandler(IApplicationDbContext
 
 // --- durum iş akışı ---
 
-public sealed record SetComplianceStatusCommand(int Id, string Status)
-    : IRequest<ComplianceDocumentDto>;
+public sealed record SetComplianceStatusCommand(int Id, string Status, int? GuidanceContentRevisionId = null)
+    : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "compliance-status"; }
 
 public sealed class SetComplianceStatusCommandValidator
     : AbstractValidator<SetComplianceStatusCommand>
@@ -133,11 +147,13 @@ public sealed class SetComplianceStatusCommandValidator
     }
 }
 
-public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext context)
+public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext context, ICurrentUser user, GuidanceOperationContext guidance, IDatabaseLock databaseLock)
     : IRequestHandler<SetComplianceStatusCommand, ComplianceDocumentDto>
 {
-    public async Task<ComplianceDocumentDto> Handle(
-        SetComplianceStatusCommand request, CancellationToken cancellationToken)
+    public Task<ComplianceDocumentDto> Handle(SetComplianceStatusCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"compliance-document:{request.Id}", ct => ExecuteAsync(request, ct), cancellationToken);
+
+    private async Task<ComplianceDocumentDto> ExecuteAsync(SetComplianceStatusCommand request, CancellationToken cancellationToken)
     {
         var document = await context.ComplianceDocuments
             .Include(d => d.Employee)!.ThenInclude(e => e!.Department)
@@ -157,6 +173,7 @@ public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext cont
             document.Level = RiskLevel.Low;
         }
 
+        ComplianceOperationEvidence.Record(context, user, guidance, document, request.GuidanceOperationKey, document.Status.ToString());
         await context.SaveChangesAsync(cancellationToken);
         return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
     }
@@ -164,8 +181,9 @@ public sealed class SetComplianceStatusCommandHandler(IApplicationDbContext cont
 
 // --- sorumlu atama ---
 
-public sealed record AssignComplianceOwnerCommand(int Id, string OwnerName)
-    : IRequest<ComplianceDocumentDto>;
+public sealed record AssignComplianceOwnerCommand(int Id, string OwnerName, int? GuidanceContentRevisionId = null)
+    : IRequest<ComplianceDocumentDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "compliance-owner"; }
 
 public sealed class AssignComplianceOwnerCommandValidator
     : AbstractValidator<AssignComplianceOwnerCommand>
@@ -176,20 +194,38 @@ public sealed class AssignComplianceOwnerCommandValidator
     }
 }
 
-public sealed class AssignComplianceOwnerCommandHandler(IApplicationDbContext context)
+public sealed class AssignComplianceOwnerCommandHandler(IApplicationDbContext context, ICurrentUser user, GuidanceOperationContext guidance, IDatabaseLock databaseLock)
     : IRequestHandler<AssignComplianceOwnerCommand, ComplianceDocumentDto>
 {
-    public async Task<ComplianceDocumentDto> Handle(
-        AssignComplianceOwnerCommand request, CancellationToken cancellationToken)
+    public Task<ComplianceDocumentDto> Handle(AssignComplianceOwnerCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync($"compliance-document:{request.Id}", ct => ExecuteAsync(request, ct), cancellationToken);
+
+    private async Task<ComplianceDocumentDto> ExecuteAsync(AssignComplianceOwnerCommand request, CancellationToken cancellationToken)
     {
         var document = await context.ComplianceDocuments
             .Include(d => d.Employee)!.ThenInclude(e => e!.Department)
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Uyum belgesi", request.Id);
 
+        if (document.OwnerName == request.OwnerName.Trim())
+            return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
         document.OwnerName = request.OwnerName.Trim();
 
+        ComplianceOperationEvidence.Record(context, user, guidance, document, request.GuidanceOperationKey, "owner-assigned");
         await context.SaveChangesAsync(cancellationToken);
         return document.ToDto(DateOnly.FromDateTime(DateTime.UtcNow.Date));
+    }
+}
+
+internal static class ComplianceOperationEvidence
+{
+    public static void Record(IApplicationDbContext context, ICurrentUser user, GuidanceOperationContext guidance,
+        ComplianceDocument document, string operation, string outcome)
+    {
+        if (!guidance.IsGuided) return;
+        var evidence = new GuidanceComplianceEvidence { UserId = PersonnelEntryGuide.RequireUserId(user), ComplianceDocument = document,
+            OperationKey = operation, Outcome = outcome };
+        guidance.Stamp(evidence);
+        context.GuidanceComplianceEvidences.Add(evidence);
     }
 }
