@@ -46,3 +46,7 @@ Kendi veri dışa aktarımı `guidanceContentReadings` koleksiyonunu içerir. Ba
 ## Açık teslimler
 
 Gerçek uzman kabulü/yayın, süreçlerin bütün alt adımlarını açıklayan içerik envanteri, sürümlü alıştırma/gerçek iş bağlantıları, yardım tercihi, günlük iş/API kapsamı ve novice görev denemeleri hâlâ açıktır. Bu başlangıç metinleri veya okuma sayısı tam kapsam canlı yayın kabulü değildir.
+
+## Sonraki teslimle güncellenen durum
+
+[Sürümlü alıştırma ve alt adım teslimi](2026-10-01-ik-rehberi-surumlu-alistirma.md), ilk üç akışın on adımında soru/yanıtı bağımsız incelemeye tabi katalog sürümüne bağlar. Yukarıdaki eski kod sürümlerinin katalogla eşitlenmediği kuralı sürer. Gerçek iş snapshotlarının sürümle bağlantısı, kalan süreç adımları, yardım tercihi ve uzman/ürün kabulü hâlâ açıktır.
