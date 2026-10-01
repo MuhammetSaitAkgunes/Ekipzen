@@ -44,6 +44,12 @@ Tablodaki “sürüme bağlı iş kanıtı” açıklığı artık diğer gerçe
 
 ## Karar alıştırması sözleşmesi
 
+### 1 Ekim — şirket, puantaj ve uyum bağlantıları
+
+Başlangıç şablonu oluşturma, puantaj oluşturma/düzeltme ve uyum takip kaydının oluşturma/bilgi/durum/sorumlu işlemleri artık isteğe bağlı kaynak kimliğiyle kişisel sürümlü kanıt üretir. Şirket kanıtı gerçekten eklenen grupları/sayıları; puantaj ve uyum her ayrı gerçek değişikliği saklar. No-op, önizleme ve ayrı isteğin başarısız sonucu kanıt oluşturmaz. Kişisel geçmiş ve dışa aktarım `evidenceKey` ile aynı satırdaki tekrarları ayırır. [Sözleşme ve migration](2026-10-01-ik-rehberi-sirket-puantaj-uyum-kaniti.md).
+
+Uyum yazımlarının ortak belge kilidi aynı anda aynı durumun iki defa değişmiş sayılmasını önler; beklenen istemci sürümü henüz yoktur. Belge bilgisi PUT'u ve sorumlu PATCH'i iki ayrı transaction olarak kalır. Açık API işi: beklenen belge sürümü ve ortak formun tutarlı etki/önizleme sözleşmesi. Kurulum yalnız başlangıç şablonudur; şirket profili/departman/erişim düzenlemeleri bu kanıtı devralmaz. Rehber kanıtı genel komutların belirsiz ağ sonucu için idempotensi yerine geçmez. Bordro ve ayrılış sürümlü işlem bağlantıları sıradadır.
+
 `GET /api/guidance/employee-entry/checks/{stepKey}` işe girişin altı adımını; `GET /api/guidance/recruitment/checks/{stepKey}` aday kaydı (`candidate-create`) ve ilk aşama kararı (`first-review`); `GET /api/guidance/leave-approval/checks/{stepKey}` izin ön incelemesi (`review-request`) ve karar etkisi (`decision-effect`) konularını sunar. İzin alıştırması ve yolculuğu İK yöneticisi ile ekip yöneticisine açıktır; çalışan erişemez. Her yanıt soru, seçenekler, içerik sürümü ve kullanıcının son denemesini içerir; doğru seçenek ilk yanıtta açıklanmaz. Aynı yolun `POST .../attempts` ucu yalnız `selectedChoice` (0–2) alır; doğru yanıtı sunucu belirler. Kullanıcı/tenant/süreç/adım/sürüm için deneme sayısı ve son yanıt güncellenir; önceki denemelerin ayrı geçmişi tutulmaz. Her sürecin yolculuğundaki alıştırma sayıları gerçek işlem kanıtından ayrıdır. İzin yolculuğu, oturum sahibinin `DecisionByUserId` ve `DecisionAtUtc` alanları dolu gerçek onay/ret kararlarını sayar; karar doğruluğu puanı üretmez. İçerik değişikliğinde ilgili süreç içerik sürümü artırılmalı; eski yanıt yeni soruya aktarılmamalıdır. Bu alıştırmalar mevzuat onayı, gerçek işlem kanıtı veya personel yeterlilik kararı değildir.
 
 ## Sözleşmesi ayrıca tasarlanacak bağımlılıklar

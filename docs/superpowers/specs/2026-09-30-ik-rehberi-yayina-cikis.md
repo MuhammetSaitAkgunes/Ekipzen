@@ -28,6 +28,8 @@ Bu belge [onaylı planı](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md
 
 ## İş sırası ve bitirme disiplini
 
+1 Ekim ek teslimi: [şirket başlangıcı, puantaj ve uyum](2026-10-01-ik-rehberi-sirket-puantaj-uyum-kaniti.md) yedi gerçek komutta sürümlü kanıtı genişletir. Şablonun gerçekten eklediği kayıtlar/sayılar ve aynı kayda yapılan ayrı düzeltmeler öğrenme yolculuğunda görünür. Bu üç süreç grubunun bütün alt işlemleri tamamlanmış sayılmaz; diğer şirket/personel, bordro/ayrılış bağlantıları, olağan API kapıları ve günlük görev envanteri açık kalır. Sıradaki geliştirme bordro ve ayrılış bağlantılarıdır. Tam kapsam yayın koşulu ve uzman/yeni kullanıcı/Turhost kabulü korunur.
+
 1. Mevcut aday–çalışan geçişini kapat; genel testleri ve ilk yerel paket üretimini doğrula.
 2. Ortak içerik kataloğunu oluştur; kaynak/inceleme ve sürüm sözleşmesini ekranlara bağla.
 3. Aynı altyapıyla süreç gruplarını tamamla; temel görevler ve işlem kanıtlarını birlikte genişlet.
