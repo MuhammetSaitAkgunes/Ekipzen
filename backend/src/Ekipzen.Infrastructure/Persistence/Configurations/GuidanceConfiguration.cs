@@ -15,6 +15,17 @@ public sealed class GuidanceHelpPreferenceConfiguration : IEntityTypeConfigurati
     }
 }
 
+public sealed class GuidanceLeaveDecisionEvidenceConfiguration : IEntityTypeConfiguration<GuidanceLeaveDecisionEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidanceLeaveDecisionEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.HasIndex(x => new { x.TenantId, x.UserId, x.LeaveRequestId }).IsUnique();
+        builder.HasOne(x => x.LeaveRequest).WithMany().HasForeignKey(x => x.LeaveRequestId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class GuidancePublishedPracticeProgressConfiguration : IEntityTypeConfiguration<GuidancePublishedPracticeProgress>
 {
     public void Configure(EntityTypeBuilder<GuidancePublishedPracticeProgress> builder)
@@ -56,6 +67,7 @@ public sealed class EmployeeCreationEvidenceConfiguration : IEntityTypeConfigura
     public void Configure(EntityTypeBuilder<EmployeeCreationEvidence> builder)
     {
         builder.Property(item => item.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         builder.HasIndex(item => new { item.TenantId, item.UserId, item.EmployeeId }).IsUnique();
         builder.HasOne(item => item.Employee)
             .WithMany()
@@ -69,6 +81,7 @@ public sealed class CandidateReviewEvidenceConfiguration : IEntityTypeConfigurat
     public void Configure(EntityTypeBuilder<CandidateReviewEvidence> builder)
     {
         builder.Property(item => item.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         builder.HasIndex(item => new { item.TenantId, item.UserId, item.CandidateId }).IsUnique();
         builder.HasOne(item => item.Candidate)
             .WithMany()

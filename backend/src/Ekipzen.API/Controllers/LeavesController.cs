@@ -81,7 +81,7 @@ public sealed class LeavesController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<LeaveRequestDto>> Approve(
         int id, DecisionBody? body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new DecideLeaveRequestCommand(id, true, body?.Note), cancellationToken));
+        => Ok(await sender.Send(new DecideLeaveRequestCommand(id, true, body?.Note, body?.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/reject")]
     [Authorize(Policy = Policies.Management)]
@@ -89,7 +89,7 @@ public sealed class LeavesController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<LeaveRequestDto>> Reject(
         int id, DecisionBody? body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new DecideLeaveRequestCommand(id, false, body?.Note), cancellationToken));
+        => Ok(await sender.Send(new DecideLeaveRequestCommand(id, false, body?.Note, body?.GuidanceContentRevisionId), cancellationToken));
 
     // --- takım yokluk widget'ı ---
 
@@ -98,5 +98,5 @@ public sealed class LeavesController(ISender sender) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<TeamLeaveDto>>> GetTeamLeaves(CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetTeamLeavesQuery(), cancellationToken));
 
-    public sealed record DecisionBody(string? Note);
+    public sealed record DecisionBody(string? Note, int? GuidanceContentRevisionId = null);
 }

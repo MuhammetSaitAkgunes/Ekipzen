@@ -2,6 +2,8 @@ using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Employees;
+using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Constants;
 using Ekipzen.Domain.Enums;
 using MediatR;
@@ -9,8 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ekipzen.Application.Features.Leaves.Commands;
 
-public sealed record DecideLeaveRequestCommand(int Id, bool Approve, string? DecisionNote = null)
-    : IRequest<LeaveRequestDto>;
+public sealed record DecideLeaveRequestCommand(int Id, bool Approve, string? DecisionNote = null,
+    int? GuidanceContentRevisionId = null) : IRequest<LeaveRequestDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "leave-decision";
+}
 
 public sealed class DecideLeaveRequestCommandValidator : AbstractValidator<DecideLeaveRequestCommand>
 {
@@ -24,7 +29,8 @@ public sealed class DecideLeaveRequestCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
     IWorkingDayCalculator workingDayCalculator,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock,
+    GuidanceOperationContext guidance)
     : IRequestHandler<DecideLeaveRequestCommand, LeaveRequestDto>
 {
     public async Task<LeaveRequestDto> Handle(
@@ -87,6 +93,16 @@ public sealed class DecideLeaveRequestCommandHandler(
         leaveRequest.DecisionByUserId = currentUser.UserId;
         leaveRequest.DecisionAtUtc = DateTime.UtcNow;
         leaveRequest.DecisionNote = request.DecisionNote;
+        if (guidance.IsGuided)
+        {
+            var evidence = new GuidanceLeaveDecisionEvidence
+            {
+                UserId = PersonnelEntryGuide.RequireUserId(currentUser),
+                LeaveRequestId = leaveRequest.Id, DecisionStatus = leaveRequest.Status,
+            };
+            guidance.Stamp(evidence);
+            context.GuidanceLeaveDecisionEvidences.Add(evidence);
+        }
         await context.SaveChangesAsync(cancellationToken);
 
         if (request.Approve && (leaveRequest.LeaveType?.DeductsFromAnnualBalance ?? false))

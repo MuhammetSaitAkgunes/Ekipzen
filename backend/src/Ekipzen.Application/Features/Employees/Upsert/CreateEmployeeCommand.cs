@@ -4,6 +4,7 @@ using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Common.Notifications;
 using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Employees.GetEmployee;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Domain.Entities.Identity;
 using Ekipzen.Domain.Entities.Guidance;
 using Ekipzen.Domain.Entities.Organization;
@@ -12,7 +13,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ekipzen.Application.Features.Employees.Upsert;
 
-public sealed record CreateEmployeeCommand(EmployeeUpsertModel Model) : IRequest<EmployeeDetailDto>;
+public sealed record CreateEmployeeCommand(EmployeeUpsertModel Model) : IRequest<EmployeeDetailDto>, IGuidanceOperationCommand
+{
+    public int? GuidanceContentRevisionId => Model.GuidanceContentRevisionId;
+    public string GuidanceOperationKey => "employee-create";
+}
 
 public sealed class CreateEmployeeCommandValidator : AbstractValidator<CreateEmployeeCommand>
 {
@@ -34,7 +39,8 @@ public sealed class CreateEmployeeCommandHandler(
     ISender sender,
     ICurrentUser currentUser,
     INotificationTrigger notificationTrigger,
-    IIdentityProvisioningProcessor provisioningProcessor)
+    IIdentityProvisioningProcessor provisioningProcessor,
+    GuidanceOperationContext guidance)
     : IRequestHandler<CreateEmployeeCommand, EmployeeDetailDto>
 {
     public async Task<EmployeeDetailDto> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
@@ -71,11 +77,13 @@ public sealed class CreateEmployeeCommandHandler(
         var userId = currentUser.UserId
             ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi.");
         context.Employees.Add(employee);
-        context.EmployeeCreationEvidences.Add(new EmployeeCreationEvidence
+        var creationEvidence = new EmployeeCreationEvidence
         {
             UserId = userId,
             Employee = employee,
-        });
+        };
+        guidance.Stamp(creationEvidence);
+        context.EmployeeCreationEvidences.Add(creationEvidence);
         await context.SaveChangesAsync(cancellationToken);
 
         await ManagerRoleProvisioning.ProcessNowAsync(provisioningProcessor, roleOperations, cancellationToken);

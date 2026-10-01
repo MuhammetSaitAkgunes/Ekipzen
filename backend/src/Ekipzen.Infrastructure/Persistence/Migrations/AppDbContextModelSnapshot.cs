@@ -429,6 +429,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
@@ -469,6 +473,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -711,6 +719,56 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("GuidanceHelpPreferences");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceLeaveDecisionEvidence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DecisionStatus")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("LeaveRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaveRequestId");
+
+                    b.HasIndex("TenantId", "UserId", "LeaveRequestId")
+                        .IsUnique();
+
+                    b.ToTable("GuidanceLeaveDecisionEvidences");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidancePublishedPracticeProgress", b =>
@@ -4205,6 +4263,17 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Guidance.GuidanceLeaveDecisionEvidence", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Leaves.LeaveRequest", "LeaveRequest")
+                        .WithMany()
+                        .HasForeignKey("LeaveRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LeaveRequest");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Identity.IdentityProvisioningOperation", b =>

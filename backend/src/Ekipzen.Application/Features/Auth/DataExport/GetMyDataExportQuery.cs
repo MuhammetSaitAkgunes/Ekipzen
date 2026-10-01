@@ -1,4 +1,5 @@
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Guidance;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -46,6 +47,7 @@ public sealed record MyDataExportDto(
     IReadOnlyList<GuidanceContentReadingExportItem> GuidanceContentReadings,
     IReadOnlyList<GuidancePublishedPracticeExportItem> GuidancePublishedPractices,
     IReadOnlyList<GuidanceHelpPreferenceExportItem> GuidanceHelpPreferences,
+    IReadOnlyList<GuidanceOperationEvidenceDto> GuidanceOperations,
     DateTime ExportedAtUtc);
 
 /// <summary>
@@ -81,6 +83,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         IReadOnlyList<PayslipExportItem> payslips = Array.Empty<PayslipExportItem>();
 
         var userId = currentUser.UserId ?? string.Empty;
+        var guidanceOperations = await GuidanceOperationEvidenceReader.ReadAsync(context, userId, cancellationToken);
         var publishedPractices = await context.GuidancePublishedPracticeProgresses.AsNoTracking()
             .Where(item => item.UserId == userId)
             .Select(item => new GuidancePublishedPracticeExportItem(item.ContentRevisionId, item.ContentKey,
@@ -163,7 +166,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         var dto = new MyDataExportDto(
             account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
             guidanceBookmarks, employeeCreationEvidences, candidateReviewEvidences,
-            guidanceDecisionProgresses, guidanceReadings, publishedPractices, helpPreferences, DateTime.UtcNow);
+            guidanceDecisionProgresses, guidanceReadings, publishedPractices, helpPreferences, guidanceOperations, DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
         var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";

@@ -158,7 +158,11 @@ public sealed class CreateCandidateCommandHandler(
 // --- pipeline durum geçişi ---
 
 public sealed record SetCandidateStatusCommand(int Id, string Status, int ExpectedVersion, string Reason,
-    IReadOnlyList<CandidateDecisionEvidenceReference>? Evidence = null) : IRequest<CandidateDetailDto>;
+    IReadOnlyList<CandidateDecisionEvidenceReference>? Evidence = null, int? GuidanceContentRevisionId = null)
+    : IRequest<CandidateDetailDto>, Ekipzen.Application.Features.Guidance.IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-first-review";
+}
 
 public sealed class SetCandidateStatusCommandValidator : AbstractValidator<SetCandidateStatusCommand>
 {
@@ -183,7 +187,8 @@ public sealed class SetCandidateStatusCommandValidator : AbstractValidator<SetCa
 }
 
 public sealed class SetCandidateStatusCommandHandler(
-    IApplicationDbContext context, ISender sender, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ISender sender, ICurrentUser currentUser, IDatabaseLock databaseLock,
+    Ekipzen.Application.Features.Guidance.GuidanceOperationContext guidance)
     : IRequestHandler<SetCandidateStatusCommand, CandidateDetailDto>
 {
     public Task<CandidateDetailDto> Handle(
@@ -207,6 +212,8 @@ public sealed class SetCandidateStatusCommandHandler(
         }
 
         var newStatus = RecruitmentMappings.ParseStatus(request.Status);
+        if (guidance.IsGuided && candidate.Status != CandidateStatus.New)
+            throw new ConflictException("İlk inceleme rehberi yalnız Yeni aşamasındaki aday kararına bağlanabilir.");
         if (newStatus != candidate.Status)
         {
             var userId = currentUser.UserId
@@ -239,12 +246,14 @@ public sealed class SetCandidateStatusCommandHandler(
                     .AnyAsync(item => item.CandidateId == candidate.Id && item.UserId == userId, cancellationToken);
                 if (!alreadyVerified)
                 {
-                    context.CandidateReviewEvidences.Add(new CandidateReviewEvidence
+                    var reviewEvidence = new CandidateReviewEvidence
                     {
                         CandidateId = candidate.Id,
                         UserId = userId,
                         DecisionStatus = newStatus,
-                    });
+                    };
+                    guidance.Stamp(reviewEvidence);
+                    context.CandidateReviewEvidences.Add(reviewEvidence);
                 }
             }
 

@@ -23,6 +23,7 @@ public static class DependencyInjection
         {
             cfg.RegisterServicesFromAssembly(assembly);
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            cfg.AddOpenBehavior(typeof(Features.Guidance.GuidanceOperationBehavior<,>));
         });
 
         // IRegister implementasyonları (modül DTO eşlemeleri) assembly'den taranır.
@@ -30,6 +31,7 @@ public static class DependencyInjection
 
         // Bildirim tetikleyicileri (Faz 11): ayar toggle'larına uyar, IEmailSender'a yazar.
         services.AddScoped<INotificationTrigger, NotificationTrigger>();
+        services.AddScoped<Features.Guidance.GuidanceOperationContext>();
 
         // Kiracı kurmanın tek yolu. Scoped: platform context'i ve dizin ile AYNI
         // kapsamda olmalı — adım 1'in transaction'ı bu paylaşıma dayanıyor.

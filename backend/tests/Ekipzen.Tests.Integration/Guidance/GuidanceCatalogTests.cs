@@ -23,7 +23,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Ekipzen.Tests.Integration.Guidance;
 
 [Collection(ApiCollection.Name)]
-public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
+public sealed partial class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTestBase(factory)
 {
     private const string Root = "/api/guidance/catalog";
 

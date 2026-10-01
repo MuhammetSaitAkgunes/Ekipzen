@@ -46,7 +46,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public async Task<ActionResult<CandidateDetailDto>> SetStatus(
         int id, CandidateStatusBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new SetCandidateStatusCommand(id, body.Status,
-            body.ExpectedVersion, body.Reason, body.Evidence), cancellationToken));
+            body.ExpectedVersion, body.Reason, body.Evidence, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPut("candidates/{id:int}")]
     [ProducesResponseType<CandidateDetailDto>(StatusCodes.Status200OK)]
@@ -170,7 +170,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new GetRecruitmentFunnelQuery(), cancellationToken));
 
     public sealed record CandidateStatusBody(string Status, int ExpectedVersion, string Reason,
-        IReadOnlyList<CandidateDecisionEvidenceReference>? Evidence = null);
+        IReadOnlyList<CandidateDecisionEvidenceReference>? Evidence = null, int? GuidanceContentRevisionId = null);
     public sealed record ReviseNoteBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
         string NoteType, string Text, string Reason);
     public sealed record ReviseEvaluationBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
