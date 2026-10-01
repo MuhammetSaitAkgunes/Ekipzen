@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -93,9 +94,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderModal = (employeeId: number | null, readOnly = false, onCreated?: (id: number) => void, guided = false) =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <PersonnelModal employeeId={employeeId} readOnly={readOnly} onClose={() => {}} onCreated={onCreated} guided={guided} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("düzenleme modunda alanlar mevcut kayıtla dolar", async () => {

@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,7 +20,7 @@ test("günlük iş bağlantısı ilgili izin talebini listenin başında açık 
   });
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={["/app/inbox?tab=approvals&requestId=8"]}>
-      <ToastProvider><ApprovalsList /></ToastProvider>
+      <AuthProvider><ToastProvider><ApprovalsList /></ToastProvider></AuthProvider>
     </MemoryRouter>
   </QueryClientProvider>);
 
@@ -59,7 +60,7 @@ test("izin kararı alıştırması isteğe bağlı açılır ve yanıt gerçek o
   }));
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={["/app/inbox?requestId=8"]}>
-      <ToastProvider><ApprovalsList /></ToastProvider>
+      <AuthProvider><ToastProvider><ApprovalsList /></ToastProvider></AuthProvider>
     </MemoryRouter>
   </QueryClientProvider>);
 
@@ -87,7 +88,7 @@ test("onay için karar özeti görülmeden işlem gönderilmez; not karar kaydı
   queryClient.setQueryData(leaveApprovalJourneyKey, { verifiedDecisions: 0 });
   render(<QueryClientProvider client={queryClient}>
     <MemoryRouter initialEntries={["/app/inbox?requestId=8"]}>
-      <ToastProvider><ApprovalsList /></ToastProvider>
+      <AuthProvider><ToastProvider><ApprovalsList /></ToastProvider></AuthProvider>
     </MemoryRouter>
   </QueryClientProvider>);
 
@@ -117,7 +118,7 @@ test("ret kararı da ayrı inceleme ve açık kaydetme gerektirir", async () => 
   });
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={["/app/inbox?requestId=8"]}>
-      <ToastProvider><ApprovalsList /></ToastProvider>
+      <AuthProvider><ToastProvider><ApprovalsList /></ToastProvider></AuthProvider>
     </MemoryRouter>
   </QueryClientProvider>);
 
@@ -147,7 +148,7 @@ test("karar çakışırsa panel ve not korunur; tamamlanmış gibi gösterilmez"
   }));
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={["/app/inbox?requestId=8"]}>
-      <ToastProvider><ApprovalsList /></ToastProvider>
+      <AuthProvider><ToastProvider><ApprovalsList /></ToastProvider></AuthProvider>
     </MemoryRouter>
   </QueryClientProvider>);
 

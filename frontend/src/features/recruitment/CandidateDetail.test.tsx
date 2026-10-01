@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import userEvent from "@testing-library/user-event";
@@ -40,9 +41,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderDetail = () =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <CandidateDetail id={5} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("aday detayından mevcut not gerekçeli düzeltme penceresinde açılır", async () => {
@@ -311,7 +312,7 @@ test("işe alma ön kontrolünden sonra personel kaydı oluşturur ve kalan işe
   });
   function SwitchCandidate() {
     const [id, setId] = useState(5);
-    return <ToastProvider><button onClick={() => setId(6)}>Diğer adayı seç</button><CandidateDetail id={id} /></ToastProvider>;
+    return <AuthProvider><ToastProvider><button onClick={() => setId(6)}>Diğer adayı seç</button><CandidateDetail id={id} /></ToastProvider></AuthProvider>;
   }
   renderPage(<SwitchCandidate />);
   await screen.findByRole("heading", { name: "Burak Yılmaz" });

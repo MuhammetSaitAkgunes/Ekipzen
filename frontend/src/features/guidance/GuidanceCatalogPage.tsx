@@ -5,6 +5,7 @@ import { appPath } from "../../paths";
 import type { Role } from "../../routes";
 import { PageError, PageLoading } from "../shared/PageState";
 import { guidanceSourceDrafts, guidanceSourceResearchDate } from "./sourceDrafts";
+import { guidanceStepDrafts, guidanceStepTitles } from "./stepDrafts";
 import { guidanceProcessPath } from "./processNavigation";
 import { GuidanceReadingJourney } from "./GuidanceReadingJourney";
 import { processTitles, sourceTitles, useGuidanceCatalog, useGuidanceCatalogVersion, useGuidanceEditorial,
@@ -12,7 +13,7 @@ import { processTitles, sourceTitles, useGuidanceCatalog, useGuidanceCatalogVers
   type GuidanceContent, type GuidanceContentBody, type GuidanceEditorial } from "./catalogQueries";
 import "./GuidanceCatalogPage.css";
 
-type TextField = Exclude<keyof GuidanceContentBody, "title" | "audience" | "sourceKind" | "effectiveFrom" | "effectiveTo">;
+type TextField = Exclude<keyof GuidanceContentBody, "title" | "audience" | "sourceKind" | "effectiveFrom" | "effectiveTo" | "stepKey" | "practice">;
 const fields: [TextField, string][] = [
   ["learningGoal", "Öğrenme hedefi"], ["prerequisites", "Başlamadan önce"], ["action", "Ne yapacağız?"],
   ["why", "Neden yapacağız?"], ["example", "Ayrıntılı örnek"], ["counterExample", "Hatalı örnek"],
@@ -41,6 +42,7 @@ function ContentArticle({ content }: { content: GuidanceContent }) {
   return <article className="ez-panel ez-guidance-article">
     <span className="ez-overline">{processTitles[content.processKey]} · Sürüm {content.contentVersion} · {sourceTitles[body.sourceKind]}</span>
     <h2>{body.title}</h2>
+    {body.stepKey && <p>Alt adım: {guidanceStepTitles[content.processKey]?.[body.stepKey] ?? body.stepKey}</p>}
     {!content.isCurrent && <p role="status">Bu sürüm şu anda güncel rehber olarak kullanılmıyor. Tarihî, ileri tarihli veya inceleme süresi geçmiş olabilir; işlem öncesinde güncel içeriği kontrol edin.</p>}
     <p>Yürürlük: {body.effectiveFrom}{body.effectiveTo ? ` — ${body.effectiveTo}` : " itibarıyla"}</p>
     {body.sourceKind === "company-policy" && <p>Bu merkezî içerik bir politika örneğidir. Kendi şirketinizde yürürlükte olan politikayı ayrıca doğrulayın.</p>}
@@ -48,6 +50,9 @@ function ContentArticle({ content }: { content: GuidanceContent }) {
       <h3>{title}</h3>
       {key === "sourceReference" && sourceUrl ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{body[key]}</a> : <p>{body[key]}</p>}
     </section>)}
+    {body.practice && <section aria-label="Yayın incelemesindeki alıştırma"><h3>İnceleme kapsamındaki alıştırma</h3>
+      <p>{body.practice.question}</p><ol>{body.practice.choices.map((choice, index) => <li key={index}>{choice}{index === body.practice!.correctChoice ? " · Doğru seçenek" : ""}</li>)}</ol>
+      <p>{body.practice.explanation}</p><p>Soru, seçenekler, doğru yanıt ve açıklama bu içerik sürümünün yayın onayına dahildir.</p></section>}
     <p>Uzman incelemesi: {content.expertName} · {content.expertRole} · {content.reviewedOn}. Yeniden inceleme: {content.reviewDueOn}.</p>
     <p>Rehberi okumak bir işlemi tamamlamaz veya öğrenme yeterliliğini onaylamaz. Gerçek sonucu ilgili işlem ekranından doğrulayın.</p>
     <ReadingAcknowledgement key={content.id} content={content} />
@@ -97,9 +102,25 @@ function ContentForm({ initial, identity, onSaved, onDirtyChange }: {
     <label>İçerik kimliği<input value={contentKey} disabled={!!identity.contentKey} required maxLength={64}
       pattern="[a-z0-9]+(-[a-z0-9]+)*" onChange={event => setContentKey(event.target.value)} /></label>
     {!identity.contentKey && <p>Küçük harf ve tireyle sabit bir kimlik seçin; örneğin calisan-karti-ilk-kontrol.</p>}
-    <label>Süreç<select value={processKey} disabled={!!identity.processKey} onChange={event => setProcessKey(event.target.value)}>
+    <label>Süreç<select value={processKey} disabled={!!identity.processKey} onChange={event => { setProcessKey(event.target.value); setField("stepKey", null); setField("practice", null); }}>
       {Object.entries(processTitles).map(([key, title]) => <option value={key} key={key}>{title}</option>)}
     </select></label>
+    <label>Alt adım (isteğe bağlı)<select value={body.stepKey ?? ""} disabled={!!identity.contentKey} onChange={event => {
+      const step = event.target.value; setField("stepKey", step || null); setField("practice", null);
+      if (step) setContentKey(`${processKey}-${step}`);
+    }}><option value="">Süreç içeriği</option>{Object.entries(guidanceStepTitles[processKey] ?? {}).map(([key, title]) => <option key={key} value={key}>{title}</option>)}</select></label>
+    {body.stepKey && <fieldset><legend>Sürümlü alıştırma · yayın incelemesinin parçası</legend>
+      <label className="ez-guidance-inline"><input type="checkbox" checked={!!body.practice} onChange={event => setField("practice", event.target.checked
+        ? { question: "", choices: ["", "", ""], correctChoice: 0, explanation: "" } : null)} />Bu alt adıma alıştırma ekle</label>
+      {body.practice && <>
+        <label>Alıştırma sorusu<textarea maxLength={2000} value={body.practice.question} onChange={event => setField("practice", { ...body.practice!, question: event.target.value })} /></label>
+        {body.practice.choices.map((choice, index) => <label key={index}>Seçenek {index + 1}<textarea maxLength={1000} value={choice} onChange={event => setField("practice", {
+          ...body.practice!, choices: body.practice!.choices.map((item, i) => i === index ? event.target.value : item) })} /></label>)}
+        <label>Doğru seçenek<select value={body.practice.correctChoice} onChange={event => setField("practice", { ...body.practice!, correctChoice: Number(event.target.value) })}>
+          {body.practice.choices.map((_, index) => <option key={index} value={index}>Seçenek {index + 1}</option>)}</select></label>
+        <label>Yanıt açıklaması<textarea maxLength={4000} value={body.practice.explanation} onChange={event => setField("practice", { ...body.practice!, explanation: event.target.value })} /></label>
+      </>}
+    </fieldset>}
     <label>İçerik başlığı<input value={body.title} required maxLength={200} onChange={event => setField("title", event.target.value)} /></label>
     <fieldset><legend>İçeriği görebilecek roller</legend>{roles.map(([role, name]) => <label className="ez-guidance-inline" key={role}>
       <input type="checkbox" checked={body.audience.includes(role)} onChange={event => setField("audience", event.target.checked
@@ -211,6 +232,13 @@ export function GuidanceCatalogPage() {
             onClick={() => { setCreation({ ...draft, body: { ...draft.body, audience: [...draft.body.audience] } }); setSelected(null); setMessage(""); }}>
             {processTitles[draft.processKey]} başlangıç taslağını hazırla</button>
         </li>)}</ul>
+      </details>
+      <details><summary>Alt adım ve alıştırma taslakları</summary>
+        <p>İşe girişte altı, işe alımda iki ve izin kararında iki alt adım. Metin, kaynak ve soru birlikte bağımsız incelemeye sunulur; hazırlamak veya kaydetmek yayımlamaz.</p>
+        <ul>{guidanceStepDrafts.map(draft => <li key={draft.contentKey}><button type="button" className="btn btn-secondary"
+          disabled={!editorial.isSuccess || editorial.data.some(item => item.content.contentKey === draft.contentKey)}
+          onClick={() => { setCreation({ ...draft, body: structuredClone(draft.body) }); setSelected(null); setMessage(""); }}>
+          {processTitles[draft.processKey]} · {draft.body.title} taslağını hazırla</button></li>)}</ul>
       </details>
       {message && <p role="status">{message}</p>}
       {editorial.isPending ? <PageLoading /> : editorial.isError ? <PageError error={editorial.error} /> : <ul>{editorial.data?.map(entry => <li key={entry.content.id}>

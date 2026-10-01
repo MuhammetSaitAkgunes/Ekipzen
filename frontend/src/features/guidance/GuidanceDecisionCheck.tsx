@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { PublishedGuidancePractice } from "./PublishedGuidancePractice";
 import {
   useGuidanceDecisionCheck, useSubmitGuidanceDecisionCheck,
   type GuidanceDecisionCheck as Check, type GuidanceDecisionProcess,
@@ -15,9 +16,11 @@ export function GuidanceDecisionCheck({ process, step, operationName, eager = tr
   const submit = useSubmitGuidanceDecisionCheck();
   const shown = submitted ?? (selected === null ? query.data : null);
 
-  return <details className="ez-personnel-decision-check"
+  return <><PublishedGuidancePractice process={process === "employee-entry" ? "personnel-entry" : process === "leave-approval" ? "leave" : process} step={step} />
+  <details className="ez-personnel-decision-check"
     onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>Kısa karar alıştırması</summary>
+    <p>Bu bölümün yanıtları kaynaklı sürüm alıştırmalarından ayrı izlenir.</p>
     {query.isPending ? <p>Alıştırma yükleniyor.</p> : query.isError
       ? <p role="alert">Alıştırma yüklenemedi. Daha sonra yeniden deneyin.</p>
       : <>
@@ -52,5 +55,5 @@ export function GuidanceDecisionCheck({ process, step, operationName, eager = tr
           Bu alıştırma öğrenme takibidir; gerçek {operationName} kanıtı veya yeterlilik onayı değildir.
         </small>
       </>}
-  </details>;
+  </details></>;
 }

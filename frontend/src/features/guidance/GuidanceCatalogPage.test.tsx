@@ -8,6 +8,30 @@ import { stubApi } from "../../test/apiStub";
 import { GuidanceCatalogPage } from "./GuidanceCatalogPage";
 import type { GuidanceContent, GuidanceEditorial } from "./catalogQueries";
 
+test("alt adım taslağı soru ve doğru yanıtı yayın incelemesine taşır; seçim otomatik kayıt yapmaz", async () => {
+  stubApi(routes(true, [])); renderCatalog();
+  await userEvent.click(await screen.findByRole("button", { name: "İçerik yayınını yönet" }));
+  await userEvent.click(screen.getByText("Alt adım ve alıştırma taslakları"));
+  const prepare = await screen.findByRole("button", { name: "İşe giriş · Kimlik ve temel bilgiler taslağını hazırla" });
+  await waitFor(() => expect(prepare).toBeEnabled());
+  await userEvent.click(prepare);
+  expect(screen.getByLabelText("İçerik kimliği")).toHaveValue("personnel-entry-tab-kimlik");
+  expect(screen.getByLabelText("Alt adım (isteğe bağlı)")).toHaveValue("tab-kimlik");
+  expect(screen.getByLabelText("Doğru seçenek")).toHaveValue("1");
+  expect(screen.getByLabelText("Alıştırma sorusu")).toHaveValue("İşe girişte zorunlu kimlik bilgisi henüz doğrulanmadı. Nasıl ilerlersiniz?");
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  const mock = vi.mocked(fetch), original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (input, init) => init?.method === "POST" ? new Response(JSON.stringify({
+    ...entry, revision: 1, content: { ...content, id: 9, state: "draft", isCurrent: false,
+      ...JSON.parse(String(init.body)), body: JSON.parse(String(init.body)).body },
+  })) : original(input, init));
+  await userEvent.click(screen.getByRole("button", { name: "Taslağı kaydet" }));
+  await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+  const call = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === "POST")!;
+  expect(JSON.parse(String(call[1]?.body))).toMatchObject({ contentKey: "personnel-entry-tab-kimlik", processKey: "personnel-entry",
+    body: { stepKey: "tab-kimlik", practice: { correctChoice: 1, choices: ["Tahminî bilgi girerim", "Doğrulanmış bilgiyi ister, sonra kaydederim", "Başka çalışanın bilgisini kullanırım"] } } });
+});
+
 const content: GuidanceContent = {
   id: 8, contentKey: "personnel-check", processKey: "personnel", contentVersion: 1, state: "published", isCurrent: true,
   expertName: "İnceleyen uzman", expertRole: "İK uzmanı", reviewedOn: "2026-09-30", reviewDueOn: "2026-10-30", publishedAtUtc: "2026-09-30T12:00:00Z",

@@ -15,6 +15,8 @@ export type GuidanceContentBody = {
   example: string; counterExample: string; terms: string; outcome: string; completionEvidence: string;
   nextStep: string; correction: string; expertEscalation: string; sourceKind: string; sourceReference: string;
   provision: string; applicability: string; effectiveFrom: string; effectiveTo: string | null;
+  stepKey?: string | null;
+  practice?: { question: string; choices: string[]; correctChoice: number; explanation: string } | null;
 };
 export type GuidanceContent = {
   id: number; contentKey: string; processKey: string; contentVersion: number;
