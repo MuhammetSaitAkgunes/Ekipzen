@@ -19,6 +19,7 @@ test.each([
   { process: "payroll", title: "Bordro", first: "Hesap ayarlarının kaynak ve sürümünü inceleme", step: "settings-review", count: 6 },
   { process: "compliance", title: "Uyum ve belgeler", first: "Gerçek belgeyi ve takip kaydını inceleme", step: "record-review", count: 3 },
   { process: "offboarding", title: "İşten ayrılış", first: "Ayrılış dosyasını hazırlama", step: "preparation", count: 5 },
+  { process: "daily", title: "Günlük yönetim", first: "İşin nedenini, kapsamını ve tarihini inceleme", step: "task-review", count: 3 },
 ])("$title adımları gerçek işlem yapmadan sırayla açılır", async ({ process, title, first, step, count }) => {
   stubApi({ [`/api/guidance/catalog/steps/${process}/${step}`]: null });
   renderPage(<AuthProvider><GuidanceStepLessons process={process} /></AuthProvider>);
@@ -45,6 +46,16 @@ test("ekip yöneticisi yalnız uyum incelemesini görür; bordro/ayrılış işl
   expect(screen.queryByText("Belge bilgisi ve sorumlu hatasını düzeltme")).not.toBeInTheDocument();
   expect(screen.queryByText("Bordro · Adım adım öğren")).not.toBeInTheDocument();
   expect(screen.queryByText("İşten ayrılış · Adım adım öğren")).not.toBeInTheDocument();
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+test("yönetici günlük iş inceleme ve sonuç adımlarını görür; dış kanıt kaydı İK rolünde kalır", async () => {
+  setRole("manager"); stubApi({});
+  renderPage(<AuthProvider><GuidanceStepLessons process="daily" /></AuthProvider>);
+  await userEvent.click(screen.getByText("Günlük yönetim · Adım adım öğren"));
+  expect(screen.getAllByRole("heading")).toHaveLength(2);
+  expect(screen.getByText("Gerçek kayıtta işlemi yapıp sonucunu doğrulama")).toBeInTheDocument();
+  expect(screen.queryByText("Ödeme ve bildirim kanıtlarını ayrı takip etme")).not.toBeInTheDocument();
   expect(fetch).not.toHaveBeenCalled();
 });
 

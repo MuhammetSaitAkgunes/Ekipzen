@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
 import { DailyGuidanceTasks } from "./DailyGuidanceTasks";
+import { AuthProvider } from "../../auth/AuthContext";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -75,7 +76,7 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
       },
     ],
   });
-  renderPage(<DailyGuidanceTasks />);
+  renderPage(<AuthProvider><DailyGuidanceTasks /></AuthProvider>);
   expect(await screen.findByText(/Diğer İK işleri burada henüz üretilmez/)).toBeInTheDocument();
   const documentCard = screen.getByText("Ece Arslan · Sözleşme").closest("article")!;
   expect(within(documentCard).getByText(/Son tarih kayıtlı değil/)).toBeInTheDocument();
@@ -114,7 +115,7 @@ test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça gö
 
 test("boş liste bütün İK işlerinin bittiğini iddia etmez", async () => {
   stubApi({ "/api/guidance/daily-tasks": [] });
-  renderPage(<DailyGuidanceTasks />);
+  renderPage(<AuthProvider><DailyGuidanceTasks /></AuthProvider>);
   expect(await screen.findByText("Bu alanlarda bekleyen iş yok")).toBeInTheDocument();
   expect(screen.getByText(/Diğer işleri İş Kutusu'ndan kontrol edin/)).toBeInTheDocument();
 });

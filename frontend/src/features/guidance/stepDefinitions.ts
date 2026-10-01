@@ -17,11 +17,14 @@ export const guidanceStepTitles: Record<string, Record<string, string>> = {
   offboarding: { preparation: "Ayrılış dosyasını hazırlama", "settlement-review": "Parasal taslağı ve dayanaklarını inceleme",
     completion: "Ayrılışı tamamlayıp dış işlemi ayırma", "reversal-review": "Geri alma kapsamını kontrol etme",
     "correction-external": "Parasal düzeltme ve ayrı dış kanıtları izleme" },
+  daily: { "task-review": "İşin nedenini, kapsamını ve tarihini inceleme", "task-action": "Gerçek kayıtta işlemi yapıp sonucunu doğrulama",
+    "external-followup": "Ödeme ve bildirim kanıtlarını ayrı takip etme" },
 };
 const managerSteps: Record<string, string[]> = {
   leave: ["review-request", "decision-effect"], personnel: ["record-review"],
   attendance: ["entry-review", "entry-correction", "period-summary"],
   compliance: ["record-review"],
+  daily: ["task-review", "task-action"],
 };
 export function guidanceStepAudience(process: string, step: string): Role[] {
   return managerSteps[process]?.includes(step) ? ["hr-admin", "manager"] : ["hr-admin"];

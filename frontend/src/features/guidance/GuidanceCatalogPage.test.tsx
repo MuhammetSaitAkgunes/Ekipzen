@@ -12,6 +12,7 @@ test.each([
   { button: "Bordro · Hesap ayarlarının kaynak ve sürümünü inceleme taslağını hazırla", key: "payroll-settings-review", step: "settings-review", kind: "good-practice", correct: "1" },
   { button: "Uyum ve belgeler · Doğrulanmış belge durumunu işleme taslağını hazırla", key: "compliance-status-review", step: "status-review", kind: "legislation", correct: "0" },
   { button: "İşten ayrılış · Ayrılışı tamamlayıp dış işlemi ayırma taslağını hazırla", key: "offboarding-completion", step: "completion", kind: "legislation", correct: "2" },
+  { button: "Günlük yönetim · Ödeme ve bildirim kanıtlarını ayrı takip etme taslağını hazırla", key: "daily-external-followup", step: "external-followup", kind: "good-practice", correct: "2" },
 ])("$key içeriği ve sorusu bağımsız inceleme için hazırlanır; otomatik yayımlanmaz", async ({ button, key, step, kind, correct }) => {
   stubApi(routes(true, [])); renderCatalog();
   await userEvent.click(await screen.findByRole("button", { name: "İçerik yayınını yönet" }));

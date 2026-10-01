@@ -3,6 +3,7 @@ import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { useDailyGuidanceTasks } from "./queries";
 import { GuidanceSourceLink } from "./GuidanceSourceLink";
+import { GuidanceStepLessons } from "./GuidanceStepLessons";
 
 const dateLabel = (date: string): string => date.split("-").reverse().join(".");
 const taskLabels: Record<string, string> = {
@@ -25,6 +26,7 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
   const tasks = limit ? query.data.slice(0, limit) : query.data;
   return <div className="ez-guidance-tasks">
     <GuidanceSourceLink processKey="daily" />
+    <GuidanceStepLessons process="daily" />
     <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını; İK yöneticileri için eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. Diğer İK işleri burada henüz üretilmez.</p>
     {tasks.map((task) => <article className="ez-guidance-task" key={task.key}>
       <span className="ez-overline">{taskLabels[task.kind] ?? "BELGE TAKİBİ"}</span>
