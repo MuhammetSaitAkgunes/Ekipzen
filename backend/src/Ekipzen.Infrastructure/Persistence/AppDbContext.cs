@@ -105,6 +105,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     // Guidance
     public DbSet<GuidanceBookmark> GuidanceBookmarks => Set<GuidanceBookmark>();
     public DbSet<GuidanceContentReading> GuidanceContentReadings => Set<GuidanceContentReading>();
+    public DbSet<GuidanceHelpPreference> GuidanceHelpPreferences => Set<GuidanceHelpPreference>();
     public DbSet<GuidancePublishedPracticeProgress> GuidancePublishedPracticeProgresses => Set<GuidancePublishedPracticeProgress>();
     public DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences => Set<EmployeeCreationEvidence>();
     public DbSet<CandidateReviewEvidence> CandidateReviewEvidences => Set<CandidateReviewEvidence>();

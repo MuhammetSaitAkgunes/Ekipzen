@@ -87,6 +87,7 @@ public interface IApplicationDbContext
     // Guidance
     DbSet<GuidanceBookmark> GuidanceBookmarks { get; }
     DbSet<GuidanceContentReading> GuidanceContentReadings { get; }
+    DbSet<GuidanceHelpPreference> GuidanceHelpPreferences { get; }
     DbSet<GuidancePublishedPracticeProgress> GuidancePublishedPracticeProgresses { get; }
     DbSet<EmployeeCreationEvidence> EmployeeCreationEvidences { get; }
     DbSet<CandidateReviewEvidence> CandidateReviewEvidences { get; }

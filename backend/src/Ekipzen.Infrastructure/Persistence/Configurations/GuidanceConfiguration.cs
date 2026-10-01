@@ -4,6 +4,17 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Ekipzen.Infrastructure.Persistence.Configurations;
 
+public sealed class GuidanceHelpPreferenceConfiguration : IEntityTypeConfiguration<GuidanceHelpPreference>
+{
+    public void Configure(EntityTypeBuilder<GuidanceHelpPreference> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.ProcessKey).IsRequired().HasMaxLength(64);
+        builder.Property(x => x.Mode).IsRequired().HasMaxLength(16);
+        builder.HasIndex(x => new { x.TenantId, x.UserId, x.ProcessKey }).IsUnique();
+    }
+}
+
 public sealed class GuidancePublishedPracticeProgressConfiguration : IEntityTypeConfiguration<GuidancePublishedPracticeProgress>
 {
     public void Configure(EntityTypeBuilder<GuidancePublishedPracticeProgress> builder)

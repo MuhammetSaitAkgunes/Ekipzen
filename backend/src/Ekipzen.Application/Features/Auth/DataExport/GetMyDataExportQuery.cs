@@ -20,6 +20,7 @@ public sealed record AttendanceExportItem(DateOnly WorkDate, TimeOnly? CheckIn, 
 public sealed record ComplianceDocumentExportItem(string DocumentName, string Status, DateOnly? DueDate);
 public sealed record PayslipExportItem(string PeriodName, string ApprovalStatus);
 public sealed record GuidanceBookmarkExportItem(string ProcessKey, string StepKey, int ContentVersion);
+public sealed record GuidanceHelpPreferenceExportItem(string ProcessKey, string Mode, int Revision);
 public sealed record GuidanceContentReadingExportItem(
     int ContentRevisionId, string ContentKey, string ProcessKey, int ContentVersion, string Title, DateTime FirstReadAtUtc);
 public sealed record GuidancePublishedPracticeExportItem(int ContentRevisionId, string ContentKey, string ProcessKey,
@@ -44,6 +45,7 @@ public sealed record MyDataExportDto(
     IReadOnlyList<GuidanceDecisionProgressExportItem> GuidanceDecisionProgresses,
     IReadOnlyList<GuidanceContentReadingExportItem> GuidanceContentReadings,
     IReadOnlyList<GuidancePublishedPracticeExportItem> GuidancePublishedPractices,
+    IReadOnlyList<GuidanceHelpPreferenceExportItem> GuidanceHelpPreferences,
     DateTime ExportedAtUtc);
 
 /// <summary>
@@ -66,6 +68,10 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
     {
         var account = new AccountInfo(
             currentUser.UserId ?? "", currentUser.UserName ?? "", currentUser.Email ?? "", currentUser.Roles);
+
+        var helpPreferences = await context.GuidanceHelpPreferences.AsNoTracking()
+            .Where(x => x.UserId == currentUser.UserId)
+            .Select(x => new GuidanceHelpPreferenceExportItem(x.ProcessKey, x.Mode, x.Revision)).ToListAsync(cancellationToken);
 
         EmployeeInfo? employeeInfo = null;
         IReadOnlyList<LeaveRequestExportItem> leaveRequests = Array.Empty<LeaveRequestExportItem>();
@@ -157,7 +163,7 @@ public sealed class GetMyDataExportQueryHandler(IApplicationDbContext context, I
         var dto = new MyDataExportDto(
             account, employeeInfo, leaveRequests, leaveLedger, attendance, compliance, payslips,
             guidanceBookmarks, employeeCreationEvidences, candidateReviewEvidences,
-            guidanceDecisionProgresses, guidanceReadings, publishedPractices, DateTime.UtcNow);
+            guidanceDecisionProgresses, guidanceReadings, publishedPractices, helpPreferences, DateTime.UtcNow);
 
         var json = JsonSerializer.SerializeToUtf8Bytes(dto, SerializerOptions);
         var fileName = $"ekipzen-verilerim-{DateTime.UtcNow:yyyyMMdd}.json";

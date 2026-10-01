@@ -21,6 +21,7 @@ public static class GuidancePublishedSteps
         ["payroll"] = ["settings-review", "period-create", "row-review", "approval", "payslip-review", "correction-external"],
         ["compliance"] = ["record-review", "status-review", "record-correction"],
         ["offboarding"] = ["preparation", "settlement-review", "completion", "reversal-review", "correction-external"],
+        ["daily"] = ["task-review", "task-action", "external-followup"],
     };
     private static readonly IReadOnlyDictionary<string, string[]> ManagerSteps = new Dictionary<string, string[]>
     {
@@ -28,6 +29,7 @@ public static class GuidancePublishedSteps
         ["personnel"] = ["record-review"],
         ["attendance"] = ["entry-review", "entry-correction", "period-summary"],
         ["compliance"] = ["record-review"],
+        ["daily"] = ["task-review", "task-action"],
     };
     public static void RequireAccess(string process, string step, ICurrentUser user)
     {

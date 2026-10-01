@@ -27,6 +27,43 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
 {
     private const string Root = "/api/guidance/catalog";
 
+    [Fact]
+    public async Task HelpPreferences_ArePersonalRevisionCheckedAndSeparateFromLearningEvidence()
+    {
+        var team = await TeamAsync(); await using var host = team.Host;
+        var owner = team.Clients[0]; var colleague = team.Clients[1];
+        const string path = "/api/guidance/help-preferences";
+        (await owner.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Should().BeEmpty();
+        var command = new { mode = "compact", expectedRevision = 0 };
+        var result = await owner.PutAsJsonAsync(path + "/daily", command);
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await result.Content.ReadFromJsonAsync<GuidanceHelpPreferenceDto>())!.Revision.Should().Be(1);
+        (await owner.PutAsJsonAsync(path + "/daily", command)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await owner.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Single().Revision.Should().Be(1);
+        (await colleague.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Should().BeEmpty();
+        (await colleague.PutAsJsonAsync(path + "/daily", command)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await owner.PutAsJsonAsync(path + "/daily", new { mode = "detailed", expectedRevision = 0 })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await owner.PutAsJsonAsync(path + "/daily", new { mode = "detailed", expectedRevision = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await owner.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Single().Should().Be(new GuidanceHelpPreferenceDto("daily", "detailed", 2));
+        (await colleague.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Single().Mode.Should().Be("compact");
+        (await owner.PutAsJsonAsync(path + "/daily", command)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await owner.PutAsJsonAsync(path + "/daily", new { mode = "off", expectedRevision = 2 })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await owner.PutAsJsonAsync(path + "/unknown", command)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await owner.PutAsJsonAsync(path + "/daily", new { mode = "compact" })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var outsider = await AuthedClientAsync("globex-admin@globex.local");
+        (await outsider.GetFromJsonAsync<List<GuidanceHelpPreferenceDto>>(path))!.Should().BeEmpty();
+        var manager = await AuthedClientAsync("ece.arslan@hrmaster.local");
+        (await manager.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.OK);
+        var employee = await AuthedClientAsync("ahmet.yilmaz@hrmaster.local");
+        (await employee.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await employee.PutAsJsonAsync(path + "/daily", command)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var export = System.Text.Json.JsonDocument.Parse(await (await owner.GetAsync("/api/me/data-export")).Content.ReadAsStringAsync());
+        export.RootElement.GetProperty("guidanceHelpPreferences").GetArrayLength().Should().Be(1);
+        export.RootElement.GetProperty("guidanceHelpPreferences")[0].GetProperty("mode").GetString().Should().Be("detailed");
+        export.RootElement.GetProperty("guidancePublishedPractices").GetArrayLength().Should().Be(0);
+        export.RootElement.GetProperty("guidanceContentReadings").GetArrayLength().Should().Be(0);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -48,6 +85,7 @@ public sealed class GuidanceCatalogTests(EkipzenApiFactory factory) : TenancyTes
             ("company", "departments", false), ("company", "access-preparation", false),
             ("personnel", "record-review", true), ("personnel", "import-review", false), ("personnel", "rehire", false),
             ("attendance", "entry-review", true), ("attendance", "entry-correction", true), ("attendance", "period-summary", true),
+            ("daily", "task-review", true), ("daily", "task-action", true), ("daily", "external-followup", false),
         ];
         try
         {
