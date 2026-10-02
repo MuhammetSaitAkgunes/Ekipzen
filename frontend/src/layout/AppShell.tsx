@@ -5,6 +5,7 @@ import { apiDownload, apiFetch } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { appRoutes, navigation, type Role } from "../routes";
 import { LOGIN_PATH, appPath, roleHomeFor } from "../paths";
+import { WriteRecoveryNotice } from "./WriteRecoveryNotice";
 import { GlobalSearch } from "./GlobalSearch";
 import { useToast } from "./ToastProvider";
 import { Logo, usePageMeta } from "../ui";
@@ -116,7 +117,7 @@ export function AppShell() {
           </div>}
         </div>
       </header>
-      <main className="main-content" id="main-content" tabIndex={-1}><Outlet /></main>
+      <main className="main-content" id="main-content" tabIndex={-1}><WriteRecoveryNotice /><Outlet /></main>
     </div>
   );
 }

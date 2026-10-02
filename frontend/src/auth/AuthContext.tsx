@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, Fragment, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { sessionIdentity } from "../api/writeRecovery";
 import { apiFetch, toSession, type AuthResponse } from "../api/client";
 import { clearSession, getSession, setSession, subscribeSession, type UserDto } from "../api/session";
 
@@ -22,14 +23,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // verisini görür (KVKK ihlali). Kimliğe bakıyoruz: token yenilemede aynı
   // kullanıcı devam ettiği için önbellek gereksiz yere boşaltılmaz.
   const queryClient = useQueryClient();
-  const lastUserId = useRef<string | null | undefined>(user?.id ?? null);
-  useEffect(() => {
-    const currentUserId = user?.id ?? null;
+  const identity = sessionIdentity();
+  const lastUserId = useRef(identity);
+  useLayoutEffect(() => {
+    const currentUserId = identity;
     if (lastUserId.current !== currentUserId) {
       lastUserId.current = currentUserId;
       queryClient.clear();
     }
-  }, [user?.id, queryClient]);
+  }, [identity, queryClient]);
 
   const accept = useCallback((auth: AuthResponse) => {
     const session = toSession(auth);
@@ -53,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession();
   }, []);
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, login, logout }}><Fragment key={identity}>{children}</Fragment></AuthContext.Provider>;
 }
 
 export function useAuth(): AuthValue {

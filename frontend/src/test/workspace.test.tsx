@@ -73,7 +73,7 @@ test("çalışan iş kutusunda onay sekmesine URL ile erişemez", async () => {
   expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u).includes("leaves/pending"))).toBe(false);
 });
 
-test("onay detayları önce incelenir; başarısız işlem korunur ve tekrar denenir", async () => {
+test("onay sonucu belirsizken detaylar korunur; gerçek kayıt kontrolünden sonra tekrar yapılır", async () => {
   let failed = false;
   const original = vi.mocked(fetch).getMockImplementation()!;
   vi.mocked(fetch).mockImplementation(async (url, init) => {
@@ -92,8 +92,14 @@ test("onay detayları önce incelenir; başarısız işlem korunur ve tekrar den
   await userEvent.click(screen.getByRole("button", { name: "Onayı incele" }));
   expect(screen.getByText(/sistem onay anında bakiyeyi yeniden kontrol eder/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Onayı kaydet" }));
-  expect(await screen.findByRole("alert")).toBeInTheDocument();
+  const notice = await screen.findByRole("alert", { name: "Sonucu belirsiz işlemler" });
+  expect(notice).toBeInTheDocument();
   expect(screen.getByText("Aile ziyareti")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Onayı kaydet" }));
+  expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url) === "/api/leaves/4/approve")).toHaveLength(1);
+  await userEvent.click(within(notice).getByRole("button", { name: "Açık ekranların güncel kayıtlarını yeniden yükle" }));
+  await userEvent.click(within(notice).getByRole("checkbox"));
+  await userEvent.click(within(notice).getByRole("button", { name: "Kontrol uyarısını kaldır" }));
   await userEvent.click(screen.getByRole("button", { name: "Onayı kaydet" }));
   await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["leaves"] }));
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ["actions"] });

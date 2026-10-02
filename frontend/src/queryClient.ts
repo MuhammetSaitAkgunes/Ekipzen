@@ -14,6 +14,7 @@ import { ApiError } from "./api/client";
 export const createQueryClient = () =>
   new QueryClient({
     defaultOptions: {
+      mutations: { retry: false },
       queries: {
         staleTime: 30_000,
         retry: (failureCount: number, error: unknown) => {

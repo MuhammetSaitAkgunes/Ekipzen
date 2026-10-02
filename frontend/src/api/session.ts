@@ -32,11 +32,15 @@ export const getSession = (): Session | null => {
 };
 
 export const subscribeSession = (listener: () => void): (() => void) => {
+  if (!listeners.size) window.addEventListener("storage", onStorage);
   listeners.add(listener);
-  return () => void listeners.delete(listener);
+  return () => { listeners.delete(listener); if (!listeners.size) window.removeEventListener("storage", onStorage); };
 };
 
 const notify = () => listeners.forEach((listener) => listener());
+const onStorage = (event: StorageEvent) => {
+  if (event.key === SESSION_KEY || event.key === null) notify();
+};
 
 export const setSession = (session: Session) => {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
