@@ -107,3 +107,7 @@ Sıradaki somut paket toplu aktarımın bağımsız sürümlü dersi ve kişisel
 Aynı gönderimin dosya/token/kaynağı sabitse sonradan yayından kaldırılmış dersle de ilk sonuç okunur; yeni işlem için güncel yayın gereklidir. Belirsiz yanıt veya uyumsuz kaynak başarı sayılmaz; kendi sonuç sorgusu ve aynı gönderim tekrarıyla kurtarma yapılır. Kaynak yazımı başarısızsa kart/dönem/makbuz atomik geri alınır. Migration kontrollü tenant şema yönetimine eklendi; üretime publish/migration gönderilmedi.
 
 Sıradaki geliştirme tüm süreçlerdeki olağan alt işlemlerin tek API/kaynak/günlük sinyal/düzeltme matrisi ve açık şirket/işe alım bağlantılarıdır. Gerçek uzman ve ayrı editör yayını, kanıta dayalı uygulama seviyesi/deneyimsiz kullanıcı kabulü ve Turhost ortam/yedek/geri dönüş kabulü açık kalır. Teknik örnek yayın gerçek uzman kabulü değildir. Önceki finansal telafi/entegrasyon/saklama bağımlılıkları ve tüm öğrenme kapsamı tamamlanmadan yayın yapılmaması kararı korunur.
+
+## 2 Ekim 2026 — T04 ve yayın sorumluluğu
+
+[T04 teslimi](2026-10-02-ik-rehberi-puantaj-bordro-ayrilis-baglantilari.md) puantaj uzlaştırmasını, bordro/ayrılış hazırlık ve düzeltme kaynaklarını, ilk hesap ile revizyonun ayrı dış kanıtlarını bağlar. Sabit 45 satırda 36 bağlı / 8 okuma / 1 açık kalır; teknik geliştirme T05–T07 olarak üç başlıktır. T08 Turhost kurulumunu kullanıcı açıkça manuel üstlenmiştir; ortamın kurulmuş veya doğrulanmış olduğu iddia edilmez. Gerçek uzman/editör ve deneyimsiz kullanıcı kabulü ayrı kapılardır. Üretime publish veya migration gönderilmedi.
