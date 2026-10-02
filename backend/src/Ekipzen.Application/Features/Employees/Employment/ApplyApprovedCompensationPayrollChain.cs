@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -21,8 +22,9 @@ public sealed record ApprovedPayrollRevisionBatchDto(
 public sealed record ApplyApprovedCompensationPayrollChainCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId,
     string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
-    bool ConfirmSourceLink, bool ConfirmChainImpact, bool ConfirmExternalReconciliation)
-    : IRequest<ApprovedPayrollRevisionBatchDto>;
+    bool ConfirmSourceLink, bool ConfirmChainImpact, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null)
+    : IRequest<ApprovedPayrollRevisionBatchDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-revision-chain"; }
 
 public sealed class ApplyApprovedCompensationPayrollChainCommandValidator
     : AbstractValidator<ApplyApprovedCompensationPayrollChainCommand>
@@ -40,7 +42,7 @@ public sealed class ApplyApprovedCompensationPayrollChainCommandValidator
 
 public sealed class ApplyApprovedCompensationPayrollChainCommandHandler(
     IApplicationDbContext context, IPayrollEngine engine, ICurrentUser currentUser,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ApplyApprovedCompensationPayrollChainCommand, ApprovedPayrollRevisionBatchDto>
 {
     public async Task<ApprovedPayrollRevisionBatchDto> Handle(
@@ -172,6 +174,8 @@ public sealed class ApplyApprovedCompensationPayrollChainCommandHandler(
             revisions.Add((row.PayrollPeriodId, revision));
         }
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "payroll-revision-batch", batch.Id, ["Etkilenen aylar atomik olarak sürümlendi"], cancellationToken);
         return new(batch.Id, request.EmployeeId, request.RowId, year,
             batch.ExpertReviewReference, batch.ReviewNotes, actor, now,
             revisions.Select(item => new ApprovedPayrollRevisionBatchRowDto(

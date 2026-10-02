@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -104,7 +105,9 @@ public sealed record UpdatePayrollSettingsCommand(
     string SourceReference,
     string? ReviewNotes = null,
     int? ExpectedVersion = null,
-    IReadOnlyList<TaxBracketDto>? TaxBrackets = null) : IRequest<PayrollSettingsDto>;
+    IReadOnlyList<TaxBracketDto>? TaxBrackets = null, int? GuidanceContentRevisionId = null)
+    : IRequest<PayrollSettingsDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-settings-save"; }
 
 public sealed class UpdatePayrollSettingsCommandValidator : AbstractValidator<UpdatePayrollSettingsCommand>
 {
@@ -216,11 +219,13 @@ public sealed class UpdatePayrollSettingsCommandValidator : AbstractValidator<Up
     }
 }
 
-public sealed class UpdatePayrollSettingsCommandHandler(IApplicationDbContext context)
+public sealed class UpdatePayrollSettingsCommandHandler(IApplicationDbContext context, ICurrentUser guidanceUser, GuidanceOperationContext guidance, IDatabaseLock guidanceLock)
     : IRequestHandler<UpdatePayrollSettingsCommand, PayrollSettingsDto>
 {
-    public async Task<PayrollSettingsDto> Handle(
-        UpdatePayrollSettingsCommand request, CancellationToken cancellationToken)
+    public Task<PayrollSettingsDto> Handle(UpdatePayrollSettingsCommand request, CancellationToken cancellationToken)
+        => guidanceLock.ExecuteExclusiveAsync("financial-settings", token => SaveGuidedAsync(request, token), cancellationToken);
+
+    private async Task<PayrollSettingsDto> SaveGuidedAsync(UpdatePayrollSettingsCommand request, CancellationToken cancellationToken)
     {
         var settings = await context.PayrollSettings
             .Include(s => s.TaxBrackets)
@@ -286,6 +291,8 @@ public sealed class UpdatePayrollSettingsCommandHandler(IApplicationDbContext co
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, guidanceUser, request.GuidanceOperationKey,
+                "payroll-settings", settings.Id, ["Yürürlük ve uzman kaynaklı taslak"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -296,8 +303,9 @@ public sealed class UpdatePayrollSettingsCommandHandler(IApplicationDbContext co
     }
 }
 
-public sealed record ApprovePayrollSettingsCommand(int Id, int ExpectedVersion)
-    : IRequest<PayrollSettingsDto>;
+public sealed record ApprovePayrollSettingsCommand(int Id, int ExpectedVersion, int? GuidanceContentRevisionId = null)
+    : IRequest<PayrollSettingsDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-settings-approve"; }
 
 public sealed class ApprovePayrollSettingsCommandValidator
     : AbstractValidator<ApprovePayrollSettingsCommand>
@@ -311,12 +319,13 @@ public sealed class ApprovePayrollSettingsCommandValidator
 
 public sealed class ApprovePayrollSettingsCommandHandler(
     IApplicationDbContext context,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser, GuidanceOperationContext guidance, IDatabaseLock guidanceLock)
     : IRequestHandler<ApprovePayrollSettingsCommand, PayrollSettingsDto>
 {
-    public async Task<PayrollSettingsDto> Handle(
-        ApprovePayrollSettingsCommand request,
-        CancellationToken cancellationToken)
+    public Task<PayrollSettingsDto> Handle(ApprovePayrollSettingsCommand request, CancellationToken cancellationToken)
+        => guidanceLock.ExecuteExclusiveAsync("financial-settings", token => SaveGuidedAsync(request, token), cancellationToken);
+
+    private async Task<PayrollSettingsDto> SaveGuidedAsync(ApprovePayrollSettingsCommand request, CancellationToken cancellationToken)
     {
         var settings = await context.PayrollSettings
             .Include(s => s.TaxBrackets)
@@ -340,6 +349,8 @@ public sealed class ApprovePayrollSettingsCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "payroll-settings", settings.Id, ["Uzman incelemesi onaylandı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

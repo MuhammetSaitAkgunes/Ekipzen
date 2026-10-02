@@ -23,9 +23,14 @@ public static class PayrollRowReadiness
                     "Puantaj kontrolü için çalışan bilgisi yüklenmelidir."));
         var coverage = await PayrollTimesheetCoverage.CalculateAsync(
             context, employmentPeriods, period.Year, period.Month, cancellationToken);
+        var revisions = await PayrollTimesheetSource.ReadAsync(context, employmentPeriods.Keys.ToArray(),
+            period.Year, period.Month, cancellationToken);
 
         foreach (var row in rows)
+        {
             row.TimesheetComplete = coverage.GetValueOrDefault(row.EmployeeId);
+            row.CurrentTimesheetRevision = revisions.GetValueOrDefault(row.EmployeeId);
+        }
     }
 
     public static bool IsReady(PayrollEmployee row, PayrollCalculation calculation) =>
@@ -51,6 +56,9 @@ public static class PayrollRowReadiness
             reasons.Add("standart yurt içi özel sektör 4/a profili doğrulanmadı");
         if (!row.IbanComplete) reasons.Add("IBAN eksik");
         if (!row.TimesheetComplete) reasons.Add("puantaj eksik");
+        if (row.ReviewedTimesheetRevision is not null && row.CurrentTimesheetRevision is not null
+            && row.ReviewedTimesheetRevision != row.CurrentTimesheetRevision)
+            reasons.Add("puantaj veya izin kaynağı değişti; satır girdilerini yeniden uzlaştırın");
         if (!row.SgkPremiumDaysConfirmed) reasons.Add("SGK prim günü doğrulanmadı");
         if (row.OvertimeHours > 0 && !row.OvertimeTreatmentConfirmed)
             reasons.Add("fazla çalışma türü, çalışan onayı veya yıllık 270 saat kontrolü doğrulanmadı");

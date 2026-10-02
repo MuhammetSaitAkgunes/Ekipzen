@@ -55,6 +55,9 @@ public class PayrollEmployee : AuditableEntity
 
     public bool IbanComplete { get; set; }
     public bool TimesheetComplete { get; set; }
+    public string? ReviewedTimesheetRevision { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? CurrentTimesheetRevision { get; set; }
 
     public PayrollApprovalStatus ApprovalStatus { get; set; } = PayrollApprovalStatus.PreCalc;
     public string? Notes { get; set; }

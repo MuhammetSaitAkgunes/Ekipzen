@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -22,8 +23,9 @@ public sealed record ApprovedPayrollRevisionDto(
 public sealed record ApplyApprovedCompensationPayrollRevisionCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId,
     string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
-    bool ConfirmSourceLink, bool ConfirmExternalReconciliation)
-    : IRequest<ApprovedPayrollRevisionDto>;
+    bool ConfirmSourceLink, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null)
+    : IRequest<ApprovedPayrollRevisionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-revision-apply"; }
 
 public sealed class ApplyApprovedCompensationPayrollRevisionCommandValidator
     : AbstractValidator<ApplyApprovedCompensationPayrollRevisionCommand>
@@ -40,7 +42,7 @@ public sealed class ApplyApprovedCompensationPayrollRevisionCommandValidator
 
 public sealed class ApplyApprovedCompensationPayrollRevisionCommandHandler(
     IApplicationDbContext context, IPayrollEngine engine, ICurrentUser currentUser,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ApplyApprovedCompensationPayrollRevisionCommand, ApprovedPayrollRevisionDto>
 {
     public Task<ApprovedPayrollRevisionDto> Handle(
@@ -101,6 +103,8 @@ public sealed class ApplyApprovedCompensationPayrollRevisionCommandHandler(
         };
         context.PayrollApprovedRowRevisions.Add(revision);
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "payroll-revision", revision.Id, ["Onaylı bordro için yeni geçerli parasal sürüm"], cancellationToken);
         return ApprovedPayrollRevisionRules.ToDto(revision);
     }
 }

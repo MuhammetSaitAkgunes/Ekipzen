@@ -251,6 +251,7 @@ public sealed class GetDailyGuidanceTasksQueryHandler(
                 }
             }
 
+            await FinancialDailyGuidanceTasks.AddAsync(context, tasks, ct);
             var periods = await sender.Send(new GetPayrollPeriodsQuery(), ct);
             tasks.AddRange(periods
                 .Where(period => period.Status is "draft" or "control")

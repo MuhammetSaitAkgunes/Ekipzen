@@ -26,6 +26,7 @@ namespace Ekipzen.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant? currentTenant = null)
     : IdentityDbContext<ApplicationUser>(options), IApplicationDbContext
 {
+    public DbSet<FinancialExternalActionRecord> FinancialExternalActionRecords => Set<FinancialExternalActionRecord>();
     /// <summary>
     /// Global query filter'ın her sorguda okuduğu aktif kiracı. HTTP dışı (tasarım
     /// zamanı/seed başlangıcı) bağlamda <c>currentTenant</c> null olabilir → 0 (hiçbir

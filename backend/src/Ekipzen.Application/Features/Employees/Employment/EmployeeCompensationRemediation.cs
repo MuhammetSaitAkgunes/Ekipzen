@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -55,8 +56,9 @@ public sealed record SaveCompensationRemediationCaseCommand(
     int EmployeeId, int PackageId, int? CaseId, int ExpectedPackageVersion,
     int? ExpectedCaseVersion, string IssueDescription, DateOnly? ProposedEffectiveFrom,
     decimal MonthlyGrossSalary, decimal RegularPremium, decimal RoadAllowance,
-    decimal MealAllowance, decimal OtherRegularBenefits, string SourceReference)
-    : IRequest<CompensationRemediationCaseDto>;
+    decimal MealAllowance, decimal OtherRegularBenefits, string SourceReference, int? GuidanceContentRevisionId = null)
+    : IRequest<CompensationRemediationCaseDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "compensation-remediation-save"; }
 
 public sealed class SaveCompensationRemediationCaseCommandValidator
     : AbstractValidator<SaveCompensationRemediationCaseCommand>
@@ -78,7 +80,7 @@ public sealed class SaveCompensationRemediationCaseCommandValidator
 }
 
 public sealed class SaveCompensationRemediationCaseCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<SaveCompensationRemediationCaseCommand, CompensationRemediationCaseDto>
 {
     public Task<CompensationRemediationCaseDto> Handle(
@@ -141,6 +143,8 @@ public sealed class SaveCompensationRemediationCaseCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "compensation-remediation", item.Id, ["Uzman inceleme dosyası taslağı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -152,8 +156,9 @@ public sealed class SaveCompensationRemediationCaseCommandHandler(
 
 public sealed record ApproveCompensationRemediationCaseCommand(
     int EmployeeId, int PackageId, int CaseId, int ExpectedCaseVersion,
-    string ExpertReviewReference, string ReviewNotes, bool ConfirmExpertReview)
-    : IRequest<CompensationRemediationCaseDto>;
+    string ExpertReviewReference, string ReviewNotes, bool ConfirmExpertReview, int? GuidanceContentRevisionId = null)
+    : IRequest<CompensationRemediationCaseDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "compensation-remediation-approve"; }
 
 public sealed class ApproveCompensationRemediationCaseCommandValidator
     : AbstractValidator<ApproveCompensationRemediationCaseCommand>
@@ -171,7 +176,7 @@ public sealed class ApproveCompensationRemediationCaseCommandValidator
 }
 
 public sealed class ApproveCompensationRemediationCaseCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ApproveCompensationRemediationCaseCommand, CompensationRemediationCaseDto>
 {
     public Task<CompensationRemediationCaseDto> Handle(
@@ -210,6 +215,8 @@ public sealed class ApproveCompensationRemediationCaseCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "compensation-remediation", item.Id, ["Uzman dosyası onaylandı; parasal uygulama yapılmadı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

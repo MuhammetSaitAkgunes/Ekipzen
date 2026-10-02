@@ -111,8 +111,9 @@ public sealed record SaveEmployeeOffboardingDraftCommand(
     decimal SeverancePayment,
     decimal NoticePayment,
     string SettlementReference,
-    string? SettlementNotes)
-    : IRequest<EmployeeOffboardingCaseDto>;
+    string? SettlementNotes, int? GuidanceContentRevisionId = null)
+    : IRequest<EmployeeOffboardingCaseDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-draft-save"; }
 
 public sealed class SaveEmployeeOffboardingDraftCommandValidator
     : AbstractValidator<SaveEmployeeOffboardingDraftCommand>
@@ -141,7 +142,7 @@ public sealed class SaveEmployeeOffboardingDraftCommandValidator
 
 public sealed class SaveEmployeeOffboardingDraftCommandHandler(
     IApplicationDbContext context,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser guidanceUser, GuidanceOperationContext guidance)
     : IRequestHandler<SaveEmployeeOffboardingDraftCommand, EmployeeOffboardingCaseDto>
 {
     public Task<EmployeeOffboardingCaseDto> Handle(
@@ -255,6 +256,8 @@ public sealed class SaveEmployeeOffboardingDraftCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, guidanceUser, request.GuidanceOperationKey,
+                "offboarding-case", item.Id, ["Ayrılış dosyası ve hesap dayanakları"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

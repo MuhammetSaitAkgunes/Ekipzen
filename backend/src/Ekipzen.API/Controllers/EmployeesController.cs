@@ -214,7 +214,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await sender.Send(new ApproveCompensationRemediationCaseCommand(
             id, packageId, caseId, body.ExpectedCaseVersion,
-            body.ExpertReviewReference, body.ReviewNotes, body.ConfirmExpertReview), cancellationToken));
+            body.ExpertReviewReference, body.ReviewNotes, body.ConfirmExpertReview, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/preview")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -245,7 +245,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new ApplyApprovedCompensationPayrollRevisionCommand(
             id, packageId, caseId, periodId, rowId, body.ExpectedPreviewToken,
             body.ExpertReviewReference, body.ReviewNotes,
-            body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
+            body.ConfirmSourceLink, body.ConfirmExternalReconciliation, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact/revise")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -257,7 +257,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new ApplyApprovedCompensationPayrollNextRevisionCommand(
             id, packageId, caseId, periodId, rowId, body.ExpectedCurrentRevisionId,
             body.ExpectedPreviewToken, body.ExpertReviewReference, body.ReviewNotes,
-            body.ConfirmSourceLink, body.ConfirmExternalReconciliation), cancellationToken));
+            body.ConfirmSourceLink, body.ConfirmExternalReconciliation, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/approved-impact/chain/apply")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -269,7 +269,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new ApplyApprovedCompensationPayrollChainCommand(
             id, packageId, caseId, periodId, rowId, body.ExpectedPreviewToken,
             body.ExpertReviewReference, body.ReviewNotes, body.ConfirmSourceLink,
-            body.ConfirmChainImpact, body.ConfirmExternalReconciliation), cancellationToken));
+            body.ConfirmChainImpact, body.ConfirmExternalReconciliation, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/revisions/{revisionId:int}/external-reconciliation")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -290,7 +290,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             id, packageId, caseId, periodId, rowId, revisionId,
             body.Kind, body.Outcome, body.ResponsibleName, body.EvidenceReference,
             body.ActionDate, body.RecordedAmount, body.Notes,
-            body.ExpectedLatestRecordId, body.ConfirmRecordedStatus), cancellationToken));
+            body.ExpectedLatestRecordId, body.ConfirmRecordedStatus, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{caseId:int}/payroll-periods/{periodId:int}/rows/{rowId:int}/apply")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -301,14 +301,14 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         ApplyCompensationPayrollBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new ApplyCompensationRemediationToPayrollCommand(
             id, packageId, caseId, periodId, rowId, body.ExpectedPreviewToken,
-            body.ConfirmSourceLink), cancellationToken));
+            body.ConfirmSourceLink, body.GuidanceContentRevisionId), cancellationToken));
 
     private static SaveCompensationRemediationCaseCommand ToRemediationCommand(
         int employeeId, int packageId, int? caseId, SaveCompensationRemediationBody body)
         => new(employeeId, packageId, caseId, body.ExpectedPackageVersion,
             body.ExpectedCaseVersion, body.IssueDescription, body.ProposedEffectiveFrom,
             body.MonthlyGrossSalary, body.RegularPremium, body.RoadAllowance,
-            body.MealAllowance, body.OtherRegularBenefits, body.SourceReference);
+            body.MealAllowance, body.OtherRegularBenefits, body.SourceReference, body.GuidanceContentRevisionId);
 
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/date-correction-preview")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -369,7 +369,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.SeverancePayment,
             body.NoticePayment,
             body.SettlementReference,
-            body.SettlementNotes), cancellationToken));
+            body.SettlementNotes, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/offboarding/{caseId:int}/calculation-draft")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -385,7 +385,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             body.ExpectedVersion,
             body.ConfirmSeveranceEligibility,
             body.ConfirmNoticeEligibility,
-            body.ExpertReviewReference), cancellationToken));
+            body.ExpertReviewReference, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("{id:int}/offboarding/{caseId:int}/completion-preview")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -436,7 +436,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int id, int packageId, int remediationCaseId, int caseId,
         OpenOffboardingSettlementRevisionBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new OpenOffboardingSettlementRevisionCommand(
-            id, packageId, remediationCaseId, caseId, body.ExpectedOffboardingVersion),
+            id, packageId, remediationCaseId, caseId, body.ExpectedOffboardingVersion, body.GuidanceContentRevisionId),
             cancellationToken));
 
     [HttpPut("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}")]
@@ -449,7 +449,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             id, packageId, remediationCaseId, caseId, revisionId,
             body.ExpectedRevisionVersion, body.UnusedLeaveDays,
             body.UnusedLeavePayment, body.SeverancePayment, body.NoticePayment,
-            body.Reason, body.SettlementReference, body.SettlementNotes), cancellationToken));
+            body.Reason, body.SettlementReference, body.SettlementNotes, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}/approve")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -460,7 +460,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new ApproveOffboardingSettlementRevisionCommand(
             id, packageId, remediationCaseId, caseId, revisionId,
             body.ExpectedRevisionVersion, body.ExpertReviewReference, body.ReviewNotes,
-            body.ConfirmFinancialReview, body.ConfirmExternalReconciliation), cancellationToken));
+            body.ConfirmFinancialReview, body.ConfirmExternalReconciliation, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("{id:int}/compensation-packages/{packageId:int}/remediation-case/{remediationCaseId:int}/offboarding/{caseId:int}/settlement-revisions/{revisionId:int}/external-reconciliation")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -481,7 +481,7 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
             id, packageId, remediationCaseId, caseId, revisionId,
             body.Kind, body.Outcome, body.ResponsibleName, body.EvidenceReference,
             body.ActionDate, body.RecordedAmount, body.Notes,
-            body.ExpectedLatestRecordId, body.ConfirmRecordedStatus), cancellationToken));
+            body.ExpectedLatestRecordId, body.ConfirmRecordedStatus, body.GuidanceContentRevisionId), cancellationToken));
 
 
     [HttpPost("bulk-deactivate")]
@@ -610,27 +610,27 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         int ExpectedPackageVersion, int? ExpectedCaseVersion, string IssueDescription,
         DateOnly? ProposedEffectiveFrom, decimal MonthlyGrossSalary, decimal RegularPremium,
         decimal RoadAllowance, decimal MealAllowance, decimal OtherRegularBenefits,
-        string SourceReference);
+        string SourceReference, int? GuidanceContentRevisionId = null);
 
     public sealed record ApproveCompensationRemediationBody(
         int ExpectedCaseVersion, string ExpertReviewReference, string ReviewNotes,
-        bool ConfirmExpertReview);
+        bool ConfirmExpertReview, int? GuidanceContentRevisionId = null);
 
     public sealed record ApplyCompensationPayrollBody(
-        string ExpectedPreviewToken, bool ConfirmSourceLink);
+        string ExpectedPreviewToken, bool ConfirmSourceLink, int? GuidanceContentRevisionId = null);
 
     public sealed record ApplyApprovedPayrollRevisionBody(
         string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
-        bool ConfirmSourceLink, bool ConfirmExternalReconciliation);
+        bool ConfirmSourceLink, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null);
 
     public sealed record ApplyApprovedPayrollNextRevisionBody(
         int ExpectedCurrentRevisionId, string ExpectedPreviewToken,
         string ExpertReviewReference, string ReviewNotes,
-        bool ConfirmSourceLink, bool ConfirmExternalReconciliation);
+        bool ConfirmSourceLink, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null);
 
     public sealed record ApplyApprovedPayrollChainBody(
         string ExpectedPreviewToken, string ExpertReviewReference, string ReviewNotes,
-        bool ConfirmSourceLink, bool ConfirmChainImpact, bool ConfirmExternalReconciliation);
+        bool ConfirmSourceLink, bool ConfirmChainImpact, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null);
 
     public sealed record PreviewCompensationDateCorrectionBody(DateOnly ProposedEffectiveFrom);
 
@@ -654,30 +654,42 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
         decimal SeverancePayment,
         decimal NoticePayment,
         string SettlementReference,
-        string? SettlementNotes = null);
+        string? SettlementNotes = null, int? GuidanceContentRevisionId = null);
 
     public sealed record GenerateOffboardingCalculationDraftBody(
         int ExpectedVersion,
         bool ConfirmSeveranceEligibility,
         bool ConfirmNoticeEligibility,
-        string ExpertReviewReference);
+        string ExpertReviewReference, int? GuidanceContentRevisionId = null);
 
     public sealed record OffboardingVersionBody(int ExpectedVersion, int? GuidanceContentRevisionId = null, string? ExpectedPreviewToken = null);
 
     public sealed record ReverseOffboardingBody(int ExpectedVersion, string Reason, int? GuidanceContentRevisionId = null, string? ExpectedPreviewToken = null);
 
-    public sealed record OpenOffboardingSettlementRevisionBody(int ExpectedOffboardingVersion);
+    public sealed record OpenOffboardingSettlementRevisionBody(int ExpectedOffboardingVersion, int? GuidanceContentRevisionId = null);
     public sealed record SaveOffboardingSettlementRevisionBody(
         int ExpectedRevisionVersion, decimal UnusedLeaveDays, decimal UnusedLeavePayment,
         decimal SeverancePayment, decimal NoticePayment, string Reason,
-        string SettlementReference, string? SettlementNotes);
+        string SettlementReference, string? SettlementNotes, int? GuidanceContentRevisionId = null);
     public sealed record ApproveOffboardingSettlementRevisionBody(
         int ExpectedRevisionVersion, string ExpertReviewReference, string ReviewNotes,
-        bool ConfirmFinancialReview, bool ConfirmExternalReconciliation);
+        bool ConfirmFinancialReview, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null);
     public sealed record RecordOffboardingExternalActionBody(
         string Kind, string Outcome, string ResponsibleName, string EvidenceReference,
         DateOnly? ActionDate, decimal? RecordedAmount, string Notes,
-        int? ExpectedLatestRecordId, bool ConfirmRecordedStatus);
+        int? ExpectedLatestRecordId, bool ConfirmRecordedStatus, int? GuidanceContentRevisionId = null);
+
+    [HttpGet("{id:int}/offboarding/{caseId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    public async Task<ActionResult<Ekipzen.Application.Features.Payroll.FinancialExternalReconciliationDto>> OriginalOffboardingExternal(
+        int id, int caseId, CancellationToken ct)
+        => Ok(await sender.Send(new Ekipzen.Application.Features.Payroll.GetFinancialExternalReconciliationQuery("offboarding", id, caseId), ct));
+
+    [HttpPost("{id:int}/offboarding/{caseId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    public async Task<ActionResult<OffboardingExternalActionDto>> RecordOriginalOffboardingExternal(int id, int caseId,
+        Ekipzen.Application.Features.Payroll.FinancialExternalActionBody body, CancellationToken ct)
+        => Ok(await sender.Send(new Ekipzen.Application.Features.Payroll.RecordFinancialExternalActionCommand("offboarding", id, caseId, body), ct));
 
     public sealed record SetStatusBody(
         string Status,

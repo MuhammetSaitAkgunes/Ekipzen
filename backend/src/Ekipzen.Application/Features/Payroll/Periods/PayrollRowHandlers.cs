@@ -40,7 +40,7 @@ public sealed record PayrollRowInputModel(
     bool CumulativeIncomeTaxBaseConfirmed = false,
     decimal SpecialDeductions = 0m,
     bool IbanComplete = true,
-    string? Notes = null, string? ExpectedRevision = null);
+    string? Notes = null, string? ExpectedRevision = null, int? GuidanceContentRevisionId = null);
 
 public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRowInputModel>
 {
@@ -68,7 +68,11 @@ public sealed class PayrollRowInputModelValidator : AbstractValidator<PayrollRow
 }
 
 public sealed record UpdatePayrollRowCommand(int PeriodId, int RowId, PayrollRowInputModel Model)
-    : IRequest<PayrollRowDto>;
+    : IRequest<PayrollRowDto>, IGuidanceOperationCommand
+{
+    public int? GuidanceContentRevisionId => Model.GuidanceContentRevisionId;
+    public string GuidanceOperationKey => "payroll-row-update";
+}
 
 public sealed class UpdatePayrollRowCommandValidator : AbstractValidator<UpdatePayrollRowCommand>
 {
@@ -81,7 +85,7 @@ public sealed class UpdatePayrollRowCommandValidator : AbstractValidator<UpdateP
 public sealed class UpdatePayrollRowCommandHandler(
     IApplicationDbContext context,
     IPayrollEngine engine,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser currentUser, GuidanceOperationContext guidance)
     : IRequestHandler<UpdatePayrollRowCommand, PayrollRowDto>
 {
     public Task<PayrollRowDto> Handle(
@@ -136,6 +140,7 @@ public sealed class UpdatePayrollRowCommandHandler(
         row.SpecialDeductions = m.SpecialDeductions;
         row.IbanComplete = m.IbanComplete;
         row.Notes = m.Notes;
+        row.ReviewedTimesheetRevision = row.CurrentTimesheetRevision;
 
         await PayrollRowReadiness.RefreshTimesheetCompletenessAsync(
             context, row.Period!, [row], cancellationToken);
@@ -150,6 +155,8 @@ public sealed class UpdatePayrollRowCommandHandler(
             : PayrollApprovalStatus.MissingData;
 
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+            "payroll-row", row.Id, ["Satır girdileri ve güncel puantaj uzlaştırması"], cancellationToken);
 
         return PayrollPeriodProjector.ToRow(
             row, engine, parameters, row.Period!.MinimumWageIncomeTaxBaseBefore);
@@ -159,12 +166,13 @@ public sealed class UpdatePayrollRowCommandHandler(
 // --- dönem kontrolü (check) ---
 
 /// <summary>Onaysız satırların durumunu toplu günceller: eksik veri → Eksik Veri, değilse Onaya Hazır.</summary>
-public sealed record RunPayrollCheckCommand(int PeriodId) : IRequest<PayrollPeriodDetailDto>;
+public sealed record RunPayrollCheckCommand(int PeriodId, int? GuidanceContentRevisionId = null) : IRequest<PayrollPeriodDetailDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-period-check"; }
 
 public sealed class RunPayrollCheckCommandHandler(
     IApplicationDbContext context,
     IPayrollEngine engine,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser currentUser, GuidanceOperationContext guidance)
     : IRequestHandler<RunPayrollCheckCommand, PayrollPeriodDetailDto>
 {
     public Task<PayrollPeriodDetailDto> Handle(
@@ -204,6 +212,8 @@ public sealed class RunPayrollCheckCommandHandler(
 
         period.Status = PayrollPeriodStatus.Control;
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+            "payroll-period", period.Id, ["Güncel kaynaklarla toplu kontrol; onay verilmedi"], cancellationToken);
 
         return await PayrollPeriodProjector.BuildDetailAsync(context, engine, period.Id, cancellationToken);
     }

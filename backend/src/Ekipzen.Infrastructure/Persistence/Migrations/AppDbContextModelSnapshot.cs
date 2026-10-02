@@ -2880,6 +2880,82 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.FinancialExternalActionRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly?>("ActionDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("EvidenceReference")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("OffboardingCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int?>("PayrollRowId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("RecordedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecordedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ResponsibleName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OffboardingCaseId");
+
+                    b.HasIndex("PayrollRowId");
+
+                    b.HasIndex("TenantId", "OffboardingCaseId", "Kind");
+
+                    b.HasIndex("TenantId", "PayrollRowId", "Kind");
+
+                    b.ToTable("FinancialExternalActionRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_FinancialExternal_Source", "([PayrollRowId] IS NOT NULL AND [OffboardingCaseId] IS NULL) OR ([PayrollRowId] IS NULL AND [OffboardingCaseId] IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.IncomeTaxBracket", b =>
                 {
                     b.Property<int>("Id")
@@ -3242,6 +3318,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("PreviousTaxBase")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ReviewedTimesheetRevision")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<decimal>("RoadAllowance")
                         .HasPrecision(18, 4)
@@ -5144,6 +5224,23 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.FinancialExternalActionRecord", b =>
+                {
+                    b.HasOne("Ekipzen.Domain.Entities.Organization.EmployeeOffboardingCase", "OffboardingCase")
+                        .WithMany()
+                        .HasForeignKey("OffboardingCaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Ekipzen.Domain.Entities.Payroll.PayrollEmployee", "PayrollRow")
+                        .WithMany()
+                        .HasForeignKey("PayrollRowId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OffboardingCase");
+
+                    b.Navigation("PayrollRow");
                 });
 
             modelBuilder.Entity("Ekipzen.Domain.Entities.Payroll.IncomeTaxBracket", b =>

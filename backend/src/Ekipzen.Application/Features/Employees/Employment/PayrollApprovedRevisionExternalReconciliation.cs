@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Payroll;
@@ -39,8 +40,9 @@ public sealed record RecordPayrollRevisionExternalActionCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId, int RevisionId,
     string Kind, string Outcome, string ResponsibleName, string EvidenceReference,
     DateOnly? ActionDate, decimal? RecordedAmount, string Notes,
-    int? ExpectedLatestRecordId, bool ConfirmRecordedStatus)
-    : IRequest<PayrollRevisionExternalActionDto>;
+    int? ExpectedLatestRecordId, bool ConfirmRecordedStatus, int? GuidanceContentRevisionId = null)
+    : IRequest<PayrollRevisionExternalActionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-revision-external-record"; }
 
 public sealed class RecordPayrollRevisionExternalActionCommandValidator
     : AbstractValidator<RecordPayrollRevisionExternalActionCommand>
@@ -80,7 +82,7 @@ public sealed class RecordPayrollRevisionExternalActionCommandValidator
 }
 
 public sealed class RecordPayrollRevisionExternalActionCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<RecordPayrollRevisionExternalActionCommand, PayrollRevisionExternalActionDto>
 {
     public Task<PayrollRevisionExternalActionDto> Handle(
@@ -124,6 +126,8 @@ public sealed class RecordPayrollRevisionExternalActionCommandHandler(
             throw new ConflictException("Aynı kanıt zaten geçerli; değişiklik olmadan yeni kayıt açılamaz.");
         context.PayrollApprovedRowExternalActionRecords.Add(record);
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "payroll-external-action", record.Id, [request.Kind == "payment" ? "Ödeme kanıtı" : "Bildirim kanıtı", request.Outcome], cancellationToken);
         return PayrollRevisionExternalReconciliationRules.ToDto(record);
     }
 }

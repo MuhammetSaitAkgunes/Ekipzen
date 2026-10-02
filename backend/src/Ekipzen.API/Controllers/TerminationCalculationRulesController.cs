@@ -51,7 +51,7 @@ public sealed class TerminationCalculationRulesController(ISender sender) : Cont
         ApproveTerminationCalculationRuleBody body,
         CancellationToken cancellationToken) =>
         Ok(await sender.Send(
-            new ApproveTerminationCalculationRuleCommand(id, body.ExpectedVersion),
+            new ApproveTerminationCalculationRuleCommand(id, body.ExpectedVersion, body.GuidanceContentRevisionId),
             cancellationToken));
 
     public sealed record SaveTerminationCalculationRuleBody(
@@ -73,7 +73,7 @@ public sealed class TerminationCalculationRulesController(ISender sender) : Cont
         bool IncludeMealAllowanceInDressedWage,
         bool IncludeOtherRegularBenefitsInDressedWage,
         string SourceReference,
-        string? ReviewNotes)
+        string? ReviewNotes, int? GuidanceContentRevisionId = null)
     {
         public SaveTerminationCalculationRuleCommand ToCommand(int? id = null) => new(
             id,
@@ -95,8 +95,8 @@ public sealed class TerminationCalculationRulesController(ISender sender) : Cont
             IncludeMealAllowanceInDressedWage,
             IncludeOtherRegularBenefitsInDressedWage,
             SourceReference,
-            ReviewNotes);
+            ReviewNotes, GuidanceContentRevisionId);
     }
 
-    public sealed record ApproveTerminationCalculationRuleBody(int ExpectedVersion);
+    public sealed record ApproveTerminationCalculationRuleBody(int ExpectedVersion, int? GuidanceContentRevisionId = null);
 }

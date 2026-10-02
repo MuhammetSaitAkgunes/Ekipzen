@@ -19,6 +19,7 @@ namespace Ekipzen.Application.Common.Interfaces;
 /// </summary>
 public interface IApplicationDbContext
 {
+    DbSet<FinancialExternalActionRecord> FinancialExternalActionRecords { get; }
     // Organization
     DbSet<Department> Departments { get; }
     DbSet<Employee> Employees { get; }

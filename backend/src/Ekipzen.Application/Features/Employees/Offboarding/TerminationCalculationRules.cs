@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -53,7 +54,9 @@ public sealed record SaveTerminationCalculationRuleCommand(
     bool IncludeMealAllowanceInDressedWage,
     bool IncludeOtherRegularBenefitsInDressedWage,
     string SourceReference,
-    string? ReviewNotes) : IRequest<TerminationCalculationRuleDto>;
+    string? ReviewNotes, int? GuidanceContentRevisionId = null)
+    : IRequest<TerminationCalculationRuleDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "termination-rule-save"; }
 
 public sealed class SaveTerminationCalculationRuleCommandValidator
     : AbstractValidator<SaveTerminationCalculationRuleCommand>
@@ -98,12 +101,13 @@ public sealed class GetTerminationCalculationRulesQueryHandler(IApplicationDbCon
             .ToListAsync(cancellationToken);
 }
 
-public sealed class SaveTerminationCalculationRuleCommandHandler(IApplicationDbContext context)
+public sealed class SaveTerminationCalculationRuleCommandHandler(IApplicationDbContext context, ICurrentUser guidanceUser, GuidanceOperationContext guidance, IDatabaseLock guidanceLock)
     : IRequestHandler<SaveTerminationCalculationRuleCommand, TerminationCalculationRuleDto>
 {
-    public async Task<TerminationCalculationRuleDto> Handle(
-        SaveTerminationCalculationRuleCommand request,
-        CancellationToken cancellationToken)
+    public Task<TerminationCalculationRuleDto> Handle(SaveTerminationCalculationRuleCommand request, CancellationToken cancellationToken)
+        => guidanceLock.ExecuteExclusiveAsync("financial-settings", token => SaveGuidedAsync(request, token), cancellationToken);
+
+    private async Task<TerminationCalculationRuleDto> SaveGuidedAsync(SaveTerminationCalculationRuleCommand request, CancellationToken cancellationToken)
     {
         TerminationCalculationRule item;
         if (request.Id is int id)
@@ -159,6 +163,8 @@ public sealed class SaveTerminationCalculationRuleCommandHandler(IApplicationDbC
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, guidanceUser, request.GuidanceOperationKey,
+                "termination-rule", item.Id, ["Yürürlük ve hesap kuralı taslağı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -169,8 +175,9 @@ public sealed class SaveTerminationCalculationRuleCommandHandler(IApplicationDbC
     }
 }
 
-public sealed record ApproveTerminationCalculationRuleCommand(int Id, int ExpectedVersion)
-    : IRequest<TerminationCalculationRuleDto>;
+public sealed record ApproveTerminationCalculationRuleCommand(int Id, int ExpectedVersion, int? GuidanceContentRevisionId = null)
+    : IRequest<TerminationCalculationRuleDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "termination-rule-approve"; }
 
 public sealed class ApproveTerminationCalculationRuleCommandValidator
     : AbstractValidator<ApproveTerminationCalculationRuleCommand>
@@ -184,12 +191,13 @@ public sealed class ApproveTerminationCalculationRuleCommandValidator
 
 public sealed class ApproveTerminationCalculationRuleCommandHandler(
     IApplicationDbContext context,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser, GuidanceOperationContext guidance, IDatabaseLock guidanceLock)
     : IRequestHandler<ApproveTerminationCalculationRuleCommand, TerminationCalculationRuleDto>
 {
-    public async Task<TerminationCalculationRuleDto> Handle(
-        ApproveTerminationCalculationRuleCommand request,
-        CancellationToken cancellationToken)
+    public Task<TerminationCalculationRuleDto> Handle(ApproveTerminationCalculationRuleCommand request, CancellationToken cancellationToken)
+        => guidanceLock.ExecuteExclusiveAsync("financial-settings", token => SaveGuidedAsync(request, token), cancellationToken);
+
+    private async Task<TerminationCalculationRuleDto> SaveGuidedAsync(ApproveTerminationCalculationRuleCommand request, CancellationToken cancellationToken)
     {
         var item = await context.TerminationCalculationRules
             .SingleOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken)
@@ -212,6 +220,8 @@ public sealed class ApproveTerminationCalculationRuleCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "termination-rule", item.Id, ["Uzman hesap kuralı onayı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -227,7 +237,9 @@ public sealed record GenerateTerminationCalculationDraftCommand(
     int ExpectedVersion,
     bool ConfirmSeveranceEligibility,
     bool ConfirmNoticeEligibility,
-    string ExpertReviewReference) : IRequest<EmployeeOffboardingCaseDto>;
+    string ExpertReviewReference, int? GuidanceContentRevisionId = null)
+    : IRequest<EmployeeOffboardingCaseDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-settlement-generate"; }
 
 public sealed class GenerateTerminationCalculationDraftCommandValidator
     : AbstractValidator<GenerateTerminationCalculationDraftCommand>
@@ -243,7 +255,7 @@ public sealed class GenerateTerminationCalculationDraftCommandValidator
 public sealed class GenerateTerminationCalculationDraftCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<GenerateTerminationCalculationDraftCommand, EmployeeOffboardingCaseDto>
 {
     public Task<EmployeeOffboardingCaseDto> Handle(
@@ -311,6 +323,8 @@ public sealed class GenerateTerminationCalculationDraftCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "offboarding-case", item.Id, ["Onaylı kuraldan parasal taslak"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

@@ -29,7 +29,8 @@ public static class PayrollRowReview
 {
     public static string Revision(PayrollRowDto dto, PayrollEmployee row) => Convert.ToHexString(SHA256.HashData(
         JsonSerializer.SerializeToUtf8Bytes(new { Data = dto with { Revision = null }, Created = row.CreatedAtUtc.Ticks, Updated = row.UpdatedAtUtc?.Ticks,
-            PeriodStatus = row.Period?.Status, SettingsVersion = row.Period?.Settings?.Version })));
+            PeriodStatus = row.Period?.Status, SettingsVersion = row.Period?.Settings?.Version,
+            row.CurrentTimesheetRevision, row.ReviewedTimesheetRevision })));
     public static void EnsureRevision(string? expected, string? actual)
     {
         if (string.IsNullOrWhiteSpace(expected)) throw new ConflictException("Bordro satırını yeniden okuyup sürümüyle gönderin.");

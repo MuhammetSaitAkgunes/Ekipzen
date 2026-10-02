@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -49,11 +50,12 @@ public sealed class GetOffboardingSettlementRevisionContextQueryHandler(IApplica
 
 public sealed record OpenOffboardingSettlementRevisionCommand(
     int EmployeeId, int PackageId, int RemediationCaseId, int OffboardingCaseId,
-    int ExpectedOffboardingVersion)
-    : IRequest<OffboardingSettlementRevisionDto>;
+    int ExpectedOffboardingVersion, int? GuidanceContentRevisionId = null)
+    : IRequest<OffboardingSettlementRevisionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-revision-open"; }
 
 public sealed class OpenOffboardingSettlementRevisionCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<OpenOffboardingSettlementRevisionCommand, OffboardingSettlementRevisionDto>
 {
     public Task<OffboardingSettlementRevisionDto> Handle(
@@ -105,6 +107,8 @@ public sealed class OpenOffboardingSettlementRevisionCommandHandler(
         };
         context.EmployeeOffboardingSettlementRevisions.Add(revision);
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "offboarding-revision", revision.Id, ["Parasal düzeltme taslağı açıldı"], cancellationToken);
         return OffboardingSettlementRevisionRules.ToDto(revision);
     }
 }
@@ -114,8 +118,9 @@ public sealed record SaveOffboardingSettlementRevisionCommand(
     int RevisionId, int ExpectedRevisionVersion,
     decimal UnusedLeaveDays, decimal UnusedLeavePayment,
     decimal SeverancePayment, decimal NoticePayment,
-    string Reason, string SettlementReference, string? SettlementNotes)
-    : IRequest<OffboardingSettlementRevisionDto>;
+    string Reason, string SettlementReference, string? SettlementNotes, int? GuidanceContentRevisionId = null)
+    : IRequest<OffboardingSettlementRevisionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-revision-save"; }
 
 public sealed class SaveOffboardingSettlementRevisionCommandValidator
     : AbstractValidator<SaveOffboardingSettlementRevisionCommand>
@@ -134,7 +139,7 @@ public sealed class SaveOffboardingSettlementRevisionCommandValidator
 }
 
 public sealed class SaveOffboardingSettlementRevisionCommandHandler(
-    IApplicationDbContext context, IDatabaseLock databaseLock)
+    IApplicationDbContext context, IDatabaseLock databaseLock, ICurrentUser guidanceUser, GuidanceOperationContext guidance)
     : IRequestHandler<SaveOffboardingSettlementRevisionCommand, OffboardingSettlementRevisionDto>
 {
     public Task<OffboardingSettlementRevisionDto> Handle(
@@ -168,6 +173,8 @@ public sealed class SaveOffboardingSettlementRevisionCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, guidanceUser, request.GuidanceOperationKey,
+                "offboarding-revision", draft.Id, ["Parasal düzeltme taslağı güncellendi"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -181,8 +188,9 @@ public sealed record ApproveOffboardingSettlementRevisionCommand(
     int EmployeeId, int PackageId, int RemediationCaseId, int OffboardingCaseId,
     int RevisionId, int ExpectedRevisionVersion,
     string ExpertReviewReference, string ReviewNotes,
-    bool ConfirmFinancialReview, bool ConfirmExternalReconciliation)
-    : IRequest<OffboardingSettlementRevisionDto>;
+    bool ConfirmFinancialReview, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null)
+    : IRequest<OffboardingSettlementRevisionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-revision-approve"; }
 
 public sealed class ApproveOffboardingSettlementRevisionCommandValidator
     : AbstractValidator<ApproveOffboardingSettlementRevisionCommand>
@@ -198,7 +206,7 @@ public sealed class ApproveOffboardingSettlementRevisionCommandValidator
 }
 
 public sealed class ApproveOffboardingSettlementRevisionCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ApproveOffboardingSettlementRevisionCommand,
         OffboardingSettlementRevisionDto>
 {
@@ -240,6 +248,8 @@ public sealed class ApproveOffboardingSettlementRevisionCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "offboarding-revision", draft.Id, ["Yeni geçerli parasal sürüm onaylandı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

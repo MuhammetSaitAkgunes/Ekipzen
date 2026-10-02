@@ -58,6 +58,7 @@ public class PayrollEmployeeConfiguration : IEntityTypeConfiguration<PayrollEmpl
 {
     public void Configure(EntityTypeBuilder<PayrollEmployee> b)
     {
+        b.Property(x => x.ReviewedTimesheetRevision).HasMaxLength(64);
         // Audit trigger'lı tablo: EF'in OUTPUT-clause tabanlı kaydetme stratejisiyle çakışmasın.
         b.ToTable(tb => tb.HasTrigger("TR_PayrollEmployees_Audit"));
 

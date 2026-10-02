@@ -225,6 +225,8 @@ public static class PayrollPeriodProjector
             calc.MinimumWageIncomeTaxExemption, calc.MinimumWageStampTaxExemption,
             calc.AppliedEmployerSgkRate, calc.DisabilityIncomeTaxBaseDeduction,
             calc.Warnings);
-        return dto with { Revision = PayrollRowReview.Revision(dto, pe) };
+        return dto with { Revision = PayrollRowReview.Revision(dto, pe),
+            TimesheetNeedsReview = pe.ReviewedTimesheetRevision is not null && pe.CurrentTimesheetRevision is not null
+                && pe.ReviewedTimesheetRevision != pe.CurrentTimesheetRevision };
     }
 }

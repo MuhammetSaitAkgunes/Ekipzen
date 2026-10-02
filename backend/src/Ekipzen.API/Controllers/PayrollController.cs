@@ -72,8 +72,9 @@ public sealed class PayrollController(ISender sender) : ControllerBase
     [HttpPost("periods/{id:int}/check")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType<PayrollPeriodDetailDto>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<PayrollPeriodDetailDto>> RunCheck(int id, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new RunPayrollCheckCommand(id), cancellationToken));
+    public async Task<ActionResult<PayrollPeriodDetailDto>> RunCheck(int id,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] GuidanceOperationBody? body, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new RunPayrollCheckCommand(id, body?.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("periods/{id:int}/rows/{rowId:int}/approval-preview")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -96,6 +97,17 @@ public sealed class PayrollController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new SubmitPayrollPeriodCommand(id, body?.GuidanceContentRevisionId), cancellationToken));
 
     public sealed record GuidanceOperationBody(int? GuidanceContentRevisionId = null, string? ExpectedRevision = null);
+
+    [HttpGet("periods/{id:int}/rows/{rowId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    public async Task<ActionResult<FinancialExternalReconciliationDto>> ExternalReview(int id, int rowId, CancellationToken ct)
+        => Ok(await sender.Send(new GetFinancialExternalReconciliationQuery("payroll", id, rowId), ct));
+
+    [HttpPost("periods/{id:int}/rows/{rowId:int}/external-reconciliation")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    public async Task<ActionResult<Ekipzen.Application.Features.Employees.Offboarding.OffboardingExternalActionDto>> RecordExternal(
+        int id, int rowId, FinancialExternalActionBody body, CancellationToken ct)
+        => Ok(await sender.Send(new RecordFinancialExternalActionCommand("payroll", id, rowId, body), ct));
 
     // --- tekil hesap (hr-admin) ---
 

@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -16,8 +17,9 @@ public sealed record ApplyApprovedCompensationPayrollNextRevisionCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId,
     int ExpectedCurrentRevisionId, string ExpectedPreviewToken,
     string ExpertReviewReference, string ReviewNotes,
-    bool ConfirmSourceLink, bool ConfirmExternalReconciliation)
-    : IRequest<ApprovedPayrollRevisionDto>;
+    bool ConfirmSourceLink, bool ConfirmExternalReconciliation, int? GuidanceContentRevisionId = null)
+    : IRequest<ApprovedPayrollRevisionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-revision-next"; }
 
 public sealed class ApplyApprovedCompensationPayrollNextRevisionCommandValidator
     : AbstractValidator<ApplyApprovedCompensationPayrollNextRevisionCommand>
@@ -35,7 +37,7 @@ public sealed class ApplyApprovedCompensationPayrollNextRevisionCommandValidator
 
 public sealed class ApplyApprovedCompensationPayrollNextRevisionCommandHandler(
     IApplicationDbContext context, IPayrollEngine engine, ICurrentUser currentUser,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ApplyApprovedCompensationPayrollNextRevisionCommand, ApprovedPayrollRevisionDto>
 {
     public async Task<ApprovedPayrollRevisionDto> Handle(
@@ -133,6 +135,8 @@ public sealed class ApplyApprovedCompensationPayrollNextRevisionCommandHandler(
         };
         context.PayrollApprovedRowRevisions.Add(revision);
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "payroll-revision", revision.Id, ["Önceki sürüm korunarak yeni parasal sürüm"], cancellationToken);
         return ApprovedPayrollRevisionRules.ToDto(revision);
     }
 }

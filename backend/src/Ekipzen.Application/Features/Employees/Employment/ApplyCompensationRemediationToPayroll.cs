@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -41,8 +42,9 @@ public sealed class PreviewCompensationPayrollApplicationQueryHandler(
 
 public sealed record ApplyCompensationRemediationToPayrollCommand(
     int EmployeeId, int PackageId, int CaseId, int PeriodId, int RowId,
-    string ExpectedPreviewToken, bool ConfirmSourceLink)
-    : IRequest<CompensationPayrollApplicationDto>;
+    string ExpectedPreviewToken, bool ConfirmSourceLink, int? GuidanceContentRevisionId = null)
+    : IRequest<CompensationPayrollApplicationDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "payroll-remediation-apply"; }
 
 public sealed class ApplyCompensationRemediationToPayrollCommandValidator
     : AbstractValidator<ApplyCompensationRemediationToPayrollCommand>
@@ -56,7 +58,7 @@ public sealed class ApplyCompensationRemediationToPayrollCommandValidator
 
 public sealed class ApplyCompensationRemediationToPayrollCommandHandler(
     IApplicationDbContext context, IPayrollEngine engine, ICurrentUser currentUser,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ApplyCompensationRemediationToPayrollCommand, CompensationPayrollApplicationDto>
 {
     public Task<CompensationPayrollApplicationDto> Handle(
@@ -110,6 +112,8 @@ public sealed class ApplyCompensationRemediationToPayrollCommandHandler(
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "payroll-row", request.RowId, ["Açık satıra önizlemeli telafi uygulandı"], cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {

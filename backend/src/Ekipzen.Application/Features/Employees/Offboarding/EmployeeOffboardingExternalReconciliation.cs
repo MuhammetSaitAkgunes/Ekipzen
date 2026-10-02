@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Organization;
@@ -42,7 +43,9 @@ public sealed record RecordOffboardingExternalActionCommand(
     int SettlementRevisionId, string Kind, string Outcome,
     string ResponsibleName, string EvidenceReference, DateOnly? ActionDate,
     decimal? RecordedAmount, string Notes, int? ExpectedLatestRecordId,
-    bool ConfirmRecordedStatus) : IRequest<OffboardingExternalActionDto>;
+    bool ConfirmRecordedStatus, int? GuidanceContentRevisionId = null)
+    : IRequest<OffboardingExternalActionDto>, IGuidanceOperationCommand
+{ public string GuidanceOperationKey => "offboarding-external-record"; }
 
 public sealed class RecordOffboardingExternalActionCommandValidator
     : AbstractValidator<RecordOffboardingExternalActionCommand>
@@ -85,7 +88,7 @@ public sealed class RecordOffboardingExternalActionCommandValidator
 }
 
 public sealed class RecordOffboardingExternalActionCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<RecordOffboardingExternalActionCommand, OffboardingExternalActionDto>
 {
     public Task<OffboardingExternalActionDto> Handle(
@@ -130,6 +133,8 @@ public sealed class RecordOffboardingExternalActionCommandHandler(
             throw new ConflictException("Aynı kanıt zaten geçerli; değişiklik olmadan yeni kayıt açılamaz.");
         context.EmployeeOffboardingExternalActionRecords.Add(record);
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser, request.GuidanceOperationKey,
+                "offboarding-external-action", record.Id, [request.Kind == "payment" ? "Ödeme kanıtı" : "Bildirim kanıtı", request.Outcome], cancellationToken);
         return OffboardingExternalReconciliationRules.ToDto(record);
     }
 }

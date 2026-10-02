@@ -81,6 +81,14 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "leave-decision" => ("leave", "decision-effect"),
             "leave-request-create" or "leave-request-cancel" => ("leave", "request-lifecycle"),
             "payroll-period-create" => ("payroll", "period-create"),
+            "payroll-settings-save" or "payroll-settings-approve" or "termination-rule-save" or "termination-rule-approve" => ("payroll", "settings-review"),
+            "payroll-row-update" or "payroll-period-check" => ("payroll", "row-review"),
+            "compensation-remediation-save" or "compensation-remediation-approve" or "payroll-remediation-apply"
+                or "payroll-revision-apply" or "payroll-revision-next" or "payroll-revision-chain" => ("payroll", "correction-external"),
+            "offboarding-draft-save" => ("offboarding", "preparation"),
+            "offboarding-settlement-generate" => ("offboarding", "settlement-review"),
+            "offboarding-revision-open" or "offboarding-revision-save" or "offboarding-revision-approve" => ("offboarding", "correction-external"),
+            "payroll-revision-external-record" or "offboarding-external-record" or "financial-external-record" => ("daily", "external-followup"),
             "payroll-row-approve" or "payroll-period-submit" => ("payroll", "approval"),
             "offboarding-complete" => ("offboarding", "completion"),
             "offboarding-reverse" => ("offboarding", "reversal-review"),
@@ -162,7 +170,13 @@ public static class GuidanceOperationEvidenceReader
                         row.SatirNo, row.Durum, row.Aciklama, row.Sorunlar.Select(issue => $"{issue.Alan}: {issue.Mesaj}").ToArray())).ToArray()),
             });
         var preparationItems = preparation.Select(x => Item(x.OperationKey, x.Id, x.ResourceId,
-            x.OperationKey == "candidate-hire-create" ? "hire-recorded" : x.OperationKey == "candidate-provisioning-retry" ? "retry-requested"
+            x.OperationKey.EndsWith("-approve", StringComparison.Ordinal) ? "approved"
+                : x.OperationKey.EndsWith("-external-record", StringComparison.Ordinal) ? "recorded"
+                : x.OperationKey == "payroll-period-check" ? "checked"
+                : x.OperationKey is "payroll-remediation-apply" or "payroll-revision-apply" or "payroll-revision-next" or "payroll-revision-chain" ? "applied"
+                : x.OperationKey == "offboarding-revision-open" ? "draft-opened"
+                : x.OperationKey.EndsWith("-save", StringComparison.Ordinal) ? "draft-saved"
+                : x.OperationKey == "candidate-hire-create" ? "hire-recorded" : x.OperationKey == "candidate-provisioning-retry" ? "retry-requested"
                 : x.OperationKey == "department-delete" ? "deleted" : x.OperationKey == "company-logo-upload" ? "uploaded"
                 : x.OperationKey == "leave-request-cancel" ? "cancelled"
                 : x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
