@@ -5,6 +5,7 @@ import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
+import { PublishedGuidancePractice } from "../guidance/PublishedGuidancePractice";
 import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useDepartments } from "../personnel/queries";
 import { NOTE_TYPES, PIPELINE_STATUSES, formatTimeAgo } from "./format";
@@ -82,9 +83,11 @@ export function CandidateDetail({ id }: { id: number }) {
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [hireOutcome, setHireOutcome] = useState<HireResultDto | null>(null);
   const [provisioningEmail, setProvisioningEmail] = useState("");
+  const [retrySource, setRetrySource] = useState<number | null>(null);
+  const [retryReview, setRetryReview] = useState<{ email: string; source: number | null } | null>(null);
 
   useEffect(() => {
-    setHireOutcome(null); setHireOpen(false); setProvisioningEmail("");
+    setHireOutcome(null); setHireOpen(false); setProvisioningEmail(""); setRetrySource(null); setRetryReview(null);
     setCorrectionOpen(false);
     setEvidenceSelection(null);
     setStatusReview(null); setStatusConfirmed(false); setStatusReason(""); setStatusEvidence([]);
@@ -139,7 +142,7 @@ export function CandidateDetail({ id }: { id: number }) {
       }
       await setStatus.mutateAsync({ id, status: pendingStatus.to, expectedVersion: pendingStatus.source.version,
         reason: statusReason.trim(), evidence: statusEvidence,
-        ...(pendingStatus.from === "Yeni" && guidanceVersion !== null ? { guidanceContentRevisionId: guidanceVersion } : {}) });
+        ...(guidanceVersion !== null ? { guidanceContentRevisionId: guidanceVersion } : {}) });
       setStatusReview(null);
       setStatusConfirmed(false);
       showToast(candidate.name + " için pipeline durumu " + pendingStatus.to + " olarak kaydedildi.", "success");
@@ -219,17 +222,20 @@ export function CandidateDetail({ id }: { id: number }) {
   };
 
   const retryLoginProvisioning = async () => {
+    if (!retryReview || retryProvisioning.isPending) return;
     try {
       const result = await retryProvisioning.mutateAsync({
         id,
-        email: provisioningEmail.trim() || provisioning?.email || null,
+        email: retryReview.email || null,
+        ...(retryReview.source !== null ? { guidanceContentRevisionId: retryReview.source } : {}),
       });
       showToast(
         result.status === "completed"
-          ? "Personel giriş hesabı ve daveti hazır."
+          ? "Personel giriş hesabı hazır; davetin teslimini ayrıca kontrol edin."
           : "Provizyon yeniden kuyruğa alındı; otomatik deneme devam edecek.",
         result.status === "completed" ? "success" : "warning",
       );
+      setRetryReview(null); setRetrySource(null);
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Provizyon yeniden denenemedi.", "error");
     }
@@ -307,9 +313,9 @@ export function CandidateDetail({ id }: { id: number }) {
             && <p>Kayıtlı not veya değerlendirme yok; kararınızın bilgi kaynağını gerekçede açıklayın.</p>}
           <p>Yalnız bu kararda kullandığınız dayanakları seçin; en fazla 20 kayıt bağlanabilir. Seçim kanıtın doğruluğunu otomatik onaylamaz.</p>
         </fieldset>
-        {candidate.status === "Yeni" && <GuidanceDecisionCheck process="recruitment" step="first-review" operationName="aday işlemi" />}
-        {candidate.status === "Yeni" && <GuidanceOperationSource process="recruitment" step="first-review"
-          value={guidanceVersion} onChange={value => { setGuidanceVersion(value); setStatusConfirmed(false); }} disabled={setStatus.isPending} />}
+        <GuidanceDecisionCheck process="recruitment" step="first-review" operationName="aday aşama kararı" />
+        <GuidanceOperationSource label="Aşama kararında kullandığım rehber sürümü" process="recruitment" step="first-review"
+          value={guidanceVersion} onChange={value => { setGuidanceVersion(value); setStatusConfirmed(false); }} disabled={setStatus.isPending} />
         <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>
         <div className="ez-candidate-status-actions">
           <button className="btn btn-ghost" onClick={() => { setStatusReview(null); setStatusConfirmed(false); }}>Vazgeç</button>
@@ -370,11 +376,20 @@ export function CandidateDetail({ id }: { id: number }) {
             type="email"
             className="input-control"
             value={provisioningEmail}
-            onChange={(event) => setProvisioningEmail(event.target.value)}
+            onChange={(event) => { setProvisioningEmail(event.target.value); setRetryReview(null); }}
           />
-          <button className="btn btn-primary btn-sm" onClick={retryLoginProvisioning} disabled={retryProvisioning.isPending}>
+          <PublishedGuidancePractice process="recruitment" step="hire-preparation" />
+          <GuidanceOperationSource label="Hesap yeniden denemesinde kullandığım rehber sürümü" process="recruitment" step="hire-preparation"
+            value={retrySource} onChange={value => { setRetrySource(value); setRetryReview(null); }} disabled={retryProvisioning.isPending} />
+          <button className="btn btn-primary btn-sm" onClick={() => setRetryReview({ email: provisioningEmail.trim() || provisioning.email || "", source: retrySource })} disabled={retryProvisioning.isPending}>
             Şimdi yeniden dene
           </button>
+          {retryReview && <section aria-label="Hesap yeniden deneme ön kontrolü">
+            <p>{candidate.name} · {retryReview.email}. Var olan hesap hazırlığı yeniden istenir; yeni çalışan oluşturulmaz. Başka bir deneme çalışıyorsa sunucu işlemi durdurur.</p>
+            <p>İstek kaydı teslim kanıtı değildir. Sonuçta hesap durumunu ve davetin gerçek teslimini ayrıca kontrol edin.</p>
+            <button className="btn btn-ghost" onClick={() => setRetryReview(null)} disabled={retryProvisioning.isPending}>Yeniden denemeden vazgeç</button>
+            <button className="btn btn-primary" onClick={retryLoginProvisioning} disabled={retryProvisioning.isPending}>Kontrol ettim; yeniden denemeyi iste</button>
+          </section>}
         </div>
       )}
 
@@ -574,6 +589,7 @@ export function CandidateDetail({ id }: { id: number }) {
       {hireOpen && (
         <HireModal
           candidateId={id}
+          candidateVersion={candidate.version}
           candidateName={candidate.name ?? ""}
           appliedRole={candidate.appliedRole ?? ""}
           onClose={() => setHireOpen(false)}
@@ -593,12 +609,14 @@ type HireReview = {
   contractType: "indefinite" | "fixed-term";
 };
 
-function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }: {
-  candidateId: number; candidateName: string; appliedRole: string;
+function HireModal({ candidateId, candidateVersion, candidateName, appliedRole, onClose, onHired }: {
+  candidateId: number; candidateVersion: number; candidateName: string; appliedRole: string;
   onClose: () => void; onHired: (result: HireResultDto) => void;
 }) {
   const { showToast } = useToast();
   const hire = useHireCandidate();
+  const [initialVersion] = useState(candidateVersion);
+  const [hireSource, setHireSource] = useState<number | null>(null);
   const departmentsQ = useDepartments();
   const [departmentId, setDepartmentId] = useState("");
   const [email, setEmail] = useState("");
@@ -648,6 +666,8 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
         title: review.title,
         hireDate: review.hireDate,
         contractType: review.contractType,
+        expectedCandidateVersion: initialVersion,
+        ...(hireSource !== null ? { guidanceContentRevisionId: hireSource } : {}),
       });
       onHired(result);
       showToast(result.provisioning?.status === "completed"
@@ -679,6 +699,9 @@ function HireModal({ candidateId, candidateName, appliedRole, onClose, onHired }
             <p><strong>Neden?</strong> Hatalı tarih ve departman personel, izin ve bordro hazırlığını etkileyebilir. Örneğin sözleşmedeki 1 Ekim başlangıcını bugünün tarihiyle değiştirmeyin.</p>
             <p>İmzalı belgedeki sözleşme türünü seçin; seçiminiz çalışan kaydına ve ilk istihdam dönemine birlikte yazılır. Örneğin belirli süreli sözleşmeyi belirsiz süreli seçmeyin. İşe alma sonrası özlük, ücret ve dış bildirim adımları ayrıca kontrol edilir.</p>
           </section>
+          <PublishedGuidancePractice process="recruitment" step="hire-preparation" />
+          <GuidanceOperationSource label="İşe alırken kullandığım rehber sürümü" process="recruitment" step="hire-preparation"
+            value={hireSource} onChange={value => { setHireSource(value); setReview(null); }} disabled={hire.isPending} />
           {departmentsQ.isPending && <p role="status">Departmanlar yükleniyor…</p>}
           {departmentsQ.isError && <p className="form-error" role="alert">Departman listesi okunamadı; işe alma ön kontrolü yapılamaz.</p>}
           <div className="form-grid-2">

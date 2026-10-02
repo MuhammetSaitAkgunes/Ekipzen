@@ -29,8 +29,8 @@ function routes(process = "leave", step = "decision-effect") {
 function render(element: React.ReactNode) {
   return renderPage(<AuthProvider><ToastProvider>{element}</ToastProvider></AuthProvider>);
 }
-async function chooseSource() {
-  await userEvent.click(screen.getByText("Gerçek işlemde kullandığım rehber sürümü"));
+async function chooseSource(label = "Gerçek işlemde kullandığım rehber sürümü") {
+  await userEvent.click(screen.getByText(label));
   await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
   await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
 }
@@ -111,7 +111,7 @@ test("aday ilk aşama PATCH'i kaynak kimliğini taşır ve seçmek tek başına 
   stubApi({ ...routes("recruitment", "first-review"), "/api/candidates/5": candidate, "/api/candidates/5/status": { ...candidate, status: "Mülakat" } });
   render(<CandidateDetail id={5} />); await screen.findByRole("heading", { name: "Başvuran" });
   await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Mülakat");
-  await chooseSource();
+  await chooseSource("Aşama kararında kullandığım rehber sürümü");
   expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
   await userEvent.type(screen.getByLabelText("Aşama kararının gerekçesi ve dayanağı"), "Rol koşulları incelendi.");
   await userEvent.click(screen.getByLabelText("Aday kaydını ve aşama gerekçesini kontrol ettim."));

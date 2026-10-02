@@ -3,7 +3,7 @@ import type { Role } from "../../routes";
 export const guidanceStepTitles: Record<string, Record<string, string>> = {
   "personnel-entry": { "tab-kimlik": "Kimlik ve temel bilgiler", "tab-iletisim": "İletişim",
     "tab-is": "İş ve kurumsal bilgiler", "tab-mali": "Mali bilgiler", "tab-ozluk": "Özlük bilgileri", "tab-evrak": "Belgeler" },
-  recruitment: { "candidate-create": "Adayı oluşturma", "first-review": "Adayın ilk incelemesi" },
+  recruitment: { "candidate-create": "Adayı oluşturma", "first-review": "Aday incelemesi ve aşama kararı", "hire-preparation": "İşe alma ve giriş hesabını izleme" },
   leave: { "review-request": "İzin talebini inceleme", "decision-effect": "İzin kararının etkisi" },
   company: { "initial-setup": "Başlangıç kayıtlarını inceleme", "company-profile": "Şirket profilini doğrulama",
     departments: "Departman hazırlığı", "access-preparation": "Erişim sorumlularını belirleme" },

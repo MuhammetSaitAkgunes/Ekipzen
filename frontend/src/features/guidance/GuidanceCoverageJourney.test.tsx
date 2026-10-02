@@ -19,7 +19,7 @@ test("tüm süreç görünümü açılmadan okumaz; eski kanıtı yeni sürüme 
   const label = await screen.findByText("Satır ve dönem onayını ayırma · Sürüm 2"); const row = label.closest("li")!;
   expect(within(row).getByText(/İnceleme beyanı yok.*Alıştırma yanıtı yok.*Gerçek işlem kanıtı yok/)).toBeInTheDocument();
   expect(within(row).getByRole("link")).toHaveAttribute("href", "/app/guidance/catalog?version=21");
-  expect(screen.getAllByText("Bu adımın güncel onaylı içeriği henüz yayımlanmamış.")).toHaveLength(36);
+  expect(screen.getAllByText("Bu adımın güncel onaylı içeriği henüz yayımlanmamış.")).toHaveLength(37);
 });
 test("güncel kişisel kanıtlar ayrı gösterilir; başka adımın işi başarı sayılmaz", async () => {
   stubApi({ "/api/guidance/catalog": [content], "/api/guidance/catalog/readings": [{ contentRevisionId: 21, isCurrent: true }],

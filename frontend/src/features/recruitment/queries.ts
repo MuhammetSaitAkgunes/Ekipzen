@@ -229,18 +229,19 @@ export const useAddCandidateEvaluation = () => {
 export const useHireCandidate = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, departmentId, email, contractType, title, hireDate }: {
+    mutationFn: ({ id, departmentId, email, contractType, title, hireDate, expectedCandidateVersion, guidanceContentRevisionId }: {
       id: number; departmentId: number; email: string; contractType: "indefinite" | "fixed-term";
-      title?: string | null; hireDate?: string | null;
+      title?: string | null; hireDate?: string | null; expectedCandidateVersion?: number; guidanceContentRevisionId?: number;
     }) =>
       apiFetch<HireResultDto>(`/candidates/${id}/hire`, {
         method: "POST",
-        body: JSON.stringify({ departmentId, email, contractType, title: title || null, hireDate: hireDate || null }),
+        body: JSON.stringify({ departmentId, email, contractType, title: title || null, hireDate: hireDate || null, expectedCandidateVersion, guidanceContentRevisionId }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recruitment"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
     },
   });
 };
@@ -248,13 +249,14 @@ export const useHireCandidate = () => {
 export const useRetryCandidateProvisioning = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, email }: { id: number; email?: string | null }) =>
+    mutationFn: ({ id, email, guidanceContentRevisionId }: { id: number; email?: string | null; guidanceContentRevisionId?: number }) =>
       apiFetch<IdentityProvisioningDto>(`/candidates/${id}/provisioning/retry`, {
         method: "POST",
-        body: JSON.stringify({ email: email || null }),
+        body: JSON.stringify({ email: email || null, guidanceContentRevisionId }),
       }),
     onSuccess: (_result, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", id] });
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
     },
   });

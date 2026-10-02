@@ -456,6 +456,7 @@ test("bekleyen hesap kurulumu düzeltilmiş e-postayla yeniden denenir", async (
   await userEvent.clear(email);
   await userEvent.type(email, "burak.yeni@hrmaster.local");
   await userEvent.click(screen.getByRole("button", { name: "Şimdi yeniden dene" }));
+  await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim; yeniden denemeyi iste" }));
 
   await waitFor(() => {
     const posted = vi.mocked(fetch).mock.calls.find(

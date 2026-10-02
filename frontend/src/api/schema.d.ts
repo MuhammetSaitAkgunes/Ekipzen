@@ -9276,6 +9276,10 @@ export interface components {
             title?: string | null;
             /** Format: date */
             hireDate?: string | null;
+            /** Format: int32 */
+            expectedCandidateVersion?: number | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CandidateHistoryDto: {
             /** Format: int32 */
@@ -11492,6 +11496,8 @@ export interface components {
         };
         RetryProvisioningBody: {
             email?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ReverseOffboardingBody: {
             /** Format: int32 */
