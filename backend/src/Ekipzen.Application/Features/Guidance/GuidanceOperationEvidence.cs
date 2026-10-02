@@ -68,6 +68,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
         if (id <= 0) throw new ValidationException("Rehber içerik sürümü pozitif olmalıdır.");
         var (process, step) = command.GuidanceOperationKey switch
         {
+            "action-create" or "action-update" or "action-status" or "action-delete" => ("daily", "task-action"),
             "employee-photo-upload" => ("personnel-entry", "tab-kimlik"),
             "employee-create" => ("personnel-entry", "tab-is"),
             "employee-update" => ("personnel", "record-review"),
@@ -177,7 +178,7 @@ public static class GuidanceOperationEvidenceReader
                 : x.OperationKey == "offboarding-revision-open" ? "draft-opened"
                 : x.OperationKey.EndsWith("-save", StringComparison.Ordinal) ? "draft-saved"
                 : x.OperationKey == "candidate-hire-create" ? "hire-recorded" : x.OperationKey == "candidate-provisioning-retry" ? "retry-requested"
-                : x.OperationKey == "department-delete" ? "deleted" : x.OperationKey == "company-logo-upload" ? "uploaded"
+                : x.OperationKey is "department-delete" or "action-delete" ? "deleted" : x.OperationKey == "company-logo-upload" ? "uploaded"
                 : x.OperationKey == "leave-request-cancel" ? "cancelled"
                 : x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
                 PreparationChanges = new(x.ResourceKind, x.ResourceId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!),

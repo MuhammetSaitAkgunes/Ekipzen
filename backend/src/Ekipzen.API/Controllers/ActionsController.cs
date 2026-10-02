@@ -52,7 +52,7 @@ public sealed class ActionsController(ISender sender) : ControllerBase
         => Ok(await sender.Send(
             new UpdateGlobalActionCommand(
                 id, body.Title, body.Source, body.Owner, body.SourceRoute,
-                body.Due, body.Priority, body.RecommendedAction),
+                body.Due, body.Priority, body.RecommendedAction, body.ExpectedRevision, body.GuidanceContentRevisionId),
             cancellationToken));
 
     /// <summary>Durum geçişi (open→week→done, ileri yönlü; geri dönüş 409).</summary>
@@ -62,15 +62,15 @@ public sealed class ActionsController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<GlobalActionDto>> SetStatus(
         int id, ActionStatusBody body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new SetGlobalActionStatusCommand(id, body.Status), cancellationToken));
+        => Ok(await sender.Send(new SetGlobalActionStatusCommand(id, body.Status, body.ExpectedRevision, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpDelete("actions/{id:int}")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(int id, [FromQuery] string? expectedRevision, [FromQuery] int? guidanceContentRevisionId, CancellationToken cancellationToken)
     {
-        await sender.Send(new DeleteGlobalActionCommand(id), cancellationToken);
+        await sender.Send(new DeleteGlobalActionCommand(id, expectedRevision, guidanceContentRevisionId), cancellationToken);
         return NoContent();
     }
 
@@ -92,6 +92,6 @@ public sealed class ActionsController(ISender sender) : ControllerBase
 
     public sealed record ActionUpdateBody(
         string Title, string Source, string Owner, string? SourceRoute,
-        string? Due, string Priority, string? RecommendedAction);
-    public sealed record ActionStatusBody(string Status);
+        string? Due, string Priority, string? RecommendedAction, string? ExpectedRevision = null, int? GuidanceContentRevisionId = null);
+    public sealed record ActionStatusBody(string Status, string? ExpectedRevision = null, int? GuidanceContentRevisionId = null);
 }

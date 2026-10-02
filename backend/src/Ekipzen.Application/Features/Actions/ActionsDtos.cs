@@ -1,4 +1,6 @@
 using Ekipzen.Domain.Entities.Actions;
+using Ekipzen.Application.Features.Guidance;
+using System.Globalization;
 using Ekipzen.Domain.Enums;
 
 namespace Ekipzen.Application.Features.Actions;
@@ -13,7 +15,7 @@ public sealed record GlobalActionDto(
     string? Due,
     string Priority,
     string Status,
-    string? Action);
+    string? Action, string? Revision = null);
 
 /// <summary>Denetim izi satırı — mockData.js auditLogs şekli (+ ham UTC zaman).</summary>
 public sealed record AuditLogDto(
@@ -77,6 +79,11 @@ public static class ActionsMappings
         _ => throw new ArgumentException($"Geçersiz aksiyon durumu: {value} (open|week|done)."),
     };
 
+    public static string Revision(GlobalAction action) => PreparationOperationEvidence.RecordToken(
+        action.Id.ToString(CultureInfo.InvariantCulture), action.Title, action.Source, action.SourceRoute,
+        action.Owner, action.Due, action.Priority.ToString(), action.Status.ToString(), action.RecommendedAction,
+        action.CreatedAtUtc.Ticks.ToString(CultureInfo.InvariantCulture), action.UpdatedAtUtc?.Ticks.ToString(CultureInfo.InvariantCulture));
+
     public static GlobalActionDto ToDto(this GlobalAction action) => new(
         action.Id,
         action.Title,
@@ -86,5 +93,5 @@ public static class ActionsMappings
         action.Due,
         action.Priority.ToDto(),
         action.Status.ToDto(),
-        action.RecommendedAction);
+        action.RecommendedAction, Revision(action));
 }
