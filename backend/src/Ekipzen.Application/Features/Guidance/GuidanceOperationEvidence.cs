@@ -24,7 +24,8 @@ public sealed record GuidanceOperationSnapshot(int ContentRevisionId, string Con
     string StepKey, int ContentVersion, string Title);
 public sealed record GuidanceOperationEvidenceDto(string OperationKey, int ResourceId, string Outcome,
     DateTime OccurredAtUtc, GuidanceOperationSnapshot Content, string EvidenceKey, GuidanceSetupChangesDto? SetupChanges = null,
-    GuidancePersonnelChangesDto? PersonnelChanges = null, GuidanceImportChangesDto? ImportChanges = null);
+    GuidancePersonnelChangesDto? PersonnelChanges = null, GuidanceImportChangesDto? ImportChanges = null, GuidancePreparationChangesDto? PreparationChanges = null);
+public sealed record GuidancePreparationChangesDto(string ResourceKind, int ResourceId, IReadOnlyList<string> ChangedFields);
 public sealed record GuidanceImportChangesDto(Guid ImportRequestId, int CreatedCount, int SkippedCount,
     IReadOnlyList<int> CreatedEmployeeIds, IReadOnlyList<GuidanceImportSkippedRowDto> SkippedRows);
 public sealed record GuidanceImportSkippedRowDto(int RowNumber, string Outcome, string Explanation, IReadOnlyList<string> Issues);
@@ -77,6 +78,9 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "payroll-row-approve" or "payroll-period-submit" => ("payroll", "approval"),
             "offboarding-complete" => ("offboarding", "completion"),
             "offboarding-reverse" => ("offboarding", "reversal-review"),
+            "company-profile-update" => ("company", "company-profile"),
+            "department-create" or "department-update" => ("company", "departments"),
+            "position-create" or "candidate-create" => ("recruitment", "candidate-create"),
             "tenant-setup" => ("company", "initial-setup"),
             "attendance-create" => ("attendance", "entry-review"),
             "attendance-update" => ("attendance", "entry-correction"),
@@ -109,6 +113,8 @@ public static class GuidanceOperationEvidenceReader
     public static async Task<IReadOnlyList<GuidanceOperationEvidenceDto>> ReadAsync(IApplicationDbContext db,
         string userId, CancellationToken ct)
     {
+        var preparation = await db.GuidancePreparationEvidences.AsNoTracking()
+            .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var employees = await db.EmployeeCreationEvidences.AsNoTracking()
             .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var personnel = await db.GuidancePersonnelEvidences.AsNoTracking()
@@ -149,7 +155,11 @@ public static class GuidanceOperationEvidenceReader
                     x.Result.Satirlar.Where(row => row.EmployeeId is null).Select(row => new GuidanceImportSkippedRowDto(
                         row.SatirNo, row.Durum, row.Aciklama, row.Sorunlar.Select(issue => $"{issue.Alan}: {issue.Mesaj}").ToArray())).ToArray()),
             });
-        return result.Concat(importItems).OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
+        var preparationItems = preparation.Select(x => Item(x.OperationKey, x.Id, x.ResourceId,
+            x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
+                PreparationChanges = new(x.ResourceKind, x.ResourceId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!),
+            });
+        return result.Concat(importItems).Concat(preparationItems).OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
     }
     private static GuidanceOperationEvidenceDto Item(string operation, int evidenceId, int id, string outcome, DateTime at, string json) =>
         new(operation, id, outcome, DateTime.SpecifyKind(at, DateTimeKind.Utc), JsonSerializer.Deserialize<GuidanceOperationSnapshot>(json)!, $"{operation}:{evidenceId}");

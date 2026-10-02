@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -15,8 +16,11 @@ namespace Ekipzen.Application.Features.Recruitment.Commands;
 
 // --- pozisyon oluştur ---
 
-public sealed record CreatePositionCommand(string Title, int? DepartmentId, int OpenCount = 1)
-    : IRequest<PositionDto>;
+public sealed record CreatePositionCommand(string Title, int? DepartmentId, int OpenCount = 1, int? GuidanceContentRevisionId = null)
+    : IRequest<PositionDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "position-create";
+}
 
 public sealed class CreatePositionCommandValidator : AbstractValidator<CreatePositionCommand>
 {
@@ -27,13 +31,14 @@ public sealed class CreatePositionCommandValidator : AbstractValidator<CreatePos
     }
 }
 
-public sealed class CreatePositionCommandHandler(IApplicationDbContext context)
+public sealed class CreatePositionCommandHandler(IApplicationDbContext context, IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<CreatePositionCommand, PositionDto>
 {
-    public async Task<PositionDto> Handle(CreatePositionCommand request, CancellationToken cancellationToken)
+    public Task<PositionDto> Handle(CreatePositionCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync("recruitment-position-create", async ct =>
     {
         if (request.DepartmentId is not null &&
-            !await context.Departments.AnyAsync(d => d.Id == request.DepartmentId, cancellationToken))
+            !await context.Departments.AnyAsync(d => d.Id == request.DepartmentId, ct))
         {
             throw new NotFoundException("Departman", request.DepartmentId);
         }
@@ -47,19 +52,21 @@ public sealed class CreatePositionCommandHandler(IApplicationDbContext context)
         };
 
         context.Positions.Add(position);
-        await context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(ct);
 
         var departmentName = request.DepartmentId is null
             ? null
             : await context.Departments
                 .Where(d => d.Id == request.DepartmentId)
                 .Select(d => d.Name)
-                .SingleAsync(cancellationToken);
+                .SingleAsync(ct);
 
+        await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "position", position.Id,
+            ["Pozisyon adı", "Departman", "Açık kadro"], ct);
         return new PositionDto(
             position.Id, position.Title, position.DepartmentId, departmentName,
             position.IsOpen, position.OpenCount, 0, position.Version);
-    }
+    }, cancellationToken);
 }
 
 // --- aday oluştur ---
@@ -76,7 +83,11 @@ public sealed record CreateCandidateCommand(
     int ExperienceYears = 0,
     string? Summary = null,
     IReadOnlyList<string>? Skills = null,
-    IReadOnlyList<CandidateExperienceInput>? Experiences = null) : IRequest<CandidateDetailDto>;
+    IReadOnlyList<CandidateExperienceInput>? Experiences = null, int? GuidanceContentRevisionId = null)
+    : IRequest<CandidateDetailDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-create";
+}
 
 public sealed class CreateCandidateCommandValidator : AbstractValidator<CreateCandidateCommand>
 {
@@ -91,7 +102,7 @@ public sealed class CreateCandidateCommandValidator : AbstractValidator<CreateCa
 }
 
 public sealed class CreateCandidateCommandHandler(
-    IApplicationDbContext context, ISender sender, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ISender sender, IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<CreateCandidateCommand, CandidateDetailDto>
 {
     public Task<CandidateDetailDto> Handle(
@@ -99,7 +110,7 @@ public sealed class CreateCandidateCommandHandler(
         => request.PositionId is { } positionId
             ? databaseLock.ExecuteExclusiveAsync($"recruitment-position:{positionId}",
                 token => CreateAsync(request, token), cancellationToken)
-            : CreateAsync(request, cancellationToken);
+            : databaseLock.ExecuteExclusiveAsync("recruitment-candidate-create", token => CreateAsync(request, token), cancellationToken);
 
     private async Task<CandidateDetailDto> CreateAsync(
         CreateCandidateCommand request, CancellationToken cancellationToken)
@@ -151,6 +162,8 @@ public sealed class CreateCandidateCommandHandler(
         context.Candidates.Add(candidate);
         await context.SaveChangesAsync(cancellationToken);
 
+        await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "candidate", candidate.Id,
+            ["Başvuru bilgileri", "Pozisyon", "Puan / değerlendirilmedi"], cancellationToken);
         return await sender.Send(new GetCandidateQuery(candidate.Id), cancellationToken);
     }
 }

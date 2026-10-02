@@ -103,6 +103,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     // Guidance
+    public DbSet<GuidancePreparationEvidence> GuidancePreparationEvidences => Set<GuidancePreparationEvidence>();
     public DbSet<GuidanceBookmark> GuidanceBookmarks => Set<GuidanceBookmark>();
     public DbSet<GuidanceContentReading> GuidanceContentReadings => Set<GuidanceContentReading>();
     public DbSet<GuidanceHelpPreference> GuidanceHelpPreferences => Set<GuidanceHelpPreference>();

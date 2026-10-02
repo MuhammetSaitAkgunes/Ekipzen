@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Domain.Entities.Settings;
 
 namespace Ekipzen.Application.Features.Settings;
@@ -9,7 +10,7 @@ public sealed record CompanyProfileDto(
     string? SystemEmail,
     string? Phone,
     string? HeadquartersAddress,
-    string? LogoPath);
+    string? LogoPath, string? RecordToken = null);
 
 /// <summary>E-posta bildirim toggle'ları — settings.js "Bildirimler" sekmesi.</summary>
 public sealed record NotificationSettingsDto(
@@ -40,7 +41,8 @@ public static class SettingsMappings
 {
     public static CompanyProfileDto ToDto(this CompanyProfile profile) => new(
         profile.Name, profile.Website, profile.SystemEmail, profile.Phone,
-        profile.HeadquartersAddress, profile.LogoPath);
+        profile.HeadquartersAddress, profile.LogoPath, PreparationOperationEvidence.RecordToken(profile.Name, profile.Website,
+            profile.SystemEmail, profile.Phone, profile.HeadquartersAddress));
 
     public static NotificationSettingsDto ToNotificationsDto(this NotificationSettings settings)
         => new(settings.NewPersonnelEmail, settings.LeaveRequestEmail, false);

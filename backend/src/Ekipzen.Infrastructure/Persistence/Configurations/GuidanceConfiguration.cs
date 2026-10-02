@@ -188,3 +188,16 @@ public sealed class GuidanceOffboardingEvidenceConfiguration : IEntityTypeConfig
         builder.HasOne(x => x.OffboardingCase).WithMany().HasForeignKey(x => x.OffboardingCaseId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public sealed class GuidancePreparationEvidenceConfiguration : IEntityTypeConfiguration<GuidancePreparationEvidence>
+{
+    public void Configure(EntityTypeBuilder<GuidancePreparationEvidence> builder)
+    {
+        builder.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+        builder.Property(x => x.OperationKey).IsRequired().HasMaxLength(64);
+        builder.Property(x => x.ResourceKind).IsRequired().HasMaxLength(32);
+        builder.Property(x => x.ChangedFieldsJson).IsRequired().HasMaxLength(2000);
+        builder.Property(x => x.GuidanceSnapshotJson).HasMaxLength(4000);
+        builder.HasIndex(x => new { x.TenantId, x.UserId });
+    }
+}

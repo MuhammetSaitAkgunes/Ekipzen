@@ -38,7 +38,7 @@ public sealed class DepartmentsController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<DepartmentDto>> Update(
         int id, UpdateDepartmentBody body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new UpdateDepartmentCommand(id, body.Name, body.Code), cancellationToken));
+        => Ok(await sender.Send(new UpdateDepartmentCommand(id, body.Name, body.Code, body.ExpectedRecordToken, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = Policies.HrAdminOnly)]
@@ -52,5 +52,5 @@ public sealed class DepartmentsController(ISender sender) : ControllerBase
     }
 
     /// <summary>Gövde modeli: id route'tan gelir.</summary>
-    public sealed record UpdateDepartmentBody(string Name, string? Code);
+    public sealed record UpdateDepartmentBody(string Name, string? Code, string? ExpectedRecordToken = null, int? GuidanceContentRevisionId = null);
 }

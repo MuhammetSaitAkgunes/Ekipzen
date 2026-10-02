@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -47,7 +48,11 @@ public sealed record UpdateCompanyProfileCommand(
     string? Website,
     string? SystemEmail,
     string? Phone,
-    string? HeadquartersAddress) : IRequest<CompanyProfileDto>;
+    string? HeadquartersAddress, string? ExpectedRecordToken = null, int? GuidanceContentRevisionId = null)
+    : IRequest<CompanyProfileDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "company-profile-update";
+}
 
 public sealed class UpdateCompanyProfileCommandValidator : AbstractValidator<UpdateCompanyProfileCommand>
 {
@@ -62,13 +67,23 @@ public sealed class UpdateCompanyProfileCommandValidator : AbstractValidator<Upd
     }
 }
 
-public sealed class UpdateCompanyProfileCommandHandler(IApplicationDbContext context)
+public sealed class UpdateCompanyProfileCommandHandler(IApplicationDbContext context, IDatabaseLock databaseLock,
+    ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<UpdateCompanyProfileCommand, CompanyProfileDto>
 {
-    public async Task<CompanyProfileDto> Handle(
-        UpdateCompanyProfileCommand request, CancellationToken cancellationToken)
+    public Task<CompanyProfileDto> Handle(UpdateCompanyProfileCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync("tenant-setup", async ct =>
     {
-        var profile = await context.CompanyProfiles.FirstOrDefaultAsync(cancellationToken);
+        var profile = await context.CompanyProfiles.FirstOrDefaultAsync(ct);
+        var initial = profile ?? new CompanyProfile();
+        PreparationOperationEvidence.RequireToken(request.ExpectedRecordToken, initial.ToDto().RecordToken!, guidance.IsGuided);
+        var fields = new List<string>();
+        if (initial.Name != request.Name.Trim()) fields.Add("Şirket adı");
+        if (initial.Website != request.Website?.Trim()) fields.Add("Web sitesi");
+        if (initial.SystemEmail != request.SystemEmail?.Trim()) fields.Add("Sistem e-postası");
+        if (initial.Phone != request.Phone?.Trim()) fields.Add("Telefon");
+        if (initial.HeadquartersAddress != request.HeadquartersAddress?.Trim()) fields.Add("Merkez adresi");
+        if (fields.Count == 0) return initial.ToDto();
         if (profile is null)
         {
             profile = new CompanyProfile();
@@ -81,9 +96,10 @@ public sealed class UpdateCompanyProfileCommandHandler(IApplicationDbContext con
         profile.Phone = request.Phone?.Trim();
         profile.HeadquartersAddress = request.HeadquartersAddress?.Trim();
 
-        await context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(ct);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "company-profile", profile.Id, fields, ct);
         return profile.ToDto();
-    }
+    }, cancellationToken);
 }
 
 // --- bildirim toggle'ları güncelle ---
