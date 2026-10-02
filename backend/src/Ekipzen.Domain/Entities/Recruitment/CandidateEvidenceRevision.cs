@@ -1,9 +1,11 @@
 using Ekipzen.Domain.Common;
+using Ekipzen.Domain.Entities.Guidance;
 
 namespace Ekipzen.Domain.Entities.Recruitment;
 
-public sealed class CandidateEvidenceRevision : BaseEntity
+public sealed class CandidateEvidenceRevision : BaseEntity, IGuidanceOperationEvidence
 {
+    public string? GuidanceSnapshotJson { get; set; }
     public int CandidateId { get; set; }
     public Candidate? Candidate { get; set; }
     public int? InterviewNoteId { get; set; }

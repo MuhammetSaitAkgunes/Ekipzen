@@ -24,7 +24,9 @@ public sealed record GuidanceOperationSnapshot(int ContentRevisionId, string Con
     string StepKey, int ContentVersion, string Title);
 public sealed record GuidanceOperationEvidenceDto(string OperationKey, int ResourceId, string Outcome,
     DateTime OccurredAtUtc, GuidanceOperationSnapshot Content, string EvidenceKey, GuidanceSetupChangesDto? SetupChanges = null,
-    GuidancePersonnelChangesDto? PersonnelChanges = null, GuidanceImportChangesDto? ImportChanges = null, GuidancePreparationChangesDto? PreparationChanges = null);
+    GuidancePersonnelChangesDto? PersonnelChanges = null, GuidanceImportChangesDto? ImportChanges = null, GuidancePreparationChangesDto? PreparationChanges = null, GuidanceRecruitmentChangesDto? RecruitmentChanges = null);
+public sealed record GuidanceRecruitmentChangesDto(int? CandidateId, int? PositionId, string RecordKind, int RecordId,
+    int? FromVersion, int ToVersion, string? Reason, int? FromCandidateVersion = null, int? ToCandidateVersion = null);
 public sealed record GuidancePreparationChangesDto(string ResourceKind, int ResourceId, IReadOnlyList<string> ChangedFields);
 public sealed record GuidanceImportChangesDto(Guid ImportRequestId, int CreatedCount, int SkippedCount,
     IReadOnlyList<int> CreatedEmployeeIds, IReadOnlyList<GuidanceImportSkippedRowDto> SkippedRows);
@@ -72,6 +74,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "employee-rehire" => ("personnel", "rehire"),
             "employee-compensation-create" or "employee-compensation-correct" or "employee-compensation-date" => ("personnel-entry", "tab-mali"),
             "employee-document-upload" or "employee-document-withdraw" => ("personnel-entry", "tab-evrak"),
+            "candidate-note-create" or "candidate-note-revise" or "candidate-evaluation-create" or "candidate-evaluation-revise" => ("recruitment", "first-review"),
             "candidate-first-review" => ("recruitment", "first-review"),
             "leave-decision" => ("leave", "decision-effect"),
             "payroll-period-create" => ("payroll", "period-create"),
@@ -80,7 +83,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "offboarding-reverse" => ("offboarding", "reversal-review"),
             "company-profile-update" => ("company", "company-profile"),
             "department-create" or "department-update" => ("company", "departments"),
-            "position-create" or "candidate-create" => ("recruitment", "candidate-create"),
+            "position-create" or "candidate-create" or "position-correct" or "candidate-correct" => ("recruitment", "candidate-create"),
             "tenant-setup" => ("company", "initial-setup"),
             "attendance-create" => ("attendance", "entry-review"),
             "attendance-update" => ("attendance", "entry-correction"),
@@ -159,9 +162,10 @@ public static class GuidanceOperationEvidenceReader
             x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
                 PreparationChanges = new(x.ResourceKind, x.ResourceId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!),
             });
-        return result.Concat(importItems).Concat(preparationItems).OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
+        var recruitment = await GuidanceRecruitmentEvidenceReader.ReadAsync(db, userId, ct);
+        return result.Concat(importItems).Concat(preparationItems).Concat(recruitment).OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
     }
-    private static GuidanceOperationEvidenceDto Item(string operation, int evidenceId, int id, string outcome, DateTime at, string json) =>
+    internal static GuidanceOperationEvidenceDto Item(string operation, int evidenceId, int id, string outcome, DateTime at, string json) =>
         new(operation, id, outcome, DateTime.SpecifyKind(at, DateTimeKind.Utc), JsonSerializer.Deserialize<GuidanceOperationSnapshot>(json)!, $"{operation}:{evidenceId}");
 }
 

@@ -57,7 +57,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new CorrectCandidateCommand(id, body.ExpectedVersion,
             body.Name, body.AppliedRole, body.PositionId, body.ExpectedPositionVersion,
             body.Score, body.Location, body.ExperienceYears, body.Summary,
-            body.Reason, body.ConfirmExistingEvidenceReview), cancellationToken));
+            body.Reason, body.ConfirmExistingEvidenceReview, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("candidates/{id:int}/corrections")]
     [ProducesResponseType<IReadOnlyList<CandidateCorrectionDto>>(StatusCodes.Status200OK)]
@@ -70,7 +70,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public async Task<ActionResult<InterviewNoteDto>> AddNote(
         int id, CandidateNoteBody body, CancellationToken cancellationToken)
     {
-        var note = await sender.Send(new AddInterviewNoteCommand(id, body.NoteType, body.Text), cancellationToken);
+        var note = await sender.Send(new AddInterviewNoteCommand(id, body.NoteType, body.Text, body.GuidanceContentRevisionId), cancellationToken);
         return CreatedAtAction(nameof(GetCandidate), new { id }, note);
     }
 
@@ -80,7 +80,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         int id, CandidateEvaluationBody body, CancellationToken cancellationToken)
     {
         var evaluation = await sender.Send(
-            new AddCandidateEvaluationCommand(id, body.Criterion, body.Score, body.MaxScore), cancellationToken);
+            new AddCandidateEvaluationCommand(id, body.Criterion, body.Score, body.MaxScore, body.GuidanceContentRevisionId), cancellationToken);
         return CreatedAtAction(nameof(GetCandidate), new { id }, evaluation);
     }
 
@@ -92,7 +92,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         int id, int noteId, ReviseNoteBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new ReviseCandidateEvidenceCommand(id, noteId, true,
             body.ExpectedCandidateVersion, body.ExpectedRecordVersion, body.NoteType, body.Text,
-            null, null, null, body.Reason), cancellationToken));
+            null, null, null, body.Reason, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("candidates/{id:int}/notes/{noteId:int}/revisions")]
     [ProducesResponseType<CandidateEvidenceHistoryDto>(StatusCodes.Status200OK)]
@@ -108,7 +108,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         int id, int evaluationId, ReviseEvaluationBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new ReviseCandidateEvidenceCommand(id, evaluationId, false,
             body.ExpectedCandidateVersion, body.ExpectedRecordVersion, null, null,
-            body.Criterion, body.Score, body.MaxScore, body.Reason), cancellationToken));
+            body.Criterion, body.Score, body.MaxScore, body.Reason, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpGet("candidates/{id:int}/evaluations/{evaluationId:int}/revisions")]
     [ProducesResponseType<CandidateEvidenceHistoryDto>(StatusCodes.Status200OK)]
@@ -155,7 +155,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public async Task<ActionResult<PositionDto>> CorrectPosition(
         int id, CorrectPositionBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new CorrectPositionCommand(id, body.ExpectedVersion,
-            body.Title, body.DepartmentId, body.OpenCount, body.IsOpen, body.Reason),
+            body.Title, body.DepartmentId, body.OpenCount, body.IsOpen, body.Reason, body.GuidanceContentRevisionId),
             cancellationToken));
 
     [HttpGet("positions/{id:int}/corrections")]
@@ -172,16 +172,16 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public sealed record CandidateStatusBody(string Status, int ExpectedVersion, string Reason,
         IReadOnlyList<CandidateDecisionEvidenceReference>? Evidence = null, int? GuidanceContentRevisionId = null);
     public sealed record ReviseNoteBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
-        string NoteType, string Text, string Reason);
+        string NoteType, string Text, string Reason, int? GuidanceContentRevisionId = null);
     public sealed record ReviseEvaluationBody(int ExpectedCandidateVersion, int ExpectedRecordVersion,
-        string Criterion, int Score, int MaxScore, string Reason);
+        string Criterion, int Score, int MaxScore, string Reason, int? GuidanceContentRevisionId = null);
     public sealed record CorrectCandidateBody(int ExpectedVersion, string Name, string AppliedRole,
         int? PositionId, int? ExpectedPositionVersion, int? Score, string? Location,
-        int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview);
-    public sealed record CandidateNoteBody(string NoteType, string Text);
-    public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5);
+        int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview, int? GuidanceContentRevisionId = null);
+    public sealed record CandidateNoteBody(string NoteType, string Text, int? GuidanceContentRevisionId = null);
+    public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5, int? GuidanceContentRevisionId = null);
     public sealed record CandidateHireBody(int DepartmentId, string Email, string ContractType, string? Title = null, DateOnly? HireDate = null);
     public sealed record RetryProvisioningBody(string? Email = null);
     public sealed record CorrectPositionBody(int ExpectedVersion, string Title,
-        int? DepartmentId, int OpenCount, bool IsOpen, string Reason);
+        int? DepartmentId, int OpenCount, bool IsOpen, string Reason, int? GuidanceContentRevisionId = null);
 }

@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -10,7 +11,10 @@ namespace Ekipzen.Application.Features.Recruitment.Commands;
 
 public sealed record CorrectPositionCommand(
     int PositionId, int ExpectedVersion, string Title, int? DepartmentId,
-    int OpenCount, bool IsOpen, string Reason) : IRequest<PositionDto>;
+    int OpenCount, bool IsOpen, string Reason, int? GuidanceContentRevisionId = null) : IRequest<PositionDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "position-correct";
+}
 
 public sealed class CorrectPositionCommandValidator : AbstractValidator<CorrectPositionCommand>
 {
@@ -27,7 +31,7 @@ public sealed class CorrectPositionCommandValidator : AbstractValidator<CorrectP
 }
 
 public sealed class CorrectPositionCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<CorrectPositionCommand, PositionDto>
 {
     public Task<PositionDto> Handle(CorrectPositionCommand request, CancellationToken cancellationToken)
@@ -57,7 +61,7 @@ public sealed class CorrectPositionCommandHandler(
         position.IsOpen = after.IsOpen;
         position.OpenCount = after.OpenCount;
         position.Version++;
-        context.PositionCorrections.Add(new PositionCorrection
+        var evidence = new PositionCorrection
         {
             PositionId = position.Id,
             FromVersion = request.ExpectedVersion,
@@ -68,7 +72,9 @@ public sealed class CorrectPositionCommandHandler(
             ChangedByUserId = currentUser.UserId
                 ?? throw new ForbiddenAccessException("Pozisyon düzeltmesi için oturum sahibi gerekli."),
             ChangedAtUtc = DateTime.UtcNow,
-        });
+        };
+        guidance.Stamp(evidence);
+        context.PositionCorrections.Add(evidence);
         await context.SaveChangesAsync(cancellationToken);
         var departmentName = after.DepartmentId is { } id
             ? await context.Departments.AsNoTracking()

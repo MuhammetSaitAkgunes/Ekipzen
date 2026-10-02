@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -12,8 +13,11 @@ namespace Ekipzen.Application.Features.Recruitment.Commands;
 
 public sealed record ReviseCandidateEvidenceCommand(
     int CandidateId, int RecordId, bool IsNote, int ExpectedCandidateVersion, int ExpectedRecordVersion,
-    string? NoteType, string? Text, string? Criterion, int? Score, int? MaxScore, string Reason)
-    : IRequest<CandidateDetailDto>;
+    string? NoteType, string? Text, string? Criterion, int? Score, int? MaxScore, string Reason, int? GuidanceContentRevisionId = null)
+    : IRequest<CandidateDetailDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => IsNote ? "candidate-note-revise" : "candidate-evaluation-revise";
+}
 
 public sealed class ReviseCandidateEvidenceCommandValidator : AbstractValidator<ReviseCandidateEvidenceCommand>
 {
@@ -41,7 +45,7 @@ public sealed class ReviseCandidateEvidenceCommandValidator : AbstractValidator<
 }
 
 public sealed class ReviseCandidateEvidenceCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, ISender sender)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, ISender sender, GuidanceOperationContext guidance)
     : IRequestHandler<ReviseCandidateEvidenceCommand, CandidateDetailDto>
 {
     public Task<CandidateDetailDto> Handle(ReviseCandidateEvidenceCommand request, CancellationToken cancellationToken)
@@ -69,7 +73,7 @@ public sealed class ReviseCandidateEvidenceCommandHandler(
         if (before == after) throw new ConflictException("Not veya değerlendirmede değişiklik yok.");
         var userId = currentUser.UserId ?? throw new ForbiddenAccessException("Düzeltme için oturum sahibi gerekli.");
         candidate.Version++;
-        context.CandidateEvidenceRevisions.Add(new CandidateEvidenceRevision
+        var evidence = new CandidateEvidenceRevision
         {
             CandidateId = candidate.Id, InterviewNoteId = request.IsNote ? request.RecordId : null,
             EvaluationId = request.IsNote ? null : request.RecordId, Version = recordVersion + 1,
@@ -77,7 +81,9 @@ public sealed class ReviseCandidateEvidenceCommandHandler(
             BeforeJson = JsonSerializer.Serialize(before), AfterJson = JsonSerializer.Serialize(after),
             Reason = request.Reason.Trim(), ChangedByUserId = userId,
             ChangedByName = currentUser.UserName ?? "İK", ChangedAtUtc = DateTime.UtcNow,
-        });
+        };
+        guidance.Stamp(evidence);
+        context.CandidateEvidenceRevisions.Add(evidence);
         context.CandidateHistory.Add(new CandidateHistory
         {
             CandidateId = candidate.Id, OccurredAtUtc = DateTime.UtcNow,

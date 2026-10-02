@@ -1,3 +1,4 @@
+using Ekipzen.Application.Features.Guidance;
 using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
@@ -14,8 +15,11 @@ namespace Ekipzen.Application.Features.Recruitment.Commands;
 public sealed record CorrectCandidateCommand(
     int CandidateId, int ExpectedVersion, string Name, string AppliedRole,
     int? PositionId, int? ExpectedPositionVersion, int? Score, string? Location,
-    int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview)
-    : IRequest<CandidateDetailDto>;
+    int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview, int? GuidanceContentRevisionId = null)
+    : IRequest<CandidateDetailDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-correct";
+}
 
 public sealed class CorrectCandidateCommandValidator : AbstractValidator<CorrectCandidateCommand>
 {
@@ -37,7 +41,7 @@ public sealed class CorrectCandidateCommandValidator : AbstractValidator<Correct
 }
 
 public sealed class CorrectCandidateCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, ISender sender)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, ISender sender, GuidanceOperationContext guidance)
     : IRequestHandler<CorrectCandidateCommand, CandidateDetailDto>
 {
     public async Task<CandidateDetailDto> Handle(
@@ -106,7 +110,7 @@ public sealed class CorrectCandidateCommandHandler(
         candidate.ExperienceYears = after.ExperienceYears;
         candidate.Summary = after.Summary;
         candidate.Version++;
-        context.CandidateCorrections.Add(new CandidateCorrection
+        var evidence = new CandidateCorrection
         {
             CandidateId = candidate.Id,
             FromVersion = request.ExpectedVersion, ToVersion = candidate.Version,
@@ -115,7 +119,9 @@ public sealed class CorrectCandidateCommandHandler(
             ChangedByUserId = currentUser.UserId
                 ?? throw new ForbiddenAccessException("Aday düzeltmesi için oturum sahibi gerekli."),
             ChangedByName = currentUser.UserName ?? "İK", ChangedAtUtc = DateTime.UtcNow,
-        });
+        };
+        guidance.Stamp(evidence);
+        context.CandidateCorrections.Add(evidence);
         context.CandidateHistory.Add(new CandidateHistory
         {
             CandidateId = candidate.Id,

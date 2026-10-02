@@ -21,6 +21,7 @@ public sealed class PositionCorrectionConfiguration : IEntityTypeConfiguration<P
 {
     public void Configure(EntityTypeBuilder<PositionCorrection> b)
     {
+        b.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         b.Property(item => item.BeforeJson).IsRequired();
         b.Property(item => item.AfterJson).IsRequired();
         b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
@@ -53,6 +54,7 @@ public sealed class CandidateCorrectionConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<CandidateCorrection> b)
     {
+        b.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         b.Property(item => item.BeforeJson).IsRequired();
         b.Property(item => item.AfterJson).IsRequired();
         b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
@@ -68,6 +70,7 @@ public sealed class CandidateEvidenceRevisionConfiguration : IEntityTypeConfigur
 {
     public void Configure(EntityTypeBuilder<CandidateEvidenceRevision> b)
     {
+        b.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         b.Property(item => item.BeforeJson).IsRequired();
         b.Property(item => item.AfterJson).IsRequired();
         b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
@@ -135,6 +138,7 @@ public class InterviewNoteConfiguration : IEntityTypeConfiguration<InterviewNote
 {
     public void Configure(EntityTypeBuilder<InterviewNote> b)
     {
+        b.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         b.Property(n => n.AuthorUserId).HasMaxLength(450);
         b.Property(n => n.AuthorName).IsRequired().HasMaxLength(128);
         b.Property(n => n.NoteType).IsRequired().HasMaxLength(64);
@@ -151,6 +155,8 @@ public class CandidateEvaluationConfiguration : IEntityTypeConfiguration<Candida
 {
     public void Configure(EntityTypeBuilder<CandidateEvaluation> b)
     {
+        b.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
+        b.Property(item => item.GuidanceUserId).HasMaxLength(450);
         b.Property(e => e.Criterion).IsRequired().HasMaxLength(128);
 
         b.HasOne(e => e.Candidate)

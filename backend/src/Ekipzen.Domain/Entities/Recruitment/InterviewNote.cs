@@ -1,10 +1,12 @@
 using Ekipzen.Domain.Common;
+using Ekipzen.Domain.Entities.Guidance;
 
 namespace Ekipzen.Domain.Entities.Recruitment;
 
 /// <summary>Aday için mülakat/görüşme notu (Teknik Mülakat | İK Görüşmesi).</summary>
-public class InterviewNote : AuditableEntity
+public class InterviewNote : AuditableEntity, IGuidanceOperationEvidence
 {
+    public string? GuidanceSnapshotJson { get; set; }
     public int CandidateId { get; set; }
     public Candidate? Candidate { get; set; }
 

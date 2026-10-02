@@ -1,10 +1,14 @@
 using Ekipzen.Domain.Common;
+using Ekipzen.Domain.Entities.Guidance;
 
 namespace Ekipzen.Domain.Entities.Recruitment;
 
 /// <summary>Aday değerlendirme kriteri ve puanı (ör. Teknik Yeterlilik 4/5).</summary>
-public class CandidateEvaluation : BaseEntity
+public class CandidateEvaluation : BaseEntity, IGuidanceOperationEvidence
 {
+    public string? GuidanceSnapshotJson { get; set; }
+    public string? GuidanceUserId { get; set; }
+    public DateTime? GuidanceOccurredAtUtc { get; set; }
     public int CandidateId { get; set; }
     public Candidate? Candidate { get; set; }
 

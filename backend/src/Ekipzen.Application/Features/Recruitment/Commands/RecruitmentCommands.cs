@@ -287,8 +287,11 @@ public sealed class SetCandidateStatusCommandHandler(
 
 // --- mülakat notu ---
 
-public sealed record AddInterviewNoteCommand(int CandidateId, string NoteType, string Text)
-    : IRequest<InterviewNoteDto>;
+public sealed record AddInterviewNoteCommand(int CandidateId, string NoteType, string Text, int? GuidanceContentRevisionId = null)
+    : IRequest<InterviewNoteDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-note-create";
+}
 
 public sealed class AddInterviewNoteCommandValidator : AbstractValidator<AddInterviewNoteCommand>
 {
@@ -302,7 +305,7 @@ public sealed class AddInterviewNoteCommandValidator : AbstractValidator<AddInte
 }
 
 public sealed class AddInterviewNoteCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<AddInterviewNoteCommand, InterviewNoteDto>
 {
     public Task<InterviewNoteDto> Handle(
@@ -329,6 +332,7 @@ public sealed class AddInterviewNoteCommandHandler(
             Text = request.Text.Trim(),
         };
 
+        guidance.Stamp(note);
         context.InterviewNotes.Add(note);
         context.CandidateHistory.Add(new Domain.Entities.Recruitment.CandidateHistory
         {
@@ -345,8 +349,11 @@ public sealed class AddInterviewNoteCommandHandler(
 
 // --- değerlendirme ---
 
-public sealed record AddCandidateEvaluationCommand(int CandidateId, string Criterion, int Score, int MaxScore = 5)
-    : IRequest<CandidateEvaluationDto>;
+public sealed record AddCandidateEvaluationCommand(int CandidateId, string Criterion, int Score, int MaxScore = 5, int? GuidanceContentRevisionId = null)
+    : IRequest<CandidateEvaluationDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-evaluation-create";
+}
 
 public sealed class AddCandidateEvaluationCommandValidator : AbstractValidator<AddCandidateEvaluationCommand>
 {
@@ -360,7 +367,7 @@ public sealed class AddCandidateEvaluationCommandValidator : AbstractValidator<A
     }
 }
 
-public sealed class AddCandidateEvaluationCommandHandler(IApplicationDbContext context, IDatabaseLock databaseLock)
+public sealed class AddCandidateEvaluationCommandHandler(IApplicationDbContext context, IDatabaseLock databaseLock, ICurrentUser currentUser, GuidanceOperationContext guidance)
     : IRequestHandler<AddCandidateEvaluationCommand, CandidateEvaluationDto>
 {
     public Task<CandidateEvaluationDto> Handle(
@@ -386,6 +393,12 @@ public sealed class AddCandidateEvaluationCommandHandler(IApplicationDbContext c
             MaxScore = request.MaxScore,
         };
 
+        if (guidance.IsGuided)
+        {
+            evaluation.GuidanceUserId = currentUser.UserId ?? throw new ForbiddenAccessException("Değerlendirme için oturum sahibi gerekli.");
+            evaluation.GuidanceOccurredAtUtc = DateTime.UtcNow;
+            guidance.Stamp(evaluation);
+        }
         context.CandidateEvaluations.Add(evaluation);
         await context.SaveChangesAsync(cancellationToken);
 

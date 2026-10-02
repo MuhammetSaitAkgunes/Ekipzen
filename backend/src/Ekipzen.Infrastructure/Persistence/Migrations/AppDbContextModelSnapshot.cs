@@ -3728,6 +3728,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<int>("FromVersion")
                         .HasColumnType("int");
 
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -3764,6 +3768,17 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("GuidanceOccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("GuidanceUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("MaxScore")
                         .HasColumnType("int");
@@ -3820,6 +3835,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("FromCandidateVersion")
                         .HasColumnType("int");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<int?>("InterviewNoteId")
                         .HasColumnType("int");
@@ -4048,6 +4067,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("NoteType")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -4151,6 +4174,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("FromVersion")
                         .HasColumnType("int");
+
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<int>("PositionId")
                         .HasColumnType("int");
