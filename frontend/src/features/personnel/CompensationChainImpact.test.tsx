@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -57,8 +58,8 @@ function renderImpact(blocked: boolean) {
       },
     },
   });
-  renderPage(<ToastProvider><CompensationRemediationPanel employeeId={1}
-    packageId={2} /></ToastProvider>);
+  renderPage(<AuthProvider><ToastProvider><CompensationRemediationPanel employeeId={1}
+    packageId={2} /></ToastProvider></AuthProvider>);
 }
 
 test("sonraki onaylı ayın zincirleme net hesabını karar öncesi gösterir", async () => {

@@ -7,6 +7,9 @@ import { GuidanceStepLessons } from "./GuidanceStepLessons";
 
 const dateLabel = (date: string): string => date.split("-").reverse().join(".");
 const taskLabels: Record<string, string> = {
+  "payroll-timesheet-review": "PUANTAJ / BORDRO UZLAŞTIRMASI",
+  "payroll-original-external-payment": "İLK BORDRO ÖDEME KANITI", "payroll-original-external-notification": "İLK BORDRO BİLDİRİM KANITI",
+  "offboarding-original-external-payment": "İLK AYRILIŞ ÖDEME KANITI", "offboarding-original-external-notification": "İLK AYRILIŞ BİLDİRİM KANITI",
   "employee-contact": "İLETİŞİM KAYDI", "employee-documents": "EVRAK ENVANTERİ", "employee-manager": "YÖNETİCİ BAĞLANTISI",
   "action-followup": "AKSİYON TAKİBİ",
   "company-setup": "ŞİRKET HAZIRLIĞI",
@@ -31,7 +34,7 @@ export function DailyGuidanceTasks({ limit }: { limit?: number }) {
   return <div className="ez-guidance-tasks">
     <GuidanceSourceLink processKey="daily" />
     <GuidanceStepLessons process="daily" />
-    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını ve açık aksiyonları; İK yöneticileri için eksik başlangıç kayıtlarını, taslak bordro ayarlarını, eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, iletişim kanalı veya aktif evrak kaydı olmayan ve atanmış yönetici bağlantısı uygun görünmeyen etkin çalışanları, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. İletişim ve evrak işleri envanter kontrolüdür; yasal eksiklik veya tüm belgelerin tamamlanması kararı değildir. Yönetici ataması her çalışan için zorunlu değildir. Diğer İK işleri burada henüz üretilmez.</p>
+    <p className="ez-guidance-task-scope">Bu liste şu anda yetkiniz kapsamındaki bekleyen izin onaylarını ve açık aksiyonları; İK yöneticileri için eksik başlangıç kayıtlarını, taslak bordro ayarlarını, eksik/süresi yaklaşan uyum belgelerini, açık ayrılış taslaklarını, onaylı ayrılış ve bordro düzeltmelerinin eksik dış işlem kanıtlarını, ilk hesapların ayrı ödeme/bildirim kanıtlarını ve açık bordro satırlarının değişen puantaj kaynağı uzlaştırmasını, iletişim kanalı veya aktif evrak kaydı olmayan ve atanmış yönetici bağlantısı uygun görünmeyen etkin çalışanları, yürürlükte ücret paketi bulunmayan etkin çalışanları, açık bordro dönemlerini ve Yeni aşamasındaki adayları gösterir. İletişim ve evrak işleri envanter kontrolüdür; yasal eksiklik veya tüm belgelerin tamamlanması kararı değildir. Yönetici ataması her çalışan için zorunlu değildir. Diğer İK işleri burada henüz üretilmez.</p>
     {tasks.map((task) => <article className="ez-guidance-task" key={task.key}>
       <span className="ez-overline">{taskLabels[task.kind] ?? "BELGE TAKİBİ"}</span>
       <h3>{task.title}</h3>

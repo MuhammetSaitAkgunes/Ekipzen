@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import type { SaveTerminationCalculationRuleBody, TerminationCalculationRuleDto } from "../personnel/queries";
@@ -52,6 +53,7 @@ const NUMBER_FIELDS: Array<[keyof SaveTerminationCalculationRuleBody, string, st
 ];
 
 export function TerminationRulesPanel() {
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const { showToast } = useToast();
   const rulesQ = useTerminationCalculationRules();
   const saveRule = useSaveTerminationCalculationRule();
@@ -73,7 +75,7 @@ export function TerminationRulesPanel() {
     try {
       await saveRule.mutateAsync({
         id: editingId,
-        body: { ...form, sourceReference: form.sourceReference.trim(), reviewNotes: form.reviewNotes?.trim() || null },
+        body: { ...form, guidanceContentRevisionId: guidanceVersion ?? undefined, sourceReference: form.sourceReference.trim(), reviewNotes: form.reviewNotes?.trim() || null },
       });
       setEditingId(undefined);
       setForm(emptyRule());
@@ -88,7 +90,7 @@ export function TerminationRulesPanel() {
       `${rule.effectiveFrom} sürümünü onaylıyor musunuz? Onaydan sonra bu sürüm değiştirilemez.`,
     )) return;
     try {
-      await approveRule.mutateAsync({ id: rule.id, expectedVersion: rule.version });
+      await approveRule.mutateAsync({ id: rule.id, expectedVersion: rule.version, guidanceContentRevisionId: guidanceVersion ?? undefined });
       showToast("Kural sürümü onaylandı ve değişmez hale getirildi.", "success");
     } catch (cause) {
       showToast(cause instanceof ApiError ? cause.message : "Kural onaylanamadı.", "error");
@@ -97,6 +99,7 @@ export function TerminationRulesPanel() {
 
   return (
     <section className="card payroll-settings-card">
+      <GuidanceOperationSource process="payroll" step="settings-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={saveRule.isPending || approveRule.isPending} />
       <div className="card-header-clean">
         <div>
           <h4>İşten Çıkış Hesap Kuralları</h4>

@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -35,8 +36,8 @@ const nextCase = {
 
 function renderWithRoutes(routes: Record<string, unknown>) {
   stubApi(routes);
-  renderPage(<ToastProvider><CompensationRemediationPanel
-    employeeId={1} packageId={2} /></ToastProvider>);
+  renderPage(<AuthProvider><ToastProvider><CompensationRemediationPanel
+    employeeId={1} packageId={2} /></ToastProvider></AuthProvider>);
 }
 
 test("onaylı dosyayı değiştirmeden aynı paket için yeni uzman dosyası açar", async () => {

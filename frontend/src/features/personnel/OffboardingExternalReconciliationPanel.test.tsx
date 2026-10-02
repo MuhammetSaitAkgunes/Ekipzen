@@ -1,4 +1,5 @@
-import { screen, waitFor } from "@testing-library/react";
+import { AuthProvider } from "../../auth/AuthContext";
+import { screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { ToastProvider } from "../../layout/ToastProvider";
@@ -20,7 +21,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 test("işlem bitmeden ödeme sorumlusunu bekliyor durumunda atar", async () => {
   stubApi({ [path]: context });
-  renderPage(<ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider>);
+  renderPage(<AuthProvider><ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider></AuthProvider>);
   await screen.findByRole("region", { name: "Dış ödeme kanıtı" });
   await userEvent.type(screen.getByLabelText("Sorumlu kişi", { selector: "#external-payment-owner" }), "Bordro uzmanı");
   const section = screen.getByRole("region", { name: "Dış ödeme kanıtı" });
@@ -38,7 +39,7 @@ test("işlem bitmeden ödeme sorumlusunu bekliyor durumunda atar", async () => {
 
 test("ödeme ve bildirimi ayrı kanıtlarla kaydeder; teyit olmadan göndermez", async () => {
   stubApi({ [path]: context });
-  renderPage(<ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider>);
+  renderPage(<AuthProvider><ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider></AuthProvider>);
   expect(await screen.findByRole("region", { name: "Dış ödeme kanıtı" })).toHaveTextContent("sorumlu ve kanıt bekliyor");
   expect(screen.getByRole("region", { name: "Dış bildirim kanıtı" })).toHaveTextContent("sorumlu ve kanıt bekliyor");
   expect(screen.getByText(/Bu fark ödenecek net tutar değildir/)).toBeInTheDocument();
@@ -49,7 +50,7 @@ test("ödeme ve bildirimi ayrı kanıtlarla kaydeder; teyit olmadan göndermez",
   await userEvent.type(screen.getByLabelText("Dış işlem tarihi", { selector: "#external-payment-date" }), "2025-07-02");
   await userEvent.type(screen.getByLabelText("Belgelenen gerçek ödeme tutarı"), "420");
   const paymentSection = screen.getByRole("region", { name: "Dış ödeme kanıtı" });
-  const paymentSave = paymentSection.querySelector("button")!;
+  const paymentSave = within(paymentSection).getByRole("button", { name: "Kanıtı kaydet" });
   expect(paymentSave).toBeDisabled();
   await userEvent.click(paymentSection.querySelector('input[type="checkbox"]')!);
   await userEvent.click(paymentSave);
@@ -85,7 +86,7 @@ test("ödeme ve bildirimi ayrı kanıtlarla kaydeder; teyit olmadan göndermez",
 
 test("geçmiş parasal sürümün dış kanıtlarını salt okunur gösterir", async () => {
   stubApi({ [path]: { ...context, isCurrent: false } });
-  renderPage(<ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider>);
+  renderPage(<AuthProvider><ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider></AuthProvider>);
   expect(await screen.findByText(/Bu parasal sürüm geçmişte kaldı/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Sorumluyu kaydet" })).not.toBeInTheDocument();
 });

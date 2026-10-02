@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
@@ -16,9 +17,9 @@ test("bordro farkını gerçek ödemeden ayırır ve ödeme kanıtını ayrı ka
     revisedNetPay: 36300, calculatedNetDifference: 1300, isCurrent: true,
     payment: null, notification: null, history: [],
   } });
-  renderPage(<ToastProvider><PayrollRevisionExternalReconciliationPanel
+  renderPage(<AuthProvider><ToastProvider><PayrollRevisionExternalReconciliationPanel
     employeeId={1} packageId={2} caseId={3} periodId={4} rowId={5}
-    revisionId={6} /></ToastProvider>);
+    revisionId={6} /></ToastProvider></AuthProvider>);
   expect(await screen.findByText(/Net fark gerçek ödenen tutar/)).toBeInTheDocument();
   expect(screen.getAllByText(/kanıt bekliyor/)).toHaveLength(2);
   const payment = screen.getByRole("region", { name: "Dış ödeme kanıtı" });

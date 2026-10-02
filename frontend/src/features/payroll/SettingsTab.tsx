@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -77,6 +78,7 @@ export function SettingsTab() {
   const [bracketForm, setBracketForm] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<PayrollSettingsDto | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const [approvedInSession, setApprovedInSession] = useState<PayrollSettingsDto | null>(null);
 
   const noApprovedSettings = settingsQ.error instanceof ApiError && settingsQ.error.status === 404;
@@ -110,6 +112,7 @@ export function SettingsTab() {
   const save = async () => {
     try {
       const saved = await updateSettings.mutateAsync({
+        guidanceContentRevisionId: guidanceVersion ?? undefined,
         effectiveFrom: form.effectiveFrom,
         overtimeMultiplier: parseNumber(form.overtimeMultiplier),
         monthlyWorkingHours: parseNumber(form.monthlyWorkingHours),
@@ -157,7 +160,8 @@ export function SettingsTab() {
   const approve = async () => {
     if (!draft?.id || !draft.version || draftChanged || busy) return;
     try {
-      const approved = await approveSettings.mutateAsync({ id: draft.id, expectedVersion: draft.version });
+      const approved = await approveSettings.mutateAsync({ id: draft.id, expectedVersion: draft.version,
+        guidanceContentRevisionId: guidanceVersion ?? undefined });
       setDraft(null);
       setApprovedInSession(approved);
       setForm(toForm(approved));
@@ -187,6 +191,7 @@ export function SettingsTab() {
   return (
     <>
       <section className="card payroll-settings-card">
+        <GuidanceOperationSource process="payroll" step="settings-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={busy} />
         <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div className="card-header-clean">
           <div>

@@ -69,10 +69,10 @@ export const useUpdatePayrollRow = () => {
 export const useRunPayrollCheck = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (periodId: number) =>
-      apiFetch<PayrollPeriodDetailDto>(`/payroll/periods/${periodId}/check`, {
+    mutationFn: (input: number | { periodId: number; guidanceContentRevisionId?: number }) =>
+      apiFetch<PayrollPeriodDetailDto>(`/payroll/periods/${typeof input === "number" ? input : input.periodId}/check`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify(typeof input === "number" ? {} : { guidanceContentRevisionId: input.guidanceContentRevisionId }),
       }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
@@ -141,6 +141,10 @@ export const usePayrollSettingsDrafts = (enabled: boolean) =>
 export const useUpdatePayrollSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
     mutationFn: (command: UpdatePayrollSettingsCommand) =>
       apiFetch<PayrollSettingsDto>("/payroll/settings", {
         method: "PUT",
@@ -153,6 +157,10 @@ export const useUpdatePayrollSettings = () => {
 export const useApprovePayrollSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
     mutationFn: (command: ApprovePayrollSettingsCommand) =>
       apiFetch<PayrollSettingsDto>(`/payroll/settings/${command.id}/approve`, {
         method: "POST",
@@ -170,6 +178,10 @@ export const useTerminationCalculationRules = () =>
 export const useSaveTerminationCalculationRule = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
     mutationFn: ({ id, body }: { id?: number; body: SaveTerminationCalculationRuleBody }) =>
       apiFetch<TerminationCalculationRuleDto>(
         id ? `/termination-calculation-rules/${id}` : "/termination-calculation-rules",
@@ -182,10 +194,14 @@ export const useSaveTerminationCalculationRule = () => {
 export const useApproveTerminationCalculationRule = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, expectedVersion }: { id: number; expectedVersion: number }) =>
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    mutationFn: ({ id, expectedVersion, guidanceContentRevisionId }: { id: number; expectedVersion: number; guidanceContentRevisionId?: number }) =>
       apiFetch<TerminationCalculationRuleDto>(`/termination-calculation-rules/${id}/approve`, {
         method: "POST",
-        body: JSON.stringify({ expectedVersion }),
+        body: JSON.stringify({ expectedVersion, guidanceContentRevisionId }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termination-calculation-rules"] }),
   });

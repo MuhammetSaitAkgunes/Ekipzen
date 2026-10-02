@@ -1,4 +1,5 @@
 import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { FinancialExternalReconciliationPanel } from "./FinancialExternalReconciliationPanel";
 import { useState } from "react";
 import { ApiError, apiDownload, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -47,6 +48,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   const updateRow = useUpdatePayrollRow();
   const approveRow = useApprovePayrollRow();
   const [error, setError] = useState<string | null>(null);
+  const [editGuidanceVersion, setEditGuidanceVersion] = useState<number | null>(null);
   const [form, setForm] = useState<DetailForm>({
     grossSalary: String(row.grossSalary ?? 0),
     statutoryProfile: (row.statutoryProfile as DetailForm["statutoryProfile"]) ?? "unspecified",
@@ -98,6 +100,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
         periodId,
         rowId,
         model: {
+          guidanceContentRevisionId: editGuidanceVersion ?? undefined,
           grossSalary: parse(form.grossSalary),
           statutoryProfile: form.statutoryProfile,
           workedDays: Math.round(parse(form.workedDays)),
@@ -202,6 +205,9 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
 
   return (
     <div className="payroll-detail-panel">
+      {!isApproved && <GuidanceOperationSource process="payroll" step="row-review" value={editGuidanceVersion} onChange={setEditGuidanceVersion} disabled={updateRow.isPending} />}
+      {row.timesheetNeedsReview && <p role="alert">Puantaj veya onaylı izin kaynağı değişti. Aylık özeti açıp gün ve fazla mesai girdilerini yeniden uzlaştırarak kaydedin; toplu kontrol tek başına yeterli olmaz.</p>}
+      {isApproved && row.id != null && <FinancialExternalReconciliationPanel source="payroll" parentId={periodId} resourceId={row.id} />}
       <div className="payroll-detail-head">
         <div>
           <span className={`status-pill ${payrollStatusClass(row.approvalStatus)}`}>{row.approvalStatus}</span>

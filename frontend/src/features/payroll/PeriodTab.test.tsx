@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import { AuthProvider } from "../../auth/AuthContext";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -58,9 +59,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const renderTab = () =>
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <PeriodTab periodId={3} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
 
 test("KPI şeridi dönem toplamlarıyla dolar", async () => {
@@ -106,9 +107,9 @@ test("tablo satırları ve departman filtresi çalışır", async () => {
 
 test("dönem seçili değilse boş durum görünür", async () => {
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <PeriodTab periodId={null} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
   expect(await screen.findByText(/Henüz bordro dönemi yok/)).toBeInTheDocument();
 });

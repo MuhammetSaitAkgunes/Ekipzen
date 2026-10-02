@@ -46,7 +46,7 @@ export type TerminationCalculationRuleDto = {
 export type SaveTerminationCalculationRuleBody = Omit<
   TerminationCalculationRuleDto,
   "id" | "version" | "status" | "approvedAtUtc" | "approvedByUserId"
-> & { expectedVersion?: number | null };
+> & { expectedVersion?: number | null; guidanceContentRevisionId?: number };
 export type SaveOffboardingDraftBody = components["schemas"]["SaveOffboardingDraftBody"];
 export type ManagerSuccessorDto = components["schemas"]["ManagerSuccessorDto"];
 export type EmployeeEmploymentFoundationDto = components["schemas"]["EmployeeEmploymentFoundationDto"];
@@ -200,6 +200,7 @@ export type OffboardingExternalReconciliation = Omit<ExternalReconciliationSchem
   history: OffboardingExternalAction[];
 };
 export type SaveCompensationRemediationBody = CompensationPackageValues & {
+  guidanceContentRevisionId?: number;
   expectedPackageVersion: number; expectedCaseVersion: number | null;
   issueDescription: string; proposedEffectiveFrom: string | null;
 };
@@ -369,6 +370,10 @@ export const useCompensationRemediationContext = (employeeId: number, packageId:
 export const useSaveCompensationRemediationCase = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
     mutationFn: ({ employeeId, packageId, caseId, body }: {
       employeeId: number; packageId: number; caseId: number | null;
       body: SaveCompensationRemediationBody;
@@ -383,13 +388,17 @@ export const useSaveCompensationRemediationCase = () => {
 export const useApproveCompensationRemediationCase = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, packageId, caseId, expectedCaseVersion,
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    mutationFn: ({ employeeId, packageId, caseId, expectedCaseVersion, guidanceContentRevisionId,
       expertReviewReference, reviewNotes }: {
-      employeeId: number; packageId: number; caseId: number; expectedCaseVersion: number;
+      employeeId: number; packageId: number; caseId: number; expectedCaseVersion: number; guidanceContentRevisionId?: number;
       expertReviewReference: string; reviewNotes: string;
     }) => apiFetch<CompensationRemediationCase>(
       `/employees/${employeeId}/compensation-packages/${packageId}/remediation-case/${caseId}/approve`,
-      { method: "POST", body: JSON.stringify({ expectedCaseVersion, expertReviewReference,
+      { method: "POST", body: JSON.stringify({ expectedCaseVersion, expertReviewReference, guidanceContentRevisionId,
         reviewNotes, confirmExpertReview: true }) }),
     onSuccess: (_case, { employeeId, packageId }) =>
       queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
@@ -420,13 +429,13 @@ export const usePayrollRevisionExternalReconciliation = (args: PayrollRevisionEx
 export const useRecordPayrollRevisionExternalAction = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: PayrollRevisionExternalArgs & {
+    mutationFn: (args: PayrollRevisionExternalArgs & { guidanceContentRevisionId?: number;
       kind: "payment" | "notification";
       outcome: "pending" | "completed" | "not-required";
       responsibleName: string; evidenceReference: string; actionDate: string | null;
       recordedAmount: number | null; notes: string; expectedLatestRecordId: number | null;
     }) => apiFetch<PayrollRevisionExternalAction>(payrollRevisionExternalUrl(args), {
-      method: "POST", body: JSON.stringify({
+      method: "POST", body: JSON.stringify({ guidanceContentRevisionId: args.guidanceContentRevisionId,
         kind: args.kind, outcome: args.outcome,
         responsibleName: args.responsibleName,
         evidenceReference: args.evidenceReference,
@@ -438,6 +447,7 @@ export const useRecordPayrollRevisionExternalAction = () => {
     onSuccess: (_record, args) => Promise.all([
       queryClient.invalidateQueries({ queryKey: payrollRevisionExternalKey(args) }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -459,17 +469,18 @@ export const useApprovedCompensationPayrollImpact = () => useMutation({
 export const useApplyApprovedCompensationPayrollRevision = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId,
-      expectedPreviewToken, expertReviewReference, reviewNotes }: {
+    mutationFn: ({ guidanceContentRevisionId, employeeId, packageId, caseId, periodId, rowId,
+      expectedPreviewToken, expertReviewReference, reviewNotes }: { guidanceContentRevisionId?: number;
       employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
       expectedPreviewToken: string; expertReviewReference: string; reviewNotes: string;
     }) => apiFetch<ApprovedPayrollRevision>(
       `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact/apply`,
-      { method: "POST", body: JSON.stringify({ expectedPreviewToken, expertReviewReference,
+      { method: "POST", body: JSON.stringify({ guidanceContentRevisionId: guidanceContentRevisionId, expectedPreviewToken, expertReviewReference,
         reviewNotes, confirmSourceLink: true, confirmExternalReconciliation: true }) }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -477,20 +488,21 @@ export const useApplyApprovedCompensationPayrollRevision = () => {
 export const useApplyApprovedCompensationPayrollNextRevision = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId,
+    mutationFn: ({ guidanceContentRevisionId, employeeId, packageId, caseId, periodId, rowId,
       expectedCurrentRevisionId, expectedPreviewToken,
-      expertReviewReference, reviewNotes }: {
+      expertReviewReference, reviewNotes }: { guidanceContentRevisionId?: number;
       employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
       expectedCurrentRevisionId: number; expectedPreviewToken: string;
       expertReviewReference: string; reviewNotes: string;
     }) => apiFetch<ApprovedPayrollRevision>(
       `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact/revise`,
-      { method: "POST", body: JSON.stringify({ expectedCurrentRevisionId,
+      { method: "POST", body: JSON.stringify({ guidanceContentRevisionId: guidanceContentRevisionId, expectedCurrentRevisionId,
         expectedPreviewToken, expertReviewReference, reviewNotes,
         confirmSourceLink: true, confirmExternalReconciliation: true }) }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -498,18 +510,19 @@ export const useApplyApprovedCompensationPayrollNextRevision = () => {
 export const useApplyApprovedCompensationPayrollChain = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId,
-      expectedPreviewToken, expertReviewReference, reviewNotes }: {
+    mutationFn: ({ guidanceContentRevisionId, employeeId, packageId, caseId, periodId, rowId,
+      expectedPreviewToken, expertReviewReference, reviewNotes }: { guidanceContentRevisionId?: number;
       employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
       expectedPreviewToken: string; expertReviewReference: string; reviewNotes: string;
     }) => apiFetch<ApprovedPayrollRevisionBatch>(
       `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/approved-impact/chain/apply`,
-      { method: "POST", body: JSON.stringify({ expectedPreviewToken, expertReviewReference,
+      { method: "POST", body: JSON.stringify({ guidanceContentRevisionId: guidanceContentRevisionId, expectedPreviewToken, expertReviewReference,
         reviewNotes, confirmSourceLink: true, confirmChainImpact: true,
         confirmExternalReconciliation: true }) }),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -517,16 +530,17 @@ export const useApplyApprovedCompensationPayrollChain = () => {
 export const useApplyCompensationPayrollApplication = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, packageId, caseId, periodId, rowId, expectedPreviewToken }: {
+    mutationFn: ({ guidanceContentRevisionId, employeeId, packageId, caseId, periodId, rowId, expectedPreviewToken }: { guidanceContentRevisionId?: number;
       employeeId: number; packageId: number; caseId: number; periodId: number; rowId: number;
       expectedPreviewToken: string;
     }) => apiFetch<CompensationPayrollApplication>(
       `${payrollRemediationUrl(employeeId, packageId, caseId, periodId, rowId)}/apply`,
-      { method: "POST", body: JSON.stringify({ expectedPreviewToken, confirmSourceLink: true }) }),
+      { method: "POST", body: JSON.stringify({ guidanceContentRevisionId: guidanceContentRevisionId, expectedPreviewToken, confirmSourceLink: true }) }),
     onSuccess: (_application, { employeeId, packageId }) => Promise.all([
       queryClient.invalidateQueries({ queryKey: remediationKey(employeeId, packageId) }),
       queryClient.invalidateQueries({ queryKey: ["payroll"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -564,10 +578,14 @@ const invalidateSettlementRevision = (queryClient: ReturnType<typeof useQueryCli
 export const useOpenOffboardingSettlementRevision = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: SettlementRevisionArgs & { expectedOffboardingVersion: number }) =>
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    mutationFn: (args: SettlementRevisionArgs & { guidanceContentRevisionId?: number; expectedOffboardingVersion: number }) =>
       apiFetch<OffboardingSettlementRevision>(settlementRevisionUrl(args.employeeId,
         args.packageId, args.remediationCaseId, args.offboardingCaseId),
-      { method: "POST", body: JSON.stringify({
+      { method: "POST", body: JSON.stringify({ guidanceContentRevisionId: args.guidanceContentRevisionId,
         expectedOffboardingVersion: args.expectedOffboardingVersion }) }),
     onSuccess: (_revision, args) => invalidateSettlementRevision(queryClient, args),
   });
@@ -576,14 +594,18 @@ export const useOpenOffboardingSettlementRevision = () => {
 export const useSaveOffboardingSettlementRevision = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: SettlementRevisionArgs & { revisionId: number;
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    mutationFn: (args: SettlementRevisionArgs & { guidanceContentRevisionId?: number; revisionId: number;
       expectedRevisionVersion: number; unusedLeaveDays: number;
       unusedLeavePayment: number; severancePayment: number; noticePayment: number;
       reason: string; settlementReference: string; settlementNotes: string | null }) =>
       apiFetch<OffboardingSettlementRevision>(
         `${settlementRevisionUrl(args.employeeId, args.packageId,
           args.remediationCaseId, args.offboardingCaseId)}/${args.revisionId}`,
-        { method: "PUT", body: JSON.stringify({
+        { method: "PUT", body: JSON.stringify({ guidanceContentRevisionId: args.guidanceContentRevisionId,
           expectedRevisionVersion: args.expectedRevisionVersion,
           unusedLeaveDays: args.unusedLeaveDays,
           unusedLeavePayment: args.unusedLeavePayment,
@@ -600,13 +622,17 @@ export const useSaveOffboardingSettlementRevision = () => {
 export const useApproveOffboardingSettlementRevision = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: SettlementRevisionArgs & { revisionId: number;
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    mutationFn: (args: SettlementRevisionArgs & { guidanceContentRevisionId?: number; revisionId: number;
       expectedRevisionVersion: number; expertReviewReference: string;
       reviewNotes: string }) =>
       apiFetch<OffboardingSettlementRevision>(
         `${settlementRevisionUrl(args.employeeId, args.packageId,
           args.remediationCaseId, args.offboardingCaseId)}/${args.revisionId}/approve`,
-        { method: "POST", body: JSON.stringify({
+        { method: "POST", body: JSON.stringify({ guidanceContentRevisionId: args.guidanceContentRevisionId,
           expectedRevisionVersion: args.expectedRevisionVersion,
           expertReviewReference: args.expertReviewReference,
           reviewNotes: args.reviewNotes,
@@ -633,12 +659,12 @@ export const useOffboardingExternalReconciliation = (args: ExternalReconciliatio
 export const useRecordOffboardingExternalAction = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: ExternalReconciliationArgs & {
+    mutationFn: (args: ExternalReconciliationArgs & { guidanceContentRevisionId?: number;
       kind: "payment" | "notification"; outcome: "pending" | "completed" | "not-required";
       responsibleName: string; evidenceReference: string; actionDate: string | null;
       recordedAmount: number | null; notes: string; expectedLatestRecordId: number | null;
     }) => apiFetch<OffboardingExternalAction>(externalReconciliationUrl(args), {
-      method: "POST", body: JSON.stringify({
+      method: "POST", body: JSON.stringify({ guidanceContentRevisionId: args.guidanceContentRevisionId,
         kind: args.kind, outcome: args.outcome,
         responsibleName: args.responsibleName,
         evidenceReference: args.evidenceReference,
@@ -650,6 +676,7 @@ export const useRecordOffboardingExternalAction = () => {
     onSuccess: (_record, args) => Promise.all([
       queryClient.invalidateQueries({ queryKey: externalReconciliationKey(args) }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };
@@ -688,6 +715,10 @@ export const useCorrectCompensationDate = () => {
 export const useSaveOffboardingDraft = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
     mutationFn: ({ employeeId, body }: { employeeId: number; body: SaveOffboardingDraftBody }) =>
       apiFetch<EmployeeOffboardingCaseDto>(`/employees/${employeeId}/offboarding-draft`, {
         method: "PUT",
@@ -709,14 +740,18 @@ export const useTerminationCalculationRules = () =>
 export const useGenerateOffboardingCalculationDraft = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ employeeId, caseId, expectedVersion, confirmSeveranceEligibility,
+    onSettled: (_data, error) => error ? undefined : Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+    ]),
+    mutationFn: ({ employeeId, caseId, expectedVersion, confirmSeveranceEligibility, guidanceContentRevisionId,
       confirmNoticeEligibility, expertReviewReference }: {
-      employeeId: number; caseId: number; expectedVersion: number;
+      employeeId: number; caseId: number; expectedVersion: number; guidanceContentRevisionId?: number;
       confirmSeveranceEligibility: boolean; confirmNoticeEligibility: boolean;
       expertReviewReference: string;
     }) => apiFetch<EmployeeOffboardingCaseDto>(
       `/employees/${employeeId}/offboarding/${caseId}/calculation-draft`,
-      { method: "POST", body: JSON.stringify({ expectedVersion, confirmSeveranceEligibility,
+      { method: "POST", body: JSON.stringify({ expectedVersion, confirmSeveranceEligibility, guidanceContentRevisionId,
         confirmNoticeEligibility, expertReviewReference }) },
     ),
     onSuccess: (_case, { employeeId }) =>

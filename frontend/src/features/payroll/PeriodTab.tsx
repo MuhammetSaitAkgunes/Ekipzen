@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -16,6 +17,7 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
   const [deptFilter, setDeptFilter] = useState("");
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
   const [detailRow, setDetailRow] = useState<PayrollRowDto | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
 
   if (periodId === null) {
     return (
@@ -42,7 +44,7 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
 
   const handleCheck = async () => {
     try {
-      const result = await runCheck.mutateAsync(periodId);
+      const result = await runCheck.mutateAsync({ periodId, guidanceContentRevisionId: guidanceVersion ?? undefined });
       const needsWork = (result.rows ?? []).filter((item) =>
         item.approvalStatus !== "Onaya Hazır" && item.approvalStatus !== "Onaylandı",
       ).length;
@@ -88,6 +90,7 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
       </div>
 
       <section className="card payroll-flow-card">
+        {!periodLocked && <GuidanceOperationSource process="payroll" step="row-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={runCheck.isPending} />}
         <div className="card-header-clean">
           <div>
             <h4>Bordro Akışı</h4>

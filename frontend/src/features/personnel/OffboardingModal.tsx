@@ -1,5 +1,6 @@
 import { OffboardingImpactDetails, type EmployeeOffboardingImpactPreview } from "./OffboardingImpactPreview";
 import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { FinancialExternalReconciliationPanel } from "../payroll/FinancialExternalReconciliationPanel";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
@@ -80,6 +81,8 @@ export function OffboardingModal({ employeeId, onClose }: {
   const [reversalReason, setReversalReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
+  const [draftGuidanceVersion, setDraftGuidanceVersion] = useState<number | null>(null);
+  const [calculationGuidanceVersion, setCalculationGuidanceVersion] = useState<number | null>(null);
   const [reverseGuidanceVersion, setReverseGuidanceVersion] = useState<number | null>(null);
   const [completionImpact, setCompletionImpact] = useState<EmployeeOffboardingImpactPreview | null>(null);
   const [reverseImpact, setReverseImpact] = useState<EmployeeOffboardingImpactPreview | null>(null);
@@ -154,6 +157,7 @@ export function OffboardingModal({ employeeId, onClose }: {
   };
 
   const draftBody = (): SaveOffboardingDraftBody => ({
+    guidanceContentRevisionId: draftGuidanceVersion ?? undefined,
     expectedVersion: currentCase?.status === "draft" ? currentCase.version : null,
     terminationDate,
     exitCode: exitCode.trim(),
@@ -244,6 +248,7 @@ export function OffboardingModal({ employeeId, onClose }: {
         throw new Error("İşten çıkış taslağı kimlik veya sürüm bilgisi döndürmedi.");
       }
       await generateCalculation.mutateAsync({
+        guidanceContentRevisionId: calculationGuidanceVersion ?? undefined,
         employeeId,
         caseId: saved.id,
         expectedVersion: saved.version,
@@ -341,6 +346,11 @@ export function OffboardingModal({ employeeId, onClose }: {
           </section>}
 
           {context && <GuidanceStepLessons process="offboarding" />}
+          {completedCase?.id && <FinancialExternalReconciliationPanel source="offboarding" parentId={employeeId} resourceId={completedCase.id} />}
+          {context && !completedCase && <>
+            <GuidanceOperationSource process="offboarding" step="preparation" value={draftGuidanceVersion} onChange={setDraftGuidanceVersion} disabled={isBusy} />
+            <GuidanceOperationSource process="offboarding" step="settlement-review" value={calculationGuidanceVersion} onChange={setCalculationGuidanceVersion} disabled={isBusy} />
+          </>}
           {context && completedCase && (
             <>
               <div className="notice-card">

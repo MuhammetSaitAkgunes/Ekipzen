@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import {
@@ -47,9 +48,14 @@ function ReconciliationContent({ args, context }: {
   </>;
 }
 
-function ExternalActionForm({ args, kind, title, current, canRecord }: {
-  args: Args; kind: "payment" | "notification"; title: string;
+export type ExternalActionInput = { kind: "payment" | "notification"; outcome: "pending" | "completed" | "not-required";
+  responsibleName: string; evidenceReference: string; actionDate: string | null; recordedAmount: number | null;
+  notes: string; expectedLatestRecordId: number | null; guidanceContentRevisionId?: number };
+
+export function ExternalActionForm({ args, kind, title, current, canRecord, onRecord, pending = false }: {
+  args?: Args; kind: "payment" | "notification"; title: string;
   current: OffboardingExternalAction | null; canRecord: boolean;
+  onRecord?: (input: ExternalActionInput) => Promise<unknown>; pending?: boolean;
 }) {
   const { showToast } = useToast();
   const record = useRecordOffboardingExternalAction();
@@ -61,6 +67,7 @@ function ExternalActionForm({ args, kind, title, current, canRecord }: {
   const [notes, setNotes] = useState(current?.notes ?? "");
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const valid = responsibleName.trim().length > 0 && responsibleName.trim().length <= 256
     && evidenceReference.trim().length <= 256
     && notes.trim().length <= 2000
@@ -78,19 +85,25 @@ function ExternalActionForm({ args, kind, title, current, canRecord }: {
       return;
     }
     try {
-      await record.mutateAsync({ ...args, kind, outcome,
+      const input: ExternalActionInput = { kind, outcome, guidanceContentRevisionId: guidanceVersion ?? undefined,
         responsibleName: responsibleName.trim(), evidenceReference: evidenceReference.trim(),
         actionDate: outcome === "completed" ? actionDate : null,
         recordedAmount: outcome === "completed" && kind === "payment"
           ? Number(recordedAmount) : null,
-        notes: notes.trim(), expectedLatestRecordId: current?.id ?? null });
+        notes: notes.trim(), expectedLatestRecordId: current?.id ?? null };
+      if (onRecord) await onRecord(input);
+      else if (args) await record.mutateAsync({ ...args, ...input });
+      else throw new Error("Dış işlem kaynağı bulunamadı.");
       showToast(`${title} durumu kaydedildi; önceki kayıt geçmişte korundu.`, "success");
     } catch (cause) {
+      setConfirmed(false);
       setError(cause instanceof ApiError ? cause.message : "Kanıt kaydedilemedi; güncel durumu yeniden açın.");
     }
   };
 
   return <section className="ez-compensation-review" aria-label={`${title} kanıtı`}>
+    {canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion}
+      onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending || record.isPending} />}
     <h5>{title}: {current ? current.outcome === "completed" ? "kanıtlı tamamlandı" : current.outcome === "pending" ? "sorumlu atandı, işlem bekliyor" : "işlem gerekmiyor kaydı" : "sorumlu ve kanıt bekliyor"}</h5>
     {current && <p>Son kayıt: {current.evidenceReference || "Kanıt henüz yok"} · sorumlu {current.responsibleName}. Hata varsa yeni kayıt ekleyin; eski kayıt korunur.</p>}
     {canRecord && <>
@@ -133,7 +146,7 @@ function ExternalActionForm({ args, kind, title, current, canRecord }: {
       {outcome === "not-required" && <p>İşlem gerekmiyor kararının dayanağını notta ve referansta açıkça belirtin.</p>}
       <label><input type="checkbox" checked={confirmed}
         onChange={(event) => setConfirmed(event.target.checked)} /> {outcome === "pending" ? "Sorumluyu atadım; dış işlemin henüz tamamlanmadığını anlıyorum." : "Gerçek dış işlem sonucunu ve dayanak belgeyi doğruladım."}</label>
-      <button type="button" className="btn btn-secondary" disabled={!valid || !confirmed || record.isPending}
+      <button type="button" className="btn btn-secondary" disabled={!valid || !confirmed || pending || record.isPending}
         onClick={save}>{outcome === "pending" ? "Sorumluyu kaydet" : current ? "Yeni kanıt kaydı ekle" : "Kanıtı kaydet"}</button>
       {error && <p className="form-error" role="alert">{error}</p>}
     </>}

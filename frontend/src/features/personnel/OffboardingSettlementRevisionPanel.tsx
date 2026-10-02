@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -49,6 +50,7 @@ function SettlementRevisionContent({ args, context }: {
   const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(
     context.history[0]?.id ?? null);
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const busy = open.isPending || save.isPending || approve.isPending;
   const amounts = [unusedLeaveDays, unusedLeavePayment, severancePayment, noticePayment]
     .map(Number);
@@ -68,7 +70,7 @@ function SettlementRevisionContent({ args, context }: {
   const openDraft = async () => {
     setError(null);
     try {
-      await open.mutateAsync({ ...args,
+      await open.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined,
         expectedOffboardingVersion: context.offboardingCaseVersion });
       showToast("Yalnız parasal hesap taslağı açıldı; tamamlanmış ayrılış değişmedi.", "success");
     } catch (cause) {
@@ -83,7 +85,7 @@ function SettlementRevisionContent({ args, context }: {
       return;
     }
     try {
-      await save.mutateAsync({ ...args, revisionId: draft.id,
+      await save.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined, revisionId: draft.id,
         expectedRevisionVersion: draft.version, unusedLeaveDays: amounts[0],
         unusedLeavePayment: amounts[1], severancePayment: amounts[2],
         noticePayment: amounts[3], reason: reason.trim(),
@@ -107,7 +109,7 @@ function SettlementRevisionContent({ args, context }: {
       return;
     }
     try {
-      await approve.mutateAsync({ ...args, revisionId: draft.id,
+      await approve.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined, revisionId: draft.id,
         expectedRevisionVersion: draft.version,
         expertReviewReference: expertReference.trim(), reviewNotes: reviewNotes.trim() });
       showToast("Parasal düzeltme geçerli hesap sürümü oldu; dış ödeme ve bildirimleri ayrıca uzlaştırın.", "success");
@@ -117,6 +119,7 @@ function SettlementRevisionContent({ args, context }: {
   };
 
   return <>
+    <GuidanceOperationSource process="offboarding" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setFinancialConfirmed(false); setExternalConfirmed(false); }} />
     <p><strong>İlk hesap:</strong> brüt {money.format(context.original.monthlyGrossSalarySnapshot)} · toplam {money.format(context.original.totalPayment)}</p>
     <p><strong>Geçerli hesap:</strong> brüt {money.format(context.effective.monthlyGrossSalarySnapshot)} · toplam {money.format(context.effective.totalPayment)}</p>
     {context.history.length > 0 && <ul>{context.history.map((item) =>

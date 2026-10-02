@@ -4356,6 +4356,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{id}/offboarding/{caseId}/external-reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FinancialExternalReconciliationDto"];
+                        "application/json": components["schemas"]["FinancialExternalReconciliationDto"];
+                        "text/json": components["schemas"]["FinancialExternalReconciliationDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    caseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["FinancialExternalActionBody"];
+                    "text/json": components["schemas"]["FinancialExternalActionBody"];
+                    "application/*+json": components["schemas"]["FinancialExternalActionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingExternalActionDto"];
+                        "application/json": components["schemas"]["OffboardingExternalActionDto"];
+                        "text/json": components["schemas"]["OffboardingExternalActionDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/guidance/employee-entry/journey": {
         parameters: {
             query?: never;
@@ -6359,7 +6429,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GuidanceOperationBody"];
+                    "text/json": components["schemas"]["GuidanceOperationBody"];
+                    "application/*+json": components["schemas"]["GuidanceOperationBody"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -6523,6 +6599,76 @@ export interface paths {
                         "text/plain": components["schemas"]["ProblemDetails"];
                         "application/json": components["schemas"]["ProblemDetails"];
                         "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/periods/{id}/rows/{rowId}/external-reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FinancialExternalReconciliationDto"];
+                        "application/json": components["schemas"]["FinancialExternalReconciliationDto"];
+                        "text/json": components["schemas"]["FinancialExternalReconciliationDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    rowId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["FinancialExternalActionBody"];
+                    "text/json": components["schemas"]["FinancialExternalActionBody"];
+                    "application/*+json": components["schemas"]["FinancialExternalActionBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OffboardingExternalActionDto"];
+                        "application/json": components["schemas"]["OffboardingExternalActionDto"];
+                        "text/json": components["schemas"]["OffboardingExternalActionDto"];
                     };
                 };
             };
@@ -9058,6 +9204,8 @@ export interface components {
             confirmSourceLink?: boolean;
             confirmChainImpact?: boolean;
             confirmExternalReconciliation?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApplyApprovedPayrollNextRevisionBody: {
             /** Format: int32 */
@@ -9067,6 +9215,8 @@ export interface components {
             reviewNotes?: string | null;
             confirmSourceLink?: boolean;
             confirmExternalReconciliation?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApplyApprovedPayrollRevisionBody: {
             expectedPreviewToken?: string | null;
@@ -9074,10 +9224,14 @@ export interface components {
             reviewNotes?: string | null;
             confirmSourceLink?: boolean;
             confirmExternalReconciliation?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApplyCompensationPayrollBody: {
             expectedPreviewToken?: string | null;
             confirmSourceLink?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApproveCompensationRemediationBody: {
             /** Format: int32 */
@@ -9085,6 +9239,8 @@ export interface components {
             expertReviewReference?: string | null;
             reviewNotes?: string | null;
             confirmExpertReview?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApproveOffboardingSettlementRevisionBody: {
             /** Format: int32 */
@@ -9093,16 +9249,23 @@ export interface components {
             reviewNotes?: string | null;
             confirmFinancialReview?: boolean;
             confirmExternalReconciliation?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApprovePayrollSettingsCommand: {
             /** Format: int32 */
             id?: number;
             /** Format: int32 */
             expectedVersion?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         ApproveTerminationCalculationRuleBody: {
             /** Format: int32 */
             expectedVersion?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApprovedCompensationPayrollImpactDto: {
             /** Format: int32 */
@@ -10333,12 +10496,43 @@ export interface components {
         };
         /** @enum {string} */
         EmployerSgkDiscountType: "none" | "otherSectorTwoPoints" | "manufacturingFivePoints";
+        FinancialExternalActionBody: {
+            kind?: string | null;
+            outcome?: string | null;
+            responsibleName?: string | null;
+            evidenceReference?: string | null;
+            /** Format: date */
+            actionDate?: string | null;
+            /** Format: double */
+            recordedAmount?: number | null;
+            notes?: string | null;
+            /** Format: int32 */
+            expectedLatestRecordId?: number | null;
+            confirmRecordedStatus?: boolean;
+            expectedSourceToken?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+        };
+        FinancialExternalReconciliationDto: {
+            sourceKind?: string | null;
+            /** Format: int32 */
+            resourceId?: number;
+            /** Format: double */
+            originalTotal?: number;
+            canRecord?: boolean;
+            sourceToken?: string | null;
+            payment?: components["schemas"]["OffboardingExternalActionDto"];
+            notification?: components["schemas"]["OffboardingExternalActionDto"];
+            history?: components["schemas"]["OffboardingExternalActionDto"][] | null;
+        };
         GenerateOffboardingCalculationDraftBody: {
             /** Format: int32 */
             expectedVersion?: number;
             confirmSeveranceEligibility?: boolean;
             confirmNoticeEligibility?: boolean;
             expertReviewReference?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         GlobalActionDto: {
             /** Format: int32 */
@@ -11020,6 +11214,8 @@ export interface components {
         OpenOffboardingSettlementRevisionBody: {
             /** Format: int32 */
             expectedOffboardingVersion?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         OverviewDto: {
             /** Format: int32 */
@@ -11323,6 +11519,7 @@ export interface components {
             /** Format: int32 */
             revisionNumber?: number;
             revision?: string | null;
+            timesheetNeedsReview?: boolean;
         };
         PayrollRowInputModel: {
             /** Format: double */
@@ -11361,6 +11558,8 @@ export interface components {
             ibanComplete?: boolean;
             notes?: string | null;
             expectedRevision?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         PayrollSettingsDto: {
             /** Format: int32 */
@@ -11609,6 +11808,8 @@ export interface components {
             /** Format: int32 */
             expectedLatestRecordId?: number | null;
             confirmRecordedStatus?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         RecruitmentCheckAnswerBody: {
             /** Format: int32 */
@@ -11800,6 +12001,8 @@ export interface components {
             /** Format: double */
             otherRegularBenefits?: number;
             sourceReference?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         SaveOffboardingDraftBody: {
             /** Format: int32 */
@@ -11822,6 +12025,8 @@ export interface components {
             noticePayment?: number;
             settlementReference?: string | null;
             settlementNotes?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         SaveOffboardingSettlementRevisionBody: {
             /** Format: int32 */
@@ -11837,6 +12042,8 @@ export interface components {
             reason?: string | null;
             settlementReference?: string | null;
             settlementNotes?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         SavePersonnelEntryBookmarkCommand: {
             stepKey?: string | null;
@@ -11874,6 +12081,8 @@ export interface components {
             includeOtherRegularBenefitsInDressedWage?: boolean;
             sourceReference?: string | null;
             reviewNotes?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         SearchResultDto: {
             type?: string | null;
@@ -12180,6 +12389,9 @@ export interface components {
             /** Format: int32 */
             expectedVersion?: number | null;
             taxBrackets?: components["schemas"]["TaxBracketDto"][] | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         UpdateSecuritySettingsCommand: {
             twoFactorSmsEnabled?: boolean;

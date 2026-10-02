@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -56,6 +57,7 @@ function ActionForm({ args, kind, current, canRecord }: {
   const [notes, setNotes] = useState(current?.notes ?? "");
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const valid = responsibleName.trim().length > 0 && responsibleName.trim().length <= 256
     && evidenceReference.trim().length <= 256 && notes.trim().length <= 2000
     && (outcome === "pending" ? evidenceReference.trim().length === 0
@@ -68,7 +70,7 @@ function ActionForm({ args, kind, current, canRecord }: {
     if (!valid || !confirmed) return;
     setError(null);
     try {
-      await mutation.mutateAsync({ ...args, kind, outcome,
+      await mutation.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined, kind, outcome,
         responsibleName: responsibleName.trim(), evidenceReference: evidenceReference.trim(),
         actionDate: outcome === "completed" ? actionDate : null,
         recordedAmount: outcome === "completed" && kind === "payment"
@@ -76,11 +78,13 @@ function ActionForm({ args, kind, current, canRecord }: {
         notes: notes.trim(), expectedLatestRecordId: current?.id ?? null });
       showToast(`${title} durumu kaydedildi; önceki kanıt geçmişte korundu.`, "success");
     } catch (cause) {
+      setConfirmed(false);
       setError(cause instanceof ApiError ? cause.message : "Kanıt kaydedilemedi; durumu yeniden açın.");
     }
   };
 
   return <section className="ez-compensation-review" aria-label={`${title} kanıtı`}>
+    {canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={mutation.isPending} />}
     <h5>{title}: {current ? current.outcome === "completed" ? "kanıtlı tamamlandı"
       : current.outcome === "pending" ? "bekliyor" : "işlem gerekmiyor" : "kanıt bekliyor"}</h5>
     {current && <p>Son kayıt: {current.evidenceReference || "kanıt yok"} · sorumlu {current.responsibleName}. Hata varsa yeni kayıt ekleyin.</p>}

@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -67,6 +68,7 @@ function RemediationContent({ context, employeeId, packageId }: {
   const [reviewNotes, setReviewNotes] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const draftDirty = current?.status === "draft" && (
     issue !== current.issueDescription || effectiveFrom !== (current.proposedEffectiveFrom ?? "")
     || values.sourceReference !== current.proposedValues.sourceReference
@@ -81,7 +83,7 @@ function RemediationContent({ context, employeeId, packageId }: {
       return;
     }
     try {
-      await save.mutateAsync({ employeeId, packageId, caseId: current?.id ?? null, body: {
+      await save.mutateAsync({ employeeId, packageId, caseId: current?.id ?? null, body: { guidanceContentRevisionId: guidanceVersion ?? undefined,
         ...values, sourceReference: values.sourceReference.trim(),
         expectedPackageVersion: context.package.version,
         expectedCaseVersion: current?.version ?? null,
@@ -107,6 +109,7 @@ function RemediationContent({ context, employeeId, packageId }: {
     }
     try {
       await approve.mutateAsync({ employeeId, packageId, caseId: current.id,
+        guidanceContentRevisionId: guidanceVersion ?? undefined,
         expectedCaseVersion: current.version, expertReviewReference: expertReference.trim(),
         reviewNotes: reviewNotes.trim() });
       showToast("İnceleme dosyası onaylandı; finansal kayıtlar değişmedi.", "success");
@@ -128,6 +131,7 @@ function RemediationContent({ context, employeeId, packageId }: {
   };
 
   return <>
+    <GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} />
     <p><strong>Mevcut paket:</strong> {context.package.effectiveFrom} · {currency.format(context.package.monthlyGrossSalary)} · sürüm {context.package.version}</p>
     {context.history?.length > 0 && <details>
       <summary>Uzman inceleme dosyası geçmişi ({context.history.length})</summary>
@@ -239,6 +243,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   const [applied, setApplied] = useState<CompensationPayrollApplication | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
   const args = { employeeId, packageId, caseId, periodId, rowId };
 
   const loadPreview = async () => {
@@ -256,7 +261,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
     if (!preview?.canApply || !confirmed) return;
     setError(null);
     try {
-      const result = await applyMutation.mutateAsync({ ...args,
+      const result = await applyMutation.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined,
         expectedPreviewToken: preview.previewToken });
       setApplied(result);
       setPreview(null);
@@ -274,7 +279,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       || !expertReference.trim() || !approvedNotes.trim()) return;
     setError(null);
     try {
-      const revision = await approvedApply.mutateAsync({ ...args,
+      const revision = await approvedApply.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined,
         expectedPreviewToken: impact.previewToken,
         expertReviewReference: expertReference.trim(), reviewNotes: approvedNotes.trim() });
       setImpact({ ...impact, revision, canApply: false,
@@ -292,7 +297,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       || !expertReference.trim() || !approvedNotes.trim()) return;
     setError(null);
     try {
-      const batch = await chainApply.mutateAsync({ ...args,
+      const batch = await chainApply.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined,
         expectedPreviewToken: impact.chainImpact.previewToken,
         expertReviewReference: expertReference.trim(), reviewNotes: approvedNotes.trim() });
       setImpact({ ...impact, canApply: false, canApplyChain: false,
@@ -311,7 +316,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       || !expertReference.trim() || !approvedNotes.trim()) return;
     setError(null);
     try {
-      const revision = await nextApply.mutateAsync({ ...args,
+      const revision = await nextApply.mutateAsync({ ...args, guidanceContentRevisionId: guidanceVersion ?? undefined,
         expectedCurrentRevisionId: impact.revision.id,
         expectedPreviewToken: impact.previewToken,
         expertReviewReference: expertReference.trim(), reviewNotes: approvedNotes.trim() });
@@ -328,6 +333,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   };
   if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review"
     aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
+    <GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setSourceConfirmed(false); setExternalConfirmed(false); setChainConfirmed(false); }} />
     <button type="button" className="btn btn-secondary"
       disabled={impactMutation.isPending}
       onClick={async () => {
@@ -469,6 +475,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
     {error && <p className="form-error" role="alert">{error}</p>}
   </div>;
   return <div className="ez-compensation-review" aria-label={`Bordro satırı ${rowId} telafi uygulaması`}>
+    <GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} />
     <button type="button" className="btn btn-secondary" onClick={loadPreview}
       disabled={previewMutation.isPending || applyMutation.isPending}>
       Satır #{rowId} için telafiyi önizle
