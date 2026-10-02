@@ -46,4 +46,5 @@ public sealed record ImportResultDto(
     int AtlananSatir,
     IReadOnlyList<ImportRowIssueDto> Sorunlar,
     IReadOnlyList<ImportRowPreviewDto> Satirlar,
-    Guid ImportRequestId);
+    Guid ImportRequestId,
+    Ekipzen.Application.Features.Guidance.GuidanceOperationSnapshot? GuidanceContent = null);

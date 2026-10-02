@@ -62,10 +62,10 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
     [ProducesResponseType<ImportResultDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<ImportResultDto>> Import(
         IFormFile file, [FromForm] Guid importRequestId, [FromForm] string expectedPreviewToken,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, [FromForm] int? guidanceContentRevisionId = null)
     {
         await using var stream = file.OpenReadStream();
-        return Ok(await sender.Send(new ImportEmployeesCommand(stream, importRequestId, expectedPreviewToken), cancellationToken));
+        return Ok(await sender.Send(new ImportEmployeesCommand(stream, importRequestId, expectedPreviewToken, guidanceContentRevisionId), cancellationToken));
     }
 
     [HttpGet("import/results/{requestId:guid}")]

@@ -2138,6 +2138,9 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("ImportRequestId")
                         .HasColumnType("uniqueidentifier");
 

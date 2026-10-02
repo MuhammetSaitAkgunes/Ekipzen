@@ -3,6 +3,7 @@ using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Features.Employees.Employment;
 using Ekipzen.Application.Features.Employees.Upsert;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Domain.Entities.Organization;
 using FluentValidation;
 using MediatR;
@@ -10,8 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ekipzen.Application.Features.Employees.Import;
 
-public sealed record ImportEmployeesCommand(Stream Dosya, Guid ImportRequestId, string ExpectedPreviewToken)
-    : IRequest<ImportResultDto>;
+public sealed record ImportEmployeesCommand(Stream Dosya, Guid ImportRequestId, string ExpectedPreviewToken,
+    int? GuidanceContentRevisionId = null) : IRequest<ImportResultDto>, IGuidanceImportOperationCommand
+{
+    public string GuidanceOperationKey => "employee-import";
+}
 
 public sealed class ImportEmployeesCommandValidator : AbstractValidator<ImportEmployeesCommand>
 {
@@ -23,7 +27,7 @@ public sealed class ImportEmployeesCommandValidator : AbstractValidator<ImportEm
 }
 
 public sealed class ImportEmployeesCommandHandler(
-    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock)
+    IApplicationDbContext context, ICurrentUser currentUser, IDatabaseLock databaseLock, GuidanceOperationContext guidance)
     : IRequestHandler<ImportEmployeesCommand, ImportResultDto>
 {
     public async Task<ImportResultDto> Handle(ImportEmployeesCommand request, CancellationToken ct)
@@ -37,8 +41,11 @@ public sealed class ImportEmployeesCommandHandler(
                 x => x.UserId == userId && x.ImportRequestId == request.ImportRequestId, token);
             if (receipt is not null)
             {
-                if (receipt.FileFingerprint != file.Fingerprint || receipt.PreviewToken != request.ExpectedPreviewToken)
-                    throw new ConflictException("Bu aktarım zaten tamamlandı. Aynı gönderimle farklı dosya veya önizleme uygulanamaz; önce kayıtlı sonucu açın.");
+                var originalSource = receipt.GuidanceSnapshotJson is null ? null
+                    : JsonSerializer.Deserialize<GuidanceOperationSnapshot>(receipt.GuidanceSnapshotJson);
+                if (receipt.FileFingerprint != file.Fingerprint || receipt.PreviewToken != request.ExpectedPreviewToken
+                    || originalSource?.ContentRevisionId != request.GuidanceContentRevisionId)
+                    throw new ConflictException("Bu aktarım zaten tamamlandı. Aynı gönderimle farklı dosya, önizleme veya rehber sürümü uygulanamaz; önce kayıtlı sonucu açın.");
                 return JsonSerializer.Deserialize<ImportResultDto>(receipt.ResultJson)!;
             }
             var prepared = await ImportPreparation.PrepareAsync(file, context, token);
@@ -69,13 +76,15 @@ public sealed class ImportEmployeesCommandHandler(
                 ? row with { Durum = "created", EmployeeId = employee.Id, Aciklama = "Personel ve istihdam kaydı oluşturuldu; karttan kontrol edip eksik bilgileri tamamlayın." }
                 : row).ToArray();
             var result = new ImportResultDto(created.Count, prepared.Preview.ToplamSatir - created.Count,
-                prepared.Preview.Sorunlar, results, request.ImportRequestId);
-            context.EmployeeImportReceipts.Add(new EmployeeImportReceipt
+                prepared.Preview.Sorunlar, results, request.ImportRequestId, guidance.Snapshot);
+            var savedReceipt = new EmployeeImportReceipt
             {
                 UserId = userId, ImportRequestId = request.ImportRequestId,
                 FileFingerprint = file.Fingerprint, PreviewToken = request.ExpectedPreviewToken,
                 ResultJson = JsonSerializer.Serialize(result),
-            });
+            };
+            guidance.Stamp(savedReceipt);
+            context.EmployeeImportReceipts.Add(savedReceipt);
             // Sonuç kaydı başarısızsa aynı transaction personel kayıtlarını da geri alır.
             await context.SaveChangesAsync(token);
             return result;

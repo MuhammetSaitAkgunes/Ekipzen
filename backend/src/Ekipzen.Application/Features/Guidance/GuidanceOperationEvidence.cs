@@ -2,6 +2,7 @@ using System.Text.Json;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Guidance;
+using Ekipzen.Application.Features.Employees.Import;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,19 @@ public interface IGuidanceOperationCommand
     string GuidanceOperationKey { get; }
 }
 
+public interface IGuidanceImportOperationCommand : IGuidanceOperationCommand
+{
+    Guid ImportRequestId { get; }
+}
+
 public sealed record GuidanceOperationSnapshot(int ContentRevisionId, string ContentKey, string ProcessKey,
     string StepKey, int ContentVersion, string Title);
 public sealed record GuidanceOperationEvidenceDto(string OperationKey, int ResourceId, string Outcome,
     DateTime OccurredAtUtc, GuidanceOperationSnapshot Content, string EvidenceKey, GuidanceSetupChangesDto? SetupChanges = null,
-    GuidancePersonnelChangesDto? PersonnelChanges = null);
+    GuidancePersonnelChangesDto? PersonnelChanges = null, GuidanceImportChangesDto? ImportChanges = null);
+public sealed record GuidanceImportChangesDto(Guid ImportRequestId, int CreatedCount, int SkippedCount,
+    IReadOnlyList<int> CreatedEmployeeIds, IReadOnlyList<GuidanceImportSkippedRowDto> SkippedRows);
+public sealed record GuidanceImportSkippedRowDto(int RowNumber, string Outcome, string Explanation, IReadOnlyList<string> Issues);
 public sealed record GuidancePersonnelChangesDto(int EmployeeId, int? DocumentId, IReadOnlyList<string> ChangedFields, string? Reason,
     int? EmploymentPeriodId = null, int? CompensationPackageId = null, int? RelatedPackageId = null, int? FromVersion = null, int? ToVersion = null);
 public sealed record GuidanceSetupChangesDto(bool AddedCompanyProfile, int AddedLeaveTypeCount, int AddedHolidayCount, bool AddedPayrollSettings);
@@ -42,7 +51,10 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
     {
         if (request is not IGuidanceOperationCommand command) return await next();
-        if (command.GuidanceContentRevisionId is null)
+        // Tamamlanan aktarımın makbuzu yayından bağımsız okunur; handler dosya/token/kaynak eşitliğini denetler.
+        var importReplay = command is IGuidanceImportOperationCommand import
+            && await sender.Send(new GetEmployeeImportResultQuery(import.ImportRequestId), ct) is not null;
+        if (command.GuidanceContentRevisionId is null || importReplay)
         {
             var previous = context.Snapshot;
             context.Snapshot = null;
@@ -55,6 +67,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
         {
             "employee-create" => ("personnel-entry", "tab-is"),
             "employee-update" => ("personnel", "record-review"),
+            "employee-import" => ("personnel", "import-review"),
             "employee-rehire" => ("personnel", "rehire"),
             "employee-compensation-create" or "employee-compensation-correct" or "employee-compensation-date" => ("personnel-entry", "tab-mali"),
             "employee-document-upload" or "employee-document-withdraw" => ("personnel-entry", "tab-evrak"),
@@ -100,6 +113,8 @@ public static class GuidanceOperationEvidenceReader
             .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var personnel = await db.GuidancePersonnelEvidences.AsNoTracking()
             .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+        var imports = await db.EmployeeImportReceipts.AsNoTracking()
+            .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var candidates = await db.CandidateReviewEvidences.AsNoTracking()
             .Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var leaves = await db.GuidanceLeaveDecisionEvidences.AsNoTracking()
@@ -126,7 +141,15 @@ public static class GuidanceOperationEvidenceReader
             .Concat(periods.Select(x => Item(x.OperationKey, x.Id, x.PayrollPeriodId, x.OperationKey == "payroll-period-create" ? "draft-created" : "approved", x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
             .Concat(rows.Select(x => Item("payroll-row-approve", x.Id, x.PayrollEmployeeId, "approved", x.CreatedAtUtc, x.GuidanceSnapshotJson!)))
             .Concat(offboarding.Select(x => Item(x.OperationKey, x.Id, x.OffboardingCaseId, x.OperationKey == "offboarding-complete" ? "completed" : "reversed", x.CreatedAtUtc, x.GuidanceSnapshotJson!)));
-        return result.OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
+        var importItems = imports.Select(receipt => (Receipt: receipt, Result: JsonSerializer.Deserialize<ImportResultDto>(receipt.ResultJson)!))
+            .Where(x => x.Result.OlusturulanSatir > 0)
+            .Select(x => Item("employee-import", x.Receipt.Id, x.Receipt.Id, "imported", x.Receipt.CreatedAtUtc, x.Receipt.GuidanceSnapshotJson!) with {
+                ImportChanges = new(x.Receipt.ImportRequestId, x.Result.OlusturulanSatir, x.Result.AtlananSatir,
+                    x.Result.Satirlar.Where(row => row.EmployeeId.HasValue).Select(row => row.EmployeeId!.Value).ToArray(),
+                    x.Result.Satirlar.Where(row => row.EmployeeId is null).Select(row => new GuidanceImportSkippedRowDto(
+                        row.SatirNo, row.Durum, row.Aciklama, row.Sorunlar.Select(issue => $"{issue.Alan}: {issue.Mesaj}").ToArray())).ToArray()),
+            });
+        return result.Concat(importItems).OrderByDescending(x => x.OccurredAtUtc).ThenBy(x => x.OperationKey).ToList();
     }
     private static GuidanceOperationEvidenceDto Item(string operation, int evidenceId, int id, string outcome, DateTime at, string json) =>
         new(operation, id, outcome, DateTime.SpecifyKind(at, DateTimeKind.Utc), JsonSerializer.Deserialize<GuidanceOperationSnapshot>(json)!, $"{operation}:{evidenceId}");
