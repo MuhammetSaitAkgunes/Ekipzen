@@ -9,7 +9,7 @@
 - **Okuma:** Liste/önizleme/analiz bir yazım değildir; açılması başarılı iş kanıtı üretmez. Açıklama/alıştırma ve ilgili işin gerçek sonucu ayrı izlenir. Her okuma için yeni mutasyon yaratılmayacak.
 - **Karar/dış:** Üründe olmayan yetenek veya şirket/uzman/sağlayıcı kararı. Mevcut yol/sınır açık gösterilir; tamamlandı denmez ve sessizce kaldırılmaz.
 
-Tablodaki dersler mevcut 10 süreç/38 adım tanımına başvurur. Bir adım birden fazla işlem öğretir; örneğin pozisyon hazırlığı ve aday oluşturma aynı `recruitment/candidate-create` açıklamasını, fakat ayrı işlem anahtarları ve kanıtları kullanır. Mutasyon ve GET denetim geçmişi aynı şey değildir. `GET /api/guidance/operations` ve kişisel veri dışa aktarımı yalnız kişinin kendi kaynaklı kanıtlarını gösterir.
+Tablodaki dersler mevcut 10 süreç/39 adım tanımına başvurur. Bir adım birden fazla işlem öğretir; örneğin pozisyon hazırlığı ve aday oluşturma aynı `recruitment/candidate-create` açıklamasını, fakat ayrı işlem anahtarları ve kanıtları kullanır. Mutasyon ve GET denetim geçmişi aynı şey değildir. Yönetimin `GET /api/guidance/operations`, çalışanın `GET /api/leaves/learning-operations` ve kişisel veri dışa aktarımı yalnız kişinin kendi kaynaklı kanıtlarını gösterir.
 
 ## Şirket hazırlığı
 
@@ -54,8 +54,8 @@ Tablodaki dersler mevcut 10 süreç/38 adım tanımına başvurur. Bir adım bir
 
 | ID / işlem | API veya kayıt | Ders / teknik durum | Günlük sinyal ve düzeltme |
 | --- | --- | --- | --- |
-| L01 izin türü/bakiye ve talep ön inceleme | GET types/balance/ledger, POST leaves/preview | `leave/review-request` **Okuma + açık tür bağlantısı**. | Tür/şirket politikası kaynakları ve belge koşulları henüz uygulama türleriyle tam eşlenmedi; izin türü bayrağı hukuki uygunluk değildir. |
-| L02 izin talebi ve iptal | POST `/api/leaves`, leaves/{id}/cancel | **Açık öğrenme/devam bağlantısı**; gerçek kayıt ve mevcut iptal koşulları vardır. | Talep gerçek bekleyen onay işi doğurur; kullanıcı/rol kapsamı genişletilmez. İptal bakiye/rezervasyon etkisi yeniden doğrulanır. |
+| L01 izin türü/bakiye ve talep ön inceleme | GET types/balance/ledger, POST leaves/preview, GET cancellation-preview | `leave/request-lifecycle` **Okuma**; dört başlangıç kodunun gerçek belge/politika kontrolü, örnek/resmî kaynak; özel kodda sorumlu doğrulaması. | Bayrak hukuki uygunluk değildir. Önizleme kayıt/kanıt üretmez. İş günü/hak ediş, rezervasyon ve gerçek kullanım iadesi ayrıdır; şirket takvimi ve istisnalar uzmanla doğrulanır. |
+| L02 izin talebi ve iptal | POST `/api/leaves`, leaves/{id}/cancel, GET learning-operations | `leave/request-lifecycle` **Bağlı**; ayrı seçilen ders/önizleme belirteci, gerçek talep/iptalle atomik kişisel kanıt. | Bekleyen onay işi kaynaktan doğar/kapanır; yönetici yetkisi genişlemez. İptal gerçek kullanım hareketini tersler; takvim değişse de aynı gün iade edilir. 409'da taslak/sürüm korunur, açık yeniden önizleme gerekir. |
 | L03 onay/ret | POST leaves/{id}/approve veya reject | `leave/decision-effect` **Bağlı**. | Bekleyen görev gerçek durumdan kapanır; eski/ikinci karar reddedilir, soru gerçek karar değildir. |
 | A01 puantaj oluştur/düzelt | POST attendance/preview ve attendance; PUT attendance/{id} | `attendance/entry-review`, entry-correction **Bağlı**. | Tarih aralığı ve ilk satır sürümü korunur. Bordro girdisini otomatik düzeltmez. |
 | A02 aylık özet/bordro uzlaştırma | GET puantaj özetleri ve dönem girdileri | `attendance/period-summary` **Okuma + açık uzlaştırma**. | Değişen puantajla mevcut bordro girdisinin tekrar kontrol görevi/kanıtı açık. |
@@ -90,9 +90,10 @@ Toplam olağan kapsam **45 satır**dır; satır sayısı kalan iş sayısı değ
 | İlk kapsam matrisi | 19 | 5 | 21 | 8 |
 | İşe alım düzeltmeleri sonrası | 23 | 5 | 17 | 8 |
 | Aday karar/işe alma sonrası | 25 | 5 | 15 | 7 |
-| Şirket yardımcı işlemleri sonrası | **28** | **6** | **11** | **6** |
+| Şirket yardımcı işlemleri sonrası | 28 | 6 | 11 | 6 |
+| İzin türü/talep/iptal sonrası | **29** | **7** | **9** | **5** |
 
-Bu paket **S05, S06, S07 ve P08** satırlarını kapatır. Yeni kapsam satırı eklemez. Kalan olağan satırlar: **L01, L02, A02, B01, B03, B06, B07, O01, O03, G02, G03**. T06–T08 çapraz güvenlik/teslim/ortam kapılarıdır; bu 11 satırla aynı birimde ölçülmez. İnsan/uzman kabulü ayrıca izlenir.
+Bu paket **L01 ve L02** satırlarını kapatır. Yeni kapsam satırı eklemez. Kalan olağan satırlar: **A02, B01, B03, B06, B07, O01, O03, G02, G03**. T06–T08 çapraz güvenlik/teslim/ortam kapılarıdır; bu 9 satırla aynı birimde ölçülmez. İnsan/uzman kabulü ayrıca izlenir.
 
 ## Kalan teknik iş paketlerinin sabit listesi
 
@@ -102,14 +103,14 @@ Bu liste **sekiz çalışma başlığıdır, sekiz commit/gün vaadi değildir**
 | --- | --- |
 | T01 şirket yardımcı işlemleri ve erişim hazırlığı — **tamamlandı** | S05–S07, P08: önizlemeli silme, ayrı logo/bildirim/fotoğraf kanıtları, rol/ekip/hesap hazırlığı açıklamaları ve gerçek bağlantılar. Üç uygunluk alanı kullanıcı kararıyla kaldırıldı; yeni rol/SMS/teslim yeteneği iddiası yok. |
 | T02 işe alımın kalan alt işlemleri — **tamamlandı** | R02, R04–R08: pozisyon/aday düzeltmeleri, bütün aşama kararları, not/değerlendirme ekleme/revizyonu, işe alma/provizyon için ayrı doğru kaynak ve sonuç. R09'un anlık/tarihsel sınırı açık tutulur. |
-| T03 izin türü ve talep/iptal yolculuğu | L01–L02: gerçek tür/koşul kaynağı eşlemesi, rol kapsamlı talep/iptal etkisi ve kanıt. Yayın için uzman içeriği beklenir. |
+| T03 izin türü ve talep/iptal yolculuğu — **tamamlandı** | L01–L02: dört başlangıç kodunun kaynak/koşul kontrolü ve özel kod yönlendirmesi; rol kapsamlı ayrı talep/iptal dersi, önizleme belirteci, gerçek kullanım iadesi ve kişisel kanıt. Yayın için uzman içeriği beklenir. |
 | T04 puantaj/bordro/ayrılış kalan olağan bağlantılar | A02, B01/B03/B06/B07, O01/O03, G03: gerçek kaynak/önizleme/sonuç, günlük eksik ve düzeltme/external zinciri. Gelişmiş finansal bağımlılığı olağan işlem gibi genişletmez. |
 | T05 günlük aksiyon ve görev kapsamının kapanışı | G02 ve tablodaki görev açıkları: gerçek tetikleyici/sorumlu/kararlı anahtar/güvenilir tarih/başka kişiyle kapanma/yeniden açılma; kaynaklı mutasyon. Her kayda yapay görev eklenmez. |
 | T06 yarım iş/tekrar ve öğrenme seviyeleri | Bütün yazımlarda açık ağ sonucu ve sürüm matrisi; mevcut oluşturma/aktarım makbuzlarına diğer komutlarda otomatik garanti atfetmeme; oturum/cihaz devamı, kişisel kanıt/alıştırma/uygulama seviyesi modeli. Pilot eşikleri insan kabulünde karara bağlanır. |
 | T07 bütün akış otomasyonu ve teknik teslim | Süreçler arası gerçek kayıt akışları, rol/tenant sınırı, hata/düzeltme, klavye/dar ekran; gerekli derleme/test/model kontrolleri ve kesin kaynak commitinden paket üretimi. İnsan/uzman testi değildir. |
 | T08 Turhost kurulum ve geri yükleme | Hedef .NET/IIS/SQL yetki uyumu, Visual Studio profil, tek dış API yolu, SMTP, kalıcı evrak/anahtar/sır dizinleri, kontrollü üç katalog migrationı, yedek ve geri yükleme/restart provasının kanıtı. Sağlayıcı bilgileri gerektirir. |
 
-S02–S04 ve R01/R03 ilk hazırlık paketinde, R02/R04/R06/R07 [işe alım düzeltme paketinde](2026-10-02-ik-rehberi-ise-alim-duzeltme-kanitlari.md) teknik olarak bağlandı. R05/R08 [aday karar ve işe alma paketinde](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md) bağlandı; T02'nin kaynak/gerçek sonuç kapsamı teknik olarak tamamlandı. S05–S07/P08 [şirket yardımcı işlemleri paketinde](2026-10-02-ik-rehberi-sirket-yardimci-islemler.md) kapandı; T01 tamamlandı. Kalan başlıklar T03–T08, toplam altıdır. Günlük iletişim, genel tekrar/oturum güvenliği ve R09 tarihsel huni kendi açık başlıklarında/API bağımlılığında kalır; bütün işe alım modülü veya yayın kabulü tamamlandı sayılmaz.
+S02–S04 ve R01/R03 ilk hazırlık paketinde, R02/R04/R06/R07 [işe alım düzeltme paketinde](2026-10-02-ik-rehberi-ise-alim-duzeltme-kanitlari.md) bağlandı. R05/R08 [aday karar ve işe alma](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md) ile T02'yi; S05–S07/P08 [şirket yardımcı işlemleri](2026-10-02-ik-rehberi-sirket-yardimci-islemler.md) ile T01'i kapattı. L01/L02 [izin yolculuğu](2026-10-02-ik-rehberi-izin-talep-iptal-ogrenme.md) ile T03'ü kapatır. Kalan T04–T08, toplam beş başlıktır. Günlük iletişim, genel tekrar/oturum güvenliği ve R09 tarihsel huni kendi açık başlık/API bağımlılığındadır; yayın kabulü tamamlandı sayılmaz.
 
 ## Kaldırılmayan karar ve entegrasyon bağımlılıkları
 

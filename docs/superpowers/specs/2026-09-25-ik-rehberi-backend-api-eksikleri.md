@@ -1,5 +1,14 @@
 # İK rehberi — backend API eksikleri
 
+## 2 Ekim — T03 kendi izin talebi ve iptal öğrenmesi
+
+- POST leaves/preview başarılı salt okur sonucunda recordToken üretir. POST leaves opsiyonel expectedRecordToken/guidanceContentRevisionId kabul eder; rehberli talepte token zorunludur. Kişi/dönem/tür/onay-bakiye koşulu/tarih/iş günü/vekil yeniden karşılaştırılır; bakiye ve çakışma kilit altında ayrıca doğrulanır. Önizleme rezervasyon veya gönderim makbuzu değildir.
+- GET leaves/{id}/cancellation-preview kendi personelinin talebinde canCancel, güncel durum, releasedReservationDays, refundedDays ve recordToken döndürür. POST cancel query alanları aynı iki opsiyonel alandır. Rehberli iptalde token zorunlu; eski önizleme/ders 409. Önizleme salt okumadır. İade takvimden yeniden hesaplanmaz; gerçek kullanım hareketi eş gün/dönem/tarihle terslenir.
+- `leave-request-create` ve `leave-request-cancel` aynı `leave/request-lifecycle` dersini ayrı seçilmiş kaynak ve atomik GuidancePreparationEvidence ile bağlar. Yeni migration gerekmez; rollback iş/hak ediş/kullanım/iade ve kanıtı birlikte kapsar. Kaynaksız eski istemciler çalışır; geçmişe kanıt eklenmez.
+- GET leaves/learning-operations bütün oturum rollerinde yalnız kişinin kendi iki izin işlem anahtarını verir. Genel yönetim kanıt uçları, başka kişinin talebini iptal etme ve çalışan onay yetkileri açılmaz. Kişisel veri dışa aktarımı yeni kanıtları da taşır; izin açıklaması bu kanıta kopyalanmaz.
+- Dört şablon tür kodunun koşul/örnek/resmî kaynak eşlemesi ve özel kodda İK doğrulaması UI'dadır. Merkezi ders çalışan/İK/yöneticiye kendi talebi için açılabilir; review-request/decision-effect yönetim kapsamındadır. Gerçek uzman ve bağımsız yayın beklenir. İptal yalnız mevcut bekleyen onay işini kapatır; yeni yapay görev yoktur.
+- Korunan bağımlılıklar: yarım gün/işyeri takvimi ve tam hukuki hak ediş hesap sözleşmeleri, belge/rapor otomatik doğrulaması, izin-puantaj/bordro/dış SGK senkronizasyonu, bütün yazımların gönderim makbuzu ve yenileme/cihaz devamı. İptalin geçmiş kullanımın veya dış bildirimin hukukî geri alınması olduğu varsayılmaz. Ayrıntı: [T03 teslimi](2026-10-02-ik-rehberi-izin-talep-iptal-ogrenme.md).
+
 ## 2 Ekim — şirket yardımcı işlemleri ve kaldırılan uygunluk alanları
 
 - Departman silme önizlemesi yalnız hr-admin'e açıktır: GET departments/{id}/deletion-preview ad/kod, çalışan/pozisyon sayıları, canDelete ve recordToken döndürür. DELETE sorgusunda expectedRecordToken ve isteğe bağlı guidanceContentRevisionId kabul eder. Rehberli yazımda belirteç zorunlu; bağlantı varsa silme 409. Salt okuma kanıt üretmez; silme kanıtı silinen departmandan bağımsız kalır.

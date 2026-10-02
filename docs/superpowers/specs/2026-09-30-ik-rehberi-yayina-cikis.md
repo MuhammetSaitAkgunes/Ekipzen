@@ -1,5 +1,13 @@
 # İK rehberi — tam kapsam yayın bitirme listesi
 
+## Güncel kapanış — 2 Ekim, T03 izin türü/talep/iptal
+
+[T03 teslimi](2026-10-02-ik-rehberi-izin-talep-iptal-ogrenme.md) L01/L02'yi kapatır: dört başlangıç türünün koşul/örnek/resmî kaynak kontrolü ve özel kod yönlendirmesi, kendi talebi/iptali için ayrı seçilmiş ders/önizleme ve atomik kişisel işlem kanıtı. İptal değişmiş takvim yerine eski gerçek kullanımı eş iade ile tersler. Yeni migration yoktur. 10 süreç/39 ders taslağı, insan uzman yayını değildir.
+
+Güncel matris **45 satır: 29 bağlı, 7 okuma, 9 açık/kısmi**. Açık satırlar **11 → 9**, açık başlıklar **6 → 5**. T01–T03 kapalı; sıradaki T04 (A02, B01/B03/B06/B07, O01/O03, G03), ardından T05 G02, T06 tekrar/öğrenme, T07 bütün akış/teknik teslim, T08 Turhost ortam/geri yükleme. Yeni kapsam satırı eklenmedi. Onaylı önceki altı commit main/ekipzen'de 0806d68'e senkronize edildi; bu yeni paket ayrı bildirilen Git onayı bekler.
+
+Uzman/yeni kullanıcı/hedef sunucu kabulü açık; tam öğrenme kapsamından önce yayın yapmama kararı korunur. Sunucuya publish veya migration gönderilmedi. Aşağıdaki eski tarihli kapanış notları tarihsel teslimlerdir; güncel açık sayım bu bölüm ve olağan matristir.
+
 ## Güncel kapanış — 2 Ekim, şirket yardımcı işlemleri
 
 [Teknik teslim](2026-10-02-ik-rehberi-sirket-yardimci-islemler.md) S05–S07/P08 satırlarını kapatır: departman silme etkisi, ayrı logo/bildirim/fotoğraf kaynakları ve gerçek kanıtları, rol/ekip/hesap hazırlığı rehberi. Kullanıcı kararıyla üç evet/hayır çalışma uygunluğu alanı aktif UI ve API'den kaldırıldı; eski veriler değişmedi. Bu paket yeni migration gerektirmez.
