@@ -1,3 +1,4 @@
+import { guidanceOperationsKey } from "../guidance/operationQueries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
@@ -135,7 +136,7 @@ export const useCreatePosition = () => {
         method: "POST",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment", "positions"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["recruitment", "positions"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
@@ -173,6 +174,7 @@ export const useCreateCandidate = () => {
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };

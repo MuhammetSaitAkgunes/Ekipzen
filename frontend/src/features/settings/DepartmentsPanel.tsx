@@ -1,10 +1,11 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState, type FormEvent } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { useDepartments } from "../personnel/queries";
 import { useCreateDepartment, useUpdateDepartment } from "./departmentQueries";
 
-type Draft = { id: number; name: string; code: string };
+type Draft = { id: number; name: string; code: string; recordToken?: string };
 
 export function DepartmentsPanel() {
   const departmentsQ = useDepartments();
@@ -14,6 +15,8 @@ export function DepartmentsPanel() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [editing, setEditing] = useState<Draft | null>(null);
+  const [createSource, setCreateSource] = useState<number | null>(null);
+  const [editSource, setEditSource] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   const submitCreate = async (event: FormEvent) => {
@@ -21,7 +24,8 @@ export function DepartmentsPanel() {
     setError("");
     if (!name.trim()) { setError("Departman adını girin."); return; }
     try {
-      await create.mutateAsync({ name: name.trim(), code: code.trim() || null });
+      await create.mutateAsync({ name: name.trim(), code: code.trim() || null, ...(createSource != null ? { guidanceContentRevisionId: createSource } : {}) });
+      setCreateSource(null);
       setName("");
       setCode("");
       showToast("Departman oluşturuldu; çalışan kartında seçilebilir.", "success");
@@ -36,8 +40,10 @@ export function DepartmentsPanel() {
     setError("");
     if (!editing.name.trim()) { setError("Departman adını girin."); return; }
     try {
-      await update.mutateAsync({ id: editing.id, name: editing.name.trim(), code: editing.code.trim() || null });
-      setEditing(null);
+      await update.mutateAsync({ id: editing.id, name: editing.name.trim(), code: editing.code.trim() || null,
+        ...(editing.recordToken ? { expectedRecordToken: editing.recordToken } : {}),
+        ...(editSource != null ? { guidanceContentRevisionId: editSource } : {}) });
+      setEditing(null); setEditSource(null);
       showToast("Departman bilgisi güncellendi.", "success");
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Departman güncellenemedi.");
@@ -61,6 +67,7 @@ export function DepartmentsPanel() {
         <input id="new-department-code" className="input-control" value={code} maxLength={32}
           onChange={(event) => setCode(event.target.value)} />
       </div>
+      <GuidanceOperationSource process="company" step="departments" value={createSource} onChange={setCreateSource} disabled={create.isPending} label="Departman eklerken kullandığım rehber sürümü" />
       <button className="btn btn-primary" type="submit" disabled={create.isPending}>Departman ekle</button>
     </form>
     {departmentsQ.isPending ? <p>Departmanlar yükleniyor…</p>
@@ -76,6 +83,8 @@ export function DepartmentsPanel() {
                 <div className="input-group"><label htmlFor={`department-code-${department.id}`}>Kısa kod</label>
                   <input id={`department-code-${department.id}`} className="input-control" maxLength={32}
                     value={editing.code} onChange={(event) => setEditing((current) => current ? { ...current, code: event.target.value } : current)} /></div>
+                <GuidanceOperationSource process="company" step="departments" value={editSource} onChange={setEditSource} disabled={update.isPending} label="Departman düzeltirken kullandığım rehber sürümü" />
+                {editing.recordToken && department.recordToken && editing.recordToken !== department.recordToken && <p role="alert">Departman siz düzenlerken değişti. Taslağınız korunuyor; önce güncel kaydı inceleyin.</p>}
                 <div className="ez-department-actions">
                   <button className="btn btn-secondary btn-sm" type="button" disabled={update.isPending}
                     onClick={() => { setEditing(null); setError(""); }}>Vazgeç</button>
@@ -84,8 +93,8 @@ export function DepartmentsPanel() {
               </form> : <div className="ez-department-row">
                 <div><strong>{department.name}</strong><small>{department.code || "Kod yok"} · {department.employeeCount ?? 0} çalışan</small></div>
                 <button className="btn btn-secondary btn-sm" onClick={() => {
-                  setError("");
-                  setEditing({ id: department.id!, name: department.name ?? "", code: department.code ?? "" });
+                  setError(""); setEditSource(null);
+                  setEditing({ id: department.id!, name: department.name ?? "", code: department.code ?? "", recordToken: department.recordToken ?? undefined });
                 }} disabled={update.isPending}>Düzenle</button>
               </div>}
             </li>)}

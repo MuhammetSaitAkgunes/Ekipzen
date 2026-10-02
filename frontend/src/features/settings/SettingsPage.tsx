@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { ApiError, apiDownload } from "../../api/client";
@@ -35,6 +36,8 @@ export function SettingsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [section, setSection] = useState("general");
+  const [companyToken, setCompanyToken] = useState<string | null>(null);
+  const [companySource, setCompanySource] = useState<number | null>(null);
   const [company, setCompany] = useState<Record<string, string> | null>(null);
   const [passwords, setPasswords] = useState({ current: "", next: "", repeat: "" });
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -43,6 +46,7 @@ export function SettingsPage() {
   useEffect(() => {
     if (company === null && settingsQ.data?.company) {
       const profile = settingsQ.data.company;
+      setCompanyToken(profile.recordToken ?? null);
       setCompany({
         name: profile.name ?? "", website: profile.website ?? "",
         systemEmail: profile.systemEmail ?? "", phone: profile.phone ?? "",
@@ -83,12 +87,15 @@ export function SettingsPage() {
 
   const saveCompany = async () => {
     try {
-      await updateCompany.mutateAsync({
+      const saved = await updateCompany.mutateAsync({
+        ...(companyToken ? { expectedRecordToken: companyToken } : {}),
+        ...(companySource != null ? { guidanceContentRevisionId: companySource } : {}),
         name: company.name.trim(), website: company.website.trim() || null,
         systemEmail: company.systemEmail.trim() || null, phone: company.phone.trim() || null,
         headquartersAddress: company.headquartersAddress.trim() || null,
       });
-      showToast("Ayarlar başarıyla kaydedildi.", "success");
+      setCompanyToken(saved.recordToken ?? null);
+      showToast("Şirket profili kaydedildi; öğrenme yolculuğundaki gerçek sonucu kontrol edin.", "success");
     } catch (e) {
       showToast(e instanceof ApiError ? e.message : "Ayarlar kaydedilemedi.", "error");
     }
@@ -175,6 +182,20 @@ export function SettingsPage() {
                   <h3>Marka & Görünüm</h3>
                   <p>Sistemde görünecek şirket adı ve marka varlıkları.</p>
                 </div>
+                <GuidanceOperationSource process="company" step="company-profile" value={companySource} onChange={setCompanySource} disabled={updateCompany.isPending} label="Şirket profili işleminde kullandığım rehber sürümü" />
+                <p>Bu işlem profil alanlarını kaydeder; logo, erişim ve bildirim tercihleri ayrı işlemlerdir. Aynı değerleri kaydetmek yeni öğrenme kanıtı oluşturmaz.</p>
+                {companyToken && data.company?.recordToken && companyToken !== data.company.recordToken && <p role="alert">Şirket profili başka işlemde değişti. Taslağınız korunuyor; eski kayıt belirteciyle değişiklik kabul edilmez.</p>}
+                <button className="btn btn-secondary btn-sm" disabled={updateCompany.isPending || settingsQ.isFetching} onClick={async () => {
+                  const result = await settingsQ.refetch();
+                  const profile = result.data?.company;
+                  if (result.isError || !profile) {
+                    showToast("Güncel şirket profili alınamadı; taslağınız korunuyor.", "error");
+                    return;
+                  }
+                  setCompanyToken(profile.recordToken ?? null);
+                  setCompany({ name: profile.name ?? "", website: profile.website ?? "", systemEmail: profile.systemEmail ?? "", phone: profile.phone ?? "", headquartersAddress: profile.headquartersAddress ?? "" });
+                  setCompanySource(null);
+                }}>Taslağı bırakıp güncel şirket profilini aç</button>
                 <div className="form-row">
                   <div className="logo-upload">
                     <div className="current-logo">

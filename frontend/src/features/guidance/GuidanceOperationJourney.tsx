@@ -4,6 +4,8 @@ import { appPath } from "../../paths";
 import { useGuidanceOperations } from "./operationQueries";
 
 const operationTitles: Record<string, string> = {
+  "company-profile-update": "Şirket profili düzeltme", "department-create": "Departman ekleme", "department-update": "Departman düzeltme",
+  "position-create": "Pozisyon açma", "candidate-create": "Aday oluşturma",
   "employee-import": "Toplu personel aktarımı",
   "employee-rehire": "Yeni çalışma dönemi", "employee-compensation-create": "Ücret paketi ekleme", "employee-compensation-correct": "Ücret tutarı/kaynak düzeltme", "employee-compensation-date": "Ücret yürürlük tarihi düzeltme",
   "employee-update": "Personel kartı düzeltme", "employee-document-upload": "Özlük belgesi yükleme", "employee-document-withdraw": "Özlük belgesi geri çekme",
@@ -25,6 +27,7 @@ export function GuidanceOperationJourney() {
           <strong>{operationTitles[item.operationKey] ?? item.operationKey}</strong> · {item.operationKey === "tenant-setup" ? `Şablon yılı ${item.resourceId}` : item.operationKey === "employee-import" ? `Aktarım makbuzu #${item.resourceId}` : `Kayıt #${item.resourceId}`} · {outcomes[item.outcome] ?? item.outcome}
           {item.setupChanges && <p>Şirket profili: {item.setupChanges.addedCompanyProfile ? "eklendi" : "korundu"} · İzin türü: {item.setupChanges.addedLeaveTypeCount} eklendi · Tam gün tatil: {item.setupChanges.addedHolidayCount} eklendi · Bordro taslağı: {item.setupChanges.addedPayrollSettings ? "eklendi" : "korundu"}. Uzman onayı veya hukuki doğrulama değildir.</p>}
           <p>{new Date(item.occurredAtUtc).toLocaleString("tr-TR")} · {item.content.title} · Sürüm {item.content.contentVersion}</p>
+          {item.preparationChanges && <p>Gerçek kayıt türü: {({ "company-profile": "Şirket profili", department: "Departman", position: "Pozisyon", candidate: "Aday" } as Record<string, string>)[item.preparationChanges.resourceKind] ?? item.preparationChanges.resourceKind} #{item.preparationChanges.resourceId} · Alanlar: {item.preparationChanges.changedFields.join(", ")}. Bu tarihsel işlem kanıtı, bütün hazırlığın veya işe alımın tamamlandığı anlamına gelmez.</p>}
           {item.importChanges && <section aria-label="Aktarım kanıtının gerçek sonucu">
             <p>{item.importChanges.createdCount} personel oluşturuldu · {item.importChanges.skippedCount} satır atlandı. Gönderim: {item.importChanges.importRequestId}. Aynı gönderim tek kanıttır; kart hazırlığı ve dış bildirimler ayrıca kontrol edilir.</p>
             <details><summary>Oluşan kartlar ve atlanan satırlar</summary>

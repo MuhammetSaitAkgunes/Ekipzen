@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -16,6 +17,7 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
   const createPosition = useCreatePosition();
   const correctPosition = useCorrectPosition();
   const historyQ = usePositionCorrections(position?.id ?? null);
+  const [source, setSource] = useState<number | null>(null);
   const [title, setTitle] = useState(position?.title ?? "");
   const [departmentId, setDepartmentId] = useState(position?.departmentId ? String(position.departmentId) : "");
   const [openCount, setOpenCount] = useState(String(position?.openCount ?? 1));
@@ -73,7 +75,8 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
         showToast("Pozisyon düzeltildi; önceki değerler geçmişte saklandı.", "success");
       } else {
         const created = await createPosition.mutateAsync({ title: review.title,
-          departmentId: review.departmentId, openCount: review.openCount });
+          departmentId: review.departmentId, openCount: review.openCount,
+          ...(source != null ? { guidanceContentRevisionId: source } : {}) });
         showToast((created.title || review.title) + " pozisyonu açıldı.", "success");
       }
       onClose();
@@ -144,6 +147,7 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
               {" → "}{item.after.title} / {item.after.openCount} kadro / {item.after.isOpen ? "açık" : "kapalı"}
             </p>)}
           </details>}
+          {!position && <GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createPosition.isPending} label="Pozisyon açarken kullandığım rehber sürümü" />}
           {review && <section className="ez-position-review" role="region" aria-label="Pozisyon ön kontrolü" aria-live="polite">
             <h4>{position ? "Düzeltmeyi kaydetmeden önce" : "Pozisyonu açmadan önce"}</h4>
             <p><strong>Ad:</strong> {review.title} · <strong>Departman:</strong> {review.departmentName}</p>

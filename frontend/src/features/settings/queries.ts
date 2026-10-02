@@ -1,3 +1,5 @@
+import { guidanceOperationsKey } from "../guidance/operationQueries";
+import { dailyTasksKey } from "../guidance/queries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -21,7 +23,7 @@ export const useUpdateCompany = () => {
         method: "PUT",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["settings"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
   });
 };
 

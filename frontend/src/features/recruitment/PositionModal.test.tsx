@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -14,9 +15,9 @@ beforeEach(() => stubApi({
 afterEach(() => vi.unstubAllGlobals());
 
 const renderModal = () => renderPage(
-  <ToastProvider>
+  <AuthProvider><ToastProvider>
     <PositionModal onClose={() => {}} />
-  </ToastProvider>,
+  </ToastProvider></AuthProvider>,
 );
 
 test("pozisyon ön kontrolden sonra seçilen departman ve kadro sayısıyla açılır", async () => {
@@ -76,7 +77,7 @@ test("pozisyon kapatma gerekçe ve sürümle ön kontrolden sonra gönderilir, g
       reason: "Ad düzeltildi", changedByUserId: "hr", changedAtUtc: "2026-09-30T10:00:00Z" }],
     "/api/positions": [position],
   });
-  renderPage(<ToastProvider><PositionModal position={position} onClose={() => {}} /></ToastProvider>);
+  renderPage(<AuthProvider><ToastProvider><PositionModal position={position} onClose={() => {}} /></ToastProvider></AuthProvider>);
   await screen.findByRole("option", { name: "Ürün" });
   await userEvent.click(screen.getByText("Düzeltme geçmişi"));
   expect(await screen.findByText(/Ad düzeltildi/)).toBeInTheDocument();

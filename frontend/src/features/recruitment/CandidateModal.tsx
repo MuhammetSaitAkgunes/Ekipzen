@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
@@ -19,6 +20,7 @@ export function CandidateModal({ onClose, onCreated }: {
   const [form, setForm] = useState<CandidateForm>({
     name: "", appliedRole: "", positionId: "", score: "", location: "", experienceYears: "0", summary: "", skills: "",
   });
+  const [source, setSource] = useState<number | null>(null);
   const [review, setReview] = useState<CreateCandidateCommand | null>(null);
   const [error, setError] = useState<string | null>(null);
   const selectedPosition = form.positionId
@@ -78,7 +80,7 @@ export function CandidateModal({ onClose, onCreated }: {
           return;
         }
       }
-      const candidate = await createCandidate.mutateAsync(review);
+      const candidate = await createCandidate.mutateAsync({ ...review, ...(source != null ? { guidanceContentRevisionId: source } : {}) });
       showToast(candidate.name + " aday havuzuna eklendi.", "success");
       if (candidate.id !== undefined) onCreated(candidate.id);
       onClose();
@@ -155,6 +157,7 @@ export function CandidateModal({ onClose, onCreated }: {
               <textarea id="cand-summary" className="input-control" rows={3} value={form.summary} onChange={set("summary")} />
             </div>
           </div>
+          <GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createCandidate.isPending} label="Adayı oluştururken kullandığım rehber sürümü" />
           {review && <section className="ez-candidate-create-review" aria-labelledby="candidate-create-review-title" aria-live="polite">
             <h4 id="candidate-create-review-title">Kaydetmeden önce son kontrol</h4>
             <p><strong>Aday:</strong> {review.name} · <strong>Başvurulan rol:</strong> {review.appliedRole}</p>

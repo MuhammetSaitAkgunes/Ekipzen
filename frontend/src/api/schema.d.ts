@@ -9357,6 +9357,7 @@ export interface components {
             phone?: string | null;
             headquartersAddress?: string | null;
             logoPath?: string | null;
+            recordToken?: string | null;
         };
         CompensationDateCorrectionDto: {
             /** Format: date */
@@ -9664,6 +9665,9 @@ export interface components {
             summary?: string | null;
             skills?: string[] | null;
             experiences?: components["schemas"]["CandidateExperienceInput"][] | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         CreateComplianceDocumentCommand: {
             /** Format: int32 */
@@ -9681,6 +9685,9 @@ export interface components {
         CreateDepartmentCommand: {
             name?: string | null;
             code?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         /** @description Manuel giriş gövdesi: personel + gün verileri. */
         CreateEntryBody: {
@@ -9731,6 +9738,9 @@ export interface components {
             departmentId?: number | null;
             /** Format: int32 */
             openCount?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         DailyGuidanceTaskDto: {
             key?: string | null;
@@ -9790,6 +9800,7 @@ export interface components {
             code?: string | null;
             /** Format: int32 */
             employeeCount?: number;
+            readonly recordToken?: string | null;
         };
         DepartmentRiskDto: {
             /** Format: int32 */
@@ -10300,6 +10311,7 @@ export interface components {
             setupChanges?: components["schemas"]["GuidanceSetupChangesDto"];
             personnelChanges?: components["schemas"]["GuidancePersonnelChangesDto"];
             importChanges?: components["schemas"]["GuidanceImportChangesDto"];
+            preparationChanges?: components["schemas"]["GuidancePreparationChangesDto"];
         };
         GuidanceOperationHistoryDto: {
             evidence?: components["schemas"]["GuidanceOperationEvidenceDto"];
@@ -10339,6 +10351,12 @@ export interface components {
             /** Format: int32 */
             correctChoice?: number;
             explanation?: string | null;
+        };
+        GuidancePreparationChangesDto: {
+            resourceKind?: string | null;
+            /** Format: int32 */
+            resourceId?: number;
+            changedFields?: string[] | null;
         };
         GuidancePublishedPracticeDto: {
             /** Format: int32 */
@@ -11862,11 +11880,18 @@ export interface components {
             systemEmail?: string | null;
             phone?: string | null;
             headquartersAddress?: string | null;
+            expectedRecordToken?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         /** @description Gövde modeli: id route'tan gelir. */
         UpdateDepartmentBody: {
             name?: string | null;
             code?: string | null;
+            expectedRecordToken?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         UpdateEntryBody: {
             model?: components["schemas"]["AttendanceEntryModel"];
