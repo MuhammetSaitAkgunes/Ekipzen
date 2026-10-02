@@ -1,5 +1,6 @@
 using Ekipzen.Application.Features.Guidance;
 using FluentValidation;
+using Microsoft.Extensions.Logging;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Settings;
@@ -107,7 +108,11 @@ public sealed class UpdateCompanyProfileCommandHandler(IApplicationDbContext con
 public sealed record UpdateNotificationSettingsCommand(
     bool NewPersonnelEmail,
     bool LeaveRequestEmail,
-    bool WeeklyReportEmail) : IRequest<NotificationSettingsDto>;
+    bool WeeklyReportEmail, string? ExpectedRecordToken = null, int? GuidanceContentRevisionId = null)
+    : IRequest<NotificationSettingsDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "company-notifications-update";
+}
 
 public sealed class UpdateNotificationSettingsCommandValidator : AbstractValidator<UpdateNotificationSettingsCommand>
 {
@@ -118,21 +123,29 @@ public sealed class UpdateNotificationSettingsCommandValidator : AbstractValidat
     }
 }
 
-public sealed class UpdateNotificationSettingsCommandHandler(IApplicationDbContext context)
+public sealed class UpdateNotificationSettingsCommandHandler(IApplicationDbContext context, IDatabaseLock databaseLock,
+    ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<UpdateNotificationSettingsCommand, NotificationSettingsDto>
 {
-    public async Task<NotificationSettingsDto> Handle(
-        UpdateNotificationSettingsCommand request, CancellationToken cancellationToken)
-    {
-        var settings = await GetOrCreateAsync(context, cancellationToken);
-
-        settings.NewPersonnelEmail = request.NewPersonnelEmail;
-        settings.LeaveRequestEmail = request.LeaveRequestEmail;
-        settings.WeeklyReportEmail = request.WeeklyReportEmail;
-
-        await context.SaveChangesAsync(cancellationToken);
-        return settings.ToNotificationsDto();
-    }
+    public Task<NotificationSettingsDto> Handle(UpdateNotificationSettingsCommand request, CancellationToken cancellationToken)
+        => databaseLock.ExecuteExclusiveAsync("tenant-setup", async ct =>
+        {
+            var existing = await context.NotificationSettings.FirstOrDefaultAsync(ct);
+            var settings = existing ?? new NotificationSettings();
+            PreparationOperationEvidence.RequireToken(request.ExpectedRecordToken, settings.ToNotificationsDto().RecordToken!, guidance.IsGuided);
+            var fields = new List<string>();
+            if (settings.NewPersonnelEmail != request.NewPersonnelEmail) fields.Add("Yeni personel e-posta tercihi");
+            if (settings.LeaveRequestEmail != request.LeaveRequestEmail) fields.Add("İzin talebi e-posta tercihi");
+            if (settings.WeeklyReportEmail != request.WeeklyReportEmail) fields.Add("Haftalık rapor tercihi");
+            if (fields.Count == 0) return settings.ToNotificationsDto();
+            if (existing is null) context.NotificationSettings.Add(settings);
+            settings.NewPersonnelEmail = request.NewPersonnelEmail;
+            settings.LeaveRequestEmail = request.LeaveRequestEmail;
+            settings.WeeklyReportEmail = request.WeeklyReportEmail;
+            await context.SaveChangesAsync(ct);
+            await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "notifications", settings.Id, fields, ct);
+            return settings.ToNotificationsDto();
+        }, cancellationToken);
 
     internal static async Task<NotificationSettings> GetOrCreateAsync(
         IApplicationDbContext context, CancellationToken cancellationToken)
@@ -184,7 +197,11 @@ public sealed class UpdateSecuritySettingsCommandHandler(IApplicationDbContext c
 public sealed record UploadCompanyLogoCommand(
     Stream Content,
     string FileName,
-    long Length) : IRequest<string>;
+    long Length, string? ExpectedRecordToken = null, int? GuidanceContentRevisionId = null)
+    : IRequest<string>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "company-logo-upload";
+}
 
 public sealed class UploadCompanyLogoCommandValidator : AbstractValidator<UploadCompanyLogoCommand>
 {
@@ -203,31 +220,23 @@ public sealed class UploadCompanyLogoCommandValidator : AbstractValidator<Upload
     }
 }
 
-public sealed class UploadCompanyLogoCommandHandler(IApplicationDbContext context, IFileStorage fileStorage)
+public sealed class UploadCompanyLogoCommandHandler(IApplicationDbContext context, IFileStorage storage,
+    IDatabaseLock gate, ICurrentUser user, GuidanceOperationContext guidance, ILogger<UploadCompanyLogoCommandHandler> logger)
     : IRequestHandler<UploadCompanyLogoCommand, string>
 {
-    public async Task<string> Handle(UploadCompanyLogoCommand request, CancellationToken cancellationToken)
-    {
-        var profile = await context.CompanyProfiles.FirstOrDefaultAsync(cancellationToken);
-        if (profile is null)
+    public Task<string> Handle(UploadCompanyLogoCommand request, CancellationToken ct)
+        => GuidanceImageReplacement.ExecuteAsync(storage, gate, "tenant-setup", request.Content, request.FileName, "branding", async (upload, token) =>
         {
-            profile = new CompanyProfile { Name = "Şirket" };
-            context.CompanyProfiles.Add(profile);
-        }
-
-        var stored = await fileStorage.SaveAsync(request.Content, request.FileName, "branding", cancellationToken);
-
-        var oldLogoPath = profile.LogoPath;
-        profile.LogoPath = stored.Path;
-        await context.SaveChangesAsync(cancellationToken);
-
-        if (oldLogoPath is not null)
-        {
-            await fileStorage.DeleteAsync(oldLogoPath, cancellationToken);
-        }
-
-        return stored.Path;
-    }
+            var profile = await context.CompanyProfiles.FirstOrDefaultAsync(token);
+            PreparationOperationEvidence.RequireToken(request.ExpectedRecordToken, (profile ?? new CompanyProfile()).ToDto().LogoRecordToken!, guidance.IsGuided);
+            if (profile is null) { profile = new CompanyProfile { Name = "Şirket" }; context.CompanyProfiles.Add(profile); }
+            var stored = await upload(token);
+            var previous = profile.LogoPath;
+            profile.LogoPath = stored.Path;
+            await context.SaveChangesAsync(token);
+            await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "company-profile", profile.Id, ["Şirket logosu"], token);
+            return previous;
+        }, logger, ct);
 }
 
 /// <summary>Şirket logosunu akış olarak döner (layout header'ı tüm roller görür).</summary>

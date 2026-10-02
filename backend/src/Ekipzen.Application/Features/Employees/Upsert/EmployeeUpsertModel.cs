@@ -51,9 +51,6 @@ public sealed record EmployeeProfileUpsertModel(
     string? PantsSize = null,
     string? CoatSize = null,
     string? ShoeSize = null,
-    bool CanWorkAtHeight = false,
-    bool CanWorkNightShift = false,
-    bool CanLiftHeavyLoads = false,
     string? HealthNotes = null);
 
 public sealed class EmployeeUpsertModelValidator : AbstractValidator<EmployeeUpsertModel>

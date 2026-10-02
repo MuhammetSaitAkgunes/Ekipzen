@@ -509,16 +509,26 @@ public sealed class EmployeesController(ISender sender) : ControllerBase
 
     // --- dosyalar ---
 
+    [HttpGet("{id:int}/photo")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPhoto(int id, CancellationToken cancellationToken)
+    {
+        var photo = await sender.Send(new GetEmployeePhotoQuery(id), cancellationToken);
+        return File(photo.Content, photo.ContentType);
+    }
+
     [HttpPost("{id:int}/photo")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [RequestSizeLimit(4 * 1024 * 1024)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UploadPhoto(int id, IFormFile file, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadPhoto(int id, IFormFile file, [FromForm] string? expectedRecordToken, [FromForm] int? guidanceContentRevisionId, CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
         var photoPath = await sender.Send(
-            new UploadEmployeePhotoCommand(id, stream, file.FileName, file.Length), cancellationToken);
+            new UploadEmployeePhotoCommand(id, stream, file.FileName, file.Length, expectedRecordToken, guidanceContentRevisionId), cancellationToken);
         return Ok(new { photoPath });
     }
 

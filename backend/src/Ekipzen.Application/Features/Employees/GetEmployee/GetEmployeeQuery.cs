@@ -80,10 +80,7 @@ public sealed class GetEmployeeQueryHandler(IApplicationDbContext context, ICurr
                 profile.PantsSize,
                 profile.CoatSize,
                 profile.ShoeSize,
-                profile.CanWorkAtHeight,
-                profile.CanWorkNightShift,
-                profile.CanLiftHeavyLoads,
-                profile.HealthNotes),
+                profile.HealthNotes, Files.UploadEmployeePhotoCommandHandler.RecordToken(employee.Id, profile.PhotoPath)),
             employee.Documents
                 .Where(d => d.WithdrawnAtUtc is null)
                 .OrderByDescending(d => d.CreatedAtUtc)

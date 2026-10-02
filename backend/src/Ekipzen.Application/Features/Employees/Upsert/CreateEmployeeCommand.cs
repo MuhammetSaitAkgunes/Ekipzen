@@ -224,9 +224,6 @@ public static class EmployeeUpsertGuards
         profile.PantsSize = model.PantsSize;
         profile.CoatSize = model.CoatSize;
         profile.ShoeSize = model.ShoeSize;
-        profile.CanWorkAtHeight = model.CanWorkAtHeight;
-        profile.CanWorkNightShift = model.CanWorkNightShift;
-        profile.CanLiftHeavyLoads = model.CanLiftHeavyLoads;
         profile.HealthNotes = model.HealthNotes;
 
         return profile;

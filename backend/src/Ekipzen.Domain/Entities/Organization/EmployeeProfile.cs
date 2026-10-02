@@ -39,11 +39,12 @@ public class EmployeeProfile : AuditableEntity
     public string? PensionStatus { get; set; }     // BES: Otomatik Katılım | İptal | Muaf
     public string? MealCard { get; set; }
 
-    // Özlük & sağlık (PPE bedenleri + iş güvenliği bayrakları)
+    // Özlük & sağlık
     public string? TshirtSize { get; set; }
     public string? PantsSize { get; set; }
     public string? CoatSize { get; set; }
     public string? ShoeSize { get; set; }
+    // Eski veri korunur; bu üç alan aktif personel API'sinden ve kart yazımından kaldırıldı.
     public bool CanWorkAtHeight { get; set; }
     public bool CanWorkNightShift { get; set; }
     public bool CanLiftHeavyLoads { get; set; }

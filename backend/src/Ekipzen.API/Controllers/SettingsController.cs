@@ -44,11 +44,11 @@ public sealed class SettingsController(ISender sender) : ControllerBase
     [RequestSizeLimit(4 * 1024 * 1024)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UploadLogo(IFormFile file, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadLogo(IFormFile file, [FromForm] string? expectedRecordToken, [FromForm] int? guidanceContentRevisionId, CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
         var logoPath = await sender.Send(
-            new UploadCompanyLogoCommand(stream, file.FileName, file.Length), cancellationToken);
+            new UploadCompanyLogoCommand(stream, file.FileName, file.Length, expectedRecordToken, guidanceContentRevisionId), cancellationToken);
         return Ok(new { logoPath });
     }
 }

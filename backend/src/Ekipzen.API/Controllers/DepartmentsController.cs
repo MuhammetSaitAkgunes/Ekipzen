@@ -40,14 +40,20 @@ public sealed class DepartmentsController(ISender sender) : ControllerBase
         int id, UpdateDepartmentBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(new UpdateDepartmentCommand(id, body.Name, body.Code, body.ExpectedRecordToken, body.GuidanceContentRevisionId), cancellationToken));
 
+    [HttpGet("{id:int}/deletion-preview")]
+    [Authorize(Policy = Policies.HrAdminOnly)]
+    [ProducesResponseType<DepartmentDeletionPreviewDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<DepartmentDeletionPreviewDto>> DeletionPreview(int id, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetDepartmentDeletionPreviewQuery(id), cancellationToken));
+
     [HttpDelete("{id:int}")]
     [Authorize(Policy = Policies.HrAdminOnly)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(int id, [FromQuery] string? expectedRecordToken, [FromQuery] int? guidanceContentRevisionId, CancellationToken cancellationToken)
     {
-        await sender.Send(new DeleteDepartmentCommand(id), cancellationToken);
+        await sender.Send(new DeleteDepartmentCommand(id, expectedRecordToken, guidanceContentRevisionId), cancellationToken);
         return NoContent();
     }
 

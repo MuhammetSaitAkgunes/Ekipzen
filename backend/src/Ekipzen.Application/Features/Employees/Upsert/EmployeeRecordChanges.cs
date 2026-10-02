@@ -15,7 +15,7 @@ public static class EmployeeRecordChanges
         ["EmploymentType"] = "İş / Çalışma şekli", ["RehireEligibility"] = "İş / Yeniden işe alım uygunluğu", ["ExitCode"] = "İş / Profil çıkış kodu",
         ["Iban"] = "Mali / IBAN", ["BankName"] = "Mali / Banka", ["SalaryType"] = "Mali / Ücret türü", ["PensionStatus"] = "Mali / Emeklilik", ["MealCard"] = "Mali / Yemek kartı",
         ["TshirtSize"] = "Özlük / Tişört", ["PantsSize"] = "Özlük / Pantolon", ["CoatSize"] = "Özlük / Mont", ["ShoeSize"] = "Özlük / Ayakkabı",
-        ["CanWorkAtHeight"] = "Özlük / Yüksekte çalışma", ["CanWorkNightShift"] = "Özlük / Gece çalışma", ["CanLiftHeavyLoads"] = "Özlük / Yük taşıma", ["HealthNotes"] = "Özlük / Sağlık notu",
+        ["HealthNotes"] = "Özlük / Sağlık notu",
     };
 
     public static SortedDictionary<string, string> Capture(Employee employee)

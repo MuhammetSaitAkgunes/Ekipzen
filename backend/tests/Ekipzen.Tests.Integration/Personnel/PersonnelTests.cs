@@ -160,7 +160,7 @@ public sealed class PersonnelTests(EkipzenApiFactory factory)
         created.Initials.Should().Be("MC");
         created.Profile.EmploymentType.Should().Be("Uzaktan");
         created.Profile.Iban.Should().Be("TR120006400000112345678901", "IBAN boşluksuz normalize edilir");
-        created.Profile.CanWorkNightShift.Should().BeTrue();
+        (await createResponse.Content.ReadAsStringAsync()).Should().NotContain("canWorkNightShift");
 
         var updateResponse = await client.PutAsJsonAsync($"/api/employees/{created.Id}", new
         {

@@ -68,6 +68,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
         if (id <= 0) throw new ValidationException("Rehber içerik sürümü pozitif olmalıdır.");
         var (process, step) = command.GuidanceOperationKey switch
         {
+            "employee-photo-upload" => ("personnel-entry", "tab-kimlik"),
             "employee-create" => ("personnel-entry", "tab-is"),
             "employee-update" => ("personnel", "record-review"),
             "employee-import" => ("personnel", "import-review"),
@@ -82,8 +83,8 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "payroll-row-approve" or "payroll-period-submit" => ("payroll", "approval"),
             "offboarding-complete" => ("offboarding", "completion"),
             "offboarding-reverse" => ("offboarding", "reversal-review"),
-            "company-profile-update" => ("company", "company-profile"),
-            "department-create" or "department-update" => ("company", "departments"),
+            "company-profile-update" or "company-logo-upload" or "company-notifications-update" => ("company", "company-profile"),
+            "department-create" or "department-update" or "department-delete" => ("company", "departments"),
             "position-create" or "candidate-create" or "position-correct" or "candidate-correct" => ("recruitment", "candidate-create"),
             "tenant-setup" => ("company", "initial-setup"),
             "attendance-create" => ("attendance", "entry-review"),
@@ -137,7 +138,7 @@ public static class GuidanceOperationEvidenceReader
         var offboarding = await db.GuidanceOffboardingEvidences.AsNoTracking().Where(x => x.UserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
         var result = employees.Select(x => Item("employee-create", x.Id, x.EmployeeId, "created", x.CreatedAtUtc, x.GuidanceSnapshotJson!))
             .Concat(personnel.Select(x => Item(x.OperationKey, x.Id, x.DocumentId ?? x.CompensationPackageId ?? x.EmploymentPeriodId ?? x.EmployeeId,
-                x.OperationKey switch { "employee-document-upload" => "uploaded", "employee-document-withdraw" => "withdrawn",
+                x.OperationKey switch { "employee-document-upload" or "employee-photo-upload" => "uploaded", "employee-document-withdraw" => "withdrawn",
                     "employee-rehire" => "rehired", "employee-compensation-create" => "created", _ => "updated" },
                 x.CreatedAtUtc, x.GuidanceSnapshotJson!) with
                 { PersonnelChanges = new(x.EmployeeId, x.DocumentId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!, x.Reason,
@@ -161,6 +162,7 @@ public static class GuidanceOperationEvidenceReader
             });
         var preparationItems = preparation.Select(x => Item(x.OperationKey, x.Id, x.ResourceId,
             x.OperationKey == "candidate-hire-create" ? "hire-recorded" : x.OperationKey == "candidate-provisioning-retry" ? "retry-requested"
+                : x.OperationKey == "department-delete" ? "deleted" : x.OperationKey == "company-logo-upload" ? "uploaded"
                 : x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
                 PreparationChanges = new(x.ResourceKind, x.ResourceId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!),
             });

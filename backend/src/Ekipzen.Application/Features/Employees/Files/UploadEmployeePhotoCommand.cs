@@ -1,4 +1,7 @@
 using FluentValidation;
+using Ekipzen.Application.Features.Guidance;
+using Ekipzen.Domain.Entities.Guidance;
+using Microsoft.Extensions.Logging;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Domain.Entities.Organization;
@@ -12,7 +15,11 @@ public sealed record UploadEmployeePhotoCommand(
     int EmployeeId,
     Stream Content,
     string FileName,
-    long Length) : IRequest<string>;
+    long Length, string? ExpectedRecordToken = null, int? GuidanceContentRevisionId = null)
+    : IRequest<string>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "employee-photo-upload";
+}
 
 public sealed class UploadEmployeePhotoCommandValidator : AbstractValidator<UploadEmployeePhotoCommand>
 {
@@ -31,29 +38,29 @@ public sealed class UploadEmployeePhotoCommandValidator : AbstractValidator<Uplo
     }
 }
 
-public sealed class UploadEmployeePhotoCommandHandler(IApplicationDbContext context, IFileStorage fileStorage)
+public sealed class UploadEmployeePhotoCommandHandler(IApplicationDbContext context, IFileStorage storage,
+    IDatabaseLock gate, ICurrentUser user, GuidanceOperationContext guidance, ILogger<UploadEmployeePhotoCommandHandler> logger)
     : IRequestHandler<UploadEmployeePhotoCommand, string>
 {
-    public async Task<string> Handle(UploadEmployeePhotoCommand request, CancellationToken cancellationToken)
-    {
-        var employee = await context.Employees
-            .Include(e => e.Profile)
-            .FirstOrDefaultAsync(e => e.Id == request.EmployeeId, cancellationToken)
-            ?? throw new NotFoundException("Personel", request.EmployeeId);
-
-        var stored = await fileStorage.SaveAsync(request.Content, request.FileName, "photos", cancellationToken);
-
-        var profile = employee.Profile ??= new EmployeeProfile { EmployeeId = employee.Id };
-        var oldPhotoPath = profile.PhotoPath;
-        profile.PhotoPath = stored.Path;
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        if (oldPhotoPath is not null)
+    public static string RecordToken(int id, string? path) => PreparationOperationEvidence.RecordToken("employee-photo", id.ToString(), path);
+    public Task<string> Handle(UploadEmployeePhotoCommand request, CancellationToken ct)
+        => GuidanceImageReplacement.ExecuteAsync(storage, gate, "employee-organization", request.Content, request.FileName, "photos", async (upload, token) =>
         {
-            await fileStorage.DeleteAsync(oldPhotoPath, cancellationToken);
-        }
-
-        return stored.Path;
-    }
+            var employee = await context.Employees.Include(x => x.Profile).SingleOrDefaultAsync(x => x.Id == request.EmployeeId, token)
+                ?? throw new NotFoundException("Personel", request.EmployeeId);
+            PreparationOperationEvidence.RequireToken(request.ExpectedRecordToken, RecordToken(employee.Id, employee.Profile?.PhotoPath), guidance.IsGuided);
+            var stored = await upload(token);
+            var profile = employee.Profile ??= new EmployeeProfile { EmployeeId = employee.Id };
+            var previous = profile.PhotoPath;
+            profile.PhotoPath = stored.Path;
+            await context.SaveChangesAsync(token);
+            if (guidance.IsGuided)
+            {
+                var evidence = new GuidancePersonnelEvidence { UserId = user.UserId ?? throw new UnauthorizedException("Oturum sahibi belirlenemedi."),
+                    EmployeeId = employee.Id, OperationKey = request.GuidanceOperationKey, ChangedFieldsJson = "[\"Kimlik / Fotoğraf\"]" };
+                guidance.Stamp(evidence); context.GuidancePersonnelEvidences.Add(evidence);
+                await context.SaveChangesAsync(token);
+            }
+            return previous;
+        }, logger, ct);
 }

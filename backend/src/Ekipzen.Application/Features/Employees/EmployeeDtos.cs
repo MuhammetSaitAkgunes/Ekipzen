@@ -48,10 +48,7 @@ public sealed record EmployeeProfileDto(
     string? PantsSize,
     string? CoatSize,
     string? ShoeSize,
-    bool CanWorkAtHeight,
-    bool CanWorkNightShift,
-    bool CanLiftHeavyLoads,
-    string? HealthNotes);
+    string? HealthNotes, string? PhotoRecordToken = null);
 
 public sealed record EmployeeDocumentDto(
     int Id,

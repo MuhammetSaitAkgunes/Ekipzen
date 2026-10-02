@@ -10,13 +10,13 @@ public sealed record CompanyProfileDto(
     string? SystemEmail,
     string? Phone,
     string? HeadquartersAddress,
-    string? LogoPath, string? RecordToken = null);
+    string? LogoPath, string? RecordToken = null, string? LogoRecordToken = null);
 
 /// <summary>E-posta bildirim toggle'ları — settings.js "Bildirimler" sekmesi.</summary>
 public sealed record NotificationSettingsDto(
     bool NewPersonnelEmail,
     bool LeaveRequestEmail,
-    bool WeeklyReportEmail);
+    bool WeeklyReportEmail, string? RecordToken = null);
 
 /// <summary>Güvenlik tercihleri — settings.js "Güvenlik & Yetki" sekmesi (2FA toggle).</summary>
 public sealed record SecuritySettingsDto(bool TwoFactorSmsEnabled);
@@ -42,10 +42,11 @@ public static class SettingsMappings
     public static CompanyProfileDto ToDto(this CompanyProfile profile) => new(
         profile.Name, profile.Website, profile.SystemEmail, profile.Phone,
         profile.HeadquartersAddress, profile.LogoPath, PreparationOperationEvidence.RecordToken(profile.Name, profile.Website,
-            profile.SystemEmail, profile.Phone, profile.HeadquartersAddress));
+            profile.SystemEmail, profile.Phone, profile.HeadquartersAddress), PreparationOperationEvidence.RecordToken("company-logo", profile.LogoPath));
 
     public static NotificationSettingsDto ToNotificationsDto(this NotificationSettings settings)
-        => new(settings.NewPersonnelEmail, settings.LeaveRequestEmail, false);
+        => new(settings.NewPersonnelEmail, settings.LeaveRequestEmail, false, PreparationOperationEvidence.RecordToken("notifications",
+            settings.NewPersonnelEmail.ToString(), settings.LeaveRequestEmail.ToString(), settings.WeeklyReportEmail.ToString()));
 
     public static SecuritySettingsDto ToSecurityDto(this NotificationSettings settings)
         // Eski kayıtta true olsa da gerçek bir 2FA akışı yok; etkin güvenlik gibi sunulamaz.
