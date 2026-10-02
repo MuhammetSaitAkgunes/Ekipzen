@@ -12,7 +12,7 @@ export function WriteRecoveryNotice() {
   const [checked, setChecked] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   if (!user || !writes.length) return null;
-  return <section className="ez-panel" role="alert" aria-label="Sonucu belirsiz işlemler">
+  return <section className="ez-panel ez-write-recovery" role="alert" aria-label="Sonucu belirsiz işlemler">
     <h2>İşlem sonucu doğrulanamadı</h2>
     <p>İşlem kaydedilmiş olabilir. Aynı yazımı yeniden göndermeden ilgili gerçek kaydı, geçmişi ve varsa gönderim makbuzunu kontrol edin. Sayfayı yenilemek veya uyarıyı kaldırmak işlemi geri almaz; kaydedilmemiş form alanları başka cihaza taşınmaz.</p>
     <button type="button" className="btn btn-secondary" disabled={refreshing} onClick={async () => {

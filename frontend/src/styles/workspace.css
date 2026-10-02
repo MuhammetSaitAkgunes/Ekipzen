@@ -768,3 +768,15 @@
 .ez-guidance-coverage li { min-width: 0; padding: 16px; border-radius: 8px; background: var(--surface-soft); overflow-wrap: anywhere; }
 .ez-guidance-coverage li p { margin-block: 8px; }
 @media (max-width: 720px) { .ez-guidance-coverage ul { grid-template-columns: minmax(0, 1fr); } }
+
+.ez-write-recovery { padding: clamp(16px, 3vw, 24px); margin-bottom: 24px; overflow-wrap: anywhere; }
+.ez-write-recovery h2 { margin-bottom: 12px; }
+.ez-write-recovery > p { margin-block: 12px; }
+.ez-write-recovery ul { display: grid; gap: 16px; margin-block: 16px; padding: 0; list-style: none; }
+.ez-write-recovery li { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.ez-write-recovery li p { margin: 0; }
+.ez-write-recovery a { color: var(--primary); }
+.ez-write-recovery label { display: flex; align-items: flex-start; gap: 8px; }
+.ez-write-recovery input[type="checkbox"] { flex-shrink: 0; margin-top: 5px; }
+.ez-write-recovery .btn { max-width: 100%; white-space: normal; text-align: start; }
+.ez-write-recovery a:focus-visible, .ez-write-recovery input:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }

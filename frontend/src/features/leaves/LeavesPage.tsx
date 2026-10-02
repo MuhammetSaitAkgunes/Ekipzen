@@ -274,12 +274,14 @@ export function LeavesPage() {
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const management = user?.role === "hr-admin" || user?.role === "manager";
+  const personalAvailable = !management || user?.employeeId != null;
   const requested = params.get("tab");
-  const tab = requested === "team" ? "team" : requested === "analysis" && management ? "analysis" : "personal";
-  const tabs = [{ key: "personal", label: "İzinlerim" }, { key: "team", label: "Ekip izinleri" }, ...(management ? [{ key: "analysis", label: "İzin analizleri" }] : [])];
+  const tab = requested === "team" ? "team" : requested === "analysis" && management ? "analysis" : personalAvailable ? "personal" : "team";
+  const tabs = [...(personalAvailable ? [{ key: "personal", label: "İzinlerim" }] : []), { key: "team", label: "Ekip izinleri" }, ...(management ? [{ key: "analysis", label: "İzin analizleri" }] : [])];
   return <div className="ez-leaves">
+    {!personalAvailable && <p>Hesabınıza bağlı personel kartı olmadığı için kişisel izin talebi ve bakiye alanı açılmaz. Ekip izinlerini ve bekleyen onayları yönetebilirsiniz.</p>}
     <div className="ez-tabs" role="tablist" aria-label="İzin bölümleri">{tabs.map((item) => <button key={item.key} id={`leave-tab-${item.key}`} role="tab" aria-selected={tab === item.key} aria-controls="leave-tab-content" onClick={() => setParams({ tab: item.key })}>{item.label}</button>)}
-    {management && <Link className="ez-text-link" to={appPath("/inbox")}>Bekleyen onaylar →</Link>}</div>
+    {management && <Link className="ez-text-link" to={appPath("/inbox?tab=approvals")}>Bekleyen onaylar →</Link>}</div>
     <div role="tabpanel" id="leave-tab-content" aria-labelledby={`leave-tab-${tab}`}>{tab === "personal" ? <PersonalLeaves /> : tab === "team" ? <TeamLeaves /> : <ManagerPage />}</div>
   </div>;
 }
