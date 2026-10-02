@@ -20,7 +20,7 @@ PowerShell 7, Node.js 24 LTS ve `backend/global.json` ile uyumlu SDK kullanılı
 pwsh -File scripts/build-windows-pilot.ps1 -ReleaseName pilot-p2-001
 ```
 
-Script temiz çalışma ağacı ister; `npm ci`, frontend build ve Release/win-x64 backend publish çalıştırır. Yerel geliştirme provasında `-AllowDirty` açıkça verilebilir; manifest bu durumu işaretler ve böyle bir paket müşteriye yayın paketi diye sunulmaz. Script **test koşmaz**; testler yayın kapısının ayrı şartıdır.
+Script varsayılan olarak temiz çalışma ağacı ister; `npm ci`, frontend build ve Release/win-x64 backend publish çalıştırır. Kesin committen teslim için `-SourceRef TAM_COMMIT_SHA` kullanılır: takip edilen kaynaklar ayrı Git arşivine alınır, yerel değişiklik ve ek dosyalar derlenmez. Manifest kaynak commitini, temiz kaynak durumunu ve orijinal çalışma klasörü durumunu ayrı yazar. `-SourceRef` ile `-AllowDirty` birlikte kullanılamaz. Yerel geliştirme provasında yalnız `-AllowDirty` açıkça verilebilir; manifest bu durumu işaretler ve böyle bir paket müşteriye yayın paketi diye sunulmaz. Script **test koşmaz**; testler yayın kapısının ayrı şartıdır. Güncel [rehber teknik teslim kaydı](ik-rehberi-teknik-teslim.md) kabul sahipliğini açıklar.
 
 Çıktı: `artifacts/<ReleaseName>/site`, örnek yapılandırma, bu kılavuz ve SHA-256 dosya manifesti. Sürüm klasörü zaten varsa işlem durur; mevcut paket silinmez veya ezilmez. Script IIS, servis, registry, SQL veya GitHub üzerinde değişiklik yapmaz.
 

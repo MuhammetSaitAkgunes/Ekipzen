@@ -157,3 +157,7 @@ Mevcut POST/PUT/PATCH/DELETE `/api/actions` güncel `daily/task-action` kaynağ�
 ## 2 Ekim — T06 belirsiz yazım ve kişisel devamlılık
 
 Ortak istemci belirsiz iş sonucu/aynı yazım kontrolünü, mevcut üç makbuz sözleşmesinin aynı kimlikle sonuç alınmasını ve güncel adımın ayrı öğrenme aşamalarını ekler. Yeni API veya migration yok. Genel sunucu exactly-once, form/dosya cihazlar arası geri yükleme ve insan yeterlilik onayı eklenmiş sayılmaz. Ayrı istemcide aynı kişinin inceleme/alıştırma/gerçek işlem kanıtının korunması entegrasyonda doğrulandı. [İşlem/sürüm matrisi ve sınırlar](2026-10-02-ik-rehberi-tekrar-ogrenme-seviyeleri.md) güncel sözleşmedir. Bizim kalan işimiz T07; kullanıcı Turhost ve gerçek insan/uzman kontrolünü üstlendi.
+
+## T07 teknik kapanış — 2 Ekim
+
+Yeni backend API/migration eklenmedi. Genel koşum 101 birim + 353 entegrasyon testiyle, iki model kontrolüyle ve kaynak commitinden publish çıktısıyla doğrulandı. Personel kartı olmayan yönetici için kişisel izin sorgusunu çağırmama ve doğru ekip/onay girişi istemcide düzeltildi; API yetkisi veya personel bağlantısı genişletilmedi. Sabit olağan kapsam kapalı; ileri saklama/iletişim/tarihsel/finansal bağımlılıklar bu kayıt üzerinden korunur. İnsan/uzman kabulü ve Turhost yayını kullanıcıya aittir; yapılmış sayılmaz.

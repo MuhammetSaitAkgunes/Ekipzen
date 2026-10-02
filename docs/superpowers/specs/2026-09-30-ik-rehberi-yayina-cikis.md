@@ -119,3 +119,7 @@ Manuel aksiyonların oluşturma/bilgi düzeltme/durum/silme işlemleri gerçek k
 ## 2 Ekim — T06 teknik kapanış ve kabul sahipliği
 
 Belirsiz yazım sonucunda kör tekrar yerine gerçek kayıt/varsa makbuz kontrolü, oturum tenant/rol sınırı ve güncel içerik sürümüne bağlı öğrenme aşamaları tamamlandı. Olağan kapsam değişmedi; bizim kalan tek başlığımız T07 akış doğrulaması/teknik teslimdir. Kullanıcı Turhost/Visual Studio yayınını ve gerçek insan/uzman denemelerini açıkça üstlendi. Bu kontroller tamamlanmış sayılmaz; farklı merkezî editör onayı ve gerçek uzman bilgisiyle yayın kuralı korunur. Üretime yayın/migration yapılmadı.
+
+## T07 teknik teslim ve son kapanış — 2 Ekim
+
+[Son teknik kapanış](2026-10-02-ik-rehberi-teknik-kapanis.md) ile T01–T07 geliştirmesi tamamlandı; kalan olağan teknik başlık 0. Frontend 632, backend 101 birim + 353 entegrasyon testi geçti, iki model kontrolü temiz. Gerçek tarayıcıda kayıt/yanıt kaybı/tekrar engeli/yenileme/klavye teyidi ve çalışan erişim kapısı doğrulandı. Kesin Git kaynağından Windows site paketi, üretim frontend ve dosya hash manifesti hazırlanır; paket üretimi canlı yayın değildir. Kullanıcının üstlendiği gerçek uzman/insan/ayrı merkezî editör kabulü ve Turhost/Visual Studio yayını hâlâ gerçek kabul bekler. Yeni API/migration veya kapsam feragati yok; ileri bağımlılıklar kayıtlı kalır. [Teslim kılavuzu](../../ik-rehberi-teknik-teslim.md).
