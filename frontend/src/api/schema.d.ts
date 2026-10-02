@@ -163,7 +163,10 @@ export interface paths {
         post?: never;
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    expectedRevision?: string;
+                    guidanceContentRevisionId?: number;
+                };
                 header?: never;
                 path: {
                     id: number;
@@ -9187,6 +9190,9 @@ export interface components {
         };
         ActionStatusBody: {
             status?: string | null;
+            expectedRevision?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ActionUpdateBody: {
             title?: string | null;
@@ -9196,6 +9202,9 @@ export interface components {
             due?: string | null;
             priority?: string | null;
             recommendedAction?: string | null;
+            expectedRevision?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ApplyApprovedPayrollChainBody: {
             expectedPreviewToken?: string | null;
@@ -10036,6 +10045,9 @@ export interface components {
             due?: string | null;
             priority?: string | null;
             recommendedAction?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         CreateGuidanceContentCommand: {
             contentKey?: string | null;
@@ -10545,6 +10557,7 @@ export interface components {
             priority?: string | null;
             status?: string | null;
             action?: string | null;
+            revision?: string | null;
         };
         GuidanceBookmarkDto: {
             processKey?: string | null;

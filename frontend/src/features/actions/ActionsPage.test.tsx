@@ -106,6 +106,8 @@ test("durum ilerletme PATCH status atar", async () => {
   renderShell();
   await screen.findByText("SGK matrah kontrolü");
   await userEvent.click(screen.getByRole("button", { name: "Bu haftaya al" }));
+  await userEvent.click(screen.getByRole("checkbox"));
+  await userEvent.click(screen.getByRole("button", { name: "Durumu kaydet" }));
   await waitFor(() => {
     const patched = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/actions/1/status" && i?.method === "PATCH",

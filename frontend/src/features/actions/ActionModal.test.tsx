@@ -5,6 +5,7 @@ import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { ActionModal } from "./ActionModal";
+import { AuthProvider } from "../../auth/AuthContext";
 
 beforeEach(() =>
   stubApi({
@@ -15,9 +16,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 test("form doldurulup kaydedilince POST actions tam gövdeyle gider", async () => {
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <ActionModal onClose={() => {}} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
   await userEvent.type(screen.getByLabelText("Başlık"), "Yeni görev");
   await userEvent.type(screen.getByLabelText("Kaynak"), "Bordro");
@@ -41,9 +42,9 @@ test("form doldurulup kaydedilince POST actions tam gövdeyle gider", async () =
 
 test("başlık boşsa form hatası gösterilir, istek atılmaz", async () => {
   renderPage(
-    <ToastProvider>
+    <AuthProvider><ToastProvider>
       <ActionModal onClose={() => {}} />
-    </ToastProvider>,
+    </ToastProvider></AuthProvider>,
   );
   await userEvent.click(screen.getByRole("button", { name: /Kaydet/ }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Başlık, kaynak ve sahip zorunludur.");

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { guidanceOperationsKey } from "../guidance/operationQueries";
 import { dailyTasksKey } from "../guidance/queries";
 import { apiFetch } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -39,27 +40,49 @@ export const useCreateGlobalAction = () => {
         method: "POST",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
 export const useSetActionStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
+    mutationFn: ({ id, status, expectedRevision, guidanceContentRevisionId }: { id: number; status: string; expectedRevision?: string | null; guidanceContentRevisionId?: number | null }) =>
       apiFetch<GlobalActionDto>(`/actions/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, expectedRevision, guidanceContentRevisionId }),
       }),
-    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
 export const useDeleteGlobalAction = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) =>
-      apiFetch<null>(`/actions/${id}`, { method: "DELETE" }),
-    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey })]),
+    mutationFn: (input: number | { id: number; expectedRevision?: string | null; guidanceContentRevisionId?: number | null }) => {
+      const args = typeof input === "number" ? { id: input } : input;
+      const params = new URLSearchParams();
+      if (args.expectedRevision) params.set("expectedRevision", args.expectedRevision);
+      if (args.guidanceContentRevisionId) params.set("guidanceContentRevisionId", String(args.guidanceContentRevisionId));
+      return apiFetch<null>(`/actions/${args.id}${params.size ? "?" + params : ""}`, { method: "DELETE" });
+    },
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }), queryClient.invalidateQueries({ queryKey: dailyTasksKey }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
+
+export const useUpdateGlobalAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: components["schemas"]["ActionUpdateBody"] & { id: number }) =>
+      apiFetch<GlobalActionDto>(`/actions/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["actions"] }),
+      queryClient.invalidateQueries({ queryKey: dailyTasksKey }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
+  });
+};
+
+export async function readCurrentAction(id: number) {
+  const list = await apiFetch<GlobalActionDto[]>("/actions");
+  const current = list.find(item => item.id === id);
+  if (!current) throw new Error("Aksiyon artık listede yok. Taslağınız korunuyor; kaynak kaydı kontrol edin.");
+  return current;
+}

@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
-import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import { formatTimeAgo } from "../recruitment/format";
 import { appRoutes } from "../../routes";
 import { ActionModal } from "./ActionModal";
+import { ActionOperationDialog } from "./ActionOperationDialog";
 import {
-  actionLevelText, actionPillClass, actionStatusText, nextActionStatus, nextActionStatusLabel,
+  actionLevelText, actionPillClass, actionStatusText, nextActionStatusLabel,
 } from "./format";
 import {
-  useAuditLogs, useDeleteGlobalAction, useGlobalActions, useSetActionStatus, type GlobalActionDto,
+  useAuditLogs, useGlobalActions, type GlobalActionDto,
 } from "./queries";
 
 const TABS: [string, string][] = [["open", "Açık"], ["week", "Bu Hafta"], ["done", "Tamamlanan"]];
@@ -24,15 +23,14 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestedId = Number(params.get("actionId"));
-  const { showToast } = useToast();
   const isMgmt = user?.role === "hr-admin" || user?.role === "manager";
   const isAdmin = user?.role === "hr-admin";
-  const setStatus = useSetActionStatus();
-  const deleteAction = useDeleteGlobalAction();
   const [tab, setTab] = useState("open");
   const [followedId, setFollowedId] = useState<number | null>(null);
   const [filters, setFilters] = useState({ priority: "", source: "", owner: "" });
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<GlobalActionDto | null>(null);
+  const [decision, setDecision] = useState<{ action: GlobalActionDto; kind: "status" | "delete" } | null>(null);
 
   // Aksiyon kümesi küçük; tek (filtresiz) sorgu çekilip filtreleme client-side yapılır.
   // Böylece filtre değişiminde ağ isteği olmaz ve seçenek listeleri (kaynak/sahip) stabil kalır.
@@ -49,8 +47,8 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
     if (followedId) document.getElementById("action-" + followedId)?.focus();
   }, [followedId, tab]);
   const kpis = {
-    today: actions.filter((item) => item.due === "Bugün").length,
-    overdue: actions.filter((item) => item.due === "Gecikti").length,
+    today: actions.filter((item) => item.due === "Bugün" && item.status !== "done").length,
+    overdue: actions.filter((item) => item.due === "Gecikti" && item.status !== "done").length,
     high: actions.filter((item) => item.priority === "high" && item.status !== "done").length,
     done: actions.filter((item) => item.status === "done").length,
   };
@@ -72,26 +70,6 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
     (e: React.ChangeEvent<HTMLSelectElement>) =>
       setFilters((f) => ({ ...f, [key]: e.target.value }));
 
-  const advance = async (action: GlobalActionDto) => {
-    const next = nextActionStatus(action.status);
-    if (!next) return;
-    try {
-      await setStatus.mutateAsync({ id: action.id!, status: next });
-      showToast(`"${action.title}" durumu güncellendi.`, "success");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Durum güncellenemedi.", "error");
-    }
-  };
-
-  const remove = async (action: GlobalActionDto) => {
-    try {
-      await deleteAction.mutateAsync(action.id!);
-      showToast(`"${action.title}" silindi.`, "info");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Aksiyon silinemedi.", "error");
-    }
-  };
-
   const renderCard = (action: GlobalActionDto) => {
     const sourcePath = routePathFor(action.sourceRoute);
     return (
@@ -110,19 +88,20 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
           <span className="status-pill info">{actionStatusText(action.status)}</span>
           <div className="toolbar-actions">
             {isMgmt && nextActionStatusLabel(action.status) && (
-              <button className="btn btn-primary btn-sm" onClick={() => advance(action)}>
+              <button className="btn btn-primary btn-sm" onClick={() => setDecision({ action, kind: "status" })}>
                 {nextActionStatusLabel(action.status)}
               </button>
             )}
             {sourcePath && (
               <button className="btn btn-secondary btn-sm" onClick={() => navigate(sourcePath)}>Kaynağa git</button>
             )}
+            {isAdmin && <button className="btn btn-secondary btn-sm" onClick={() => setEditing(action)}>Bilgileri düzelt</button>}
             {isAdmin && (
               <button
                 className="btn-icon-sm"
                 title="Sil"
                 aria-label={`${action.title} aksiyonunu sil`}
-                onClick={() => remove(action)}
+                onClick={() => setDecision({ action, kind: "delete" })}
               >
                 <i aria-hidden="true" className="fa-solid fa-trash" />
               </button>
@@ -148,10 +127,10 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       <div className="actions-kpi-grid">
-        <div className="stat-box"><span className="sb-label">Bugün</span><strong className="sb-val">{kpis.today}</strong><small>Kapanması beklenen</small></div>
-        <div className="stat-box"><span className="sb-label">Geciken</span><strong className="sb-val text-red">{kpis.overdue}</strong><small>Riskli aksiyon</small></div>
+        <div className="stat-box"><span className="sb-label">Bugün</span><strong className="sb-val">{kpis.today}</strong><small>“Bugün” etiketli kayıtlar</small></div>
+        <div className="stat-box"><span className="sb-label">Geciken</span><strong className="sb-val text-red">{kpis.overdue}</strong><small>“Gecikti” etiketli kayıtlar</small></div>
         <div className="stat-box"><span className="sb-label">Yüksek Öncelik</span><strong className="sb-val text-orange">{kpis.high}</strong><small>Aktif takip</small></div>
-        <div className="stat-box"><span className="sb-label">Tamamlanan</span><strong className="sb-val">{kpis.done}</strong><small>Bu hafta</small></div>
+        <div className="stat-box"><span className="sb-label">Tamamlanan</span><strong className="sb-val">{kpis.done}</strong><small>Listedeki toplam</small></div>
       </div>
 
       <section className="card actions-filter-bar">
@@ -223,6 +202,8 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
         </section>
       )}
 
+      {editing && <ActionModal key={editing.id} action={editing} onClose={() => setEditing(null)} />}
+      {decision && <ActionOperationDialog key={`${decision.kind}-${decision.action.id}`} {...decision} onClose={() => setDecision(null)} />}
       {createOpen && <ActionModal onClose={() => setCreateOpen(false)} />}
     </div>
   );
