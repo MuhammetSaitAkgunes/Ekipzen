@@ -2,6 +2,7 @@ using FluentValidation;
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
 using Ekipzen.Application.Common.Notifications;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Domain.Entities.Leaves;
 using Ekipzen.Domain.Enums;
 using MediatR;
@@ -19,7 +20,12 @@ public sealed record CreateLeaveRequestCommand(
     DateOnly StartDate,
     DateOnly EndDate,
     string? Description = null,
-    int? SubstituteEmployeeId = null) : IRequest<LeaveRequestDto>;
+    int? SubstituteEmployeeId = null,
+    string? ExpectedRecordToken = null,
+    int? GuidanceContentRevisionId = null) : IRequest<LeaveRequestDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "leave-request-create";
+}
 
 public sealed class CreateLeaveRequestCommandValidator : AbstractValidator<CreateLeaveRequestCommand>
 {
@@ -38,7 +44,8 @@ public sealed class CreateLeaveRequestCommandHandler(
     ICurrentUser currentUser,
     IWorkingDayCalculator workingDayCalculator,
     INotificationTrigger notificationTrigger,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock,
+    GuidanceOperationContext guidance)
     : IRequestHandler<CreateLeaveRequestCommand, LeaveRequestDto>
 {
     public async Task<LeaveRequestDto> Handle(
@@ -83,6 +90,10 @@ public sealed class CreateLeaveRequestCommandHandler(
             throw new ConflictException("Seçilen aralıkta iş günü bulunmuyor (hafta sonu/resmi tatil).");
         }
 
+        PreparationOperationEvidence.RequireToken(request.ExpectedRecordToken,
+            LeaveOperationReview.CreateToken(employeeId, period.Id, leaveType, request.StartDate,
+                request.EndDate, days, request.SubstituteEmployeeId), guidance.IsGuided);
+
         var hasOverlap = await context.LeaveRequests.AnyAsync(r =>
             r.EmployeeId == employeeId
             && (r.Status == LeaveStatus.Pending || r.Status == LeaveStatus.Approved)
@@ -125,6 +136,10 @@ public sealed class CreateLeaveRequestCommandHandler(
                 context, leaveRequest, workingDayCalculator, reversal: false, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
         }
+
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser,
+            request.GuidanceOperationKey, "leave-request", leaveRequest.Id,
+            [leaveRequest.Status == LeaveStatus.Pending ? "Onay bekleyen talep" : "Onaylı talep", "Tür ve tarihler"], cancellationToken);
 
         var dto = await context.LeaveRequests
             .AsNoTracking()

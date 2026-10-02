@@ -79,6 +79,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "candidate-hire-create" or "candidate-provisioning-retry" => ("recruitment", "hire-preparation"),
             "candidate-first-review" => ("recruitment", "first-review"),
             "leave-decision" => ("leave", "decision-effect"),
+            "leave-request-create" or "leave-request-cancel" => ("leave", "request-lifecycle"),
             "payroll-period-create" => ("payroll", "period-create"),
             "payroll-row-approve" or "payroll-period-submit" => ("payroll", "approval"),
             "offboarding-complete" => ("offboarding", "completion"),
@@ -163,6 +164,7 @@ public static class GuidanceOperationEvidenceReader
         var preparationItems = preparation.Select(x => Item(x.OperationKey, x.Id, x.ResourceId,
             x.OperationKey == "candidate-hire-create" ? "hire-recorded" : x.OperationKey == "candidate-provisioning-retry" ? "retry-requested"
                 : x.OperationKey == "department-delete" ? "deleted" : x.OperationKey == "company-logo-upload" ? "uploaded"
+                : x.OperationKey == "leave-request-cancel" ? "cancelled"
                 : x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
                 PreparationChanges = new(x.ResourceKind, x.ResourceId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!),
             });

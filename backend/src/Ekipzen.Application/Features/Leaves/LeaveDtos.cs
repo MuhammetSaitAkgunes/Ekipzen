@@ -7,6 +7,10 @@ namespace Ekipzen.Application.Features.Leaves;
 public sealed record LeaveTypeDto(
     int Id, string Name, string? Code, bool DeductsFromAnnualBalance, bool RequiresApproval);
 
+public sealed record LeaveCancellationPreviewDto(int Id, string LeaveTypeName, DateOnly StartDate,
+    DateOnly EndDate, int Days, string Status, bool CanCancel, int ReleasedReservationDays,
+    int RefundedDays, string RecordToken);
+
 /// <summary>İzin talebi — leaves.js geçmiş tablosu + onay kuyruğu şekli (status küçük harf).</summary>
 public sealed record LeaveRequestDto(
     int Id,

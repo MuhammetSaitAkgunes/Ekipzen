@@ -14,7 +14,7 @@ public static class GuidancePublishedSteps
     {
         ["personnel-entry"] = ["tab-kimlik", "tab-iletisim", "tab-is", "tab-mali", "tab-ozluk", "tab-evrak"],
         ["recruitment"] = ["candidate-create", "first-review", "hire-preparation"],
-        ["leave"] = ["review-request", "decision-effect"],
+        ["leave"] = ["request-lifecycle", "review-request", "decision-effect"],
         ["company"] = ["initial-setup", "company-profile", "departments", "access-preparation"],
         ["personnel"] = ["record-review", "import-review", "rehire"],
         ["attendance"] = ["entry-review", "entry-correction", "period-summary"],
@@ -35,6 +35,8 @@ public static class GuidancePublishedSteps
     {
         if (!Steps.TryGetValue(process, out var steps) || !steps.Contains(step))
             throw new NotFoundException("Rehber alt adımı", step);
+        if (process == "leave" && step == "request-lifecycle"
+            && user.Roles.Any(role => role is Roles.Employee or Roles.Manager or Roles.HrAdmin)) return;
         if (!user.Roles.Contains(Roles.HrAdmin) && !(user.Roles.Contains(Roles.Manager)
             && ManagerSteps.TryGetValue(process, out var managerSteps) && managerSteps.Contains(step)))
             throw new ForbiddenAccessException("Bu alıştırma ilgili süreci yöneten role açıktır.");

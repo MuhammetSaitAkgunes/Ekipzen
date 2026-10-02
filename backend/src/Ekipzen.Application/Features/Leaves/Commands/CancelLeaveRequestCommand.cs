@@ -1,5 +1,6 @@
 using Ekipzen.Application.Common.Exceptions;
 using Ekipzen.Application.Common.Interfaces;
+using Ekipzen.Application.Features.Guidance;
 using Ekipzen.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -10,13 +11,17 @@ namespace Ekipzen.Application.Features.Leaves.Commands;
 /// Talep sahibi bekleyen veya onaylı talebini iptal eder. Onaylı, bakiyeden
 /// düşen talep ledger'da silinmez; eş hareketlerle geri alınır.
 /// </summary>
-public sealed record CancelLeaveRequestCommand(int Id) : IRequest;
+public sealed record CancelLeaveRequestCommand(int Id, string? ExpectedRecordToken = null,
+    int? GuidanceContentRevisionId = null) : IRequest, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "leave-request-cancel";
+}
 
 public sealed class CancelLeaveRequestCommandHandler(
     IApplicationDbContext context,
     ICurrentUser currentUser,
-    IWorkingDayCalculator workingDayCalculator,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock,
+    GuidanceOperationContext guidance)
     : IRequestHandler<CancelLeaveRequestCommand>
 {
     public async Task Handle(CancelLeaveRequestCommand request, CancellationToken cancellationToken)
@@ -37,6 +42,8 @@ public sealed class CancelLeaveRequestCommandHandler(
         int employeeId,
         CancellationToken cancellationToken)
     {
+        var preview = await LeaveOperationReview.CancellationAsync(context, currentUser, request.Id, cancellationToken);
+        PreparationOperationEvidence.RequireToken(request.ExpectedRecordToken, preview.RecordToken, guidance.IsGuided);
         var leaveRequest = await context.LeaveRequests
             .Include(item => item.LeaveType)
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken)
@@ -51,14 +58,15 @@ public sealed class CancelLeaveRequestCommandHandler(
             throw new ConflictException("Yalnız bekleyen veya onaylı talepler iptal edilebilir.");
         }
 
-        if (leaveRequest.Status == LeaveStatus.Approved
-            && (leaveRequest.LeaveType?.DeductsFromAnnualBalance ?? false))
+        if (leaveRequest.Status == LeaveStatus.Approved)
         {
-            await LeaveLedgerService.AddUsageEntriesAsync(
-                context, leaveRequest, workingDayCalculator, reversal: true, cancellationToken);
+            await LeaveLedgerService.ReverseRecordedUsageAsync(context, leaveRequest, cancellationToken);
         }
 
         leaveRequest.Status = LeaveStatus.Cancelled;
         await context.SaveChangesAsync(cancellationToken);
+        await PreparationOperationEvidence.SaveAsync(context, guidance, currentUser,
+            request.GuidanceOperationKey, "leave-request", leaveRequest.Id,
+            ["Talep iptali", $"Kalkan rezervasyon: {preview.ReleasedReservationDays} gün", $"İade: {preview.RefundedDays} gün"], cancellationToken);
     }
 }

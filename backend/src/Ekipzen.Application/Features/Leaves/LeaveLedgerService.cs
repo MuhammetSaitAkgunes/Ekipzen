@@ -191,6 +191,11 @@ public static class LeaveLedgerService
         bool reversal,
         CancellationToken cancellationToken)
     {
+        if (reversal)
+        {
+            await ReverseRecordedUsageAsync(context, request, cancellationToken);
+            return;
+        }
         for (var year = request.StartDate.Year; year <= request.EndDate.Year; year++)
         {
             var segmentStart = request.StartDate > new DateOnly(year, 1, 1)
@@ -215,6 +220,24 @@ public static class LeaveLedgerService
                 Days = reversal ? days : -days,
                 SourceKey = $"leave-request:{request.Id}:{(reversal ? "reversal" : "usage")}:{year}",
                 SourceReference = $"İzin talebi #{request.Id} {(reversal ? "kullanım iadesi" : "kullanımı")}",
+            });
+        }
+    }
+
+    public static async Task ReverseRecordedUsageAsync(IApplicationDbContext context,
+        LeaveRequest request, CancellationToken cancellationToken)
+    {
+        // İade, sonradan değişmiş tatil takvimini değil değişmez kullanım hareketlerini tersler.
+        var usage = await context.LeaveLedgerEntries.AsNoTracking()
+            .Where(x => x.LeaveRequestId == request.Id && x.Type == LeaveLedgerEntryType.Usage)
+            .ToListAsync(cancellationToken);
+        foreach (var entry in usage)
+        {
+            context.LeaveLedgerEntries.Add(new LeaveLedgerEntry {
+                EmploymentPeriodId = entry.EmploymentPeriodId, LeaveRequestId = request.Id,
+                OccurredOn = entry.OccurredOn, Type = LeaveLedgerEntryType.UsageReversal, Days = -entry.Days,
+                SourceKey = $"leave-request:{request.Id}:reversal:{entry.OccurredOn.Year}",
+                SourceReference = $"İzin talebi #{request.Id} kullanım iadesi",
             });
         }
     }

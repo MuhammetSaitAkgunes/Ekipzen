@@ -14,7 +14,8 @@ public sealed record LeaveRequestPreviewDto(
     bool RequiresApproval,
     bool CanSubmit,
     string? BlockReason,
-    DateTime PreviewedAtUtc);
+    DateTime PreviewedAtUtc,
+    string? RecordToken = null);
 
 public sealed record PreviewLeaveRequestQuery(
     int LeaveTypeId, DateOnly StartDate, DateOnly EndDate, int? SubstituteEmployeeId = null)
@@ -94,7 +95,8 @@ public sealed class PreviewLeaveRequestQueryHandler(
         }
 
         return new(days, leaveType.DeductsFromAnnualBalance, leaveType.RequiresApproval,
-            true, null, DateTime.UtcNow);
+            true, null, DateTime.UtcNow, LeaveOperationReview.CreateToken(employeeId, period.Id, leaveType,
+                request.StartDate, request.EndDate, days, request.SubstituteEmployeeId));
 
         LeaveRequestPreviewDto Block(int workingDays, string reason) =>
             new(workingDays, leaveType.DeductsFromAnnualBalance, leaveType.RequiresApproval,

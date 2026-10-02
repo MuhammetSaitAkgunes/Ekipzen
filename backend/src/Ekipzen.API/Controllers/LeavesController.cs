@@ -2,6 +2,7 @@ using Ekipzen.Application.Common.Security;
 using Ekipzen.Application.Features.Leaves;
 using Ekipzen.Application.Features.Leaves.Commands;
 using Ekipzen.Application.Features.Leaves.Queries;
+using Ekipzen.Application.Features.Guidance;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,11 +62,24 @@ public sealed class LeavesController(ISender sender) : ControllerBase
     [HttpPost("{id:int}/cancel")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Cancel(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Cancel(int id, CancellationToken cancellationToken,
+        [FromQuery] string? expectedRecordToken = null, [FromQuery] int? guidanceContentRevisionId = null)
     {
-        await sender.Send(new CancelLeaveRequestCommand(id), cancellationToken);
+        await sender.Send(new CancelLeaveRequestCommand(id, expectedRecordToken, guidanceContentRevisionId), cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("{id:int}/cancellation-preview")]
+    [ProducesResponseType<LeaveCancellationPreviewDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<LeaveCancellationPreviewDto>> CancellationPreview(int id, CancellationToken ct) =>
+        Ok(await sender.Send(new PreviewLeaveCancellationQuery(id), ct));
+
+    // Çalışan yalnız kendi talep/iptal öğrenme kanıtını okuyabilir; yönetim uçları genişletilmez.
+    [HttpGet("learning-operations")]
+    [ProducesResponseType<IReadOnlyList<GuidanceOperationHistoryDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<GuidanceOperationHistoryDto>>> LearningOperations(CancellationToken ct) =>
+        Ok((await sender.Send(new GetMyGuidanceOperationsQuery(), ct))
+            .Where(x => x.Evidence.OperationKey is "leave-request-create" or "leave-request-cancel").ToList());
 
     // --- onay kuyruğu ---
 
