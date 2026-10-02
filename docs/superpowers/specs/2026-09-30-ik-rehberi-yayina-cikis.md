@@ -111,3 +111,7 @@ Sıradaki geliştirme tüm süreçlerdeki olağan alt işlemlerin tek API/kaynak
 ## 2 Ekim 2026 — T04 ve yayın sorumluluğu
 
 [T04 teslimi](2026-10-02-ik-rehberi-puantaj-bordro-ayrilis-baglantilari.md) puantaj uzlaştırmasını, bordro/ayrılış hazırlık ve düzeltme kaynaklarını, ilk hesap ile revizyonun ayrı dış kanıtlarını bağlar. Sabit 45 satırda 36 bağlı / 8 okuma / 1 açık kalır; teknik geliştirme T05–T07 olarak üç başlıktır. T08 Turhost kurulumunu kullanıcı açıkça manuel üstlenmiştir; ortamın kurulmuş veya doğrulanmış olduğu iddia edilmez. Gerçek uzman/editör ve deneyimsiz kullanıcı kabulü ayrı kapılardır. Üretime publish veya migration gönderilmedi.
+
+## 2 Ekim — T05 teknik kapanış
+
+Manuel aksiyonların oluşturma/bilgi düzeltme/durum/silme işlemleri gerçek kaynak sürümlü derse bağlandı; günlük işler aynı kaynak ID ile güncel sorumlu/durumdan kapanır. Son olağan açık G02 kapandı: sabit 45 satırın 37’si bağlı, 8’i okumadır. Bizim kalan işimiz T06 ve T07; insan/uzman/merkezî editör kabulü ayrıca bekler. T08 Turhost ve Visual Studio yayını kullanıcı tarafından manuel üstlenildi; ortam kurulmuş veya doğrulanmış sayılmadı. Bu paket üretime yayın değildir.
