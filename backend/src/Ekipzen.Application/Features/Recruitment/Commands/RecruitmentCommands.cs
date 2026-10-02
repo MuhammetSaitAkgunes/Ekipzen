@@ -225,8 +225,7 @@ public sealed class SetCandidateStatusCommandHandler(
         }
 
         var newStatus = RecruitmentMappings.ParseStatus(request.Status);
-        if (guidance.IsGuided && candidate.Status != CandidateStatus.New)
-            throw new ConflictException("İlk inceleme rehberi yalnız Yeni aşamasındaki aday kararına bağlanabilir.");
+
         if (newStatus != candidate.Status)
         {
             var userId = currentUser.UserId
@@ -245,14 +244,15 @@ public sealed class SetCandidateStatusCommandHandler(
                 evidence.Add(new(reference.Kind, reference.Id, reference.Version,
                     latest is null ? original : CandidateEvidenceVersions.Read(latest.AfterJson)));
             }
-            context.CandidateStageDecisions.Add(new CandidateStageDecision
+            var decision = new CandidateStageDecision
             {
                 CandidateId = candidate.Id, FromStatus = candidate.Status, ToStatus = newStatus,
                 FromVersion = candidate.Version, ToVersion = candidate.Version + 1,
                 Reason = request.Reason.Trim(), EvidenceJson = JsonSerializer.Serialize(evidence),
                 DecidedByUserId = userId, DecidedByName = currentUser.UserName ?? "İK",
                 DecidedAtUtc = DateTime.UtcNow,
-            });
+            };
+            var firstEvidenceCreated = false;
             if (candidate.Status == CandidateStatus.New)
             {
                 var alreadyVerified = await context.CandidateReviewEvidences
@@ -267,8 +267,13 @@ public sealed class SetCandidateStatusCommandHandler(
                     };
                     guidance.Stamp(reviewEvidence);
                     context.CandidateReviewEvidences.Add(reviewEvidence);
+                    firstEvidenceCreated = true;
                 }
             }
+
+            // İlk kullanıcı/aday kanıtı değişmez. Sonraki gerçek karar kendi yeni satırına bağlanır.
+            if (!firstEvidenceCreated) guidance.Stamp(decision);
+            context.CandidateStageDecisions.Add(decision);
 
             context.CandidateHistory.Add(new Domain.Entities.Recruitment.CandidateHistory
             {
@@ -414,7 +419,11 @@ public sealed record HireCandidateCommand(
     string Email,
     string ContractType,
     string? Title = null,
-    DateOnly? HireDate = null) : IRequest<HireResultDto>;
+    DateOnly? HireDate = null, int? ExpectedCandidateVersion = null, int? GuidanceContentRevisionId = null)
+    : IRequest<HireResultDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-hire-create";
+}
 
 public sealed record HireResultDto(
     int CandidateId, int EmployeeId, string EmployeeName, IdentityProvisioningDto Provisioning);
@@ -423,6 +432,9 @@ public sealed class HireCandidateCommandValidator : AbstractValidator<HireCandid
 {
     public HireCandidateCommandValidator()
     {
+        RuleFor(x => x.ExpectedCandidateVersion).GreaterThan(0).When(x => x.ExpectedCandidateVersion.HasValue);
+        RuleFor(x => x.ExpectedCandidateVersion).NotNull().When(x => x.GuidanceContentRevisionId.HasValue);
+        RuleFor(x => x.HireDate).NotNull().When(x => x.GuidanceContentRevisionId.HasValue);
         RuleFor(x => x.DepartmentId).GreaterThan(0);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
         RuleFor(x => x.ContractType)
@@ -436,7 +448,7 @@ public sealed class HireCandidateCommandHandler(
     IApplicationDbContext context,
     IIdentityService identityService,
     IIdentityProvisioningProcessor provisioningProcessor,
-    IDatabaseLock databaseLock)
+    IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<HireCandidateCommand, HireResultDto>
 {
     public async Task<HireResultDto> Handle(HireCandidateCommand request, CancellationToken cancellationToken)
@@ -469,6 +481,8 @@ public sealed class HireCandidateCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.CandidateId, cancellationToken)
             ?? throw new NotFoundException("Aday", request.CandidateId);
 
+        if (request.ExpectedCandidateVersion is { } version && candidate.Version != version)
+            throw new ConflictException("Aday siz incelerken değişti; işe alma bilgilerini güncel kayıtla yeniden kontrol edin.");
         if (candidate.PositionId != expectedPositionId)
             throw new ConflictException("Adayın pozisyon bağlantısı değişti; yeniden inceleyin.");
         if (candidate.Status is CandidateStatus.Hired)
@@ -549,12 +563,17 @@ public sealed class HireCandidateCommandHandler(
 
         await context.SaveChangesAsync(cancellationToken);
 
+        await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "candidate", candidate.Id,
+            [$"Personel #{employee.Id} oluşturuldu", $"Hesap hazırlığı #{provisioning.Id} istendi"], cancellationToken);
         return new HirePersisted(candidate.Id, employee.Id, employee.FullName, provisioning.Id);
     }
 }
 
-public sealed record RetryCandidateProvisioningCommand(int CandidateId, string? Email = null)
-    : IRequest<IdentityProvisioningDto>;
+public sealed record RetryCandidateProvisioningCommand(int CandidateId, string? Email = null, int? GuidanceContentRevisionId = null)
+    : IRequest<IdentityProvisioningDto>, IGuidanceOperationCommand
+{
+    public string GuidanceOperationKey => "candidate-provisioning-retry";
+}
 
 public sealed class RetryCandidateProvisioningCommandValidator
     : AbstractValidator<RetryCandidateProvisioningCommand>
@@ -571,14 +590,24 @@ public sealed class RetryCandidateProvisioningCommandValidator
 public sealed class RetryCandidateProvisioningCommandHandler(
     IApplicationDbContext context,
     IIdentityService identityService,
-    IIdentityProvisioningProcessor provisioningProcessor)
+    IIdentityProvisioningProcessor provisioningProcessor, IDatabaseLock databaseLock, ICurrentUser user, GuidanceOperationContext guidance)
     : IRequestHandler<RetryCandidateProvisioningCommand, IdentityProvisioningDto>
 {
     public async Task<IdentityProvisioningDto> Handle(
         RetryCandidateProvisioningCommand request,
         CancellationToken cancellationToken)
     {
-        var operation = await context.IdentityProvisioningOperations
+        var operationId = await databaseLock.ExecuteExclusiveAsync($"recruitment-candidate:{request.CandidateId}",
+            token => RequeueAsync(request, token), cancellationToken);
+        await provisioningProcessor.ProcessNowAsync(operationId, cancellationToken);
+        var current = await context.IdentityProvisioningOperations.AsNoTracking()
+            .SingleAsync(item => item.Id == operationId, cancellationToken);
+        return current.ToDto();
+    }
+
+    private async Task<int> RequeueAsync(RetryCandidateProvisioningCommand request, CancellationToken cancellationToken)
+    {
+        var operation = await context.IdentityProvisioningOperations.AsNoTracking()
             .Where(item => item.CandidateId == request.CandidateId
                 && item.Type == IdentityProvisioningOperationType.EmployeeLogin)
             .OrderByDescending(item => item.Id)
@@ -590,6 +619,7 @@ public sealed class RetryCandidateProvisioningCommandHandler(
             throw new ConflictException("Aday login provizyonu zaten tamamlanmış.");
         }
 
+        var previousEmail = operation.Email;
         if (!string.IsNullOrWhiteSpace(request.Email)
             && !string.Equals(operation.Email, request.Email, StringComparison.OrdinalIgnoreCase))
         {
@@ -602,16 +632,21 @@ public sealed class RetryCandidateProvisioningCommandHandler(
             operation.Email = email;
         }
 
-        operation.Status = IdentityProvisioningStatus.Pending;
-        operation.NextAttemptAtUtc = DateTime.UtcNow;
-        operation.LeaseUntilUtc = null;
-        operation.LastError = null;
-        await context.SaveChangesAsync(cancellationToken);
-
-        await provisioningProcessor.ProcessNowAsync(operation.Id, cancellationToken);
-        var current = await context.IdentityProvisioningOperations
-            .AsNoTracking()
-            .SingleAsync(item => item.Id == operation.Id, cancellationToken);
-        return current.ToDto();
+        var now = DateTime.UtcNow;
+        var changed = await context.IdentityProvisioningOperations
+            .Where(item => item.Id == operation.Id && item.Status == operation.Status
+                && item.AttemptCount == operation.AttemptCount && item.Email == previousEmail
+                && (item.LeaseUntilUtc == null || item.LeaseUntilUtc < now))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.Email, operation.Email)
+                .SetProperty(item => item.Status, IdentityProvisioningStatus.Pending)
+                .SetProperty(item => item.NextAttemptAtUtc, now)
+                .SetProperty(item => item.LeaseUntilUtc, (DateTime?)null)
+                .SetProperty(item => item.LastError, (string?)null), cancellationToken);
+        if (changed != 1)
+            throw new ConflictException("Hesap hazırlığı başka bir denemede veya değişmiş; güncel sonucu kontrol edin.");
+        await PreparationOperationEvidence.SaveAsync(context, guidance, user, request.GuidanceOperationKey, "candidate", request.CandidateId,
+            [$"Hesap hazırlığı #{operation.Id} yeniden istendi"], cancellationToken);
+        return operation.Id;
     }
 }

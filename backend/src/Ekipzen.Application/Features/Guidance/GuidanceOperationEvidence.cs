@@ -75,6 +75,7 @@ public sealed class GuidanceOperationBehavior<TRequest, TResponse>(IPlatformDbCo
             "employee-compensation-create" or "employee-compensation-correct" or "employee-compensation-date" => ("personnel-entry", "tab-mali"),
             "employee-document-upload" or "employee-document-withdraw" => ("personnel-entry", "tab-evrak"),
             "candidate-note-create" or "candidate-note-revise" or "candidate-evaluation-create" or "candidate-evaluation-revise" => ("recruitment", "first-review"),
+            "candidate-hire-create" or "candidate-provisioning-retry" => ("recruitment", "hire-preparation"),
             "candidate-first-review" => ("recruitment", "first-review"),
             "leave-decision" => ("leave", "decision-effect"),
             "payroll-period-create" => ("payroll", "period-create"),
@@ -159,7 +160,8 @@ public static class GuidanceOperationEvidenceReader
                         row.SatirNo, row.Durum, row.Aciklama, row.Sorunlar.Select(issue => $"{issue.Alan}: {issue.Mesaj}").ToArray())).ToArray()),
             });
         var preparationItems = preparation.Select(x => Item(x.OperationKey, x.Id, x.ResourceId,
-            x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
+            x.OperationKey == "candidate-hire-create" ? "hire-recorded" : x.OperationKey == "candidate-provisioning-retry" ? "retry-requested"
+                : x.OperationKey.EndsWith("create", StringComparison.Ordinal) ? "created" : "updated", x.CreatedAtUtc, x.GuidanceSnapshotJson!) with {
                 PreparationChanges = new(x.ResourceKind, x.ResourceId, JsonSerializer.Deserialize<string[]>(x.ChangedFieldsJson)!),
             });
         var recruitment = await GuidanceRecruitmentEvidenceReader.ReadAsync(db, userId, ct);

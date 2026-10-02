@@ -123,7 +123,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     public async Task<ActionResult<HireResultDto>> Hire(
         int id, CandidateHireBody body, CancellationToken cancellationToken)
         => Ok(await sender.Send(
-            new HireCandidateCommand(id, body.DepartmentId, body.Email, body.ContractType, body.Title, body.HireDate), cancellationToken));
+            new HireCandidateCommand(id, body.DepartmentId, body.Email, body.ContractType, body.Title, body.HireDate, body.ExpectedCandidateVersion, body.GuidanceContentRevisionId), cancellationToken));
 
     [HttpPost("candidates/{id:int}/provisioning/retry")]
     [ProducesResponseType<IdentityProvisioningDto>(StatusCodes.Status200OK)]
@@ -131,7 +131,7 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<IdentityProvisioningDto>> RetryProvisioning(
         int id, RetryProvisioningBody body, CancellationToken cancellationToken)
-        => Ok(await sender.Send(new RetryCandidateProvisioningCommand(id, body.Email), cancellationToken));
+        => Ok(await sender.Send(new RetryCandidateProvisioningCommand(id, body.Email, body.GuidanceContentRevisionId), cancellationToken));
 
     // --- pozisyonlar & funnel ---
 
@@ -180,8 +180,8 @@ public sealed class RecruitmentController(ISender sender) : ControllerBase
         int ExperienceYears, string? Summary, string Reason, bool ConfirmExistingEvidenceReview, int? GuidanceContentRevisionId = null);
     public sealed record CandidateNoteBody(string NoteType, string Text, int? GuidanceContentRevisionId = null);
     public sealed record CandidateEvaluationBody(string Criterion, int Score, int MaxScore = 5, int? GuidanceContentRevisionId = null);
-    public sealed record CandidateHireBody(int DepartmentId, string Email, string ContractType, string? Title = null, DateOnly? HireDate = null);
-    public sealed record RetryProvisioningBody(string? Email = null);
+    public sealed record CandidateHireBody(int DepartmentId, string Email, string ContractType, string? Title = null, DateOnly? HireDate = null, int? ExpectedCandidateVersion = null, int? GuidanceContentRevisionId = null);
+    public sealed record RetryProvisioningBody(string? Email = null, int? GuidanceContentRevisionId = null);
     public sealed record CorrectPositionBody(int ExpectedVersion, string Title,
         int? DepartmentId, int OpenCount, bool IsOpen, string Reason, int? GuidanceContentRevisionId = null);
 }

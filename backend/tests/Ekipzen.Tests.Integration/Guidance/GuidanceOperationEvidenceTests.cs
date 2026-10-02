@@ -101,12 +101,13 @@ public sealed partial class GuidanceCatalogTests
             var row = (await OwnOperationsAsync(author)).Should().ContainSingle().Subject.Evidence;
             row.OperationKey.Should().Be("candidate-first-review"); row.ResourceId.Should().Be(candidate.Id); row.Outcome.Should().Be("Interview");
             (await author.PatchAsJsonAsync(path, new { status = "Teklif", expectedVersion = candidate.Version + 1,
-                reason = "İleri aşama", guidanceContentRevisionId = source.Content.Id })).StatusCode.Should().Be(HttpStatusCode.Conflict);
-            (await OwnOperationsAsync(author)).Should().ContainSingle();
-            (await author.PatchAsJsonAsync(path, new { status = "Yeni", expectedVersion = candidate.Version + 1, reason = "Yeniden inceleme" })).StatusCode.Should().Be(HttpStatusCode.OK);
-            (await author.PatchAsJsonAsync(path, new { status = "Red", expectedVersion = candidate.Version + 2,
+                reason = "İleri aşama", guidanceContentRevisionId = source.Content.Id })).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await OwnOperationsAsync(author)).Should().HaveCount(2);
+            (await author.PatchAsJsonAsync(path, new { status = "Yeni", expectedVersion = candidate.Version + 2, reason = "Yeniden inceleme" })).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await author.PatchAsJsonAsync(path, new { status = "Red", expectedVersion = candidate.Version + 3,
                 reason = "Tekrar incelendi", guidanceContentRevisionId = source.Content.Id })).StatusCode.Should().Be(HttpStatusCode.OK);
-            (await OwnOperationsAsync(author)).Should().ContainSingle().Which.Evidence.Should().BeEquivalentTo(row, "ilk kanıt yeni incelemeyle ezilmez");
+            var proofs = await OwnOperationsAsync(author); proofs.Should().HaveCount(3);
+            proofs.Single(x => x.Evidence.OperationKey == "candidate-first-review").Evidence.Should().BeEquivalentTo(row, "ilk kanıt yeni incelemeyle ezilmez");
             (await OwnOperationsAsync(reviewer)).Should().BeEmpty();
         }
         finally { await CleanupAsync(key); }

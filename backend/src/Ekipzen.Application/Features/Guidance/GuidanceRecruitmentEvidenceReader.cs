@@ -21,6 +21,9 @@ internal static class GuidanceRecruitmentEvidenceReader
         var revisions = await db.CandidateEvidenceRevisions.AsNoTracking()
             .Where(x => x.ChangedByUserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
 
+        var decisions = await db.CandidateStageDecisions.AsNoTracking()
+            .Where(x => x.DecidedByUserId == userId && x.GuidanceSnapshotJson != null).ToListAsync(ct);
+
         return positions.Select(x => Item("position-correct", x.Id, x.PositionId, "corrected", x.ChangedAtUtc, x.GuidanceSnapshotJson!) with {
                 RecruitmentChanges = new(null, x.PositionId, "position", x.Id, x.FromVersion, x.ToVersion, x.Reason),
             }).Concat(candidates.Select(x => Item("candidate-correct", x.Id, x.CandidateId, "corrected", x.ChangedAtUtc, x.GuidanceSnapshotJson!) with {
@@ -33,6 +36,8 @@ internal static class GuidanceRecruitmentEvidenceReader
                 x.Id, x.CandidateId, "revised", x.ChangedAtUtc, x.GuidanceSnapshotJson!) with {
                 RecruitmentChanges = new(x.CandidateId, null, x.InterviewNoteId.HasValue ? "note" : "evaluation",
                     x.InterviewNoteId ?? x.EvaluationId!.Value, x.Version - 1, x.Version, x.Reason, x.FromCandidateVersion, x.ToCandidateVersion),
+            })).Concat(decisions.Select(x => Item("candidate-stage-decision", x.Id, x.CandidateId, x.ToStatus.ToString(), x.DecidedAtUtc, x.GuidanceSnapshotJson!) with {
+                RecruitmentChanges = new(x.CandidateId, null, "stage-decision", x.Id, x.FromVersion, x.ToVersion, x.Reason),
             })).ToList();
     }
 }

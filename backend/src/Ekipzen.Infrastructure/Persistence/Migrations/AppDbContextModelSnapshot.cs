@@ -4015,6 +4015,10 @@ namespace Ekipzen.Infrastructure.Persistence.Migrations
                     b.Property<int>("FromVersion")
                         .HasColumnType("int");
 
+                    b.Property<string>("GuidanceSnapshotJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(2000)

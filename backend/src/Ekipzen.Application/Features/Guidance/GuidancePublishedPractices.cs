@@ -13,7 +13,7 @@ public static class GuidancePublishedSteps
     public static readonly IReadOnlyDictionary<string, string[]> Steps = new Dictionary<string, string[]>
     {
         ["personnel-entry"] = ["tab-kimlik", "tab-iletisim", "tab-is", "tab-mali", "tab-ozluk", "tab-evrak"],
-        ["recruitment"] = ["candidate-create", "first-review"],
+        ["recruitment"] = ["candidate-create", "first-review", "hire-preparation"],
         ["leave"] = ["review-request", "decision-effect"],
         ["company"] = ["initial-setup", "company-profile", "departments", "access-preparation"],
         ["personnel"] = ["record-review", "import-review", "rehire"],

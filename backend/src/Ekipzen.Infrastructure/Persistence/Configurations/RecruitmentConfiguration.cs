@@ -95,6 +95,7 @@ public sealed class CandidateStageDecisionConfiguration : IEntityTypeConfigurati
 {
     public void Configure(EntityTypeBuilder<CandidateStageDecision> b)
     {
+        b.Property(item => item.GuidanceSnapshotJson).HasMaxLength(4000);
         b.Property(item => item.Reason).IsRequired().HasMaxLength(2000);
         b.Property(item => item.EvidenceJson).IsRequired();
         b.Property(item => item.DecidedByUserId).IsRequired().HasMaxLength(450);
