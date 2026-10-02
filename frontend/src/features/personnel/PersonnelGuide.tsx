@@ -51,9 +51,9 @@ const content: Record<PersonnelGuideStep, GuideContent> = {
   "tab-ozluk": {
     title: "Gerekli ek bilgileri ayır",
     purpose: "Özlük, ekipman ve çalışma koşullarına ilişkin bilgiler farklı ihtiyaçlar için tutulur.",
-    action: "Sağlık ve çalışma koşulu alanlarını yalnız doğrulanmış bilgiyle doldurun.",
-    reason: "Bir kutunun işaretli olması, çalışanın o işe uygunluğunun ayrıca değerlendirildiği anlamına gelmez.",
-    example: "Yüksekte çalışma bilgisi bilinmiyorsa varsayılan seçimle karar vermeyin.",
+    action: "Ekipman bedenlerini doğrulayın; sağlık notuna yalnız gerekli ve doğrulanmış bilgiyi girin.",
+    reason: "Kart bilgisi çalışanın belirli bir işe uygunluğunu onaylamaz. Uygunluk değerlendirmesi yetkili süreçte ayrı yapılır.",
+    example: "Ayakkabı bedeni bilinmiyorsa tahmin etmeyin; çalışandan doğrulayın.",
     check: "Hassas bilgileri yalnız gerekli olduğu ölçüde ve yetkili kişilerle işleyin.",
   },
   "tab-evrak": {

@@ -6,11 +6,12 @@ import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
 import {
   useChangePassword, useSettings, useUpdateCompany, useUpdateNotifications,
-  useUploadLogo, type NotificationSettingsDto,
+  useUploadLogo,
 } from "./queries";
 
 import { TenantSetupPanel } from "./TenantSetupPanel";
 import { DepartmentsPanel } from "./DepartmentsPanel";
+import { CompanyAccessPreparation } from "./CompanyAccessPreparation";
 import { CompanyPreparationGuide } from "./CompanyPreparationGuide";
 
 const SECTIONS: [string, string, string][] = [
@@ -20,9 +21,9 @@ const SECTIONS: [string, string, string][] = [
   ["billing", "fa-credit-card", "Abonelik & Fatura"],
 ];
 
-const NOTIF_ROWS: [keyof NotificationSettingsDto & string, string, string][] = [
-  ["newPersonnelEmail", "Yeni Personel Kaydı", "Sisteme yeni biri eklendiğinde yöneticilere bildir."],
-  ["leaveRequestEmail", "İzin Talepleri", "Personel izin talebi oluşturduğunda anında e-posta gönder."],
+const NOTIF_ROWS: ["newPersonnelEmail" | "leaveRequestEmail" | "weeklyReportEmail", string, string][] = [
+  ["newPersonnelEmail", "Yeni Personel Kaydı", "Yeni personel e-posta bildirimi tercihi."],
+  ["leaveRequestEmail", "İzin Talepleri", "İzin talebi e-posta bildirimi tercihi."],
   ["weeklyReportEmail", "Haftalık Rapor", "Henüz desteklenmiyor; otomatik rapor gönderilmez."],
 ];
 
@@ -41,6 +42,13 @@ export function SettingsPage() {
   const [company, setCompany] = useState<Record<string, string> | null>(null);
   const [passwords, setPasswords] = useState({ current: "", next: "", repeat: "" });
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [logoReview, setLogoReview] = useState<{ file: File; expectedRecordToken?: string } | null>(null);
+  const [logoSource, setLogoSource] = useState<number | null>(null);
+  const [logoConfirmed, setLogoConfirmed] = useState(false);
+  const [notifSource, setNotifSource] = useState<number | null>(null);
+  const [notifReview, setNotifReview] = useState<{ newPersonnelEmail: boolean; leaveRequestEmail: boolean; weeklyReportEmail: boolean; expectedRecordToken?: string } | null>(null);
+  const [notifConfirmed, setNotifConfirmed] = useState(false);
+  const [notifBefore, setNotifBefore] = useState<{ newPersonnelEmail: boolean; leaveRequestEmail: boolean } | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -101,18 +109,22 @@ export function SettingsPage() {
     }
   };
 
-  const toggleNotification = async (key: keyof NotificationSettingsDto & string) => {
+  const toggleNotification = (key: "newPersonnelEmail" | "leaveRequestEmail" | "weeklyReportEmail") => {
+    if (key === "weeklyReportEmail") return;
+    if (!notifReview) setNotifBefore({ newPersonnelEmail: notifications.newPersonnelEmail ?? false, leaveRequestEmail: notifications.leaveRequestEmail ?? false });
+    setNotifConfirmed(false);
+    setNotifReview(current => ({ newPersonnelEmail: notifications.newPersonnelEmail ?? false,
+      leaveRequestEmail: notifications.leaveRequestEmail ?? false, weeklyReportEmail: false,
+      expectedRecordToken: notifications.recordToken ?? undefined, ...current,
+      [key]: !(current?.[key] ?? notifications[key]) }));
+  };
+  const saveNotifications = async () => {
+    if (!notifReview || !notifConfirmed) return;
     try {
-      await updateNotifications.mutateAsync({
-        newPersonnelEmail: notifications.newPersonnelEmail ?? false,
-        leaveRequestEmail: notifications.leaveRequestEmail ?? false,
-        weeklyReportEmail: false,
-        [key]: !notifications[key],
-      });
-      showToast("Bildirim tercihi güncellendi.", "success");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Tercih kaydedilemedi.", "error");
-    }
+      await updateNotifications.mutateAsync({ ...notifReview, ...(notifSource != null ? { guidanceContentRevisionId: notifSource } : {}) });
+      setNotifReview(null); setNotifSource(null); setNotifConfirmed(false);
+      showToast("Bildirim tercihi kaydedildi; e-posta teslimi ayrıca doğrulanır.", "success");
+    } catch (cause) { setNotifConfirmed(false); showToast(cause instanceof ApiError ? cause.message : "Tercih kaydedilemedi; taslağınız korunuyor.", "error"); }
   };
 
   const submitPassword = async () => {
@@ -134,17 +146,17 @@ export function SettingsPage() {
     }
   };
 
-  const onLogoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const onLogoPick = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) { setLogoReview({ file, expectedRecordToken: data.company?.logoRecordToken ?? undefined }); setLogoConfirmed(false); }
+    event.target.value = "";
+  };
+  const saveLogo = async () => {
+    if (!logoReview || !logoConfirmed) return;
     try {
-      await uploadLogo.mutateAsync(file);
-      showToast("Logo yüklendi.", "success");
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Logo yüklenemedi.", "error");
-    } finally {
-      e.target.value = "";
-    }
+      await uploadLogo.mutateAsync({ ...logoReview, ...(logoSource != null ? { guidanceContentRevisionId: logoSource } : {}) });
+      setLogoReview(null); setLogoSource(null); setLogoConfirmed(false); showToast("Logo yüklendi.", "success");
+    } catch (cause) { setLogoConfirmed(false); showToast(cause instanceof ApiError ? cause.message : "Logo yüklenemedi; seçiminiz korunuyor.", "error"); }
   };
 
   return (
@@ -160,7 +172,7 @@ export function SettingsPage() {
         </button>
       </div>
 
-      {section === "general" && <CompanyPreparationGuide companyName={data.company?.name ?? ""} />}
+      {section === "general" && <CompanyPreparationGuide companyName={data.company?.name ?? ""} onOpenAccess={() => setSection("security")} />}
       <TenantSetupPanel onInitialized={() => setCompany(null)} />
       <div className="settings-layout">
         <aside className="settings-sidebar">
@@ -210,6 +222,19 @@ export function SettingsPage() {
                     </div>
                   </div>
                 </div>
+                <GuidanceOperationSource process="company" step="company-profile" value={logoSource} onChange={value => { setLogoSource(value); setLogoConfirmed(false); }} disabled={uploadLogo.isPending} label="Logo yüklerken kullandığım rehber sürümü" />
+                {logoReview && <section className="ez-company-operation-review" aria-label="Logo yükleme önizlemesi">
+                  <p>Yeni dosya: {logoReview.file.name} ({Math.ceil(logoReview.file.size / 1024)} KB). Mevcut logo değişir; şirket profili alanları değişmez. Hatalı dosyayı doğru dosyayla yeniden değiştirebilirsiniz.</p>
+                  <label><input type="checkbox" checked={logoConfirmed} disabled={uploadLogo.isPending} onChange={event => setLogoConfirmed(event.target.checked)} /> Logo değişimini teyit ediyorum</label>
+                  <button type="button" className="btn btn-primary" disabled={!logoConfirmed || uploadLogo.isPending} onClick={() => void saveLogo()}>Logoyu kaydet</button>
+                  <button type="button" className="btn btn-secondary" disabled={uploadLogo.isPending || settingsQ.isFetching} onClick={async () => {
+                    setLogoConfirmed(false);
+                    const result = await settingsQ.refetch();
+                    if (result.isError || !result.data?.company) { showToast("Güncel logo bilgisi okunamadı; seçiminiz korunuyor.", "error"); return; }
+                    setLogoReview(current => current ? { ...current, expectedRecordToken: result.data.company!.logoRecordToken ?? undefined } : current);
+                  }}>Güncel logo durumunu yeniden incele</button>
+                  <button type="button" className="btn btn-secondary" disabled={uploadLogo.isPending} onClick={() => { setLogoReview(null); setLogoSource(null); }}>Vazgeç</button>
+                </section>}
                 <div className="form-grid-2">
                   <div className="input-group">
                     <label htmlFor="set-company-name">Şirket Adı</label>
@@ -246,6 +271,8 @@ export function SettingsPage() {
             <div id="set-notif" className="set-section active">
               <div className="set-card">
                 <div className="card-head"><h3>E-Posta Bildirimleri</h3></div>
+                <p>Bu işlem yalnız tercihi kaydeder; e-posta gönderildiği veya teslim edildiği anlamına gelmez. Gönderim altyapısı ve gerçek teslim sonucu ayrıca kontrol edilir.</p>
+                <GuidanceOperationSource process="company" step="company-profile" value={notifSource} onChange={value => { setNotifSource(value); setNotifConfirmed(false); }} disabled={updateNotifications.isPending} label="Bildirim tercihinde kullandığım rehber sürümü" />
                 {NOTIF_ROWS.map(([key, title, description], index) => (
                   <div key={key}>
                     {index > 0 && <div className="divider" />}
@@ -255,7 +282,7 @@ export function SettingsPage() {
                         <input
                           type="checkbox"
                           aria-label={title}
-                          checked={key === "weeklyReportEmail" ? false : notifications[key] ?? false}
+                          checked={key === "weeklyReportEmail" ? false : (notifReview?.[key] ?? notifications[key] ?? false)}
                           disabled={key === "weeklyReportEmail" || updateNotifications.isPending}
                           onChange={() => toggleNotification(key)}
                         />
@@ -264,12 +291,28 @@ export function SettingsPage() {
                     </div>
                   </div>
                 ))}
+                {notifReview && <section className="ez-company-operation-review" aria-label="Bildirim tercihi önizlemesi">
+                  <p>İncelenen kayıt: yeni personel e-postası {notifBefore?.newPersonnelEmail ? "Açık" : "Kapalı"}, izin talebi e-postası {notifBefore?.leaveRequestEmail ? "Açık" : "Kapalı"}.</p>
+                  <p>Yeni personel e-postası: {notifReview.newPersonnelEmail ? "Açık" : "Kapalı"} · İzin talebi e-postası: {notifReview.leaveRequestEmail ? "Açık" : "Kapalı"}. Haftalık rapor gönderimi desteklenmiyor. Yanlış tercih bu ekrandan yeniden düzeltilebilir.</p>
+                  <label><input type="checkbox" checked={notifConfirmed} disabled={updateNotifications.isPending} onChange={event => setNotifConfirmed(event.target.checked)} /> Bildirim tercihlerini teyit ediyorum</label>
+                  <button type="button" className="btn btn-primary" disabled={!notifConfirmed || updateNotifications.isPending} onClick={() => void saveNotifications()}>Bildirim tercihlerini kaydet</button>
+                  <button type="button" className="btn btn-secondary" disabled={updateNotifications.isPending || settingsQ.isFetching} onClick={async () => {
+                    setNotifConfirmed(false);
+                    const result = await settingsQ.refetch();
+                    const current = result.data?.notifications;
+                    if (result.isError || !current) { showToast("Güncel bildirim tercihleri okunamadı; taslağınız korunuyor.", "error"); return; }
+                    setNotifBefore({ newPersonnelEmail: current.newPersonnelEmail ?? false, leaveRequestEmail: current.leaveRequestEmail ?? false });
+                    setNotifReview(draft => draft ? { ...draft, expectedRecordToken: current.recordToken ?? undefined } : draft);
+                  }}>Güncel bildirim tercihlerini yeniden incele</button>
+                  <button type="button" className="btn btn-secondary" disabled={updateNotifications.isPending} onClick={() => { setNotifReview(null); setNotifSource(null); setNotifConfirmed(false); }}>Taslağı bırak</button>
+                </section>}
               </div>
             </div>
           )}
 
           {section === "security" && (
             <div id="set-security" className="set-section active">
+              <CompanyAccessPreparation />
               <div className="set-card">
                 <div className="card-head"><h3>Giriş Güvenliği</h3></div>
                 {passwordError && <p className="form-error" role="alert">{passwordError}</p>}

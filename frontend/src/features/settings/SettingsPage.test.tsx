@@ -49,11 +49,14 @@ test("şirket formu backend verisiyle dolar ve kaydet PUT atar", async () => {
   });
 });
 
-test("bildirim toggle değişimi anında PUT notifications atar", async () => {
+test("bildirim toggle değişimi önizlenir ve açık teyitten sonra PUT atar", async () => {
   renderShell();
   await screen.findByLabelText("Şirket Adı");
   await userEvent.click(screen.getByRole("button", { name: /Bildirimler/ }));
   await userEvent.click(screen.getByLabelText("Yeni Personel Kaydı"));
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+  await userEvent.click(screen.getByLabelText("Bildirim tercihlerini teyit ediyorum"));
+  await userEvent.click(screen.getByRole("button", { name: "Bildirim tercihlerini kaydet" }));
   await waitFor(() => {
     const put = vi.mocked(fetch).mock.calls.find(
       ([u, i]) => String(u) === "/api/settings/notifications" && i?.method === "PUT",

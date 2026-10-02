@@ -8,7 +8,7 @@ import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 
 type SetupStatus = components["schemas"]["TenantSetupStatusDto"];
 
-export function CompanyPreparationGuide({ companyName }: { companyName: string }) {
+export function CompanyPreparationGuide({ companyName, onOpenAccess }: { companyName: string; onOpenAccess?: () => void }) {
   const setup = useQuery({ queryKey: ["tenant-setup"], queryFn: () => apiFetch<SetupStatus>("/setup") });
   const departments = useDepartments();
 
@@ -44,6 +44,7 @@ export function CompanyPreparationGuide({ companyName }: { companyName: string }
         <p className="ez-company-preparation-example"><strong>Neden?</strong> Yanlış departman, çalışan kartındaki ekip bilgisini ve sonraki filtreleri yanıltır. Ad veya kod sonradan düzeltilebilir.</p>
         <a href="#settings-departments-title">Departmanlara git</a>
       </li>
+      <li><strong>Erişimi hazırlayın</strong><p>Personel kaydı, hesap hazırlama ve gerçek giriş sonucunu ayrı kontrol edin. Unvan, yetki veya davet teslimi değildir.</p><button type="button" className="btn btn-secondary" onClick={onOpenAccess}>Erişim hazırlığına git</button></li>
     </ol>
     <p className="ez-company-preparation-next">Bu kontrollerden sonra <Link to={appPath("/personnel/new")}>çalışan kartı rehberine geçin</Link>. Buradaki durumlar kişisel öğrenme ilerlemesi veya kurulum onayı değildir.</p>
     <GuidanceStepLessons process="company" />

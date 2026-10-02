@@ -767,14 +767,18 @@ export const useReverseOffboarding = () => {
   });
 };
 
-export const useUploadPhoto = () =>
-  useMutation({
-    mutationFn: ({ id, file }: { id: number; file: File }) => {
-      const form = new FormData();
-      form.append("file", file);
+export const useUploadPhoto = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file, expectedRecordToken, guidanceContentRevisionId }: { id: number; file: File; expectedRecordToken?: string; guidanceContentRevisionId?: number }) => {
+      const form = new FormData(); form.append("file", file);
+      if (expectedRecordToken) form.append("expectedRecordToken", expectedRecordToken);
+      if (guidanceContentRevisionId != null) form.append("guidanceContentRevisionId", String(guidanceContentRevisionId));
       return apiFetch<{ photoPath: string }>(`/employees/${id}/photo`, { method: "POST", body: form });
     },
+    onSuccess: (_, input) => Promise.all([queryClient.invalidateQueries({ queryKey: ["employees", input.id] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
+};
 
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();

@@ -946,6 +946,9 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         file?: string;
+                        expectedRecordToken?: string;
+                        /** Format: int32 */
+                        guidanceContentRevisionId?: number;
                     };
                 };
             };
@@ -1658,7 +1661,10 @@ export interface paths {
         post?: never;
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    expectedRecordToken?: string;
+                    guidanceContentRevisionId?: number;
+                };
                 header?: never;
                 path: {
                     id: number;
@@ -1698,6 +1704,45 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/departments/{id}/deletion-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DepartmentDeletionPreviewDto"];
+                        "application/json": components["schemas"]["DepartmentDeletionPreviewDto"];
+                        "text/json": components["schemas"]["DepartmentDeletionPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3984,7 +4029,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         put?: never;
         post: {
             parameters: {
@@ -4000,6 +4075,9 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         file?: string;
+                        expectedRecordToken?: string;
+                        /** Format: int32 */
+                        guidanceContentRevisionId?: number;
                     };
                 };
             };
@@ -9366,6 +9444,7 @@ export interface components {
             headquartersAddress?: string | null;
             logoPath?: string | null;
             recordToken?: string | null;
+            logoRecordToken?: string | null;
         };
         CompensationDateCorrectionDto: {
             /** Format: date */
@@ -9805,6 +9884,18 @@ export interface components {
             /** Format: int32 */
             count?: number;
         };
+        DepartmentDeletionPreviewDto: {
+            /** Format: int32 */
+            id?: number;
+            name?: string | null;
+            code?: string | null;
+            /** Format: int32 */
+            employeeCount?: number;
+            /** Format: int32 */
+            positionCount?: number;
+            canDelete?: boolean;
+            recordToken?: string | null;
+        };
         DepartmentDto: {
             /** Format: int32 */
             id?: number;
@@ -10093,10 +10184,8 @@ export interface components {
             pantsSize?: string | null;
             coatSize?: string | null;
             shoeSize?: string | null;
-            canWorkAtHeight?: boolean;
-            canWorkNightShift?: boolean;
-            canLiftHeavyLoads?: boolean;
             healthNotes?: string | null;
+            photoRecordToken?: string | null;
         };
         EmployeeProfileUpsertModel: {
             /** Format: date */
@@ -10122,9 +10211,6 @@ export interface components {
             pantsSize?: string | null;
             coatSize?: string | null;
             shoeSize?: string | null;
-            canWorkAtHeight?: boolean;
-            canWorkNightShift?: boolean;
-            canLiftHeavyLoads?: boolean;
             healthNotes?: string | null;
         };
         EmployeeUpsertModel: {
@@ -10705,6 +10791,7 @@ export interface components {
             newPersonnelEmail?: boolean;
             leaveRequestEmail?: boolean;
             weeklyReportEmail?: boolean;
+            recordToken?: string | null;
         };
         OffboardingAccessImpactDto: {
             /** Format: int32 */
@@ -11938,6 +12025,10 @@ export interface components {
             newPersonnelEmail?: boolean;
             leaveRequestEmail?: boolean;
             weeklyReportEmail?: boolean;
+            expectedRecordToken?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         UpdatePayrollSettingsCommand: {
             /** Format: date */

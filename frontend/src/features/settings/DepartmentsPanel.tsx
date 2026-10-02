@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { useDepartments } from "../personnel/queries";
-import { useCreateDepartment, useUpdateDepartment } from "./departmentQueries";
+import { useCreateDepartment, useUpdateDepartment, usePreviewDepartmentDeletion, useDeleteDepartment, type DepartmentDeletionPreview } from "./departmentQueries";
 
 type Draft = { id: number; name: string; code: string; recordToken?: string };
 
@@ -11,6 +11,24 @@ export function DepartmentsPanel() {
   const departmentsQ = useDepartments();
   const create = useCreateDepartment();
   const update = useUpdateDepartment();
+  const previewDelete = usePreviewDepartmentDeletion();
+  const remove = useDeleteDepartment();
+  const [deletion, setDeletion] = useState<DepartmentDeletionPreview | null>(null);
+  const [deleteSource, setDeleteSource] = useState<number | null>(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const prepareDeletion = async (id: number) => {
+    setError(""); setDeletion(null); setDeleteSource(null); setDeleteConfirmed(false);
+    try { setDeletion(await previewDelete.mutateAsync(id)); }
+    catch (cause) { setError(cause instanceof ApiError ? cause.message : "Silme etkisi okunamadı."); }
+  };
+  const confirmDeletion = async () => {
+    if (!deletion?.canDelete || !deleteConfirmed) return;
+    setError("");
+    try {
+      await remove.mutateAsync({ id: deletion.id, expectedRecordToken: deletion.recordToken, ...(deleteSource != null ? { guidanceContentRevisionId: deleteSource } : {}) });
+      setDeletion(null); setDeleteSource(null); setDeleteConfirmed(false); showToast("Departman silindi.", "success");
+    } catch (cause) { setDeleteConfirmed(false); setError(cause instanceof ApiError ? cause.message : "Departman silinemedi; önizlemeniz korunuyor."); }
+  };
   const { showToast } = useToast();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -56,6 +74,18 @@ export function DepartmentsPanel() {
       <p>Çalışan kartında doğru ekibi seçebilmek için önce departmanları tanımlayın. Hatalı ad veya kodu daha sonra düzeltebilirsiniz.</p>
     </div>
     {error && <p className="form-error" role="alert">{error}</p>}
+    {deletion && <section className="ez-company-operation-review" aria-label="Departman silme önizlemesi">
+      <h4>{deletion.name} departmanını silme</h4>
+      <p>Kod: {deletion.code || "Yok"} · {deletion.employeeCount} çalışan · {deletion.positionCount} pozisyon bağlı.</p>
+      <p>{deletion.canDelete ? "Bağlı kayıt yok. Silme departmanı seçim listesinden kaldırır; aynı kayıt geri getirilemez. Yanlış ad veya kod için Düzenle yolunu kullanın." : "Bağlı çalışan veya pozisyon olduğu için silme kapalı. Önce gerçek bağlantıları kontrol edip başka departmana taşıyın."}</p>
+      <GuidanceOperationSource process="company" step="departments" value={deleteSource} onChange={value => { setDeleteSource(value); setDeleteConfirmed(false); }} disabled={remove.isPending} label="Departman silerken kullandığım rehber sürümü" />
+      <label><input type="checkbox" checked={deleteConfirmed} disabled={!deletion.canDelete || remove.isPending} onChange={event => setDeleteConfirmed(event.target.checked)} /> Bu departmanın silinmesini teyit ediyorum</label>
+      <div className="ez-department-actions">
+        <button type="button" className="btn btn-secondary" disabled={remove.isPending} onClick={() => { setDeletion(null); setDeleteSource(null); }}>Vazgeç</button>
+        <button type="button" className="btn btn-secondary" disabled={remove.isPending || previewDelete.isPending} onClick={() => void prepareDeletion(deletion.id)}>Güncel silme etkisini yeniden incele</button>
+        <button type="button" className="btn btn-primary" disabled={!deletion.canDelete || !deleteConfirmed || remove.isPending} onClick={() => void confirmDeletion()}>Departmanı sil</button>
+      </div>
+    </section>}
     <form className="ez-department-form" onSubmit={submitCreate}>
       <div className="input-group">
         <label htmlFor="new-department-name">Yeni departman adı</label>
@@ -96,6 +126,7 @@ export function DepartmentsPanel() {
                   setError(""); setEditSource(null);
                   setEditing({ id: department.id!, name: department.name ?? "", code: department.code ?? "", recordToken: department.recordToken ?? undefined });
                 }} disabled={update.isPending}>Düzenle</button>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={previewDelete.isPending || remove.isPending} onClick={() => void prepareDeletion(department.id!)}>Silme etkisini incele</button>
               </div>}
             </li>)}
           </ul>}

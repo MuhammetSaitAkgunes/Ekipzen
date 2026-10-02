@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ApiError, apiFetch } from "../../api/client";
+import { ApiError, apiFetch, apiDownload } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -35,6 +36,7 @@ const TABS: { id: TabId; icon: string; label: string }[] = [
 ];
 
 type FormState = {
+  healthNotes: string;
   nationalId: string; birthDate: string; firstName: string; lastName: string;
   gender: string; maritalStatus: string; bloodType: string;
   mobilePhone: string; personalEmail: string; homeAddress: string;
@@ -43,10 +45,10 @@ type FormState = {
   rehireEligibility: string; exitCode: string;
   iban: string; bankName: string; salaryType: string; pensionStatus: string; mealCard: string;
   tshirtSize: string; pantsSize: string; coatSize: string; shoeSize: string;
-  canWorkAtHeight: boolean; canWorkNightShift: boolean; canLiftHeavyLoads: boolean; healthNotes: string;
 };
 
 const emptyForm: FormState = {
+  healthNotes: "",
   nationalId: "", birthDate: "", firstName: "", lastName: "",
   gender: "", maritalStatus: "", bloodType: "",
   mobilePhone: "", personalEmail: "", homeAddress: "",
@@ -55,7 +57,6 @@ const emptyForm: FormState = {
   rehireEligibility: "Değerlendirilmedi", exitCode: "Yok",
   iban: "", bankName: "", salaryType: "", pensionStatus: "", mealCard: "",
   tshirtSize: "", pantsSize: "", coatSize: "", shoeSize: "",
-  canWorkAtHeight: false, canWorkNightShift: false, canLiftHeavyLoads: false, healthNotes: "",
 };
 
 const formFrom = (detail: EmployeeDetailDto): FormState => ({
@@ -89,9 +90,6 @@ const formFrom = (detail: EmployeeDetailDto): FormState => ({
   pantsSize: detail.profile?.pantsSize ?? emptyForm.pantsSize,
   coatSize: detail.profile?.coatSize ?? emptyForm.coatSize,
   shoeSize: detail.profile?.shoeSize ?? emptyForm.shoeSize,
-  canWorkAtHeight: detail.profile?.canWorkAtHeight ?? false,
-  canWorkNightShift: detail.profile?.canWorkNightShift ?? false,
-  canLiftHeavyLoads: detail.profile?.canLiftHeavyLoads ?? false,
   healthNotes: detail.profile?.healthNotes ?? "",
 });
 
@@ -120,8 +118,6 @@ const modelFrom = (form: FormState, existing: EmployeeDetailDto | undefined): Em
     mealCard: form.mealCard || null,
     tshirtSize: form.tshirtSize || null, pantsSize: form.pantsSize || null, coatSize: form.coatSize || null,
     shoeSize: form.shoeSize || null,
-    canWorkAtHeight: form.canWorkAtHeight, canWorkNightShift: form.canWorkNightShift,
-    canLiftHeavyLoads: form.canLiftHeavyLoads,
     healthNotes: form.healthNotes || null,
   },
 });
@@ -175,9 +171,29 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const [rehireReview, setRehireReview] = useState(false);
   const [rehireGuidanceVersion, setRehireGuidanceVersion] = useState<number | null>(null);
   const [compensationGuidanceVersion, setCompensationGuidanceVersion] = useState<number | null>(null);
+  const [photoReview, setPhotoReview] = useState<{ file: File; expectedRecordToken?: string } | null>(null);
+  const [photoSource, setPhotoSource] = useState<number | null>(null);
+  const [photoConfirmed, setPhotoConfirmed] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const detailQ = useEmployee(employeeId);
+  const { user } = useAuth();
+  const canViewPhoto = user?.role === "hr-admin";
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoReadError, setPhotoReadError] = useState(false);
+  const photoPath = detailQ.data?.profile?.photoPath;
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setPhotoUrl(null); setPhotoReadError(false);
+    if (employeeId !== null && photoPath && canViewPhoto) {
+      apiDownload(`/employees/${employeeId}/photo`).then(({ blob }) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob); setPhotoUrl(objectUrl);
+      }).catch(() => { if (!cancelled) setPhotoReadError(true); });
+    }
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [employeeId, photoPath, canViewPhoto]);
   const departmentsQ = useDepartments();
   const managerChoicesQ = useEmployeeManagerChoices(employeeId, !readOnly && activeTab === "tab-is");
   const foundationQ = useEmployeeEmploymentFoundation(employeeId);
@@ -378,14 +394,16 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
     }
   };
 
-  const handlePhoto = async (file: File | undefined) => {
-    if (!file || employeeId === null) return;
+  const handlePhoto = (file: File | undefined) => {
+    if (!file || employeeId === null || readOnly) return;
+    setPhotoReview({ file, expectedRecordToken: detailQ.data?.profile?.photoRecordToken ?? undefined }); setPhotoConfirmed(false);
+  };
+  const savePhoto = async () => {
+    if (!photoReview || !photoConfirmed || employeeId === null || readOnly) return;
     try {
-      await uploadPhoto.mutateAsync({ id: employeeId, file });
-      showToast("Fotoğraf yüklendi.", "success");
-    } catch (e) {
-      showToast(e instanceof ApiError ? e.message : "Fotoğraf yüklenemedi.", "error");
-    }
+      await uploadPhoto.mutateAsync({ id: employeeId, ...photoReview, ...(photoSource != null ? { guidanceContentRevisionId: photoSource } : {}) });
+      setPhotoReview(null); setPhotoSource(null); setPhotoConfirmed(false); showToast("Fotoğraf yüklendi.", "success");
+    } catch (cause) { setPhotoConfirmed(false); showToast(cause instanceof ApiError ? cause.message : "Fotoğraf yüklenemedi; seçiminiz korunuyor.", "error"); }
   };
 
   if (isEdit && detailQ.isPending) return <div className={embedded ? "ez-personnel-profile" : "fullscreen-modal"} style={{ display: "flex" }}><PageLoading /></div>;
@@ -452,8 +470,11 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
             </div>
             <div className="form-grid">
               <div className="photo-upload col-12">
-                <div className="photo-preview"><i aria-hidden="true" className="fa-solid fa-user" /></div>
+                <div className="photo-preview">{photoUrl && !photoReadError
+                  ? <img src={photoUrl} alt="Kayıtlı personel fotoğrafı" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setPhotoReadError(true)} />
+                  : <i aria-hidden="true" className="fa-solid fa-user" />}</div>
                 <div>
+                  {photoReadError && <p role="status">Kayıtlı fotoğraf görüntülenemedi; doğru dosyayı ayrıca kontrol edin.</p>}
                   {!readOnly && <span
                     className="upload-btn"
                     role="button"
@@ -470,9 +491,24 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                     Fotoğraf Yükle
                   </span>}
                   {!readOnly && <small>JPG/PNG, maksimum 2 MB</small>}
-                  <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" hidden onChange={(e) => handlePhoto(e.target.files?.[0])} />
+                  <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" aria-label="Personel fotoğrafı" hidden disabled={readOnly || uploadPhoto.isPending} onChange={(event) => { handlePhoto(event.target.files?.[0]); event.target.value = ""; }} />
                 </div>
               </div>
+              {!readOnly && employeeId !== null && <div className="col-12">
+                <GuidanceOperationSource process="personnel-entry" step="tab-kimlik" value={photoSource} onChange={value => { setPhotoSource(value); setPhotoConfirmed(false); }} disabled={uploadPhoto.isPending} label="Fotoğraf yüklerken kullandığım rehber sürümü" />
+                {photoReview && <section className="ez-company-operation-review" aria-label="Fotoğraf yükleme önizlemesi">
+                  <p>Yeni dosya: {photoReview.file.name} ({Math.ceil(photoReview.file.size / 1024)} KB). Yalnız bu çalışanın fotoğrafı değişir. Kimliği doğrulayın; yanlış fotoğrafı doğru dosyayla değiştirin. Fotoğraf sağlık veya çalışma uygunluğu onayı değildir.</p>
+                  <label><input type="checkbox" checked={photoConfirmed} disabled={uploadPhoto.isPending} onChange={event => setPhotoConfirmed(event.target.checked)} /> Fotoğraf değişimini teyit ediyorum</label>
+                  <button type="button" className="btn btn-primary" disabled={!photoConfirmed || uploadPhoto.isPending} onClick={() => void savePhoto()}>Fotoğrafı kaydet</button>
+                  <button type="button" className="btn btn-secondary" disabled={uploadPhoto.isPending || detailQ.isFetching} onClick={async () => {
+                    setPhotoConfirmed(false);
+                    const result = await detailQ.refetch();
+                    if (result.isError || !result.data?.profile) { showToast("Güncel fotoğraf bilgisi okunamadı; seçiminiz korunuyor.", "error"); return; }
+                    setPhotoReview(current => current ? { ...current, expectedRecordToken: result.data.profile!.photoRecordToken ?? undefined } : current);
+                  }}>Güncel fotoğraf durumunu yeniden incele</button>
+                  <button type="button" className="btn btn-secondary" disabled={uploadPhoto.isPending} onClick={() => { setPhotoReview(null); setPhotoSource(null); }}>Vazgeç</button>
+                </section>}
+              </div>}
               <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-tc">TC Kimlik No *</label>
                 <input id="pm-tc" type="text" className="input-control" maxLength={11} placeholder="11 haneli numara" value={form.nationalId} disabled={readOnly} onChange={(e) => set("nationalId", e.target.value)} />
@@ -746,9 +782,6 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                 </select>
               </div>
               <div className="input-group col-3"><label className="input-label" htmlFor="pm-shoe">Ayakkabı</label><input id="pm-shoe" type="number" className="input-control" value={form.shoeSize} disabled={readOnly} onChange={(e) => set("shoeSize", e.target.value)} /></div>
-              <label className="check-card col-4"><input type="checkbox" checked={form.canWorkAtHeight} disabled={readOnly} onChange={(e) => set("canWorkAtHeight", e.target.checked)} /> <span>Yüksekte çalışabilir</span></label>
-              <label className="check-card col-4"><input type="checkbox" checked={form.canWorkNightShift} disabled={readOnly} onChange={(e) => set("canWorkNightShift", e.target.checked)} /> <span>Gece vardiyası</span></label>
-              <label className="check-card col-4"><input type="checkbox" checked={form.canLiftHeavyLoads} disabled={readOnly} onChange={(e) => set("canLiftHeavyLoads", e.target.checked)} /> <span>Ağır yük taşıma</span></label>
               <div className="input-group col-12"><label className="input-label" htmlFor="pm-health">Bilinen Hastalık / Notlar</label><textarea id="pm-health" className="input-control" rows={2} value={form.healthNotes} disabled={readOnly} onChange={(e) => set("healthNotes", e.target.value)} /></div>
             </div>
           </div>

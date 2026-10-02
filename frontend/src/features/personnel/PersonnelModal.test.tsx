@@ -1,18 +1,20 @@
 import { AuthProvider } from "../../auth/AuthContext";
-import { screen, waitFor } from "@testing-library/react";
+import { SESSION_KEY } from "../../api/session";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { PersonnelModal } from "./PersonnelModal";
+import { guidanceStepDrafts } from "../guidance/stepDrafts";
 
 const departments = [{ id: 1, name: "Yazılım", code: "YZL", employeeCount: 1 }];
 const detail = {
   id: 1, firstName: "Ahmet", lastName: "Yılmaz", name: "Ahmet Yılmaz", initials: "AY",
   title: "Senior Developer", nationalId: "12345678901", status: "active", hireDate: "2021-03-12", contractType: "indefinite",
   departmentId: 1, department: "Yazılım", managerId: null, managerName: null,
-  profile: { birthDate: "1990-01-01", gender: "Erkek", maritalStatus: "Evli", bloodType: "0 Rh+", mobilePhone: "(532) 111 11 11", personalEmail: "a@a", homeAddress: "İstanbul", emergencyContactName: "Ayşe Yılmaz", emergencyContactRelation: null, emergencyContactPhone: "0533", employmentType: "Tam Zamanlı", rehireEligibility: null, exitCode: null, iban: "TR11", bankName: "Banka", salaryType: "Net Maaş", pensionStatus: "Otomatik Katılım", mealCard: "Multinet", tshirtSize: "L", pantsSize: "32", coatSize: "L", shoeSize: "42", canWorkAtHeight: true, canWorkNightShift: false, canLiftHeavyLoads: false, healthNotes: "" },
+  profile: { birthDate: "1990-01-01", gender: "Erkek", maritalStatus: "Evli", bloodType: "0 Rh+", mobilePhone: "(532) 111 11 11", personalEmail: "a@a", homeAddress: "İstanbul", emergencyContactName: "Ayşe Yılmaz", emergencyContactRelation: null, emergencyContactPhone: "0533", employmentType: "Tam Zamanlı", rehireEligibility: null, exitCode: null, iban: "TR11", bankName: "Banka", salaryType: "Net Maaş", pensionStatus: "Otomatik Katılım", mealCard: "Multinet", tshirtSize: "L", pantsSize: "32", coatSize: "L", shoeSize: "42", healthNotes: "" },
   documents: [],
 };
 const compensationPackage = {
@@ -91,7 +93,7 @@ beforeEach(() => {
     },
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
 const renderModal = (employeeId: number | null, readOnly = false, onCreated?: (id: number) => void, guided = false) =>
   renderPage(
@@ -105,6 +107,77 @@ test("düzenleme modunda alanlar mevcut kayıtla dolar", async () => {
   expect(await screen.findByText("Personel Kartı — Ahmet Yılmaz")).toBeInTheDocument();
   expect(screen.getByLabelText("TC Kimlik No *")).toHaveValue("12345678901");
   expect(screen.getByLabelText("Adı")).toHaveValue("Ahmet");
+});
+
+test("fotoğraf seçimi yazmaz; açık teyit ilk fotoğraf belirtecini gönderir ve çakışma seçimi korur", async () => {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "T", refreshToken: "R", user: { id: "owner", role: "hr-admin" } }));
+  const source = { ...guidanceStepDrafts.find(x => x.contentKey === "personnel-entry-tab-kimlik")!, id: 73, contentVersion: 1, state: "published", isCurrent: true };
+  const base = fetch;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).startsWith("/api/guidance/catalog")) return new Response(JSON.stringify(String(input).includes("versions/") ? source : [source]), { status: 200 });
+    if (String(input) === "/api/guidance/help-preferences" || String(input) === "/api/guidance/operations") return new Response("[]", { status: 200 });
+    if (String(input) === "/api/employees/1" && !init?.method) return new Response(JSON.stringify({ ...detail, profile: { ...detail.profile, photoRecordToken: "photo-original" } }), { status: 200 });
+    if (String(input) === "/api/employees/1/photo" && init?.method === "POST") return new Response(JSON.stringify({ title: "Fotoğraf siz incelerken değişti" }), { status: 409 });
+    return base(input, init);
+  }));
+  renderModal(1); await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.upload(screen.getByLabelText("Personel fotoğrafı"), new File(["PNG"], "personel.png", { type: "image/png" }));
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  expect(screen.getByRole("button", { name: "Fotoğrafı kaydet" })).toBeDisabled();
+  await userEvent.click(screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }));
+  const sourcePanel = screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }).closest("details")!;
+  await userEvent.click(await within(sourcePanel).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await userEvent.click(screen.getByLabelText("Fotoğraf değişimini teyit ediyorum"));
+  await userEvent.click(screen.getByRole("button", { name: "Fotoğrafı kaydet" }));
+  await screen.findByText("Fotoğraf siz incelerken değişti");
+  expect(screen.getByText(/Yeni dosya: personel.png/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Fotoğraf değişimini teyit ediyorum")).not.toBeChecked();
+  const posted = vi.mocked(fetch).mock.calls.find(([url, init]) => String(url) === "/api/employees/1/photo" && init?.method === "POST")!;
+  expect((posted[1]!.body as FormData).get("expectedRecordToken")).toBe("photo-original");
+  expect((posted[1]!.body as FormData).get("guidanceContentRevisionId")).toBe("73");
+});
+
+test("kaldırılan uygunluk alanları gösterilmez ve personel kaydına gönderilmez", async () => {
+  renderModal(1); await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  await userEvent.click(screen.getByRole("button", { name: /Özlük & Sağlık/ }));
+  expect(screen.queryByText("Yüksekte çalışabilir")).not.toBeInTheDocument();
+  expect(screen.queryByText("Gece vardiyası")).not.toBeInTheDocument();
+  expect(screen.queryByText("Ağır yük taşıma")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Kaydet" }));
+  await waitFor(() => {
+    const put = vi.mocked(fetch).mock.calls.find(([url, init]) => String(url) === "/api/employees/1" && init?.method === "PUT");
+    expect(put).toBeTruthy();
+    const profile = JSON.parse(String(put![1]!.body)).profile;
+    expect(profile).not.toHaveProperty("canWorkAtHeight"); expect(profile).not.toHaveProperty("canWorkNightShift"); expect(profile).not.toHaveProperty("canLiftHeavyLoads");
+  });
+});
+
+test("kayıtlı fotoğraf yalnız İK rolünde oturumlu indirilir ve blob URL ile gösterilir", async () => {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "photo-token", refreshToken: "R", user: { id: "owner", role: "hr-admin" } }));
+  vi.stubGlobal("URL", class extends URL {
+    static createObjectURL = vi.fn(() => "blob:stored-photo");
+    static revokeObjectURL = vi.fn();
+  });
+  const base = fetch;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === "/api/employees/1" && !init?.method) return new Response(JSON.stringify({ ...detail, profile: { ...detail.profile, photoPath: "photos/current.png" } }), { status: 200 });
+    if (String(input) === "/api/employees/1/photo") return new Response(new Uint8Array([137, 80, 78, 71]), { status: 200, headers: { "Content-Type": "image/png" } });
+    return base(input, init);
+  }));
+  renderModal(1, true);
+  expect(await screen.findByRole("img", { name: "Kayıtlı personel fotoğrafı" })).toHaveAttribute("src", "blob:stored-photo");
+  const request = vi.mocked(fetch).mock.calls.find(([url]) => String(url) === "/api/employees/1/photo")!;
+  expect(new Headers(request[1]?.headers).get("Authorization")).toBe("Bearer photo-token");
+});
+
+test("ekip yöneticisi fotoğraf yolu olsa da görüntüleme isteği göndermez", async () => {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "T", refreshToken: "R", user: { id: "manager", role: "manager" } }));
+  const base = fetch;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => String(input) === "/api/employees/1" && !init?.method
+    ? new Response(JSON.stringify({ ...detail, profile: { ...detail.profile, photoPath: "photos/current.png" } }), { status: 200 }) : base(input, init)));
+  renderModal(1, true); await screen.findByText("Personel Kartı — Ahmet Yılmaz");
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/employees/1/photo")).toBe(false);
+  expect(screen.queryByRole("img", { name: "Kayıtlı personel fotoğrafı" })).not.toBeInTheDocument();
 });
 
 test("sekme değişimi içerik bölümünü değiştirir", async () => {

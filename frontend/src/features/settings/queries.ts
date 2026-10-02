@@ -30,12 +30,12 @@ export const useUpdateCompany = () => {
 export const useUpdateNotifications = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (command: NotificationSettingsDto) =>
+    mutationFn: (command: components["schemas"]["UpdateNotificationSettingsCommand"]) =>
       apiFetch<NotificationSettingsDto>("/settings/notifications", {
         method: "PUT",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["settings"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
@@ -47,19 +47,21 @@ export const useUpdateSecurity = () => {
         method: "PUT",
         body: JSON.stringify(command),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["settings"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
 export const useUploadLogo = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: ({ file, expectedRecordToken, guidanceContentRevisionId }: { file: File; expectedRecordToken?: string; guidanceContentRevisionId?: number }) => {
       const data = new FormData();
       data.append("file", file);
+      if (expectedRecordToken) data.append("expectedRecordToken", expectedRecordToken);
+      if (guidanceContentRevisionId != null) data.append("guidanceContentRevisionId", String(guidanceContentRevisionId));
       return apiFetch<{ logoPath: string }>("/settings/company/logo", { method: "POST", body: data });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["settings"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
