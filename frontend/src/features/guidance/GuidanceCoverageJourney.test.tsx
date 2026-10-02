@@ -36,3 +36,13 @@ test("okuma hatasında eksik kanıt diye sonuç üretmez", async () => {
   await screen.findByRole("alert"); expect(screen.queryByText(/İnceleme beyanı yok/)).not.toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole("button", { name: "Durumu yeniden yükle" })).toBeEnabled());
 });
+
+test("aşama yalnız aynı güncel adımın doğru alıştırma ve kendi işlem kanıtını birleştirir", async () => {
+  stubApi({ "/api/guidance/catalog": [content], "/api/guidance/catalog/readings": [],
+    "/api/guidance/catalog/practice-progress": [{ contentRevisionId: 21, processKey: "payroll", stepKey: "approval", lastCorrect: true, isCurrent: true }],
+    "/api/guidance/operations": [{ isCurrent: true, evidence: { content: { contentRevisionId: 21, processKey: "payroll", stepKey: "approval" } } }] });
+  render(); await userEvent.click(screen.getByText("Tüm süreçlerde güncel öğrenme durumum"));
+  const row = (await screen.findByText("Satır ve dönem onayını ayırma · Sürüm 2")).closest("li")!;
+  expect(within(row).getByText("Aşama: Alıştırma ve uygulama kanıtı birlikte")).toBeInTheDocument();
+  expect(within(row).getByText(/bağımsız yeterlilik için insan değerlendirmesi/)).toBeInTheDocument();
+});

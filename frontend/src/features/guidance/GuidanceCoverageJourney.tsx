@@ -7,6 +7,7 @@ import { useGuidanceOperations } from "./operationQueries";
 import { usePublishedPracticeProgress } from "./publishedPracticeQueries";
 import { guidanceStepAudience, guidanceStepTitles } from "./stepDefinitions";
 import { guidanceProcessPath } from "./processNavigation";
+import { learningStage } from "./learningStage";
 
 export function GuidanceCoverageJourney() {
   const [open, setOpen] = useState(false);
@@ -25,7 +26,8 @@ function Coverage() {
   if (queries.some(query => query.isPending)) return <p>Güncel öğrenme durumunuz yükleniyor.</p>;
   if (queries.some(query => query.isError)) return <p role="alert">Öğrenme durumu doğrulanamadı. <button type="button" onClick={() => queries.forEach(query => void query.refetch())}>Durumu yeniden yükle</button></p>;
   return <>
-    <p>İnceleme beyanı, alıştırma ve gerçek işlem ayrı izlenir. Yeni içerik sürümü eski kanıtları devralmaz. Bu görünüm bağımsız yeterlilik veya bütün İK işlerinin tamamlanması anlamına gelmez.</p>
+    <p>İnceleme beyanı, alıştırma ve gerçek işlem ayrı izlenir. Yeni içerik sürümü eski kanıtları devralmaz. Aşama yalnız bu üç kayıt türünden türetilir; bağımsız yeterlilik veya bütün İK işlerinin tamamlanması anlamına gelmez.</p>
+    <p>Kayıtlı öğrenme konumu ve kişisel kanıtlar sunucudan gelir; aynı hesapla başka oturumda yeniden okunabilir. Kaydedilmemiş form alanları, seçilmemiş dosyalar ve bu sekmenin belirsiz işlem uyarıları başka cihaza taşınmaz. Öğrenme görünümü bir form yedeği değildir.</p>
     {Object.entries(guidanceStepTitles).map(([process, steps]) => {
       const path = guidanceProcessPath(process, user?.role);
       if (!path) return null;
@@ -36,7 +38,9 @@ function Coverage() {
           const read = readings.data!.some(item => item.isCurrent && item.contentRevisionId === content.id);
           const answer = practice.data!.find(item => item.isCurrent && item.contentRevisionId === content.id && item.processKey === process && item.stepKey === step);
           const count = operations.data!.filter(item => item.isCurrent && item.evidence.content.contentRevisionId === content.id && item.evidence.content.processKey === process && item.evidence.content.stepKey === step).length;
+          const stage = learningStage(process, step, read, answer?.lastCorrect ?? null, count);
           return <li key={step}><strong>{title} · Sürüm {content.contentVersion}</strong>
+            <p>Aşama: {stage.title}</p><p>{stage.next}</p>
             <p>{read ? "İncelediğinize dair beyan var" : "İnceleme beyanı yok"} · {answer ? answer.lastCorrect ? "Son alıştırma yanıtı doğru" : "Alıştırmayı yeniden çalışın" : "Alıştırma yanıtı yok"} · {count ? count + " gerçek işlem kanıtı" : "Gerçek işlem kanıtı yok"}</p>
             <Link to={appPath("/guidance/catalog?version=" + content.id)}>Bu sürümün açıklamasını ve alıştırmasını aç</Link>
           </li>;
