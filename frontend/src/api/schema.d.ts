@@ -9210,6 +9210,8 @@ export interface components {
             score?: number;
             /** Format: int32 */
             maxScore?: number;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CandidateEvaluationDto: {
             /** Format: int32 */
@@ -9297,6 +9299,8 @@ export interface components {
         CandidateNoteBody: {
             noteType?: string | null;
             text?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CandidateSkillDto: {
             /** Format: int32 */
@@ -9609,6 +9613,8 @@ export interface components {
             summary?: string | null;
             reason?: string | null;
             confirmExistingEvidenceReview?: boolean;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CorrectCompensationDateBody: {
             /** Format: date */
@@ -9651,6 +9657,8 @@ export interface components {
             openCount?: number;
             isOpen?: boolean;
             reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         CreateCandidateCommand: {
             name?: string | null;
@@ -10312,6 +10320,7 @@ export interface components {
             personnelChanges?: components["schemas"]["GuidancePersonnelChangesDto"];
             importChanges?: components["schemas"]["GuidanceImportChangesDto"];
             preparationChanges?: components["schemas"]["GuidancePreparationChangesDto"];
+            recruitmentChanges?: components["schemas"]["GuidanceRecruitmentChangesDto"];
         };
         GuidanceOperationHistoryDto: {
             evidence?: components["schemas"]["GuidanceOperationEvidenceDto"];
@@ -10394,6 +10403,24 @@ export interface components {
             /** Format: date-time */
             lastAnsweredAtUtc?: string;
             isCurrent?: boolean;
+        };
+        GuidanceRecruitmentChangesDto: {
+            /** Format: int32 */
+            candidateId?: number | null;
+            /** Format: int32 */
+            positionId?: number | null;
+            recordKind?: string | null;
+            /** Format: int32 */
+            recordId?: number;
+            /** Format: int32 */
+            fromVersion?: number | null;
+            /** Format: int32 */
+            toVersion?: number;
+            reason?: string | null;
+            /** Format: int32 */
+            fromCandidateVersion?: number | null;
+            /** Format: int32 */
+            toCandidateVersion?: number | null;
         };
         GuidanceSetupChangesDto: {
             addedCompanyProfile?: boolean;
@@ -11485,6 +11512,8 @@ export interface components {
             /** Format: int32 */
             maxScore?: number;
             reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         ReviseNoteBody: {
             /** Format: int32 */
@@ -11494,6 +11523,8 @@ export interface components {
             noteType?: string | null;
             text?: string | null;
             reason?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
         };
         RiskDetailDto: {
             /** Format: int32 */

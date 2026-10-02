@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { formatCandidateScore } from "./format";
@@ -33,6 +34,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
   const [review, setReview] = useState<CandidateCorrectionInput | null>(null);
   const [reviewPositionTitle, setReviewPositionTitle] = useState<string | null>(null);
   const [evidenceConfirmed, setEvidenceConfirmed] = useState(false);
+  const [guidanceSource, setGuidanceSource] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const readOnly = candidate.status === "İşe Alındı";
   const roleChanged = form.appliedRole.trim() !== source.appliedRole
@@ -85,7 +87,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
     if (!review || readOnly || correction.isPending) return;
     setError(null);
     try {
-      await correction.mutateAsync(review);
+      await correction.mutateAsync({ ...review, ...(guidanceSource !== null ? { guidanceContentRevisionId: guidanceSource } : {}) });
       showToast("Aday kaydı düzeltildi; önceki bilgiler ve gerekçe geçmişte korundu.", "success");
       onClose();
     } catch (cause) {
@@ -138,6 +140,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
               <textarea id="correction-reason" className="input-control" value={form.reason} onChange={e => set("reason", e.target.value)} /></div>
           </div>{roleChanged && <label><input type="checkbox" checked={evidenceConfirmed}
             onChange={e => { setEvidenceConfirmed(e.target.checked); setReview(null); setError(null); }} /> Mevcut not ve değerlendirmelerin yeni role uygunluğunu kontrol ettim; aşamanın ve geçmişin korunacağını biliyorum.</label>}
+        {!readOnly && <GuidanceOperationSource process="recruitment" step="candidate-create" value={guidanceSource} onChange={setGuidanceSource} disabled={correction.isPending} label="Aday düzeltirken kullandığım rehber sürümü" />}
           {review && <section aria-label="Aday düzeltmesi ön kontrolü" aria-live="polite">
             <h4>Kaydetmeden önce karşılaştırın</h4>
             <Comparison before={before} after={{ ...review, positionTitle: reviewPositionTitle, status: before.status }} />

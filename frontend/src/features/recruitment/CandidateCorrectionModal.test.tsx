@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { useState } from "react";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -21,7 +22,7 @@ beforeEach(() => stubApi({
 }));
 afterEach(() => vi.unstubAllGlobals());
 const renderModal = (record = candidate, onClose = vi.fn()) => renderPage(
-  <ToastProvider><CandidateCorrectionModal candidate={record} onClose={onClose} /></ToastProvider>);
+  <AuthProvider><ToastProvider><CandidateCorrectionModal candidate={record} onClose={onClose} /></ToastProvider></AuthProvider>);
 const putCalls = () => vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === "PUT");
 
 test("rol değişimi uygunluk teyidi ve önizleme sonrası incelenen sürümlerle gönderilir", async () => {
@@ -77,8 +78,8 @@ test("arka planda sürüm değişse de eski formun beklenen sürümü değiştir
   // Aynı pencere açıkken gelen yeni prop eski taslağın sürümünü yükseltmemeli.
   function Harness() {
     const [latest, setLatest] = useState(candidate);
-    return <ToastProvider><button onClick={() => setLatest({ ...candidate, version: 8 })}>Arka plan yenile</button>
-      <CandidateCorrectionModal candidate={latest} onClose={() => {}} /></ToastProvider>;
+    return <AuthProvider><ToastProvider><button onClick={() => setLatest({ ...candidate, version: 8 })}>Arka plan yenile</button>
+      <CandidateCorrectionModal candidate={latest} onClose={() => {}} /></ToastProvider></AuthProvider>;
   }
   renderPage(<Harness />);
   await userEvent.type(screen.getByLabelText("Ad Soyad"), " Düzeltildi");

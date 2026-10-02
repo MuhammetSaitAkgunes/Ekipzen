@@ -1,3 +1,4 @@
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -30,6 +31,7 @@ export function CandidateEvidenceModal({ candidate, selection, onClose }: {
     : { noteType: NOTE_TYPES[0], text: "", criterion: source.selection.record.criterion ?? "",
       score: String(source.selection.record.score ?? 0), maxScore: String(source.selection.record.maxScore ?? 5), reason: "" });
   const [review, setReview] = useState<CandidateEvidenceInput | null>(null);
+  const [guidanceSource, setGuidanceSource] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const readOnly = candidate.status === "İşe Alındı";
   const current: CandidateEvidenceState = source.selection.kind === "notes"
@@ -62,7 +64,7 @@ export function CandidateEvidenceModal({ candidate, selection, onClose }: {
     if (!review || readOnly || revise.isPending) return;
     setError(null);
     try {
-      await revise.mutateAsync(review);
+      await revise.mutateAsync({ ...review, ...(guidanceSource !== null ? { guidanceContentRevisionId: guidanceSource } : {}) });
       showToast(`${label} yeni sürümle düzeltildi; ilk kayıt ve geçmiş korundu.`, "success"); onClose();
     } catch (cause) {
       setReview(null); setError(cause instanceof ApiError ? cause.message : "Düzeltme kaydedilemedi.");
@@ -102,6 +104,7 @@ export function CandidateEvidenceModal({ candidate, selection, onClose }: {
               <textarea id="revise-reason" className="input-control" value={form.reason} onChange={e => set("reason", e.target.value)} /></div>
           </div></>}
         {error && <p className="form-error" role="alert">{error} Güncel kayda dönüp yeniden açabilirsiniz.</p>}
+        {!readOnly && <GuidanceOperationSource process="recruitment" step="first-review" value={guidanceSource} onChange={setGuidanceSource} disabled={revise.isPending} label={isNote ? "Not düzeltirken kullandığım rehber sürümü" : "Değerlendirme düzeltirken kullandığım rehber sürümü"} />}
         {after && <section aria-label="Kanıt düzeltmesi ön kontrolü" aria-live="polite">
           <h4>Önce</h4><StateView state={current} /><h4>Yeni geçerli sürüm</h4><StateView state={after} />
           <p><strong>Gerekçe:</strong> {review?.reason}</p><p>İlk kayıt korunur. Bu işlem adayın aşamasını veya genel puanını değiştirmez.</p>

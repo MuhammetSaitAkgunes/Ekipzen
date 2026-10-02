@@ -5,6 +5,8 @@ import type { GuidanceContent } from "./catalogQueries";
 export const guidanceOperationsKey = ["guidance", "operations"] as const;
 export type GuidanceOperationEvidence = {
   evidenceKey: string;
+  recruitmentChanges?: { candidateId: number | null; positionId: number | null; recordKind: string; recordId: number;
+    fromVersion: number | null; toVersion: number; reason: string | null; fromCandidateVersion: number | null; toCandidateVersion: number | null } | null;
   preparationChanges?: { resourceKind: string; resourceId: number; changedFields: string[] } | null;
   importChanges?: { importRequestId: string; createdCount: number; skippedCount: number; createdEmployeeIds: number[];
     skippedRows: Array<{ rowNumber: number; outcome: string; explanation: string; issues: string[] }> } | null;

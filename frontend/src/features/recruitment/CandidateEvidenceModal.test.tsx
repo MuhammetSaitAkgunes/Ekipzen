@@ -1,3 +1,4 @@
+import { AuthProvider } from "../../auth/AuthContext";
 import { useState } from "react";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -23,7 +24,7 @@ beforeEach(() => stubApi({
 }));
 afterEach(() => vi.unstubAllGlobals());
 const renderModal = (selection: EvidenceSelection = note, record: CandidateDetailDto = candidate, onClose = vi.fn()) => renderPage(
-  <ToastProvider><CandidateEvidenceModal candidate={record} selection={selection} onClose={onClose} /></ToastProvider>);
+  <AuthProvider><ToastProvider><CandidateEvidenceModal candidate={record} selection={selection} onClose={onClose} /></ToastProvider></AuthProvider>);
 const posts = () => vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === "POST");
 
 test("not ilk kaydı korunarak önizlemeden sonra iki incelenen sürümle düzeltilir", async () => {
@@ -81,9 +82,9 @@ test("arka plan yenilemesi eski taslağın iki sürümünü yükseltmez; çakı�
   }));
   function Harness() {
     const [fresh, setFresh] = useState(false);
-    return <ToastProvider><button onClick={() => setFresh(true)}>Yenile</button>
+    return <AuthProvider><ToastProvider><button onClick={() => setFresh(true)}>Yenile</button>
       <CandidateEvidenceModal candidate={fresh ? { ...candidate, version: 9 } : candidate}
-        selection={fresh ? { ...note, record: { ...note.record, version: 4 } } as EvidenceSelection : note} onClose={() => {}} /></ToastProvider>;
+        selection={fresh ? { ...note, record: { ...note.record, version: 4 } } as EvidenceSelection : note} onClose={() => {}} /></ToastProvider></AuthProvider>;
   }
   renderPage(<Harness />);
   await userEvent.type(screen.getByLabelText("Güncel not metni"), " düzeltildi");

@@ -31,7 +31,7 @@ export type CandidateCorrectionInput = {
   id: number; expectedVersion: number; name: string; appliedRole: string;
   positionId: number | null; expectedPositionVersion: number | null; score: number | null;
   location: string | null; experienceYears: number; summary: string | null;
-  reason: string; confirmExistingEvidenceReview: boolean;
+  reason: string; confirmExistingEvidenceReview: boolean; guidanceContentRevisionId?: number;
 };
 export type InterviewNoteDto = components["schemas"]["InterviewNoteDto"] & { version: number };
 export type CandidateEvaluationDto = components["schemas"]["CandidateEvaluationDto"] & { version: number };
@@ -47,7 +47,7 @@ export type CandidateEvidenceHistory = {
 };
 export type CandidateEvidenceInput = {
   candidateId: number; recordId: number; kind: "notes" | "evaluations";
-  expectedCandidateVersion: number; expectedRecordVersion: number; reason: string;
+  expectedCandidateVersion: number; expectedRecordVersion: number; reason: string; guidanceContentRevisionId?: number;
   noteType?: string; text?: string; criterion?: string; score?: number; maxScore?: number;
 };
 export type HireResultDto = components["schemas"]["HireResultDto"];
@@ -94,6 +94,7 @@ export const useCorrectCandidate = () => {
     mutationFn: ({ id, ...body }: CandidateCorrectionInput) =>
       apiFetch<CandidateDetailDto>(`/candidates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
     onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
       queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
     ]),
@@ -119,7 +120,7 @@ export const useReviseCandidateEvidence = () => {
       apiFetch<CandidateDetailDto>(`/candidates/${candidateId}/${kind}/${recordId}/revisions`, {
         method: "POST", body: JSON.stringify(body),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["recruitment"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
     onError: (_error, input) => queryClient.invalidateQueries({
       queryKey: ["recruitment", "candidate", input.candidateId] }),
   });
@@ -152,11 +153,12 @@ export const useCorrectPosition = () => {
   return useMutation({
     mutationFn: ({ id, ...body }: {
       id: number; expectedVersion: number; title: string; departmentId: number | null;
-      openCount: number; isOpen: boolean; reason: string;
+      openCount: number; isOpen: boolean; reason: string; guidanceContentRevisionId?: number;
     }) => apiFetch<PositionDto>(`/positions/${id}`, {
       method: "PUT", body: JSON.stringify(body),
     }),
     onSuccess: (_result, input) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
       queryClient.invalidateQueries({ queryKey: ["recruitment", "positions"] }),
       queryClient.invalidateQueries({ queryKey: ["recruitment", "positions", input.id, "corrections"] }),
     ]),
@@ -201,26 +203,26 @@ export const useSetCandidateStatus = () => {
 export const useAddInterviewNote = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, noteType, text }: { id: number; noteType: string; text: string }) =>
+    mutationFn: ({ id, ...body }: { id: number; noteType: string; text: string; guidanceContentRevisionId?: number }) =>
       apiFetch<InterviewNoteDto>(`/candidates/${id}/notes`, {
         method: "POST",
-        body: JSON.stringify({ noteType, text }),
+        body: JSON.stringify(body),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recruitment"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["recruitment"] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 
 export const useAddCandidateEvaluation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, criterion, score, maxScore }: {
-      id: number; criterion: string; score: number; maxScore: number;
+    mutationFn: ({ id, ...body }: {
+      id: number; criterion: string; score: number; maxScore: number; guidanceContentRevisionId?: number;
     }) =>
       apiFetch<CandidateEvaluationDto>("/candidates/" + id + "/evaluations", {
         method: "POST",
-        body: JSON.stringify({ criterion, score, maxScore }),
+        body: JSON.stringify(body),
       }),
-    onSuccess: (_result, { id }) => queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", id] }),
+    onSuccess: (_result, { id }) => Promise.all([queryClient.invalidateQueries({ queryKey: ["recruitment", "candidate", id] }), queryClient.invalidateQueries({ queryKey: guidanceOperationsKey })]),
   });
 };
 

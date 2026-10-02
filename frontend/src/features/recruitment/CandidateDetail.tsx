@@ -61,6 +61,8 @@ export function CandidateDetail({ id }: { id: number }) {
   const addEvaluation = useAddCandidateEvaluation();
   const retryProvisioning = useRetryCandidateProvisioning();
   const [tab, setTab] = useState("cv");
+  const [noteSource, setNoteSource] = useState<number | null>(null);
+  const [evaluationSource, setEvaluationSource] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState(NOTE_TYPES[0]);
   const [noteReview, setNoteReview] = useState<InterviewNoteReview | null>(null);
@@ -87,6 +89,7 @@ export function CandidateDetail({ id }: { id: number }) {
     setEvidenceSelection(null);
     setStatusReview(null); setStatusConfirmed(false); setStatusReason(""); setStatusEvidence([]);
     setGuidanceVersion(null);
+    setNoteSource(null); setEvaluationSource(null);
     setNoteReview(null);
     setNoteText("");
     setNoteError(null);
@@ -163,9 +166,10 @@ export function CandidateDetail({ id }: { id: number }) {
     if (!pendingNote || addNote.isPending || isHired) return;
     setNoteError(null);
     try {
-      await addNote.mutateAsync({ id: pendingNote.candidateId, noteType: pendingNote.noteType, text: pendingNote.text });
+      await addNote.mutateAsync({ id: pendingNote.candidateId, noteType: pendingNote.noteType, text: pendingNote.text,
+        ...(noteSource !== null ? { guidanceContentRevisionId: noteSource } : {}) });
       setNoteReview(null);
-      setNoteText("");
+      setNoteText(""); setNoteSource(null);
       showToast("Mülakat notu eklendi.", "success");
     } catch (e) {
       setNoteError(e instanceof ApiError ? e.message : "Not eklenemedi.");
@@ -203,10 +207,11 @@ export function CandidateDetail({ id }: { id: number }) {
         criterion: pendingEvaluation.criterion,
         score: pendingEvaluation.score,
         maxScore: pendingEvaluation.maxScore,
+        ...(evaluationSource !== null ? { guidanceContentRevisionId: evaluationSource } : {}),
       });
       setEvaluationReview(null);
       setCriterion("");
-      setEvaluationScore("");
+      setEvaluationScore(""); setEvaluationSource(null);
       showToast("Aday değerlendirmesi kaydedildi.", "success");
     } catch (e) {
       setEvaluationError(e instanceof ApiError ? e.message : "Değerlendirme kaydedilemedi.");
@@ -424,6 +429,7 @@ export function CandidateDetail({ id }: { id: number }) {
                 <p><strong>Neden kontrol ediyoruz?</strong> Notu sonraki değerlendirmede aynı adaya ve doğru görüşme türüne bağlayabilmek için. Örneğin teknik görüşme bulgusunu İK görüşmesi diye etiketlemeyin; gözlem ve karar yorumunu açıkça ayırın.</p>
                 <p>İlk kayıt ve yazarı korunur. Hatalı not yeni sürüm ve gerekçeyle düzeltilebilir; güncel sürüm bu listede görünür. İşe alınmış adayın geçmişi kilitlidir; ekleme veya düzeltme yapılamaz.</p>
               </section>
+              {!isHired && <GuidanceOperationSource process="recruitment" step="first-review" value={noteSource} onChange={setNoteSource} disabled={addNote.isPending} label="Not eklerken kullandığım rehber sürümü" />}
               <div className="add-note-box">
                 <label className="sr-only" htmlFor="interview-note">Mülakat notu</label>
                 <textarea
@@ -477,6 +483,7 @@ export function CandidateDetail({ id }: { id: number }) {
               <p><strong>Neden ölçüt yazıyoruz?</strong> Sayının neyi ölçtüğü ve azami puanı açık olursa sonraki incelemede gerekçe anlaşılır. Bu kayıt adayın genel puanını veya pipeline aşamasını otomatik değiştirmez.</p>
               <p>Hatalı değerlendirme gerekçeli yeni sürümle düzeltilir; ilk puan ve önceki sürümler korunur. İşe alınmış adayın geçmişi kilitlidir; ekleme veya düzeltme yapılamaz. Gözlemin dayanağını mülakat notunda belirtin.</p>
             </section>
+            {!isHired && <GuidanceOperationSource process="recruitment" step="first-review" value={evaluationSource} onChange={setEvaluationSource} disabled={addEvaluation.isPending} label="Değerlendirme eklerken kullandığım rehber sürümü" />}
             <div className="ez-candidate-evaluation-form">
               <div className="input-group">
                 <label className="input-label" htmlFor="candidate-evaluation-criterion">Değerlendirme ölçütü</label>

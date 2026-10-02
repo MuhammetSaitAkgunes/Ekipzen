@@ -5,6 +5,9 @@ import { useGuidanceOperations } from "./operationQueries";
 
 const operationTitles: Record<string, string> = {
   "company-profile-update": "Şirket profili düzeltme", "department-create": "Departman ekleme", "department-update": "Departman düzeltme",
+  "position-correct": "Pozisyon düzeltme", "candidate-correct": "Aday kaydı düzeltme",
+  "candidate-note-create": "Mülakat notu ekleme", "candidate-note-revise": "Mülakat notu yeni sürümü",
+  "candidate-evaluation-create": "Değerlendirme ekleme", "candidate-evaluation-revise": "Değerlendirme yeni sürümü",
   "position-create": "Pozisyon açma", "candidate-create": "Aday oluşturma",
   "employee-import": "Toplu personel aktarımı",
   "employee-rehire": "Yeni çalışma dönemi", "employee-compensation-create": "Ücret paketi ekleme", "employee-compensation-correct": "Ücret tutarı/kaynak düzeltme", "employee-compensation-date": "Ücret yürürlük tarihi düzeltme",
@@ -15,7 +18,7 @@ const operationTitles: Record<string, string> = {
   "compliance-create": "Uyum takip kaydı oluşturma", "compliance-update": "Uyum kayıt bilgilerini düzeltme", "compliance-status": "Uyum durumu değiştirme", "compliance-owner": "Uyum sorumlusu atama",
   "employee-create": "Çalışan kartı oluşturma", "candidate-first-review": "Aday ilk aşama kararı", "leave-decision": "İzin kararı",
 };
-const outcomes: Record<string, string> = { imported: "Personel kayıtları oluşturuldu", rehired: "Yeni dönem açıldı; erişim eşitlemesi istendi", uploaded: "Dosya yüklendi", withdrawn: "Gerekçeyle geri çekildi", created: "Kayıt oluşturuldu", "draft-created": "Taslak dönem oluşturuldu", approved: "Onaylandı", completed: "Dosya tamamlandı", reversed: "Kontrollü geri alındı", initialized: "Eksik başlangıç kayıtları eklendi", updated: "Kayıt düzeltildi", "owner-assigned": "Sorumlu değişti", Missing: "Eksik", InReview: "İncelemede", DueSoon: "Süresi Yaklaşıyor", Completed: "Tamamlandı", Interview: "Mülakat", Offer: "Teklif", Rejected: "Ret", Approved: "Onay" };
+const outcomes: Record<string, string> = { corrected: "Gerekçeli düzeltme kaydedildi", revised: "Yeni geçerli sürüm kaydedildi", imported: "Personel kayıtları oluşturuldu", rehired: "Yeni dönem açıldı; erişim eşitlemesi istendi", uploaded: "Dosya yüklendi", withdrawn: "Gerekçeyle geri çekildi", created: "Kayıt oluşturuldu", "draft-created": "Taslak dönem oluşturuldu", approved: "Onaylandı", completed: "Dosya tamamlandı", reversed: "Kontrollü geri alındı", initialized: "Eksik başlangıç kayıtları eklendi", updated: "Kayıt düzeltildi", "owner-assigned": "Sorumlu değişti", Missing: "Eksik", InReview: "İncelemede", DueSoon: "Süresi Yaklaşıyor", Completed: "Tamamlandı", Interview: "Mülakat", Offer: "Teklif", Rejected: "Ret", Approved: "Onay" };
 export function GuidanceOperationJourney() {
   const { user } = useAuth(); const query = useGuidanceOperations(user?.id);
   return <section className="ez-panel" aria-labelledby="guidance-operation-journey">
@@ -27,6 +30,7 @@ export function GuidanceOperationJourney() {
           <strong>{operationTitles[item.operationKey] ?? item.operationKey}</strong> · {item.operationKey === "tenant-setup" ? `Şablon yılı ${item.resourceId}` : item.operationKey === "employee-import" ? `Aktarım makbuzu #${item.resourceId}` : `Kayıt #${item.resourceId}`} · {outcomes[item.outcome] ?? item.outcome}
           {item.setupChanges && <p>Şirket profili: {item.setupChanges.addedCompanyProfile ? "eklendi" : "korundu"} · İzin türü: {item.setupChanges.addedLeaveTypeCount} eklendi · Tam gün tatil: {item.setupChanges.addedHolidayCount} eklendi · Bordro taslağı: {item.setupChanges.addedPayrollSettings ? "eklendi" : "korundu"}. Uzman onayı veya hukuki doğrulama değildir.</p>}
           <p>{new Date(item.occurredAtUtc).toLocaleString("tr-TR")} · {item.content.title} · Sürüm {item.content.contentVersion}</p>
+            {item.recruitmentChanges && <p>İşe alım kaydı: {item.recruitmentChanges.candidateId ? `Aday #${item.recruitmentChanges.candidateId}` : `Pozisyon #${item.recruitmentChanges.positionId}`} · {({ note: "Not", evaluation: "Değerlendirme", candidate: "Aday düzeltmesi", position: "Pozisyon düzeltmesi" } as Record<string, string>)[item.recruitmentChanges.recordKind]} #{item.recruitmentChanges.recordId} · Sürüm {item.recruitmentChanges.fromVersion ?? "ilk kayıt"} → {item.recruitmentChanges.toVersion}. {item.recruitmentChanges.reason && `Gerekçe: ${item.recruitmentChanges.reason}`} Bu kanıt aşama, genel puan veya işe alma onayı değildir.</p>}
           {item.preparationChanges && <p>Gerçek kayıt türü: {({ "company-profile": "Şirket profili", department: "Departman", position: "Pozisyon", candidate: "Aday" } as Record<string, string>)[item.preparationChanges.resourceKind] ?? item.preparationChanges.resourceKind} #{item.preparationChanges.resourceId} · Alanlar: {item.preparationChanges.changedFields.join(", ")}. Bu tarihsel işlem kanıtı, bütün hazırlığın veya işe alımın tamamlandığı anlamına gelmez.</p>}
           {item.importChanges && <section aria-label="Aktarım kanıtının gerçek sonucu">
             <p>{item.importChanges.createdCount} personel oluşturuldu · {item.importChanges.skippedCount} satır atlandı. Gönderim: {item.importChanges.importRequestId}. Aynı gönderim tek kanıttır; kart hazırlığı ve dış bildirimler ayrıca kontrol edilir.</p>
