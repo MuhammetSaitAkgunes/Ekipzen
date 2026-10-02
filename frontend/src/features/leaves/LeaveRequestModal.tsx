@@ -7,6 +7,8 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { useCreateLeave, useLeaveBalance, useLeaveTypes, usePreviewLeave, useSubstituteOptions, type LeaveTypeDto } from "./queries";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { LeaveTypeConditions } from "./LeaveTypeConditions";
 
 const typeCardMeta = (type: LeaveTypeDto, remaining: number): { icon: string; tone: string; small: string } => {
   const name = type.name ?? "";
@@ -33,6 +35,8 @@ type LeaveReview = {
   description: string;
   substituteId: number | null;
   substituteName: string | null;
+  recordToken: string | null;
+  guidanceContentRevisionId: number | null;
 };
 
 export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
@@ -54,6 +58,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
   const [substituteId, setSubstituteId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<LeaveReview | null>(null);
+  const [source, setSource] = useState<number | null>(null);
 
   const types = typesQ.data ?? [];
   const remaining = balanceQ.data?.remainingDays ?? 0;
@@ -101,6 +106,10 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
         setError(preview.blockReason || "Bu talep şu an gönderilemiyor; bilgileri kontrol edin.");
         return;
       }
+      if (source !== null && !preview.recordToken) {
+        setError("Rehberli talebin ön kontrol belirteci okunamadı; bilgileri yeniden kontrol edin.");
+        return;
+      }
       setReview({
         typeId: selectedType.id,
         typeName: selectedType.name ?? "İzin",
@@ -113,6 +122,8 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
         description: description.trim(),
         substituteId: substitute?.id ?? null,
         substituteName: substitute?.name ?? null,
+        recordToken: preview.recordToken ?? null,
+        guidanceContentRevisionId: source,
       });
     } catch (e) {
       if (revision === formRevision.current) {
@@ -131,6 +142,8 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
         endDate: review.endDate,
         description: review.description || null,
         substituteEmployeeId: review.substituteId,
+        expectedRecordToken: review.recordToken,
+        ...(review.guidanceContentRevisionId !== null ? { guidanceContentRevisionId: review.guidanceContentRevisionId } : {}),
       });
       showToast(created.status === "approved"
         ? "İzin talebi oluşturuldu ve onaylandı."
@@ -139,6 +152,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
           : "İzin talebi oluşturuldu; güncel durumunu izin listesinde kontrol edin.", "success");
       onClose();
     } catch (e) {
+      setReview(null);
       setError(e instanceof ApiError ? e.message : "İzin talebi oluşturulamadı.");
     }
   };
@@ -151,6 +165,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             <h3 id="leave-request-title">Yeni İzin Talebi</h3>
             <p>İzin türünü ve tarihleri doğrulayın; göndermeden önce sonucu gözden geçirin.</p>
           </div>
+
           <button className="btn-icon-sm" onClick={onClose} disabled={createLeave.isPending || previewLeave.isPending} title="Kapat" aria-label="İzin talebi penceresini kapat">
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
@@ -191,6 +206,9 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             })}
           </div>
 
+          <LeaveTypeConditions type={selectedType} />
+          <GuidanceOperationSource process="leave" step="request-lifecycle" value={source}
+            onChange={id => { formRevision.current++; setSource(id); setReview(null); }} disabled={createLeave.isPending || previewLeave.isPending} />
           <div className="form-grid-2 mt-4">
             <div className="input-group">
               <label className="input-label" htmlFor="start-date">Başlangıç Tarihi</label>

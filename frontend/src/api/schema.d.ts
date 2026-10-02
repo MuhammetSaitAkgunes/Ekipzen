@@ -5628,7 +5628,10 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    expectedRecordToken?: string;
+                    guidanceContentRevisionId?: number;
+                };
                 header?: never;
                 path: {
                     id: number;
@@ -5657,6 +5660,82 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leaves/{id}/cancellation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LeaveCancellationPreviewDto"];
+                        "application/json": components["schemas"]["LeaveCancellationPreviewDto"];
+                        "text/json": components["schemas"]["LeaveCancellationPreviewDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leaves/learning-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GuidanceOperationHistoryDto"][];
+                        "application/json": components["schemas"]["GuidanceOperationHistoryDto"][];
+                        "text/json": components["schemas"]["GuidanceOperationHistoryDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9812,6 +9891,10 @@ export interface components {
             description?: string | null;
             /** Format: int32 */
             substituteEmployeeId?: number | null;
+            expectedRecordToken?: string | null;
+            /** Format: int32 */
+            guidanceContentRevisionId?: number | null;
+            readonly guidanceOperationKey?: string | null;
         };
         CreatePayrollPeriodCommand: {
             /** Format: int32 */
@@ -10652,6 +10735,24 @@ export interface components {
             /** Format: int32 */
             employmentPeriodId?: number;
         };
+        LeaveCancellationPreviewDto: {
+            /** Format: int32 */
+            id?: number;
+            leaveTypeName?: string | null;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** Format: int32 */
+            days?: number;
+            status?: string | null;
+            canCancel?: boolean;
+            /** Format: int32 */
+            releasedReservationDays?: number;
+            /** Format: int32 */
+            refundedDays?: number;
+            recordToken?: string | null;
+        };
         LeaveLedgerEntryDto: {
             /** Format: int32 */
             id?: number;
@@ -10702,6 +10803,7 @@ export interface components {
             blockReason?: string | null;
             /** Format: date-time */
             previewedAtUtc?: string;
+            recordToken?: string | null;
         };
         LeaveTypeDto: {
             /** Format: int32 */

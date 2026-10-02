@@ -4,7 +4,7 @@ export const guidanceStepTitles: Record<string, Record<string, string>> = {
   "personnel-entry": { "tab-kimlik": "Kimlik ve temel bilgiler", "tab-iletisim": "İletişim",
     "tab-is": "İş ve kurumsal bilgiler", "tab-mali": "Mali bilgiler", "tab-ozluk": "Özlük bilgileri", "tab-evrak": "Belgeler" },
   recruitment: { "candidate-create": "Adayı oluşturma", "first-review": "Aday incelemesi ve aşama kararı", "hire-preparation": "İşe alma ve giriş hesabını izleme" },
-  leave: { "review-request": "İzin talebini inceleme", "decision-effect": "İzin kararının etkisi" },
+  leave: { "request-lifecycle": "Kendi izin türünü, talebini ve iptalini izleme", "review-request": "İzin talebini inceleme", "decision-effect": "İzin kararının etkisi" },
   company: { "initial-setup": "Başlangıç kayıtlarını inceleme", "company-profile": "Şirket profilini doğrulama",
     departments: "Departman hazırlığı", "access-preparation": "Erişim sorumlularını belirleme" },
   personnel: { "record-review": "Doğru çalışanı bulma ve bilgiyi kontrol etme", "import-review": "İçe aktarma önizlemesi ve sonuç kontrolü", rehire: "İşe dönüşü ayrı dönem olarak hazırlama" },
@@ -27,5 +27,6 @@ const managerSteps: Record<string, string[]> = {
   daily: ["task-review", "task-action"],
 };
 export function guidanceStepAudience(process: string, step: string): Role[] {
+  if (process === "leave" && step === "request-lifecycle") return ["hr-admin", "manager", "employee"];
   return managerSteps[process]?.includes(step) ? ["hr-admin", "manager"] : ["hr-admin"];
 }

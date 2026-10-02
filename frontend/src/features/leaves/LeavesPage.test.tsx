@@ -26,6 +26,9 @@ beforeEach(() =>
     "/api/leaves/ledger": ledger,
     "/api/leaves/my": myLeaves,
     "/api/leaves/team": team,
+    "/api/leaves/learning-operations": [],
+    "/api/leaves/1/cancellation-preview": { ...myLeaves[0], canCancel: true, releasedReservationDays: 0, refundedDays: 5, recordToken: "cancel-1" },
+    "/api/leaves/2/cancellation-preview": { ...myLeaves[1], canCancel: true, releasedReservationDays: 0, refundedDays: 0, recordToken: "cancel-2" },
     "/api/leaves/1/cancel": null,
     "/api/leaves/2/cancel": null,
   }),
@@ -70,9 +73,10 @@ test("bekleyen talep önce açıklanır, onaydan sonra yalnız bir kez iptal edi
   await userEvent.click(screen.getByRole("button", { name: "Mazeret İzni talebini iptal et" }));
   expect(screen.getByRole("region", { name: "Talebi iptal etmeden önce" })).toHaveTextContent("Bekleyen talep iptal edilir");
   expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/leaves/2/cancel")).toBe(false);
+  await waitFor(() => expect(screen.getByRole("button", { name: "Talebi iptal etmeyi onayla" })).toBeEnabled());
   await userEvent.click(screen.getByRole("button", { name: "Talebi iptal etmeyi onayla" }));
   await waitFor(() => {
-    const posted = vi.mocked(fetch).mock.calls.filter(([u, init]) => String(u) === "/api/leaves/2/cancel" && init?.method === "POST");
+    const posted = vi.mocked(fetch).mock.calls.filter(([u, init]) => String(u).startsWith("/api/leaves/2/cancel?") && init?.method === "POST");
     expect(posted).toHaveLength(1);
   });
   expect(await screen.findByText(/İzin talebi iptal edildi/)).toBeInTheDocument();

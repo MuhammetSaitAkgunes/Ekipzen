@@ -3,6 +3,7 @@ import { apiFetch } from "../../api/client";
 import { dailyTasksKey } from "../guidance/queries";
 import { leaveApprovalJourneyKey } from "../guidance/journeyQueries";
 import type { components } from "../../api/schema";
+import type { GuidanceOperationHistory } from "../guidance/operationQueries";
 
 export type LeaveBalanceDto = components["schemas"]["LeaveBalanceDto"];
 export type LeaveLedgerEntryDto = components["schemas"]["LeaveLedgerEntryDto"];
@@ -19,7 +20,18 @@ export type LeaveRequestPreviewDto = {
   canSubmit: boolean;
   blockReason: string | null;
   previewedAtUtc: string;
+  recordToken?: string | null;
 };
+
+export type LeaveCancellationPreview = { id: number; leaveTypeName: string; startDate: string; endDate: string;
+  days: number; status: string; canCancel: boolean; releasedReservationDays: number; refundedDays: number; recordToken: string };
+export const usePreviewLeaveCancellation = () => useMutation({
+  mutationFn: (id: number) => apiFetch<LeaveCancellationPreview>(`/leaves/${id}/cancellation-preview`),
+});
+export const useLeaveLearningOperations = (userId?: string | null) => useQuery({
+  queryKey: ["leaves", "learning-operations", userId], enabled: !!userId,
+  queryFn: () => apiFetch<GuidanceOperationHistory[]>("/leaves/learning-operations"),
+});
 
 type PreviewLeaveRequest = Pick<CreateLeaveRequestCommand, "leaveTypeId" | "startDate" | "endDate" | "substituteEmployeeId">;
 
@@ -61,6 +73,7 @@ export const useCreateLeave = () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: ["guidance", "operations"] });
     },
   });
 };
@@ -68,12 +81,17 @@ export const useCreateLeave = () => {
 export const useCancelLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => apiFetch<null>(`/leaves/${id}/cancel`, { method: "POST" }),
+    mutationFn: ({ id, expectedRecordToken, guidanceContentRevisionId }: { id: number; expectedRecordToken: string; guidanceContentRevisionId?: number }) => {
+      const query = new URLSearchParams({ expectedRecordToken });
+      if (guidanceContentRevisionId !== undefined) query.set("guidanceContentRevisionId", String(guidanceContentRevisionId));
+      return apiFetch<null>(`/leaves/${id}/cancel?${query}`, { method: "POST" });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leaves"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["actions"] });
       queryClient.invalidateQueries({ queryKey: dailyTasksKey });
+      queryClient.invalidateQueries({ queryKey: ["guidance", "operations"] });
     },
   });
 };
