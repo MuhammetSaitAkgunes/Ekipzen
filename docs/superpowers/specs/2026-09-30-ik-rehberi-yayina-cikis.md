@@ -115,3 +115,7 @@ Sıradaki geliştirme tüm süreçlerdeki olağan alt işlemlerin tek API/kaynak
 ## 2 Ekim — T05 teknik kapanış
 
 Manuel aksiyonların oluşturma/bilgi düzeltme/durum/silme işlemleri gerçek kaynak sürümlü derse bağlandı; günlük işler aynı kaynak ID ile güncel sorumlu/durumdan kapanır. Son olağan açık G02 kapandı: sabit 45 satırın 37’si bağlı, 8’i okumadır. Bizim kalan işimiz T06 ve T07; insan/uzman/merkezî editör kabulü ayrıca bekler. T08 Turhost ve Visual Studio yayını kullanıcı tarafından manuel üstlenildi; ortam kurulmuş veya doğrulanmış sayılmadı. Bu paket üretime yayın değildir.
+
+## 2 Ekim — T06 teknik kapanış ve kabul sahipliği
+
+Belirsiz yazım sonucunda kör tekrar yerine gerçek kayıt/varsa makbuz kontrolü, oturum tenant/rol sınırı ve güncel içerik sürümüne bağlı öğrenme aşamaları tamamlandı. Olağan kapsam değişmedi; bizim kalan tek başlığımız T07 akış doğrulaması/teknik teslimdir. Kullanıcı Turhost/Visual Studio yayınını ve gerçek insan/uzman denemelerini açıkça üstlendi. Bu kontroller tamamlanmış sayılmaz; farklı merkezî editör onayı ve gerçek uzman bilgisiyle yayın kuralı korunur. Üretime yayın/migration yapılmadı.

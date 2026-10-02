@@ -153,3 +153,7 @@ Ayrı dönem kapatma, banka/SGK/GİB gönderimi veya teslim entegrasyonu eklenme
 ## 2 Ekim — T05 günlük aksiyon bağlantısı
 
 Mevcut POST/PUT/PATCH/DELETE `/api/actions` güncel `daily/task-action` kaynağını isteğe bağlı `GuidanceContentRevisionId` ile kabul eder; GET/POST/PUT/PATCH DTO’su hesaplanan `Revision` döndürür. PUT/PATCH gövdesinde, DELETE query’sinde `ExpectedRevision` rehberli değişiklik için zorunludur. Aynı tenant kilidindeki gerçek yazım ve kişisel kanıt atomiktir; no-op bilgi kaydı kanıt üretmez. Rol kapsamı değişmedi: oluşturma/düzeltme/silme HrAdmin, durum Management; tamamlanan aksiyon yeniden açılamaz. Yeni migration veya saklı görev tamamlama bayrağı yok. G02 kapandı. Genel oluşturma idempotency/ağ sonucu T06, teknik teslim T07 ve gerçek uzman yayını ayrı kalır.
+
+## 2 Ekim — T06 belirsiz yazım ve kişisel devamlılık
+
+Ortak istemci belirsiz iş sonucu/aynı yazım kontrolünü, mevcut üç makbuz sözleşmesinin aynı kimlikle sonuç alınmasını ve güncel adımın ayrı öğrenme aşamalarını ekler. Yeni API veya migration yok. Genel sunucu exactly-once, form/dosya cihazlar arası geri yükleme ve insan yeterlilik onayı eklenmiş sayılmaz. Ayrı istemcide aynı kişinin inceleme/alıştırma/gerçek işlem kanıtının korunması entegrasyonda doğrulandı. [İşlem/sürüm matrisi ve sınırlar](2026-10-02-ik-rehberi-tekrar-ogrenme-seviyeleri.md) güncel sözleşmedir. Bizim kalan işimiz T07; kullanıcı Turhost ve gerçek insan/uzman kontrolünü üstlendi.
