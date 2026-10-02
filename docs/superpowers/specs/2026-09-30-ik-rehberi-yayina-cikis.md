@@ -1,5 +1,7 @@
 # İK rehberi — tam kapsam yayın bitirme listesi
 
+2 Ekim son teslim: [aday aşama kararları ve işe alma/hesap hazırlığı öğrenmesi](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md). 10 süreç/38 alt adım; T02 kaynak bağlantıları tamamlandı, T01/T03–T08 açık. Uzman ve bağımsız merkezî yayın, insan ve hedef sunucu kabulü sürer. Yeni Git paketi ayrı onay bekler.
+
 30 Eylül 2026. Kullanıcı kararı: onaylı plandaki tüm süreç ve öğrenme özellikleri tamamlandıktan sonra Turhost'ta ilk canlı yayın yapılacak. Mevcut özellikleri pilot diye erken yayımlama kararı yoktur. Henüz sunucuya publish gönderilmemiştir.
 
 Bu belge [onaylı planı](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md) daraltmaz; kodda mevcut olan parçalar ile yayın öncesi açık teslimleri ayırır. Eski plandaki boş kutular tek başına sıfır ilerleme anlamına gelmez; tamamlandı kararı kod ve doğrulamaya dayanır.

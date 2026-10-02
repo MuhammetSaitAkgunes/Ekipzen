@@ -9,7 +9,7 @@
 - **Okuma:** Liste/önizleme/analiz bir yazım değildir; açılması başarılı iş kanıtı üretmez. Açıklama/alıştırma ve ilgili işin gerçek sonucu ayrı izlenir. Her okuma için yeni mutasyon yaratılmayacak.
 - **Karar/dış:** Üründe olmayan yetenek veya şirket/uzman/sağlayıcı kararı. Mevcut yol/sınır açık gösterilir; tamamlandı denmez ve sessizce kaldırılmaz.
 
-Tablodaki dersler mevcut 10 süreç/37 adım tanımına başvurur. Bir adım birden fazla işlem öğretir; örneğin pozisyon hazırlığı ve aday oluşturma aynı `recruitment/candidate-create` açıklamasını, fakat ayrı işlem anahtarları ve kanıtları kullanır. Mutasyon ve GET denetim geçmişi aynı şey değildir. `GET /api/guidance/operations` ve kişisel veri dışa aktarımı yalnız kişinin kendi kaynaklı kanıtlarını gösterir.
+Tablodaki dersler mevcut 10 süreç/38 adım tanımına başvurur. Bir adım birden fazla işlem öğretir; örneğin pozisyon hazırlığı ve aday oluşturma aynı `recruitment/candidate-create` açıklamasını, fakat ayrı işlem anahtarları ve kanıtları kullanır. Mutasyon ve GET denetim geçmişi aynı şey değildir. `GET /api/guidance/operations` ve kişisel veri dışa aktarımı yalnız kişinin kendi kaynaklı kanıtlarını gösterir.
 
 ## Şirket hazırlığı
 
@@ -31,10 +31,10 @@ Tablodaki dersler mevcut 10 süreç/37 adım tanımına başvurur. Bir adım bir
 | R02 pozisyon düzelt/kapat | PUT `/api/positions/{id}`, corrections | `recruitment/candidate-create` **Bağlı**; ilk sürüm/gerekçe/önce-sonra kaydında ayrı kaynak, no-op/eski sürüm reddi. | Bağlı aday ve geçmiş korunur; kapalı pozisyonda yeni aday/işe alma durur. |
 | R03 aday oluştur | POST `/api/candidates` | `recruitment/candidate-create` **Bağlı, bu paket**; puansız durum korunur. | `candidate-review:{id}` gerçek Yeni kayıttan doğar; karar son tarihi uydurulmaz. |
 | R04 aday temel bilgi/pozisyon düzelt | PUT `/api/candidates/{id}`, corrections | `recruitment/candidate-create` **Bağlı**; değişmez düzeltme kaydında ayrı kaynak, beklenen sürüm/gerekçe/rol uygunluk teyidi. | Geçmiş/aşama korunur; işe alınmış başvuru kilitlidir, çalışan kartı ayrıdır. |
-| R05 aşama kararı | PATCH `/api/candidates/{id}/status` | `recruitment/first-review` **Kısmi bağlı**; ilk Yeni geçişi kaynaklı kanıttır, sonraki geçişler aynı öğrenme kaydına eklenmez. | Zorunlu gerekçe/seçilmiş güncel dayanak snapshotları vardır; Yeni görevi kaynaktan kapanır. Diğer aşamalarda karar/iletişim takibi açık. |
+| R05 aşama kararı | PATCH `/api/candidates/{id}/status` | `recruitment/first-review` **Bağlı**; ilk kullanıcı/aday kanıtı korunur, sonraki gerçek kararlar ayrı kaynak/karar/sürüm/gerekçeyle saklanır. | Zorunlu gerekçe/seçilmiş güncel dayanak snapshotları vardır; Yeni görevi kaynaktan kapanır. Aynı aşama veya eski sürüm yeni kanıt üretmez. İletişim/takvim/teklif teslimi T05/API bağımlılığıdır. |
 | R06 mülakat notu ekle/düzelt | POST notes ve notes/{id}/revisions | `recruitment/first-review` **Bağlı**; ekleme ve her gerekçeli yeni sürüm ayrı kaynak ve aktör kanıtı. İlk kayıt/eski karar dayanağı değişmez. | Yanlış aday notunun iptal/taşıması **karar/dış bağımlılık**; fiziksel silme yok. Eklemede ağ tekrar tekilliği ve aday beklenen sürümü ayrıca açık. |
 | R07 değerlendirme ekle/düzelt | POST evaluations ve evaluations/{id}/revisions | `recruitment/first-review` **Bağlı**; puan/ölçek, düzeltmede iki sürüm ve ayrı kaynak/aktör kanıtı. | Genel puan otomatik hesaplanmaz. Yanlış aday/iptal, ölçüt standardı ve yapılandırılmış dayanak bağımlılıkları açık. Eklemenin genel tekrar/sürüm güvenliği T06'da. |
-| R08 işe al ve başarısız hesap hazırlığını tekrar dene | POST hire ve provisioning/retry | **Açık kaynak bağlantısı**; kalıcı aday–çalışan ilişkisi ve provizyon sonucu vardır. | Adaydan doğru çalışan kartına geçilir; hesabın hazırlanması ayrıca doğrulanır. Geri alma/kadro/ücret etkisi bağımlılıkları açık. |
+| R08 işe al ve başarısız hesap hazırlığını tekrar dene | POST hire ve provisioning/retry | `recruitment/hire-preparation` **Bağlı**; bağımsız sürümlü ders/alıştırma, işe almada ilk aday sürümü, ayrı işe alma/yeniden istek kanıtı. | Kalıcı doğru çalışan bağlantısı ve ayrı hesap sonucu; aktif teslimat lease'i yeniden denemeyle kaldırılmaz. Kanıt istek sonucudur; gerçek davet teslimi değildir. Geri alma/kadro/ücret ve genel gönderim makbuzu bağımlılıkları açık. |
 | R09 huni ve başvuru geçmişini incele | GET `/api/recruitment/funnel`, aday geçmişi | **Okuma**; mevcut huni anlık dağılımdır. | Tarihsel dönüşüm/bekleme süresi ve aday iletişim durumu ayrı açık API/yetenek; anlık sayıya geçmiş oran denmez. |
 
 ## İşe giriş ve personel yönetimi
@@ -88,7 +88,7 @@ Bu liste **sekiz çalışma başlığıdır, sekiz commit/gün vaadi değildir**
 | Başlık | Bağlı satırlar / kapanış ölçütü |
 | --- | --- |
 | T01 şirket yardımcı işlemleri ve erişim hazırlığı | S05–S07, P08: mevcut güvenli işlem/düzeltme ve desteklenmeyen yeteneğin açık anlatımı; uygun kaynak/kanıt; gerçek erişim/provizyon sonucu. |
-| T02 işe alımın kalan alt işlemleri | R02, R04–R08: pozisyon/aday düzeltmeleri, bütün aşama kararları, not/değerlendirme ekleme/revizyonu, işe alma/provizyon için ayrı doğru kaynak ve sonuç. R09'un anlık/tarihsel sınırı açık tutulur. |
+| T02 işe alımın kalan alt işlemleri — **tamamlandı** | R02, R04–R08: pozisyon/aday düzeltmeleri, bütün aşama kararları, not/değerlendirme ekleme/revizyonu, işe alma/provizyon için ayrı doğru kaynak ve sonuç. R09'un anlık/tarihsel sınırı açık tutulur. |
 | T03 izin türü ve talep/iptal yolculuğu | L01–L02: gerçek tür/koşul kaynağı eşlemesi, rol kapsamlı talep/iptal etkisi ve kanıt. Yayın için uzman içeriği beklenir. |
 | T04 puantaj/bordro/ayrılış kalan olağan bağlantılar | A02, B01/B03/B06/B07, O01/O03, G03: gerçek kaynak/önizleme/sonuç, günlük eksik ve düzeltme/external zinciri. Gelişmiş finansal bağımlılığı olağan işlem gibi genişletmez. |
 | T05 günlük aksiyon ve görev kapsamının kapanışı | G02 ve tablodaki görev açıkları: gerçek tetikleyici/sorumlu/kararlı anahtar/güvenilir tarih/başka kişiyle kapanma/yeniden açılma; kaynaklı mutasyon. Her kayda yapay görev eklenmez. |
@@ -96,7 +96,7 @@ Bu liste **sekiz çalışma başlığıdır, sekiz commit/gün vaadi değildir**
 | T07 bütün akış otomasyonu ve teknik teslim | Süreçler arası gerçek kayıt akışları, rol/tenant sınırı, hata/düzeltme, klavye/dar ekran; gerekli derleme/test/model kontrolleri ve kesin kaynak commitinden paket üretimi. İnsan/uzman testi değildir. |
 | T08 Turhost kurulum ve geri yükleme | Hedef .NET/IIS/SQL yetki uyumu, Visual Studio profil, tek dış API yolu, SMTP, kalıcı evrak/anahtar/sır dizinleri, kontrollü üç katalog migrationı, yedek ve geri yükleme/restart provasının kanıtı. Sağlayıcı bilgileri gerektirir. |
 
-S02–S04 ve R01/R03 ilk hazırlık paketinde, R02/R04/R06/R07 [işe alım düzeltme paketinde](2026-10-02-ik-rehberi-ise-alim-duzeltme-kanitlari.md) teknik olarak bağlandı. T02 sırayla R05'in sonraki aşama kararları, ardından R08 işe alma/provizyon sonuçlarına devam eder. T02 ve bütün şirket/işe alım modülü tamamlandı ilan edilmez; günlük iletişim ve tekrar güvenliği kendi başlıklarında korunur.
+S02–S04 ve R01/R03 ilk hazırlık paketinde, R02/R04/R06/R07 [işe alım düzeltme paketinde](2026-10-02-ik-rehberi-ise-alim-duzeltme-kanitlari.md) teknik olarak bağlandı. R05/R08 [aday karar ve işe alma paketinde](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md) bağlandı; T02'nin kaynak/gerçek sonuç kapsamı teknik olarak tamamlandı. Kalan başlıklar T01 ve T03–T08, toplam yedidir. Günlük iletişim, genel tekrar/oturum güvenliği ve R09 tarihsel huni kendi açık başlıklarında/API bağımlılığında kalır; bütün işe alım modülü veya yayın kabulü tamamlandı sayılmaz.
 
 ## Kaldırılmayan karar ve entegrasyon bağımlılıkları
 
