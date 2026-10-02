@@ -8,6 +8,8 @@ Frontend sırasında doğrulanan backend bağımlılıkları: [API eksikleri](20
 
 Her alt işlem için rehbere girmeden önce cevaplanacak sorular: Kim başlatabilir? Hangi kayıt önkoşul? Tamamlandığını hangi sunucu durumu kanıtlar? Hata hangi aşamada nasıl düzeltilir? Kullanıcının hangi kararı öğrenmesi gerekir? Uygulama dışındaki adım hangisidir?
 
+Bu belge ilk kaynak haritasıdır. Güncel kod/API/öğrenme/günlük iş eşlemesi ve kalan teknik kapanış başlıkları [2 Ekim olağan işlem matrisinde](2026-10-02-ik-rehberi-olagan-islem-matrisi.md) izlenir.
+
 | Süreç | Kaynak ve mevcut alt işlemler | Rehberde bağlanacak karar ve kontrol | Henüz çözülmesi gerekenler |
 | --- | --- | --- | --- |
 | Şirket hazırlığı | `SetupController`: başlangıç bilgisi ve kurulum. `DepartmentsController`: liste/ekle/düzenle/sil. `SettingsController`: şirket, bildirim, güvenlik, logo. `AuthController`: davet kabulü ve parola. | Kurulum durumunu gerçek kayıttan oku; departman olmadan çalışan oluşturma adımını başlatma. Roller ve ayarlar yalnız yetkili kullanıcıya gösterilsin. | Her kurulum adımının kanıtı, hata düzeltmesi ve şirket politikasının sahibi belirlenmeli. Kiracı provizyonu son kullanıcı akışı değildir. |

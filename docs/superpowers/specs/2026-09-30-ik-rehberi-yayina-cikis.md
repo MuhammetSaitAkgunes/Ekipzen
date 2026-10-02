@@ -8,6 +8,8 @@ Bu belge [onaylı planı](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md
 
 ## Kodda mevcut ürün parçaları
 
+2 Ekim güncel teknik kapanış: [Olağan işlem matrisi ve T01–T08](2026-10-02-ik-rehberi-olagan-islem-matrisi.md). Bu tarihli tablolardaki geçmiş açık iş anlatımları yeni teslimlerle değişebilir; matris güncel olağan kapsamı ve korunan karar/dış bağımlılıkları izler.
+
 | Parça | Uygulanan kapsam | Kaynak |
 | --- | --- | --- |
 | Öğrenme yolculuğu | İşe girişte yer imi ve gerçek kart oluşturma; adayda ilk gerçek inceleme; izin kararında gerçek işlem ve açıklamalı alıştırmalar. Bu üç gerçek işlemde açıkça seçilen merkezî rehber sürümü işlem kanıtıyla korunur; geçmiş işler sonradan damgalanmaz. Bunlar yeterlilik onayı değildir. | [Sürümlü işlem kanıtı](2026-10-01-ik-rehberi-surumlu-islem-kaniti.md); frontend/src/features/guidance/GuidanceJourneyPage.tsx; backend/src/Ekipzen.Application/Features/Guidance/ |

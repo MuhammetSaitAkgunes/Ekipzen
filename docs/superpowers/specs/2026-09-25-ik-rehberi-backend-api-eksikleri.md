@@ -6,6 +6,8 @@ Ana plan: [İK rehberi ve öğrenme yolculuğu](../plans/2026-09-24-ik-rehberi-v
 
 ## Kodda doğrulanan eksikler
 
+2 Ekim güncel bitirme kaynağı: [Olağan işlem kapsam matrisi](2026-10-02-ik-rehberi-olagan-islem-matrisi.md). Aşağıdaki eski satırlar tarihsel sözleşme gelişimini de içerir; açık/kapanmış öğrenme bağlantısı için matris ve son teslim kaydı birlikte okunur.
+
 | Alan | Mevcut sözleşme ve kaynak | Eksik davranış / kullanıcı etkisi | Backend çalışmasında karara bağlanacaklar |
 | --- | --- | --- | --- |
 | Çalışan evrakı düzeltme | İK yöneticisi gerekçeyle `POST /api/employees/{id}/documents/{documentId}/withdraw` çağırarak evrakı geri çeker. Aktif liste ve indirme geri çekilmiş kaydı dışlar; İK'ya özel `GET /api/employees/{id}/documents/withdrawn` dosya adı, gerekçe, aktör ve zamanı gösterir. Kullanıcı doğru dosyayı ayrıca yükler. | Hatalı evrak uygulama üzerinden erişilemez olur ve düzeltme izi kaybolmaz. Fiziksel dosya kiracı deposunda korunur; geri çekme kalıcı silme değildir. | Tamamlanan: gerekçeli, tek seferlik geri çekme ve erişim kesme. Açık karar: fiziksel saklama/silme süresi ve yöntemi, yasal saklama yükümlülüğü, ilişkili kayıtlar ve veri yaşam döngüsü. |
@@ -97,3 +99,11 @@ Sıradaki somut paket toplu aktarımın bağımsız sürümlü dersi ve kişisel
 `GET /api/guidance/me/operations` ve kişisel veri dışa aktarımı yalnız sahibinin aktarımını, gönderim/sayılar/gerçek kart kimlikleri/atlama nedenleriyle okur. Aynı gönderim dosya/token/kaynak değişmeden tekrarlandığında aynı makbuzu verir; kaynak sonradan kaldırılmış olsa da ikinci kanıt veya kart oluşmaz. Değişiklik 409 alır; eski makbuz sonradan kaynağa bağlanamaz. Kanıt/makbuz hatası bütün yeni kart ve dönemleri geri alır. GET ile kurtarılan sonuç arayüzde personel, günlük görev ve yolculuğu yeniler.
 
 Tenant migration `20261002063356_AddEmployeeImportGuidanceSnapshot` kaynaklı makbuz varken Down 51000 ile durur. Gerçek kartların mevcut iletişim/evrak/ücret görevleri kullanılmaya devam eder. Açık: TC'siz kişinin farklı yeni gönderimler arasında tekilliği, tarayıcı yenilemesi sonrası dosya/form kurtarma ve diğer açık modüllerin API/öğrenme/günlük görev/düzeltme matrisi. Gerçek uzman/editör yayını ve ürün/ortam kabulü bu teknik teslim değildir; önceki finansal/entegrasyon/saklama bağımlılıkları korunur.
+
+## 2 Ekim 2026 — olağan kapsam ve şirket/işe alım hazırlığı
+
+[Güncel matris](2026-10-02-ik-rehberi-olagan-islem-matrisi.md) bütün olağan işlemleri API, kaynak, günlük sinyal ve düzeltme açısından T01–T08 kapanış başlıklarına bağlar. [Bu teslim](2026-10-02-ik-rehberi-sirket-ise-alim-hazirlik-kaniti.md) profil/departman/pozisyon/aday yazımlarındaki isteğe bağlı `guidanceContentRevisionId` ile beş ayrı işlem kanıtını atomik kaydeder. Şirket profil DTO'su ve departman DTO'su `recordToken`, düzeltme gövdeleri `expectedRecordToken` taşır; rehberli düzeltmede eksik token 400, güncel alanlarla uyuşmazlık 409, no-op yeni kanıt üretmez. Token artan sürüm değil, incelenen alan değerlerinin SHA-256 belirtecidir.
+
+Kişisel işlem okuması/dışa aktarımı yalnız sahibinin tarihsel kayıt türü/kimliği ve değişen alan adlarını döndürür; adayın Yeni durumundan mevcut ilk inceleme görevi doğar. Yeni `GuidancePreparationEvidences` tablosunun `20261002074120_AddGuidancePreparationEvidence` Down işlemi kanıt varken durur. Bu bağlantı pozisyon/aday oluşturmaya kalıcı gönderim makbuzu veya ağ tekilliği eklemez; belirsiz yanıtta önce gerçek liste kontrol edilir. Profil kanıtı logo/bildirim/erişim hazırlığını, aday kanıtı değerlendirme veya işe almayı kapsamaz.
+
+Sıradaki somut paket T02'de pozisyon/aday düzeltmeleri ile not/değerlendirme alt işlemleridir. T01–T08'in tamamı, gerçek uzman/ayrı editör yayını, insan kabulü ve hedef ortam kabulü açıktır. Mevcut API'lerin eksik öğrenme bağlantıları yeni API yokluğu gibi sunulmaz; karar/entegrasyon/saklama bağımlılıkları korunur.
