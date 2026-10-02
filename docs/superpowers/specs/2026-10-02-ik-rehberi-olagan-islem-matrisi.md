@@ -19,9 +19,9 @@ Tablodaki dersler mevcut 10 süreç/38 adım tanımına başvurur. Bir adım bir
 | S02 şirket profili | PUT `/api/settings/company` | `company/company-profile` **Bağlı, bu paket**; değişen alan adları, ilk token, no-op ve atomik kanıt. | Başlangıç eksikliği mevcut; profilin alan bazlı eksikliği için güvenilir zorunluluk listesi henüz yok. Aynı formdan koşullu düzeltme. |
 | S03 departman ekle | POST `/api/departments` | `company/departments` **Bağlı, bu paket**. | Mevcut hazırlık ekranında boş liste açıklanır; aynı isim reddedilir. Çalışan bağlantısı kartta ayrıca yapılır. |
 | S04 departman düzelt | PUT `/api/departments/{id}` | `company/departments` **Bağlı, bu paket**; ayrı kaynak, ilk token ve gerçek alan farkı. | Bağlı kişiler taşınmaz; eski token 409, no-op kanıt üretmez. |
-| S05 departman silme | DELETE `/api/departments/{id}` | **Açık**; API vardır, rehberli son etki/kanıt ve ekran bağlantısı yok. | Bağlı kayıt koruması mevcut; silme yerine ad/kod düzeltme yolu açıklanır. |
-| S06 logo ve bildirim tercihleri | POST `/api/settings/company/logo`, PUT `/api/settings/notifications` | **Açık**; profil kanıtı bu ayrı işlemleri kapsamaz. | Hatalı logo mevcut yükleme yoluyla değiştirilir; gerçek e-posta sonucu tercih kaydı değildir. Haftalık rapor desteklenmiyor. |
-| S07 rol/ekip erişimi ve hesap hazırlığı | Hesap daveti/provizyonu, ekip kapsamı, parola | `company/access-preparation` **Karar/dış + açık bağlantı**; gerçek rol ve sorumlu doğrulanır. | Desteklenmeyen SMS 2FA etkin gösterilmez. Yeni rol yönetimi/SMS yeteneği eklenmiş sayılmaz; hesap sorumlusuna yönlendirme ve mevcut davet/provizyon sonucu izlenir. |
+| S05 departman silme | GET departments/{id}/deletion-preview, DELETE departments/{id} | `company/departments` **Bağlı**; incelenen ad/kod/çalışan/pozisyon sayısı belirteci, ayrı kaynak, açık teyit ve atomik kalıcı kanıt. | Bağlı çalışan veya pozisyon varsa silme kapalı. Bayat önizleme 409; aynı silme tekrarında yeni kanıt yok. Silinen kimlik geri açılmaz; ad/kod hatasında Düzenle yolu. |
+| S06 logo ve bildirim tercihleri | POST settings/company/logo, PUT settings/notifications | `company/company-profile` **Bağlı**; profil yazımından ayrı iki kaynak/ilk belirteç/önizleme/teyit/işlem kanıtı. | Hata seçimi korur; güncel durum açıkça yeniden incelenir. Aynı bildirim tercihi no-op; kayıt e-posta teslimi değildir. Eski logo yalnız commit sonrası silinir. Haftalık rapor desteklenmiyor. |
+| S07 rol/ekip erişimi ve hesap hazırlığı | Oturum rolü, personel kartı, işe alım/provizyon, kendi parola işlemi | `company/access-preparation` **Okuma**; hazırlık sırasından erişim rehberine, gerçek personel/işe alım ekranlarına bağlantı ve kaynaklı alıştırma. | Unvan/şifre değişimi rol onayı değildir; hesap hazır, davet teslimi ve gerçek giriş ayrıdır. Rol yönetimi/SMS/davet teslim API yetenekleri eklenmiş sayılmaz. Okuma gerçek işlem kanıtı üretmez. |
 
 ## İşe alım
 
@@ -48,7 +48,7 @@ Tablodaki dersler mevcut 10 süreç/38 adım tanımına başvurur. Bir adım bir
 | P05 kullanılmamış tutar/kaynak ve güvenli tarih düzelt | PUT compensation-packages/{id}, effective-date + preview | `personnel-entry/tab-mali` **Bağlı**; önizleme/ilk sürüm/gerekçe ve atomik kanıt. | Kullanılmış/kapalı kayıt kilitli; uzman telafi dosyası ayrı. Tarih değişimi bugünkü ücret işini yeniden açabilir. |
 | P06 toplu aktarım | POST import/preview, import; GET import/results/{requestId} | `personnel/import-review` **Bağlı**; tek gönderim, ilk kaynak ve gerçek satır/kart sonuçları. | Kart/evrak/ücret işleri doğar; yalnız atlanan eksikler yeni dosyada. TC'siz farklı gönderim tekilliği ve yenileme sonrası dosya kurtarma açık. |
 | P07 yeniden işe alma | POST employees/{id}/rehire | `personnel/rehire` **Bağlı**; yeni dönem, eski geçmiş korunur. | Bugünkü yeni dönem ücreti görevi; eski paket/izin taşınmaz. Erişim kuyruğu sonucu ayrı. |
-| P08 fotoğraf ve bilinmeyen özlük/uygunluk alanları | Mevcut fotoğraf ve kart API'leri | **Açık açıklama/bağlantı ve karar**. | Fotoğraf kart oluşturma kanıtı değildir. `false` ile değerlendirilmedi ayrımı olmayan alanlar için model kararı gerekir; tahmini sağlık/uygunluk onayı yapılmaz. |
+| P08 personel fotoğrafı | POST/GET employees/{id}/photo; güncel kart | `personnel-entry/tab-kimlik` **Bağlı**; ayrı ilk fotoğraf belirteci/kaynak/önizleme/teyit ve atomik kişisel kanıt. | Yalnız aynı şirketin İK yöneticisi fotoğrafı görüntüler/yükler. Yanlış dosya doğru dosyayla değiştirilir; hata seçimi korur. Kullanıcı kararıyla üç evet/hayır uygunluk alanı aktif UI/DTO/yazımdan kaldırıldı; eski DB değerleri ve tarihsel kayıtlar silinmedi. Fotoğraf uygunluk onayı değildir. |
 
 ## İzin, puantaj ve bordro
 
@@ -81,13 +81,26 @@ Tablodaki dersler mevcut 10 süreç/38 adım tanımına başvurur. Bir adım bir
 | G03 dış kanıt takip | Parasal revizyon dış kayıtları ve gerçek aksiyonlar | `daily/external-followup` **Okuma + açık yazım bağlantısı**. | Gönderim/ödeme yapılmış gibi tahmin edilmez; sorumlu ataması işi kapatmaz. |
 | G04 analiz ve denetim izi | GET dashboard, audit-logs, search | **Okuma**. | Kaynak ve yanlış pozitif açıklaması korunur; yeni kanıt için ekran açma sayısı kullanılmaz. |
 
+## Sayısal kapanış günlüğü
+
+Toplam olağan kapsam **45 satır**dır; satır sayısı kalan iş sayısı değildir. Okuma satırları için yapay mutasyon/kanıt oluşturulmaz.
+
+| Kontrol noktası | Bağlı | Okuma | Açık/kısmi | Açık teknik başlık |
+| --- | ---: | ---: | ---: | ---: |
+| İlk kapsam matrisi | 19 | 5 | 21 | 8 |
+| İşe alım düzeltmeleri sonrası | 23 | 5 | 17 | 8 |
+| Aday karar/işe alma sonrası | 25 | 5 | 15 | 7 |
+| Şirket yardımcı işlemleri sonrası | **28** | **6** | **11** | **6** |
+
+Bu paket **S05, S06, S07 ve P08** satırlarını kapatır. Yeni kapsam satırı eklemez. Kalan olağan satırlar: **L01, L02, A02, B01, B03, B06, B07, O01, O03, G02, G03**. T06–T08 çapraz güvenlik/teslim/ortam kapılarıdır; bu 11 satırla aynı birimde ölçülmez. İnsan/uzman kabulü ayrıca izlenir.
+
 ## Kalan teknik iş paketlerinin sabit listesi
 
 Bu liste **sekiz çalışma başlığıdır, sekiz commit/gün vaadi değildir**. Bir başlık ancak ilişkilendirilmiş bütün satırların kod/API/arayüz/doğrulama sonucu raporlanınca kapanır. Yeni bulunan kusur mevcut başlığa eklenir; yeni özellik istenirse kapsam değişikliği ayrıca görünür olur.
 
 | Başlık | Bağlı satırlar / kapanış ölçütü |
 | --- | --- |
-| T01 şirket yardımcı işlemleri ve erişim hazırlığı | S05–S07, P08: mevcut güvenli işlem/düzeltme ve desteklenmeyen yeteneğin açık anlatımı; uygun kaynak/kanıt; gerçek erişim/provizyon sonucu. |
+| T01 şirket yardımcı işlemleri ve erişim hazırlığı — **tamamlandı** | S05–S07, P08: önizlemeli silme, ayrı logo/bildirim/fotoğraf kanıtları, rol/ekip/hesap hazırlığı açıklamaları ve gerçek bağlantılar. Üç uygunluk alanı kullanıcı kararıyla kaldırıldı; yeni rol/SMS/teslim yeteneği iddiası yok. |
 | T02 işe alımın kalan alt işlemleri — **tamamlandı** | R02, R04–R08: pozisyon/aday düzeltmeleri, bütün aşama kararları, not/değerlendirme ekleme/revizyonu, işe alma/provizyon için ayrı doğru kaynak ve sonuç. R09'un anlık/tarihsel sınırı açık tutulur. |
 | T03 izin türü ve talep/iptal yolculuğu | L01–L02: gerçek tür/koşul kaynağı eşlemesi, rol kapsamlı talep/iptal etkisi ve kanıt. Yayın için uzman içeriği beklenir. |
 | T04 puantaj/bordro/ayrılış kalan olağan bağlantılar | A02, B01/B03/B06/B07, O01/O03, G03: gerçek kaynak/önizleme/sonuç, günlük eksik ve düzeltme/external zinciri. Gelişmiş finansal bağımlılığı olağan işlem gibi genişletmez. |
@@ -96,11 +109,11 @@ Bu liste **sekiz çalışma başlığıdır, sekiz commit/gün vaadi değildir**
 | T07 bütün akış otomasyonu ve teknik teslim | Süreçler arası gerçek kayıt akışları, rol/tenant sınırı, hata/düzeltme, klavye/dar ekran; gerekli derleme/test/model kontrolleri ve kesin kaynak commitinden paket üretimi. İnsan/uzman testi değildir. |
 | T08 Turhost kurulum ve geri yükleme | Hedef .NET/IIS/SQL yetki uyumu, Visual Studio profil, tek dış API yolu, SMTP, kalıcı evrak/anahtar/sır dizinleri, kontrollü üç katalog migrationı, yedek ve geri yükleme/restart provasının kanıtı. Sağlayıcı bilgileri gerektirir. |
 
-S02–S04 ve R01/R03 ilk hazırlık paketinde, R02/R04/R06/R07 [işe alım düzeltme paketinde](2026-10-02-ik-rehberi-ise-alim-duzeltme-kanitlari.md) teknik olarak bağlandı. R05/R08 [aday karar ve işe alma paketinde](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md) bağlandı; T02'nin kaynak/gerçek sonuç kapsamı teknik olarak tamamlandı. Kalan başlıklar T01 ve T03–T08, toplam yedidir. Günlük iletişim, genel tekrar/oturum güvenliği ve R09 tarihsel huni kendi açık başlıklarında/API bağımlılığında kalır; bütün işe alım modülü veya yayın kabulü tamamlandı sayılmaz.
+S02–S04 ve R01/R03 ilk hazırlık paketinde, R02/R04/R06/R07 [işe alım düzeltme paketinde](2026-10-02-ik-rehberi-ise-alim-duzeltme-kanitlari.md) teknik olarak bağlandı. R05/R08 [aday karar ve işe alma paketinde](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md) bağlandı; T02'nin kaynak/gerçek sonuç kapsamı teknik olarak tamamlandı. S05–S07/P08 [şirket yardımcı işlemleri paketinde](2026-10-02-ik-rehberi-sirket-yardimci-islemler.md) kapandı; T01 tamamlandı. Kalan başlıklar T03–T08, toplam altıdır. Günlük iletişim, genel tekrar/oturum güvenliği ve R09 tarihsel huni kendi açık başlıklarında/API bağımlılığında kalır; bütün işe alım modülü veya yayın kabulü tamamlandı sayılmaz.
 
 ## Kaldırılmayan karar ve entegrasyon bağımlılıkları
 
-- Belge/not/değerlendirme/kanıt saklama ve fiziksel silme; özlükte bilinmiyor ayrımı; yanlış aday kaydı iptal/taşıma/birleştirme ve mükerrer kontrolü.
+- Belge/not/değerlendirme/kanıt saklama ve fiziksel silme; aktif ekranda kaldırılan üç uygunluk alanının eski verisinin saklama/temizleme kararı; yanlış aday kaydı iptal/taşıma/birleştirme ve mükerrer kontrolü.
 - Genel aday puanının yapılandırılmış dayanağı, toplam onaylı/kalan kadro ayrımı, tarihsel huni ve aday iletişim durumunun API sözleşmeleri.
 - TC'siz kişilerin farklı aktarım gönderimleri arasında tekilliği; tarayıcı yenilemesi sonrası dosya/form geri yükleme.
 - İkinci parasal düzeltmenin sonraki onaylı aylara zinciri, yıl sınırı aşan telafi; banka/SGK/resmî gönderim veya otomatik doğrulama ve kanıt dosyası yükleme.

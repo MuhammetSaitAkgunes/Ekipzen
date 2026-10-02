@@ -1,5 +1,16 @@
 # İK rehberi — backend API eksikleri
 
+## 2 Ekim — şirket yardımcı işlemleri ve kaldırılan uygunluk alanları
+
+- Departman silme önizlemesi yalnız hr-admin'e açıktır: GET departments/{id}/deletion-preview ad/kod, çalışan/pozisyon sayıları, canDelete ve recordToken döndürür. DELETE sorgusunda expectedRecordToken ve isteğe bağlı guidanceContentRevisionId kabul eder. Rehberli yazımda belirteç zorunlu; bağlantı varsa silme 409. Salt okuma kanıt üretmez; silme kanıtı silinen departmandan bağımsız kalır.
+- Şirket GET'inde profil recordToken'ından bağımsız logoRecordToken, bildirimde recordToken, personel profilinde photoRecordToken vardır. Logo/fotoğraf multipart istekleri expectedRecordToken ve guidanceContentRevisionId alır. Bildirim komutu aynı iki opsiyonel alanı alır. Kaynaklı işlemde ilk belirteç zorunlu; bayat kayıt/kaynak 409. Kaynaksız eski istemciler çalışır; aynı tercih no-op'tur.
+- İş/kişisel kanıt tenant transaction'ında birlikte kaydedilir. Dosya değiştirmede eski dosya ancak commit sonrası temizlenir; kanıt/iş yazımı başarısızsa yeni tamamlanmış dosya temizlenir. Temizleme hatası loglanır; kabul edilmiş kayıt kullanıcıya başarısız gösterilmez. Dosya sistemi DB transaction'ı değildir; ağ/commit belirsizliği ve temizleme artıkları genel işletim/tekrar kapısında ayrıca değerlendirilir.
+- Kullanıcı kararı: canWorkAtHeight, canWorkNightShift, canLiftHeavyLoads aktif EmployeeProfileDto/EmployeeProfileUpsertModel/UI/yazım ve kart alan karşılaştırmasından kaldırıldı. Eski DB kolonları/değerleri ve tarihsel kayıtlar korunur; yeni migration yoktur. Sağlık notu korunur; kart güncellemesi eski uygunluk değerlerini false'a çevirmez.
+- Kullanıcının ayrı açık kararıyla GET employees/{id}/photo aynı şirketin yalnız hr-admin rolüne açıldı; controller ve handler yetkiyi doğrular. Ekip yöneticisine erişim açılmadı. Tenant dosya alanı sınırı korunur; okuma kanıt oluşturmaz. UI dosyayı yalnız bu rolde oturumlu indirip geçici blob URL ile gösterir.
+- Mevcut erişim rehberi oturum rolü, personel departman/yönetici, işe alım ve hesap hazırlığı, kendi şifresi ayrımını ve gerçek ekranları gösterir. Genel rol yönetimi, SMS 2FA ve davet teslim takibi API'si eklenmedi. Logo/bildirim/fotoğraf için yapay günlük iş üretilmez; mevcut gerçek hazırlık/çalışan kaynakları kullanılır.
+
+
+
 25 Eylül 2026 · Frontend geliştirmesi sırasında doğrulanan bağımlılıklar
 
 Ana plan: [İK rehberi ve öğrenme yolculuğu](../plans/2026-09-24-ik-rehberi-ve-ogrenme-yolculugu.md). Bu liste, frontend sırasında belirlenen backend ihtiyaçlarını ve daha sonra tamamlanan sözleşmeleri birlikte izler. Eksik diye işaretlenen bir API'nin varlığını veya bir işin tamamlandığını varsaymaz. Her madde uygulama öncesinde güncel kod, yetki ve veri yaşam döngüsüyle yeniden doğrulanmalıdır.

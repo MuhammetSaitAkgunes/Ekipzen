@@ -1,5 +1,12 @@
 # İK rehberi — tam kapsam yayın bitirme listesi
 
+## Güncel kapanış — 2 Ekim, şirket yardımcı işlemleri
+
+[Teknik teslim](2026-10-02-ik-rehberi-sirket-yardimci-islemler.md) S05–S07/P08 satırlarını kapatır: departman silme etkisi, ayrı logo/bildirim/fotoğraf kaynakları ve gerçek kanıtları, rol/ekip/hesap hazırlığı rehberi. Kullanıcı kararıyla üç evet/hayır çalışma uygunluğu alanı aktif UI ve API'den kaldırıldı; eski veriler değişmedi. Bu paket yeni migration gerektirmez.
+
+Güncel matris **45 satır: 28 bağlı, 6 okuma, 11 açık/kısmi**. Önceki paketten bu yana açık satırlar **15 → 11**, açık başlıklar **7 → 6** (T03–T08). Sıradaki paket L01/L02 izin türü, talep ve iptal yolculuğudur. Bu sayı uzman/yeni kullanıcı/üretim ortamı kabulü yerine geçmez. Tüm öğrenme kapsamı tamamlanmadan yayın yapılmaması kararı korunur; canlıya dosya veya migration gönderilmedi. Git senkronizasyonu yalnız raporlanan commitler için ayrı açık onayla yapılır.
+
+
 2 Ekim son teslim: [aday aşama kararları ve işe alma/hesap hazırlığı öğrenmesi](2026-10-02-ik-rehberi-aday-karar-ise-alma-ogrenme.md). 10 süreç/38 alt adım; T02 kaynak bağlantıları tamamlandı, T01/T03–T08 açık. Uzman ve bağımsız merkezî yayın, insan ve hedef sunucu kabulü sürer. Yeni Git paketi ayrı onay bekler.
 
 30 Eylül 2026. Kullanıcı kararı: onaylı plandaki tüm süreç ve öğrenme özellikleri tamamlandıktan sonra Turhost'ta ilk canlı yayın yapılacak. Mevcut özellikleri pilot diye erken yayımlama kararı yoktur. Henüz sunucuya publish gönderilmemiştir.
