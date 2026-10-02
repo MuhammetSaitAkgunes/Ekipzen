@@ -834,15 +834,17 @@ export const usePreviewImport = () =>
 export const useImportEmployees = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, importRequestId, expectedPreviewToken }: { file: File; importRequestId: string; expectedPreviewToken: string }) => {
+    mutationFn: ({ file, importRequestId, expectedPreviewToken, guidanceContentRevisionId }: { file: File; importRequestId: string; expectedPreviewToken: string; guidanceContentRevisionId?: number | null }) => {
       const body = dosyaGovdesi(file);
       body.append("importRequestId", importRequestId);
       body.append("expectedPreviewToken", expectedPreviewToken);
+      if (guidanceContentRevisionId != null) body.append("guidanceContentRevisionId", String(guidanceContentRevisionId));
       return apiFetch<ImportResultDto>("/employees/import", { method: "POST", body });
     },
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["employees"] }),
       queryClient.invalidateQueries({ queryKey: dailyTasksKey }),
+      queryClient.invalidateQueries({ queryKey: guidanceOperationsKey }),
     ]),
   });
 };

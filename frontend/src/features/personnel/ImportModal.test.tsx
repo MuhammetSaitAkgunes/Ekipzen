@@ -1,10 +1,14 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
 import { renderPage } from "../../test/renderPage";
 import { ToastProvider } from "../../layout/ToastProvider";
 import { ImportModal } from "./ImportModal";
+import { AuthProvider } from "../../auth/AuthContext";
+import { SESSION_KEY } from "../../api/session";
+import { GuidanceOperationJourney } from "../guidance/GuidanceOperationJourney";
+import { guidanceStepDrafts } from "../guidance/stepDrafts";
 
 const token = "A".repeat(64);
 const ready = { satirNo: 2, adSoyad: "Ayşe Demir", unvan: "Analist", departman: "Yazılım", iseGirisTarihi: "2026-03-01", durum: "ready", aciklama: "Aktif personel oluşturulacak.", sorunlar: [] };
@@ -16,9 +20,10 @@ const result = (id: string) => ({ olusturulanSatir: 1, atlananSatir: 2, sorunlar
   satirlar: [{ ...ready, durum: "created", employeeId: 42 }, bad, duplicate] });
 const mockNormal = () => vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) =>
   response(String(url) === "/api/employees/import" ? result((init!.body as FormData).get("importRequestId") as string) : rapor)));
-beforeEach(mockNormal);
+beforeEach(() => { mockNormal(); localStorage.clear(); localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "T", refreshToken: "R",
+  user: { id: "u", name: "İK", role: "hr-admin", roleLabel: "İK", initials: "İK" } })); });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-const render = () => renderPage(<ToastProvider><ImportModal open onClose={() => {}} /></ToastProvider>);
+const render = () => renderPage(<AuthProvider><ToastProvider><ImportModal open onClose={() => {}} /></ToastProvider></AuthProvider>);
 const dosyaSec = async (name = "personel.xlsx") => userEvent.upload(screen.getByLabelText(/Excel dosyası/i), new File(["x"], name, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
 const importCalls = () => vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url) === "/api/employees/import" && init?.method === "POST");
 const approve = async () => {
@@ -29,6 +34,89 @@ const approve = async () => {
   await userEvent.click(screen.getByRole("checkbox", { name: /Tüm aktarılacak/ }));
   await userEvent.click(screen.getByRole("checkbox", { name: /Hatalı ve mükerrer/ }));
 };
+
+const sourceSnapshot = { contentRevisionId: 22, contentKey: "personnel-import-review", processKey: "personnel", stepKey: "import-review",
+  contentVersion: 1, title: "Aktarım dersi" };
+const importLesson = { id: 22, contentKey: sourceSnapshot.contentKey, processKey: "personnel", contentVersion: 1,
+  state: "published", isCurrent: true, body: guidanceStepDrafts.find(x => x.contentKey === sourceSnapshot.contentKey)!.body };
+const chooseLesson = async () => {
+  await userEvent.click(screen.getByText("Toplu aktarımda kullandığım ders sürümü"));
+  await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
+};
+const recheck = async () => {
+  for (const name of [/Şablondaki örnek/, /Tüm aktarılacak/, /Hatalı ve mükerrer/]) await userEvent.click(screen.getByRole("checkbox", { name }));
+};
+const learningRoutes = (importResponse?: (init: RequestInit) => Response | Promise<Response>, savedResponse?: () => Response,
+  operations: () => unknown[] = () => []) => vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === "/api/employees/import") return importResponse ? importResponse(init!)
+      : response({ ...result((init!.body as FormData).get("importRequestId") as string), guidanceContent: sourceSnapshot });
+    if (url.startsWith("/api/employees/import/results/")) return savedResponse?.() ?? new Response(null, { status: 204 });
+    if (url.startsWith("/api/guidance/catalog/versions/")) return response(importLesson);
+    if (url.startsWith("/api/guidance/catalog")) return response([importLesson]);
+    if (url === "/api/guidance/operations") return response(operations());
+    if (url === "/api/guidance/help-preferences") return response([]);
+    return response(rapor);
+  }));
+
+test("aktarım dersini seçmek kayıt yapmaz; tercihleri yeniden teyit edip sürümü yalnız son istekte gönderir", async () => {
+  learningRoutes(); render(); await approve(); await chooseLesson();
+  expect(importCalls()).toHaveLength(0);
+  expect(screen.getByRole("checkbox", { name: /Şablondaki örnek/ })).not.toBeChecked();
+  expect(screen.getByRole("button", { name: "Kontrol ettim, aktar" })).toBeDisabled();
+  expect(screen.getByRole("link", { name: "Seçtiğim aktarım dersini ve alıştırmasını aç" })).toHaveAttribute("href", "/app/guidance/catalog?version=22");
+  expect(screen.getByText(/Kayıtlı sonucu sorgula veya Aynı gönderimi tekrar dene kullanın/)).toBeInTheDocument();
+  await recheck(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
+  await screen.findByText("Gerçek aktarım sonucu");
+  expect((importCalls()[0][1]!.body as FormData).get("guidanceContentRevisionId")).toBe("22");
+  expect(screen.getByText(/tek gerçek işlem kanıtıdır/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "İşlemde kullanılan aktarım dersini aç" })).toHaveAttribute("href", "/app/guidance/catalog?version=22");
+});
+
+test("belirsiz yanıtta ders seçimi sabittir; makbuz kurtarması kişisel kanıt listesini yeniden okur", async () => {
+  let saved: ReturnType<typeof result> & { guidanceContent: typeof sourceSnapshot };
+  learningRoutes(init => { saved = { ...result((init.body as FormData).get("importRequestId") as string), guidanceContent: sourceSnapshot };
+    return response({ title: "Yanıt kayboldu" }, 500); }, () => response(saved), () => saved ? [{ isCurrent: false, evidence: {
+      evidenceKey: "employee-import:1", operationKey: "employee-import", resourceId: 1, outcome: "imported", occurredAtUtc: "2026-10-02T06:00:00Z",
+      content: sourceSnapshot, importChanges: { importRequestId: saved.importRequestId, createdCount: 1, skippedCount: 2, createdEmployeeIds: [42],
+        skippedRows: [{ rowNumber: 3, outcome: "invalid", explanation: "Hatalı; atlandı", issues: ["Ad: Zorunlu alan."] }] } } }] : []);
+  renderPage(<AuthProvider><ToastProvider><ImportModal open onClose={() => {}} /><GuidanceOperationJourney /></ToastProvider></AuthProvider>);
+  await approve(); await chooseLesson(); await recheck(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
+  await screen.findByText(/Yanıt kayboldu/);
+  expect(screen.getByRole("button", { name: "Rehber sürümü bağlantısını kaldır" })).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Kayıtlı sonucu sorgula" }));
+  await screen.findByText("Gerçek aktarım sonucu");
+  expect(await screen.findByRole("region", { name: "Aktarım kanıtının gerçek sonucu" })).toHaveTextContent("1 personel oluşturuldu · 2 satır atlandı");
+  expect(screen.getByRole("link", { name: "Çalışan #42 kartını aç" })).toHaveAttribute("href", "/app/personnel/42");
+  expect(within(screen.getByRole("region", { name: "Aktarım kanıtının gerçek sonucu" })).getByText(/Ad: Zorunlu alan/)).toBeInTheDocument();
+  expect(importCalls()).toHaveLength(1);
+});
+
+test("yeni dosya eski ders seçimini ve tüm tercihleri bırakır", async () => {
+  learningRoutes(); render(); await approve(); await chooseLesson(); await recheck();
+  await dosyaSec("yalniz-eksikler.xlsx");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Aktarımı gözden geçir" })).toBeEnabled());
+  await userEvent.click(screen.getByRole("button", { name: "Aktarımı gözden geçir" }));
+  expect(screen.queryByRole("link", { name: "Seçtiğim aktarım dersini ve alıştırmasını aç" })).not.toBeInTheDocument();
+  expect(screen.getByRole("checkbox", { name: /Şablondaki örnek/ })).not.toBeChecked();
+  expect(screen.getByRole("button", { name: "Kontrol ettim, aktar" })).toBeDisabled();
+});
+
+test("tutarlı satırlar yanlış ders sürümünü başarı yapmaz; aynı gönderim ve kaynakla tekrar mümkündür", async () => {
+  let attempts = 0;
+  learningRoutes(init => response({ ...result((init.body as FormData).get("importRequestId") as string),
+    guidanceContent: { ...sourceSnapshot, contentRevisionId: ++attempts === 1 ? 23 : 22 } }));
+  render(); await approve(); await chooseLesson(); await recheck(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Aktarım sonucu doğrulanamadı");
+  expect(screen.queryByText("Gerçek aktarım sonucu")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Aynı gönderimi tekrar dene" }));
+  await screen.findByText("Gerçek aktarım sonucu");
+  const bodies = importCalls().map(([, init]) => init!.body as FormData);
+  expect(bodies).toHaveLength(2);
+  expect(bodies[0].get("importRequestId")).toBe(bodies[1].get("importRequestId"));
+  expect(bodies.every(body => body.get("guidanceContentRevisionId") === "22")).toBe(true);
+});
 
 test("önizleme kayıt açmadan her kişiyi, Excel satırını ve atlama nedenini gösterir", async () => {
   render(); await dosyaSec();

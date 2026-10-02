@@ -1,4 +1,10 @@
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { appPath } from "../../paths";
+import { guidanceOperationsKey } from "../guidance/operationQueries";
+import { dailyTasksKey } from "../guidance/queries";
+import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { ApiError, apiDownload, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { ImportRows, validImportPreview, validImportResult } from "./ImportRows";
@@ -7,6 +13,7 @@ import { usePreviewImport, useImportEmployees, type ImportPreviewDto, type Impor
 /** Önizleme ve sonuç ayrı tutulur; belirsiz yanıtta aynı gönderim kimliği korunur. */
 export function ImportModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { showToast } = useToast();
+  const client = useQueryClient();
   const preview = usePreviewImport();
   const importer = useImportEmployees();
   const previewSequence = useRef(0);
@@ -23,6 +30,7 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
   const [uncertain, setUncertain] = useState(false);
   const [checking, setChecking] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [guidanceVersion, setGuidanceVersion] = useState<number | null>(null);
 
   if (!open) return null;
   const busy = importer.isPending || checking;
@@ -31,7 +39,7 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
     if (busy || uncertain) return;
     const sequence = ++previewSequence.current;
     requestId.current = crypto.randomUUID();
-    setFile(secilen); setRapor(null); setSonuc(null); clearChecks(); setError(null);
+    setFile(secilen); setRapor(null); setSonuc(null); setGuidanceVersion(null); clearChecks(); setError(null);
     if (!secilen) return;
     if (!secilen.name.toLowerCase().endsWith(".xlsx") || secilen.size > 5 * 1024 * 1024) {
       setError("En fazla 5 MB boyutunda bir .xlsx dosyası seçin."); return;
@@ -51,8 +59,12 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
 
   const showResult = (next: ImportResultDto) => {
     if (!validImportResult(next, requestId.current, rapor)) throw new Error("Aktarım yanıtı eksik veya önizlemeyle tutarsız.");
+    if ((next.guidanceContent?.contentRevisionId ?? null) !== guidanceVersion) throw new Error("Kayıtlı sonucun rehber sürümü doğrulanamadı.");
     setSonuc(next); setReview(false); setUncertain(false); setError(null);
     showToast(String(next.olusturulanSatir) + " personel kaydı oluşturuldu.", "success");
+    // Makbuz GET ile kurtarılsa da iş ve öğrenme durumunu gerçek kayıttan yeniden oku.
+    void Promise.all([client.invalidateQueries({ queryKey: ["employees"] }),
+      client.invalidateQueries({ queryKey: dailyTasksKey }), client.invalidateQueries({ queryKey: guidanceOperationsKey })]);
   };
   const kayitliSonucuAc = async () => {
     if (busy) return;
@@ -68,7 +80,8 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
     if (!onaylandi || !file || !ozet?.previewToken || importInFlight.current) return;
     importInFlight.current = true; setError(null);
     try {
-      showResult(await importer.mutateAsync({ file, importRequestId: requestId.current, expectedPreviewToken: ozet.previewToken }));
+      showResult(await importer.mutateAsync({ file, importRequestId: requestId.current, expectedPreviewToken: ozet.previewToken,
+        ...(guidanceVersion != null ? { guidanceContentRevisionId: guidanceVersion } : {}) }));
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setUncertain(true);
@@ -124,6 +137,11 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
           {ozet.toplamSatir === 0 && ozet.sorunlar!.map((issue, index) => <p className="form-error" key={index}>Satır {issue.satirNo} · {issue.alan}: {issue.mesaj}</p>)}
           {review && <section className="ez-import-review" role="region" aria-label="Aktarmadan önce kontrol edin"><h5>Aktarmadan önce kontrol edin</h5>
             <p><strong>Dosya:</strong> {file?.name} · <strong>Oluşturulacak:</strong> {ozet.gecerliSatir} · <strong>Atlanacak:</strong> {ozet.toplamSatir! - ozet.gecerliSatir!}</p>
+            <GuidanceOperationSource process="personnel" step="import-review" label="Toplu aktarımda kullandığım ders sürümü"
+              value={guidanceVersion} disabled={busy || uncertain} onChange={id => {
+                setGuidanceVersion(id); setSampleChecked(false); setContractChecked(false); setPartialChecked(false);
+              }} />
+            {guidanceVersion !== null && <p><Link to={appPath("/guidance/catalog?version=" + guidanceVersion)}>Seçtiğim aktarım dersini ve alıştırmasını aç</Link></p>}
             <label><input type="checkbox" checked={sampleChecked} disabled={busy || uncertain} onChange={(e) => setSampleChecked(e.target.checked)} /> Şablondaki örnek personel satırını sildim ve satır bazındaki gerçek çalışanları kontrol ettim.</label>
             <label><input type="checkbox" checked={contractChecked} disabled={busy || uncertain} onChange={(e) => setContractChecked(e.target.checked)} /> Tüm aktarılacak çalışanların belirsiz süreli sözleşmeyle, tam zamanlı ve aktif kaydedilmesini doğruladım.</label>
             {partial && <label><input type="checkbox" checked={partialChecked} disabled={busy || uncertain} onChange={(e) => setPartialChecked(e.target.checked)} /> Hatalı ve mükerrer satırlar atlanırken yalnız geçerli satırların kaydedilmesini istiyorum.</label>}
@@ -138,6 +156,10 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
       {sonuc && <section className="ez-import-outcome"><h5>Gerçek aktarım sonucu</h5>
         <p role="status"><strong>{sonuc.olusturulanSatir}</strong> personel kaydı oluşturuldu; <strong>{sonuc.atlananSatir}</strong> satır atlandı.</p>
         <p>Gönderim: <code>{sonuc.importRequestId}</code>. Aynı gönderimi tekrarlamak yeni kayıt oluşturmaz.</p>
+        {sonuc.guidanceContent && <p>Aktarımda kullanılan ders: {sonuc.guidanceContent.title} · Sürüm {sonuc.guidanceContent.contentVersion}.
+          {sonuc.olusturulanSatir! > 0 ? " Bu gönderim kişisel yolculuğunuzda tek gerçek işlem kanıtıdır; tüm personel hazırlığının tamamlandığı anlamına gelmez." : " Yeni personel oluşmadığı için gerçek işlem kanıtı oluşturulmadı."}
+          {" "}<Link to={appPath("/guidance/catalog?version=" + sonuc.guidanceContent.contentRevisionId)}>İşlemde kullanılan aktarım dersini aç</Link></p>}
+        {!sonuc.guidanceContent && <p>Bu aktarım bir ders sürümüne bağlanmadı; kişisel öğrenme kanıtı sayılmaz.</p>}
         <ImportRows key={"result-" + requestId.current} rows={sonuc.satirlar!} completed />
         <p>Oluşan kartlarda sözleşme, işe giriş ve departmanı kontrol edin; belge ve ücret adımlarını ayrıca tamamlayın. Atlanan hatalı satırları düzeltip yeni dosyada yalnız eksikleri yükleyin. Dış bildirimleri ayrıca takip edin.</p>
         <div className="toolbar-actions"><button className="btn btn-primary" onClick={onClose}>Personel listesine dön</button><button className="btn btn-secondary" onClick={() => void dosyaSecildi(null)}>Yeni dosya hazırla</button></div>

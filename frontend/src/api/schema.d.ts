@@ -1816,6 +1816,8 @@ export interface paths {
                         /** Format: uuid */
                         importRequestId?: string;
                         expectedPreviewToken?: string;
+                        /** Format: int32 */
+                        guidanceContentRevisionId?: number;
                     };
                 };
             };
@@ -10264,6 +10266,23 @@ export interface components {
             /** Format: int32 */
             revision?: number;
         };
+        GuidanceImportChangesDto: {
+            /** Format: uuid */
+            importRequestId?: string;
+            /** Format: int32 */
+            createdCount?: number;
+            /** Format: int32 */
+            skippedCount?: number;
+            createdEmployeeIds?: number[] | null;
+            skippedRows?: components["schemas"]["GuidanceImportSkippedRowDto"][] | null;
+        };
+        GuidanceImportSkippedRowDto: {
+            /** Format: int32 */
+            rowNumber?: number;
+            outcome?: string | null;
+            explanation?: string | null;
+            issues?: string[] | null;
+        };
         GuidanceOperationBody: {
             /** Format: int32 */
             guidanceContentRevisionId?: number | null;
@@ -10280,6 +10299,7 @@ export interface components {
             evidenceKey?: string | null;
             setupChanges?: components["schemas"]["GuidanceSetupChangesDto"];
             personnelChanges?: components["schemas"]["GuidancePersonnelChangesDto"];
+            importChanges?: components["schemas"]["GuidanceImportChangesDto"];
         };
         GuidanceOperationHistoryDto: {
             evidence?: components["schemas"]["GuidanceOperationEvidenceDto"];
@@ -10408,6 +10428,7 @@ export interface components {
             satirlar?: components["schemas"]["ImportRowPreviewDto"][] | null;
             /** Format: uuid */
             importRequestId?: string;
+            guidanceContent?: components["schemas"]["GuidanceOperationSnapshot"];
         };
         ImportRowIssueDto: {
             /** Format: int32 */
