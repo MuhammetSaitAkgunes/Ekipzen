@@ -23,5 +23,9 @@ export const useGuidanceOperations = (userId?: string | null, enabled = true) =>
 });
 export const useGuidanceOperationSources = (process: string, userId?: string | null, enabled = false) => useQuery({
   queryKey: ["guidance", "operation-sources", userId, process], enabled: enabled && !!userId,
-  queryFn: () => apiFetch<GuidanceContent[]>(`/guidance/catalog?processKey=${process}`),
+  queryFn: async () => {
+    const data = await apiFetch<GuidanceContent[]>(`/guidance/catalog?processKey=${process}`);
+    if (!Array.isArray(data)) throw new Error("İşlem rehberi yanıtı doğrulanamadı.");
+    return data;
+  },
 });

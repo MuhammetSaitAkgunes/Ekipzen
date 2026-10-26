@@ -47,7 +47,7 @@ test("kaynak açıkça seçilir; yeni yayın eski seçimi değiştirmez ve seçi
     ? new Response(JSON.stringify([current])) : original(input, init));
   function Harness() { const [value, setValue] = useState<number | null>(null); return <><output aria-label="Seçilen kimlik">{value ?? "yok"}</output>
     <GuidanceOperationSource process="leave" step="decision-effect" value={value} onChange={setValue} /></>; }
-  render(<Harness />); expect(fetch).not.toHaveBeenCalled();
+  render(<Harness />); expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
   await chooseSource(); expect(screen.getByLabelText("Seçilen kimlik")).toHaveTextContent("22");
   current = source("leave", "decision-effect", 23);
   await userEvent.click(screen.getByRole("button", { name: "İşlem rehberini yeniden yükle" }));
@@ -64,7 +64,7 @@ test("yanlış adım veya yüklenemeyen kaynak kendiliğinden seçilmez", async 
   await userEvent.click(screen.getByText("Gerçek işlemde kullandığım rehber sürümü"));
   await screen.findByText(/güncel, incelenmiş adım yayımlanmamış/);
   expect(screen.queryByRole("button", { name: "Bu rehber sürümünü işlemime bağla" })).not.toBeInTheDocument();
-  expect(changed).not.toHaveBeenCalled(); first.unmount(); stubApi({});
+  expect(changed).not.toHaveBeenCalled(); first.unmount(); vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ title: "Rehber alınamadı" }), { status: 503 })));
   render(<GuidanceOperationSource process="leave" step="decision-effect" value={null} onChange={changed} />);
   await userEvent.click(screen.getByText("Gerçek işlemde kullandığım rehber sürümü"));
   await screen.findByRole("alert"); expect(changed).not.toHaveBeenCalled();
@@ -87,7 +87,9 @@ test("yeni çalışan POST'u seçilen sürümü taşır; çakışmada form ve s�
   mock.mockImplementation(async (input, init) => init?.method === "POST" && String(input) === "/api/employees"
     ? new Response(JSON.stringify({ title: "Seçilen rehber sürümü güncel değil" }), { status: 409 }) : original(input, init));
   const created = vi.fn(); render(<PersonnelModal employeeId={null} readOnly={false} onClose={() => {}} onCreated={created} />);
+  await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
   await chooseSource();
+  await userEvent.click(screen.getByRole("button", { name: /Kimlik Bilgileri/ }));
   await userEvent.type(screen.getByLabelText("TC Kimlik No *"), "98765432109");
   await userEvent.type(screen.getByLabelText("Adı"), "Yeni"); await userEvent.type(screen.getByLabelText("Soyadı"), "Kişi");
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
@@ -257,4 +259,35 @@ test("bordro dönemi onayı seçilen kaynağı yalnız son teyitten sonra iletir
   await userEvent.click(ack); await chooseSource(); expect(ack).not.toBeChecked(); expect(onSubmit).not.toHaveBeenCalled();
   await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Dönemi onayla" }));
   expect(onSubmit).toHaveBeenCalledExactlyOnceWith(22);
+});
+
+test("açık başlayan rehber küçültüldüğünde form ve açık sürüm seçimi korunur; okuma yazım oluşturmaz", async () => {
+  stubApi(routes());
+  function Harness() { const [value, setValue] = useState<number | null>(null); return <><label>Deneme alanı<input defaultValue="" /></label><GuidanceOperationSource process="leave" step="decision-effect" value={value} onChange={setValue} /><output aria-label="Kaynak">{value ?? "seçilmedi"}</output></>; }
+  render(<Harness />);
+  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
+  await userEvent.type(screen.getByLabelText("Deneme alanı"), "Taslak korunur");
+  expect(screen.getByLabelText("Kaynak")).toHaveTextContent("seçilmedi");
+  await userEvent.click(screen.getByRole("button", { name: "Küçült" }));
+  expect(screen.getByLabelText("Deneme alanı")).toHaveValue("Taslak korunur");
+  expect(screen.getByRole("note", { name: "Kritik ön koşul ve dayanak" })).toHaveTextContent("Ön koşulu incele");
+  expect(screen.getByRole("note", { name: "Kritik ön koşul ve dayanak" })).toHaveTextContent("İşlem güvenliği");
+  await userEvent.click(screen.getByRole("button", { name: "Rehberi aç" }));
+  expect(screen.getByLabelText("Deneme alanı")).toHaveValue("Taslak korunur");
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method && init.method !== "GET")).toBe(false);
+});
+
+test("küçültülen eski seçim kendi dayanağını ve uzman uyarısını korur", async () => {
+  const old = source(); old.isCurrent = false; old.body.provision = "Seçilen eski dayanak";
+  stubApi({ ...routes(), "/api/guidance/catalog": [source("leave", "decision-effect", 23)], "/api/guidance/catalog/versions/22": old });
+  const change = vi.fn();
+  render(<GuidanceOperationSource process="leave" step="decision-effect" value={22} onChange={change} />);
+  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
+  await userEvent.click(screen.getByRole("button", { name: "Küçült" }));
+  const summary = screen.getByRole("note", { name: "Kritik ön koşul ve dayanak" });
+  expect(summary).toHaveTextContent("Seçilen eski dayanak");
+  expect(summary).toHaveTextContent("Standart kayıt");
+  expect(summary).toHaveTextContent("Uzmana ilet");
+  expect(screen.getByText(/Seçiminiz korunuyor/)).toBeVisible();
+  expect(change).not.toHaveBeenCalled();
 });

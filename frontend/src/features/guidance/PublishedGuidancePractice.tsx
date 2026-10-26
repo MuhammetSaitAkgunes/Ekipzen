@@ -38,13 +38,13 @@ function PinnedPractice({ id }: { id: number }) {
   </section>;
 }
 
-export function PublishedGuidancePractice({ process, step }: { process: string; step: string }) {
+export function PublishedGuidancePractice({ process, step, initiallyOpen = false }: { process: string; step: string; initiallyOpen?: boolean }) {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [pinned, setPinned] = useState<number | null>(null);
   const [sequence, setSequence] = useState(0);
   const current = usePublishedStep(process, step, user?.id, open);
-  return <details className="ez-personnel-decision-check" onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details open={open} className="ez-personnel-decision-check" onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>Kaynaklı adım ve sürümlü alıştırma</summary>
     {open && <>
       {current.isPending ? <p>Güncel kaynaklı adım yükleniyor.</p> : current.isError ? <p role="alert">{current.error.message}</p>

@@ -26,3 +26,4 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>,
 );
 import "./styles/workspace.css";
+import "./styles/workspace-design.css";

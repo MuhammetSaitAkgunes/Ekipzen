@@ -1,0 +1,163 @@
+/* Authenticated workspace. All sizing and controls share the same visual scale. */
+.ez-workspace {
+  --ez-bg: #f5f6fa; --ez-surface: #fff; --ez-surface-2: #f0f2f7;
+  --ez-text: #202337; --ez-text-2: #42485b; --ez-text-3: #626a7d; --ez-text-4: #70788a;
+  --ez-border: #e0e4ed; --ez-border-soft: #edf0f5; --ez-border-strong: #bac2d2;
+  --ez-nav-bg: #fff; --ez-nav-text: #4c5367; --ez-nav-muted: #687085;
+  --ez-nav-border: #e0e4ed; --sidebar-width: 232px;
+  font-size: 16px; line-height: 1.6; overflow: hidden;
+  --ez-primary: #5145b8; --ez-primary-hover: #403594; --ez-primary-soft: #eeecfb; --ez-on-primary: #fff;
+  --ez-nav-accent: #5145b8; --ez-nav-active-bg: #e5e1f5;
+  --ez-shadow-sm: 0 1px 2px rgb(40 45 30 / .03); --ez-shadow-md: 0 12px 32px rgb(40 45 30 / .08);
+  --primary: var(--ez-primary); --primary-strong: var(--ez-primary-hover); --primary-soft: var(--ez-primary-soft); --primary-contrast: var(--ez-on-primary);
+  --ink: var(--ez-text); --text: var(--ez-text-2); --muted: var(--ez-text-3); --subtle: var(--ez-text-4);
+  --line: var(--ez-border); --line-soft: var(--ez-border-soft); --line-strong: var(--ez-border-strong);
+  --surface: var(--ez-surface); --surface-soft: var(--ez-surface-2); --body: var(--ez-bg);
+  --shadow-sm: var(--ez-shadow-sm); --shadow-md: var(--ez-shadow-md); --header-height: 76px; --radius-md: 10px; --radius-lg: 14px;
+  color: var(--text); background: var(--body); color-scheme: light; height: 100dvh;
+}
+.ez-workspace[data-app-theme="dark"] {
+  --ez-bg: #121622; --ez-surface: #1b2030; --ez-surface-2: #242b3e;
+  --ez-text: #f0f2fa; --ez-text-2: #d0d6e5; --ez-text-3: #a9b3c8; --ez-text-4: #a0aac0;
+  --ez-border: #343d53; --ez-border-soft: #2b3347; --ez-border-strong: #63708c;
+  --ez-nav-bg: #191e2d; --ez-nav-text: #d0d6e5; --ez-nav-muted: #a9b3c8; --ez-nav-border: #343d53;
+  --ez-primary: #b4a7ff; --ez-primary-hover: #cdc4ff; --ez-primary-soft: #36314e; --ez-on-primary: #201b38;
+  --ez-nav-accent: #c0b4ff; --ez-nav-active-bg: #36314e;
+  --ez-shadow-sm: none; --ez-shadow-md: 0 12px 32px rgb(0 0 0 / .24);
+  color-scheme: dark;
+}
+.ez-workspace h1, .ez-workspace .page-header h2, .ez-workspace .welcome-header h2 { font-size: clamp(26px, 2.5vw, 32px); line-height: 1.25; letter-spacing: -.6px; font-weight: 650; }
+.ez-workspace h2 { font-size: 22px; line-height: 1.35; letter-spacing: -.35px; }
+.ez-workspace h3 { font-size: 18px; line-height: 1.4; }
+.ez-workspace h4 { font-size: 16px; line-height: 1.5; }
+.ez-workspace .main-content { padding: 28px 24px 48px; container-type: inline-size; scroll-behavior: smooth; }
+.ez-workspace .main-content > * { min-width: 0; }
+.ez-workspace :is(.page-header,.section-header,.ez-panel-heading) { gap: 16px; flex-wrap: wrap; }
+.ez-workspace :is(.page-header,.section-header,.ez-panel-heading) p { max-width: 68ch; font-size: 16px; line-height: 1.6; }
+.ez-workspace :is(.ez-panel,.card,.surface,.table-container) { border-radius: 14px; min-width: 0; }
+.ez-workspace .ez-panel { padding: 24px; }
+.ez-workspace .card-header-clean { display: flex; flex-wrap: wrap; gap: 12px; }
+.ez-workspace .card-header-clean > div { min-width: 0; }
+.ez-workspace .payroll-main-grid > * { min-width: 0; }
+.ez-workspace :is(.payroll-note,.notice-card,.form-error) { overflow-wrap: anywhere; }
+.ez-workspace :is(.ez-btn,.btn) { min-height: 44px; font-size: 14px; line-height: 1.4; padding: 10px 16px; border-radius: 9px; }
+.ez-workspace button:not([class]) { font: inherit; font-size: 14px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+.ez-workspace :is(button,a,input,select,textarea,summary):focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.ez-workspace label { font-size: 14px; line-height: 1.5; }
+.ez-workspace :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]) { font-size: 16px; line-height: 1.5; min-height: 44px; max-width: 100%; }
+.ez-workspace :is(.form-group,.field,.ez-field) { min-width: 0; }
+.ez-workspace :is(.form-row,.form-grid) { row-gap: 20px; }
+.ez-workspace :is(.form-label,.form-group>label,.ez-field__label) { display: block; margin-bottom: 8px; color: var(--ink); font-weight: 600; }
+.ez-workspace :is(.pending-desc,.status-pill,.badge,.nav-btn,.nav-link,.sidebar a) { font-size: 14px; }
+.ez-workspace :is(.data-table,.detail-table,.leaf-table,.payroll-table) { font-size: 14px; }
+.ez-workspace :is(.data-table,.detail-table,.leaf-table,.payroll-table) :is(th,td) { padding: 14px 16px; vertical-align: middle; }
+.ez-workspace :is(.table-container,.table-scroll,.payroll-workspace) { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.ez-workspace .modal-content { container-type: inline-size; }
+.ez-workspace .modal-card:has(.ez-workbench) { width: min(1280px, calc(100vw - 48px)); max-width: 1280px; }
+.ez-workspace .ez-profile-page .fullscreen-modal { container-type: inline-size; }
+.ez-workspace .ez-profile-page .modal-body { display: block; }
+.ez-workspace .ez-profile-page .modal-sidebar { width: auto; display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 16px 24px; border-right: 0; border-bottom: 1px solid var(--line); background: var(--surface); }
+.ez-workspace .ez-profile-page .modal-sidebar .nav-btn { width: auto; min-height: 44px; padding: 10px 14px; }
+.ez-workspace .ez-profile-page .modal-content-area { width: 100%; }
+
+/* Each operation keeps its guide beside its own fields, never the entire page. */
+.ez-workspace .ez-workbench { display: block; container-type: inline-size; min-width: 0; }
+.ez-workbench-layout { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.ez-workbench-main, .ez-workbench-guide { min-width: 0; }
+.ez-workbench-guide { max-height: 360px; overflow-y: auto; scrollbar-width: thin; }
+.ez-workbench-guide:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.ez-workbench-guide:empty { display: none; }
+.ez-workbench-main > :first-child { margin-top: 0; }
+.ez-workbench-main > :last-child { margin-bottom: 0; }
+@container (min-width: 960px) {
+  .ez-workbench > .ez-workbench-layout { display: grid; grid-template-columns: minmax(0,1fr) 340px; align-items: start; }
+  .ez-workbench > .ez-workbench-layout > .ez-workbench-main { grid-column: 1; grid-row: 1; }
+  .ez-workbench > .ez-workbench-layout > .ez-workbench-guide { grid-column: 2; grid-row: 1; position: sticky; top: 16px; max-height: calc(100dvh - 160px); overflow-y: auto; scrollbar-width: thin; }
+  .ez-workbench-layout:not(:has(> .ez-workbench-guide > *)) { grid-template-columns: minmax(0,1fr); }
+}
+.ez-context-guide { padding: 20px; border: 1px solid var(--line); border-top: 3px solid var(--primary); background: var(--surface); border-radius: 12px; color: var(--text); font-size: 16px; line-height: 1.65; }
+.ez-context-guide-heading { display: flex; align-items: start; gap: 12px; justify-content: space-between; }
+.ez-context-guide-heading h3 { margin: 6px 0 0; font-size: 18px; }
+.ez-context-guide-heading > .ez-btn { flex-shrink: 0; padding-inline: 8px; }
+.ez-context-guide .ez-overline { font-size: 11px; line-height: 1.5; letter-spacing: .07em; }
+.ez-context-guide p { margin: 10px 0; overflow-wrap: anywhere; }
+.ez-guide-explanation > section { position: relative; padding-block: 20px; border-top: 1px solid var(--line); }
+.ez-guide-explanation > section:first-child { margin-top: 20px; }
+.ez-guide-explanation > section > h3 { margin: 0 0 12px 30px; font-size: 17px; }
+.ez-guide-explanation h4 { margin-block: 14px 6px; }
+.ez-guide-number { position: absolute; top: 20px; left: 0; color: var(--primary); font-size: 12px; font-weight: 750; line-height: 24px; }
+.ez-guide-explanation p { max-width: 68ch; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ez-guide-prerequisite, .ez-guide-basis, .ez-guide-next, .ez-guide-example { padding: 12px 14px; border-radius: 9px; background: var(--surface-soft); margin-block: 12px; }
+.ez-guide-example { border-left: 3px solid var(--primary); }
+.ez-guide-warning { padding: 12px 14px; border: 1px solid var(--line-strong); border-left: 3px solid var(--ez-warning); border-radius: 8px; margin-block: 12px; }
+.ez-guide-metadata, .ez-help-preference > details { margin-block: 14px; padding-block: 12px; border-top: 1px solid var(--line); font-size: 14px; }
+.ez-workspace summary { cursor: pointer; font-weight: 600; line-height: 1.6; padding-block: 8px; }
+.ez-guide-metadata p, .ez-guide-footnote { font-size: 14px; color: var(--muted); }
+.ez-guide-footnote { border-top: 1px solid var(--line); padding-top: 12px; }
+.ez-guide-collapsed-summary { padding: 12px; background: var(--surface-soft); border-radius: 8px; margin-top: 16px; font-size: 14px; }
+.ez-guide-binding { padding-block: 12px; border-top: 1px solid var(--line); }
+.ez-guide-binding .ez-btn { width: 100%; }
+.ez-guide-empty { padding: 20px; background: var(--surface-soft); border: 1px dashed var(--line-strong); border-radius: 10px; margin-block: 16px; }
+.ez-guide-empty p { margin-top: 8px; }
+.ez-help-preference fieldset { display: grid; gap: 10px; padding: 12px 0; border: 0; }
+.ez-help-preference legend { font-size: 14px; font-weight: 600; }
+.ez-workspace .ez-guidance-inline { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+.ez-help-preference input { margin-top: 5px; }
+.ez-process-lessons { padding: 24px; margin-block: 24px; }
+.ez-step-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px; margin-block: 8px 16px; }
+.ez-step-tabs [role="tab"] { display: flex; align-items: center; gap: 10px; min-width: 170px; max-width: 260px; flex-shrink: 0; text-align: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font-size: 14px; }
+.ez-step-tabs [aria-selected="true"] { background: var(--primary-soft); border-color: var(--primary); color: var(--ink); }
+.ez-step-tabs [role="tab"] > span { color: var(--primary); font-weight: 700; }
+.ez-workspace .ez-personnel-guide { padding: 20px; margin: 0 0 16px; border-radius: 12px; }
+.ez-personnel-guide > a, .ez-personnel-guide > small { display: block; margin-top: 16px; }
+.ez-guide-reader-link { display: inline-block; margin-block: 12px; font-size: 14px; color: var(--primary); }
+.ez-workspace .ez-request-detail { margin: 16px 0 0; padding: 20px; font-size: 16px; }
+.ez-workspace .ez-leave-decision-review { padding: 0; border: 0; background: transparent; }
+.ez-leave-decision-review .ez-workbench-main { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ez-guide-practice { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ez-workbench-guide .ez-personnel-guide .ez-personnel-decision-check { margin-top: 16px; }
+
+.ez-guide-navigation { display: flex; gap: 8px; border-bottom: 1px solid var(--line); overflow-x: auto; padding: 0 0 12px; margin-bottom: 28px; }
+.ez-guide-navigation a { flex-shrink: 0; border-radius: 9px; padding: 10px 16px; color: var(--text); text-decoration: none; font-size: 14px; font-weight: 600; }
+.ez-guide-navigation a[aria-current="page"] { background: var(--primary-soft); color: var(--primary); }
+.ez-guide-start { display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,.5fr); gap: 32px; padding: clamp(24px,3vw,40px); border: 1px solid var(--line); margin-bottom: 32px; }
+.ez-guide-start h2 { font-size: 28px; margin-block: 12px; max-width: 26ch; }
+.ez-guide-start p { max-width: 60ch; margin-bottom: 24px; }
+.ez-guide-start-path { display: grid; align-content: center; gap: 16px; padding: 24px; border-radius: 12px; background: var(--primary-soft); font-size: 14px; color: var(--ink); }
+.ez-learning-history { display: grid; gap: 24px; }
+.ez-workspace .ez-journey-card { padding: 24px; margin: 0; }
+.ez-journey-card dl { display: grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap: 16px; margin-block: 20px; }
+.ez-journey-card dl > div { background: var(--surface-soft); border-radius: 10px; padding: 16px; }
+.ez-journey-card dt { font-size: 14px; color: var(--muted); }
+.ez-journey-card dd { margin: 6px 0 0; color: var(--ink); font-weight: 650; }
+.ez-journey-card > p { max-width: 72ch; margin-block: 12px; }
+.ez-workspace .ez-process-map { margin-top: 24px; }
+.ez-catalog-filters { display: grid; grid-template-columns: minmax(0,1fr) minmax(200px,.5fr); gap: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ez-catalog-filters label { display: grid; gap: 8px; }
+.ez-catalog-filters :is(input,select) { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.ez-catalog-browser { display: grid; grid-template-columns: 290px minmax(0,1fr); gap: 24px; align-items: start; }
+.ez-guidance-catalog .ez-catalog-index { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.ez-catalog-entry { display: grid; gap: 6px; width: 100%; text-align: start; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.ez-catalog-entry[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); }
+.ez-catalog-entry > span, .ez-catalog-entry > small { font-size: 14px; color: var(--muted); }
+.ez-catalog-entry > strong { font-size: 16px; }
+.ez-catalog-reading { min-width: 0; }
+.ez-guidance-article { padding: clamp(20px,3vw,36px); }
+.ez-guidance-article h2 { margin-block: 12px; }
+.ez-guidance-article > p, .ez-guidance-article > section { max-width: 72ch; }
+.ez-workspace .ez-guidance-editorial { padding: 24px; }
+@media (max-width: 900px) {
+  .ez-workspace .main-content { padding: 20px 16px 40px; }
+  .ez-guide-start { grid-template-columns: minmax(0,1fr); gap: 20px; }
+  .ez-guide-start-path { padding: 16px; }
+  .ez-catalog-browser { grid-template-columns: minmax(0,1fr); }
+  .ez-guidance-catalog .ez-catalog-index { max-height: 280px; overflow-y: auto; }
+}
+@media (max-width: 600px) {
+  .ez-catalog-filters { grid-template-columns: minmax(0,1fr); }
+  .ez-workspace .ez-profile-page .modal-sidebar { flex-wrap: nowrap; overflow-x: auto; padding: 12px; }
+  .ez-workspace .ez-profile-page .modal-sidebar .nav-btn { flex-shrink: 0; }
+  .ez-context-guide, .ez-process-lessons { padding: 16px; }
+  .ez-context-guide-heading { flex-wrap: wrap; }
+  .ez-workspace .modal-actions { flex-wrap: wrap; }
+}

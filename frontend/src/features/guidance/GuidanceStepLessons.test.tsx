@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -15,85 +15,49 @@ function setRole(role: string) {
 beforeEach(() => { localStorage.clear(); setRole("hr-admin"); });
 afterEach(() => vi.unstubAllGlobals());
 
+
 test.each([
-  { process: "payroll", title: "Bordro", first: "Hesap ayarlarının kaynak ve sürümünü inceleme", step: "settings-review", count: 6 },
-  { process: "compliance", title: "Uyum ve belgeler", first: "Gerçek belgeyi ve takip kaydını inceleme", step: "record-review", count: 3 },
-  { process: "offboarding", title: "İşten ayrılış", first: "Ayrılış dosyasını hazırlama", step: "preparation", count: 5 },
-  { process: "daily", title: "Günlük yönetim", first: "İşin nedenini, kapsamını ve tarihini inceleme", step: "task-review", count: 3 },
-])("$title adımları gerçek işlem yapmadan sırayla açılır", async ({ process, title, first, step, count }) => {
-  stubApi({ [`/api/guidance/catalog/steps/${process}/${step}`]: null });
-  renderPage(<AuthProvider><GuidanceStepLessons process={process} /></AuthProvider>);
-  expect(fetch).not.toHaveBeenCalled();
-  await userEvent.click(screen.getByText(`${title} · Adım adım öğren`));
-  const list = screen.getByRole("list");
-  const headings = within(list).getAllByRole("heading");
-  expect(headings).toHaveLength(count); expect(headings[0]).toHaveTextContent(first);
-  expect(fetch).not.toHaveBeenCalled();
-  await userEvent.click(within(list).getAllByText("Kaynaklı adım ve sürümlü alıştırma")[0]);
+  ["company", "initial-setup", "access-preparation", 4],
+  ["recruitment", "candidate-create", "hire-preparation", 3],
+  ["personnel", "record-review", "rehire", 3],
+  ["attendance", "entry-review", "period-summary", 3],
+  ["payroll", "settings-review", "correction-external", 6],
+  ["compliance", "record-review", "record-correction", 3],
+  ["offboarding", "preparation", "correction-external", 5],
+  ["daily", "task-review", "external-followup", 3],
+])("%s sürecinde yalnız aktif adım gösterilir; gezinme gerçek işlem oluşturmaz", async (process, first, last, count) => {
+  stubApi({ [`/api/guidance/catalog/steps/${process}/${first}`]: null, [`/api/guidance/catalog/steps/${process}/${last}`]: null });
+  renderPage(<AuthProvider><GuidanceStepLessons process={process as string} /></AuthProvider>);
+  const tabs = screen.getAllByRole("tab");
+  expect(tabs).toHaveLength(count as number);
+  expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+  expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
   await screen.findByText(/henüz yayımlanmadı/);
-  expect(vi.mocked(fetch).mock.calls).toHaveLength(1);
-  expect(vi.mocked(fetch).mock.calls[0][0]).toBe(`/api/guidance/catalog/steps/${process}/${step}`);
-  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  await userEvent.click(tabs[tabs.length - 1]);
+  expect(tabs[tabs.length - 1]).toHaveAttribute("aria-selected", "true");
+  await screen.findByText(/henüz yayımlanmadı/);
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === `/api/guidance/catalog/steps/${process}/${last}`)).toBe(true);
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => ["POST", "PUT", "PATCH", "DELETE"].includes(init?.method ?? "GET"))).toBe(false);
 });
 
-test("ekip yöneticisi yalnız uyum incelemesini görür; bordro/ayrılış işlemi ve uyum değişikliği önerilmez", async () => {
-  setRole("manager"); stubApi({});
-  renderPage(<AuthProvider><GuidanceStepLessons process="compliance" /><GuidanceStepLessons process="payroll" /><GuidanceStepLessons process="offboarding" /></AuthProvider>);
-  await userEvent.click(screen.getByText("Uyum ve belgeler · Adım adım öğren"));
-  expect(screen.getAllByRole("heading")).toHaveLength(1);
-  expect(screen.getByText("Gerçek belgeyi ve takip kaydını inceleme")).toBeInTheDocument();
-  expect(screen.queryByText("Doğrulanmış belge durumunu işleme")).not.toBeInTheDocument();
-  expect(screen.queryByText("Belge bilgisi ve sorumlu hatasını düzeltme")).not.toBeInTheDocument();
-  expect(screen.queryByText("Bordro · Adım adım öğren")).not.toBeInTheDocument();
-  expect(screen.queryByText("İşten ayrılış · Adım adım öğren")).not.toBeInTheDocument();
-  expect(fetch).not.toHaveBeenCalled();
-});
-
-test("yönetici günlük iş inceleme ve sonuç adımlarını görür; dış kanıt kaydı İK rolünde kalır", async () => {
-  setRole("manager"); stubApi({});
-  renderPage(<AuthProvider><GuidanceStepLessons process="daily" /></AuthProvider>);
-  await userEvent.click(screen.getByText("Günlük yönetim · Adım adım öğren"));
-  expect(screen.getAllByRole("heading")).toHaveLength(2);
-  expect(screen.getByText("Gerçek kayıtta işlemi yapıp sonucunu doğrulama")).toBeInTheDocument();
-  expect(screen.queryByText("Ödeme ve bildirim kanıtlarını ayrı takip etme")).not.toBeInTheDocument();
-  expect(fetch).not.toHaveBeenCalled();
-});
-
-test("şirket rehberi sırayı gösterir; adımı açmak kurulum veya kayıt işlemi göndermez", async () => {
-  stubApi({ "/api/guidance/catalog/steps/company/initial-setup": null });
+test("klavye ile adım seçilir ve odak korunur", async () => {
+  stubApi({ "/api/guidance/catalog/steps/company/initial-setup": null, "/api/guidance/catalog/steps/company/company-profile": null });
   renderPage(<AuthProvider><GuidanceStepLessons process="company" /></AuthProvider>);
-  expect(fetch).not.toHaveBeenCalled();
-  await userEvent.click(screen.getByText("Şirket hazırlığı · Adım adım öğren"));
-  const list = screen.getByRole("list");
-  expect(within(list).getAllByRole("heading").map(item => item.textContent)).toEqual([
-    "Başlangıç kayıtlarını inceleme", "Şirket profilini doğrulama", "Departman hazırlığı", "Erişim sorumlularını belirleme",
-  ]);
-  expect(fetch).not.toHaveBeenCalled();
-  await userEvent.click(within(list).getAllByText("Kaynaklı adım ve sürümlü alıştırma")[0]);
-  await screen.findByText(/henüz yayımlanmadı/);
-  expect(vi.mocked(fetch).mock.calls).toHaveLength(1);
-  expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/guidance/catalog/steps/company/initial-setup");
-  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  const tabs = screen.getAllByRole("tab"); tabs[0].focus();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(tabs[1]).toHaveFocus(); expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+  expect(tabs[0]).toHaveAttribute("tabindex", "-1");
+  expect(vi.mocked(fetch).mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
 });
 
-test("ekip yöneticisinde yalnız personel incelemesi açılır; içe aktarma ve işe dönüş önerilmez", async () => {
-  setRole("manager"); stubApi({});
-  renderPage(<AuthProvider><GuidanceStepLessons process="personnel" /></AuthProvider>);
-  await userEvent.click(screen.getByText("Personel yönetimi · Adım adım öğren"));
-  expect(screen.getByRole("heading", { name: "Doğru çalışanı bulma ve bilgiyi kontrol etme" })).toBeInTheDocument();
-  expect(screen.queryByText("İçe aktarma önizlemesi ve sonuç kontrolü")).not.toBeInTheDocument();
-  expect(screen.queryByText("İşe dönüşü ayrı dönem olarak hazırlama")).not.toBeInTheDocument();
-  expect(fetch).not.toHaveBeenCalled();
-});
-
-test("puantajda yöneticinin üç adımı görünür; çalışan yönetici rehberine erişmez", async () => {
-  setRole("manager"); stubApi({});
-  const page = renderPage(<AuthProvider><GuidanceStepLessons process="attendance" /></AuthProvider>);
-  await userEvent.click(screen.getByText("Mesai ve puantaj · Adım adım öğren"));
-  expect(screen.getAllByRole("heading")).toHaveLength(3);
-  expect(screen.getByText("Aylık özet ve bordro etkisini kontrol etme")).toBeInTheDocument();
-  page.unmount(); setRole("employee");
-  renderPage(<AuthProvider><GuidanceStepLessons process="attendance" /></AuthProvider>);
-  expect(screen.queryByText("Mesai ve puantaj · Adım adım öğren")).not.toBeInTheDocument();
-  expect(fetch).not.toHaveBeenCalled();
+test("yönetici yalnız yetkili adımları görür; çalışan için yönetim süreci açılmaz", () => {
+  setRole("manager"); stubApi({ "/api/guidance/catalog/steps/compliance/record-review": null });
+  const page = renderPage(<AuthProvider><GuidanceStepLessons process="compliance" /><GuidanceStepLessons process="payroll" /><GuidanceStepLessons process="offboarding" /></AuthProvider>);
+  expect(screen.getAllByRole("tab")).toHaveLength(1);
+  expect(screen.getByRole("tab")).toHaveTextContent("Gerçek belgeyi ve takip kaydını inceleme");
+  expect(screen.queryByText("Doğrulanmış belge durumunu işleme")).not.toBeInTheDocument();
+  expect(screen.queryByText("Bordro")).not.toBeInTheDocument(); page.unmount();
+  setRole("employee"); vi.mocked(fetch).mockClear();
+  renderPage(<AuthProvider><GuidanceStepLessons process="payroll" /><GuidanceStepLessons process="personnel" /></AuthProvider>);
+  expect(screen.queryByRole("tab")).not.toBeInTheDocument(); expect(fetch).not.toHaveBeenCalled();
 });

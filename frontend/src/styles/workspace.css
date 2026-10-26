@@ -1,36 +1,5 @@
 /* Ekipzen workspace: scoped tokens keep the public site and auth screens independent. */
-.ez-workspace {
-  --ez-bg: #f7f7f3; --ez-surface: #fff; --ez-surface-2: #f1f1eb;
-  --ez-text: #252721; --ez-text-2: #44473f; --ez-text-3: #686b62; --ez-text-4: #71756a;
-  --ez-border: #e4e5dd; --ez-border-soft: #eff0e9; --ez-border-strong: #c8cbc0;
-  --ez-primary: #5145b8; --ez-primary-hover: #403594; --ez-primary-soft: #eeecfb; --ez-on-primary: #fff;
-  --ez-nav-bg: #f0f1eb; --ez-nav-text: #51554b; --ez-nav-muted: #686c5f;
-  --ez-nav-accent: #5145b8; --ez-nav-active-bg: #e5e1f5; --ez-nav-border: #e0e2d7;
-  --ez-shadow-sm: 0 1px 2px rgb(40 45 30 / .03); --ez-shadow-md: 0 12px 32px rgb(40 45 30 / .08);
-  --primary: var(--ez-primary); --primary-strong: var(--ez-primary-hover); --primary-soft: var(--ez-primary-soft); --primary-contrast: var(--ez-on-primary);
-  --ink: var(--ez-text); --text: var(--ez-text-2); --muted: var(--ez-text-3); --subtle: var(--ez-text-4);
-  --line: var(--ez-border); --line-soft: var(--ez-border-soft); --line-strong: var(--ez-border-strong);
-  --surface: var(--ez-surface); --surface-soft: var(--ez-surface-2); --body: var(--ez-bg);
-  --shadow-sm: var(--ez-shadow-sm); --shadow-md: var(--ez-shadow-md);
-  --sidebar-width: 248px; --header-height: 76px; --radius-md: 10px; --radius-lg: 14px;
-  color: var(--text); background: var(--body); color-scheme: light;
-  font-size: 14px; height: 100dvh;
-}
-.ez-workspace[data-app-theme="dark"] {
-  --ez-bg: #191c1b; --ez-surface: #222624; --ez-surface-2: #2c312e;
-  --ez-text: #f0f1ea; --ez-text-2: #d3d7cf; --ez-text-3: #a7afa4; --ez-text-4: #a0aa9c;
-  --ez-border: #383f39; --ez-border-soft: #2d332e; --ez-border-strong: #505a51;
-  --ez-primary: #b4a7ff; --ez-primary-hover: #cdc4ff; --ez-primary-soft: #36314e; --ez-on-primary: #201b38;
-  --ez-nav-bg: #1e2320; --ez-nav-text: #c0c8bd; --ez-nav-muted: #a0aa9c;
-  --ez-nav-accent: #c0b4ff; --ez-nav-active-bg: #36314e; --ez-nav-border: #343b34;
-  --ez-shadow-sm: none; --ez-shadow-md: 0 12px 32px rgb(0 0 0 / .24);
-  color-scheme: dark;
-}
 .ez-workspace [hidden] { display: none !important; }
-.ez-workspace h1, .ez-workspace .page-header h2, .ez-workspace .welcome-header h2 { font-size: 28px; font-weight: 650; line-height: 1.25; letter-spacing: -.8px; }
-.ez-workspace h2 { font-size: 18px; letter-spacing: -.35px; }
-.ez-workspace h3, .ez-workspace h4 { font-size: 16px; }
-.ez-workspace .main-content { padding: 32px 40px 48px; scroll-behavior: smooth; }
 .ez-workspace .main-content > * { max-width: 1440px; margin-inline: auto; }
 .ez-workspace .page-header, .ez-workspace .welcome-header { margin-bottom: 24px; align-items: center; gap: 16px; }
 .ez-workspace .page-header p, .ez-workspace .welcome-header p { color: var(--muted); margin-top: 8px; font-size: 14px; }

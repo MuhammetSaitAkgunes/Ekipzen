@@ -10,8 +10,8 @@ export function GuidanceHelpControl({ process, children, adaptiveReady = false }
   const save = useSaveGuidanceHelpPreference(user?.id);
   const stored = query.data?.find(item => item.processKey === process);
   const mode = query.isSuccess ? stored?.mode ?? "detailed" : "detailed";
-  return <div>
-    <fieldset disabled={!query.isSuccess || save.isPending}>
+  return <div className="ez-help-preference">
+    <details><summary>Anlatımı ayarla</summary><fieldset disabled={!query.isSuccess || save.isPending}>
       <legend>{processTitles[process]} anlatım tercihim</legend>
       {(["detailed", "compact", "adaptive"] as const).map(value => <label key={value} className="ez-guidance-inline">
         <input type="radio" name={name} checked={mode === value} onChange={() => {
@@ -25,6 +25,7 @@ export function GuidanceHelpControl({ process, children, adaptiveReady = false }
     {save.isError && <p role="alert">{save.error.message} <button type="button" onClick={() => { save.reset(); void query.refetch(); }}>Güncel tercihi yeniden yükle</button></p>}
     {save.isSuccess && <p role="status">Anlatım tercihiniz kaydedildi.</p>}
     {mode === "adaptive" && <p role="status">{adaptiveReady ? "Bu adımın güncel sürümünde kendi doğru alıştırma yanıtınız ve gerçek işlem kanıtınız var; uzun örneği istediğiniz zaman açabilirsiniz." : "Bu adımın güncel sürümünde kendi doğru alıştırma yanıtınız ve gerçek işlem kanıtınız birlikte doğrulanmadı; ayrıntılı örnek açık kalır."} Bu bir yeterlilik onayı değildir.</p>}
+    </details>
     {children?.(mode === "compact" || (mode === "adaptive" && adaptiveReady))}
   </div>;
 }
