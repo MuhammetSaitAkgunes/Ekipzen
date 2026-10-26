@@ -204,8 +204,12 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   ];
 
   return (
-    <div className="payroll-detail-panel">
-      {!isApproved && <GuidanceOperationSource process="payroll" step="row-review" value={editGuidanceVersion} onChange={setEditGuidanceVersion} disabled={updateRow.isPending} />}
+    <div className="payroll-detail-panel ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!isApproved && <GuidanceOperationSource process="payroll" step="row-review" value={editGuidanceVersion} onChange={setEditGuidanceVersion} disabled={updateRow.isPending} />}</div>
+          <div className="ez-workbench-main">
+
+
       {row.timesheetNeedsReview && <p role="alert">Puantaj veya onaylı izin kaynağı değişti. Aylık özeti açıp gün ve fazla mesai girdilerini yeniden uzlaştırarak kaydedin; toplu kontrol tek başına yeterli olmaz.</p>}
       {isApproved && row.id != null && <FinancialExternalReconciliationPanel source="payroll" parentId={periodId} resourceId={row.id} />}
       <div className="payroll-detail-head">
@@ -380,7 +384,11 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
             </div>
             <div className="modal-body-scroll">
               {error && <p className="form-error" role="alert">{error}</p>}
-              <div className="ez-payroll-review">
+              <div className="ez-payroll-review ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setReviewConfirmed(false); }} disabled={approveRow.isPending} /></div>
+          <div className="ez-workbench-main">
+
                 <h4>{reviewRow.name} · {periodName}</h4>
                 <p><strong>Kaydedilmiş durum:</strong> {reviewRow.approvalStatus} · <strong>Brüt kazanç:</strong> {formatPayrollMoney(reviewRow.grossEarnings)} · <strong>Net ücret:</strong> {formatPayrollMoney(reviewRow.netPay)}</p>
                 <p><strong>Ne yapıyoruz?</strong> Satırın hesap sonucu onaylı kayıt olarak saklanır. Onaydan sonra bu satırın girdileri bu ekranda değiştirilemez.</p>
@@ -388,9 +396,9 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
                 <p><strong>Puantaj:</strong> {reviewRow.timesheetComplete ? "Sistem kontrolü tamam" : "Sistem kontrolünde eksik"} · <strong>IBAN:</strong> {reviewRow.ibanComplete ? "Tamam" : "Eksik"}</p>
                 {(reviewRow.warnings ?? []).length > 0 && <div><strong>Hesap uyarıları:</strong><ul>{reviewRow.warnings?.map((warning) => <li key={warning}>{warning}</li>)}</ul></div>}
                 <p>Bu ön kontrol, sunucunun nihai onay kurallarının yerine geçmez. Eksik veya hatalı kayıt varsa geri dönüp düzeltin; sunucu onay sırasında yeniden denetler.</p>
-                <GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setReviewConfirmed(false); }} disabled={approveRow.isPending} />
+
                 <label><input type="checkbox" checked={reviewConfirmed} onChange={(e) => setReviewConfirmed(e.target.checked)} /> Kaydedilmiş satırı ve kaynak bilgilerini kontrol ettim.</label>
-              </div>
+              </div></div></div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setReviewRow(null)}>Düzeltmeye dön</button>
@@ -399,6 +407,6 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
           </div>
         </div>
       )}
-    </div>
+    </div></div></div>
   );
 }

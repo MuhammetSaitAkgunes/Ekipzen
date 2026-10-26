@@ -70,7 +70,11 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
       {data.needsInitialization && (
         <>
           <p>Eksik izin türü: {data.missingLeaveTypeCount} · Eksik tam gün tatil: {data.missingFullDayHolidayCount}</p>
-          {reviewing && <section className="ez-setup-review" role="region" aria-label="Başlangıç kayıtlarını oluşturmadan önce kontrol edin">
+          {reviewing && <section className="ez-setup-review ez-workbench" role="region" aria-label="Başlangıç kayıtlarını oluşturmadan önce kontrol edin">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="initial-setup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={initialize.isPending} /></div>
+          <div className="ez-workbench-main">
+
             <h4>Başlangıç kayıtlarını oluşturmadan önce kontrol edin</h4>
             {preview.isPending && <p>Tek tek eklenecek kayıtlar yükleniyor.</p>}
             {preview.isError && <p role="alert">Önizleme yüklenemedi. <button type="button" onClick={() => { setAcknowledged(false); void preview.refetch(); }}>Önizlemeyi tekrar yükle</button></p>}
@@ -85,9 +89,9 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
             <p><strong>İzin türleri:</strong> {reviewed.missingLeaveTypeCount} eksik tür eklenecek. <strong>Tam gün tatiller:</strong> {reviewed.missingFullDayHolidayCount} eksik tarih eklenecek.</p>
             <p><strong>Bordro ayarı:</strong> {reviewed.payrollSettingsExists ? "Mevcut set korunacak" : "Onaysız taslak oluşturulacak"}.</p>
             <p>Bu işlem mevcut kayıtları değiştirmez. Şablon yılı {data.templateYear} için başlangıç verisidir; hukuki doğrulama veya bordro onayı değildir. Kurulumdan sonra izin türlerini, tatilleri ve bordro kurallarını şirketinizin gerçek durumuyla karşılaştırın.</p>
-            <GuidanceOperationSource process="company" step="initial-setup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={initialize.isPending} />
+
             <label><input type="checkbox" checked={acknowledged} disabled={!preview.isSuccess || preview.isFetching} onChange={(event) => setAcknowledged(event.target.checked)} /> Eksik kayıtların oluşturulacağını ve uzman kontrolünün ayrıca gerektiğini anladım.</label>
-          </section>}
+          </div></div></section>}
           {reviewing
             ? <div className="ez-setup-actions">
               <button className="btn btn-ghost" disabled={initialize.isPending} onClick={() => { setReviewing(false); setAcknowledged(false); }}>Geri dön</button>

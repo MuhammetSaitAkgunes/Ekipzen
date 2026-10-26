@@ -1,3 +1,4 @@
+import { GuidanceOperationDeck } from "../guidance/GuidanceOperationDeck";
 import { OffboardingImpactDetails, type EmployeeOffboardingImpactPreview } from "./OffboardingImpactPreview";
 import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
 import { FinancialExternalReconciliationPanel } from "../payroll/FinancialExternalReconciliationPanel";
@@ -333,7 +334,11 @@ export function OffboardingModal({ employeeId, onClose }: {
           </button>
         </div>
 
-        <div className="modal-body-scroll">
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{context && !completedCase && <GuidanceOperationDeck><GuidanceOperationSource process="offboarding" step="preparation" value={draftGuidanceVersion} onChange={setDraftGuidanceVersion} disabled={isBusy} /><GuidanceOperationSource process="offboarding" step="settlement-review" value={calculationGuidanceVersion} onChange={setCalculationGuidanceVersion} disabled={isBusy} /><GuidanceOperationSource process="offboarding" step="completion" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setCompletionAcknowledged(false); }} disabled={isBusy} /></GuidanceOperationDeck>}</div>
+          <div className="ez-workbench-main">
+
           {contextQ.isPending && <p>İşten çıkış bilgileri yükleniyor…</p>}
           {contextError && <p className="form-error" role="alert">{contextError}</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
@@ -348,8 +353,8 @@ export function OffboardingModal({ employeeId, onClose }: {
           {context && <GuidanceStepLessons process="offboarding" />}
           {completedCase?.id && <FinancialExternalReconciliationPanel source="offboarding" parentId={employeeId} resourceId={completedCase.id} />}
           {context && !completedCase && <>
-            <GuidanceOperationSource process="offboarding" step="preparation" value={draftGuidanceVersion} onChange={setDraftGuidanceVersion} disabled={isBusy} />
-            <GuidanceOperationSource process="offboarding" step="settlement-review" value={calculationGuidanceVersion} onChange={setCalculationGuidanceVersion} disabled={isBusy} />
+
+
           </>}
           {context && completedCase && (
             <>
@@ -413,15 +418,19 @@ export function OffboardingModal({ employeeId, onClose }: {
                   placeholder="Hatalı tarih, yanlış personel veya onay düzeltmesi"
                 />
               </div>}
-              {!context.hasSettlementRevisions && reverseReview && <section className="ez-offboarding-review" role="region" aria-label="Geri almadan önce kontrol edin">
+              {!context.hasSettlementRevisions && reverseReview && <section className="ez-offboarding-review ez-workbench" role="region" aria-label="Geri almadan önce kontrol edin">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={(id) => { setReverseGuidanceVersion(id); setReverseAcknowledged(false); }} disabled={isBusy} /></div>
+          <div className="ez-workbench-main">
+
                 <h4>Geri almadan önce kontrol edin</h4>
-                <GuidanceOperationSource process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={(id) => { setReverseGuidanceVersion(id); setReverseAcknowledged(false); }} disabled={isBusy} />
+
                 <p><strong>Personel:</strong> {context.employeeName} · <strong>Dosya:</strong> #{completedCase.id} · <strong>Gerekçe:</strong> {reversalReason.trim()}</p>
                 <p>Sunucu, personel durumunu ve kapanan istihdam/ücret dönemini geri açmayı, değişmeyen ekip bağlarını geri kurmayı ve erişim işlemlerini kuyruğa almayı dener. Arada değişmiş kayıt varsa güvenli geri almayı reddeder.</p>
                 {reverseImpact && <OffboardingImpactDetails preview={reverseImpact} />}
                 <label className="checkbox-line"><input type="checkbox" checked={reverseAcknowledged} disabled={!reverseImpact?.canApply || isBusy} onChange={event => setReverseAcknowledged(event.target.checked)} /> Geri alma etkilerini kontrol ettim.</label>
                 <p>Uygulama dışındaki bildirimler ve yapılmış ödemeler otomatik geri alınmaz; bunları ilgili uzmanla ayrıca değerlendirin.</p>
-              </section>}
+              </div></div></section>}
             </>
           )}
 
@@ -561,7 +570,7 @@ export function OffboardingModal({ employeeId, onClose }: {
               </div>
               </fieldset>
 
-              <GuidanceOperationSource process="offboarding" step="completion" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setCompletionAcknowledged(false); }} disabled={isBusy} />
+
               {completionReview && <section className="ez-offboarding-review" role="region" aria-label="Tamamlamadan önce kontrol edin">
                 <h4>Tamamlamadan önce kontrol edin</h4>
                 <p><strong>Personel:</strong> {context.employeeName} · <strong>Ayrılış:</strong> {terminationDate} · <strong>Çıkış kodu:</strong> {exitCode.trim()}</p>
@@ -582,7 +591,7 @@ export function OffboardingModal({ employeeId, onClose }: {
               )}
             </>
           )}
-        </div>
+        </div></div></div>
 
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose} disabled={isBusy}>Vazgeç</button>

@@ -32,7 +32,7 @@ beforeEach(()=>{
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();localStorage.clear();});
 const render=(view:React.ReactNode)=>renderPage(<AuthProvider><ToastProvider>{view}</ToastProvider></AuthProvider>);
 const writes=(path:string,method:string)=>vi.mocked(fetch).mock.calls.filter(([url,init])=>String(url)===path&&init?.method===method);
-async function choose(label:string){await userEvent.click(screen.getByText(label,{exact:true}));await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("details")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));}
+async function choose(label:string){await userEvent.click(screen.getByText(label,{exact:true}));await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("aside")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));}
 
 test("pozisyon düzeltmesi ilk sürüm ve ayrı kaynağı yalnız son onayda gönderir",async()=>{
   const base=globalThis.fetch;vi.stubGlobal("fetch",vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input)==="/api/positions/12"&&init?.method==="PUT"?respond({...position,openCount:1,version:4}):base(input,init)));

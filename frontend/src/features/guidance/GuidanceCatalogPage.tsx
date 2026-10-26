@@ -7,7 +7,9 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { guidanceSourceDrafts, guidanceSourceResearchDate } from "./sourceDrafts";
 import { guidanceStepDrafts, guidanceStepTitles } from "./stepDrafts";
 import { guidanceProcessPath } from "./processNavigation";
+import { GuidanceNavigation } from "./GuidanceNavigation";
 import { GuidanceReadingJourney } from "./GuidanceReadingJourney";
+import { GuidanceExplanationBody } from "./GuidanceStepExplanation";
 import { processTitles, sourceTitles, useGuidanceCatalog, useGuidanceCatalogVersion, useGuidanceEditorial,
   useGuidanceEditorialAccess, useSaveGuidanceContent, useGuidanceContentReadings, useRecordGuidanceReading,
   type GuidanceContent, type GuidanceContentBody, type GuidanceEditorial } from "./catalogQueries";
@@ -38,7 +40,6 @@ function ContentArticle({ content }: { content: GuidanceContent }) {
   const { user } = useAuth();
   const processPath = guidanceProcessPath(content.processKey, user?.role);
   const body = content.body;
-  const sourceUrl = /^https:\/\//i.test(body.sourceReference) ? body.sourceReference : null;
   return <article className="ez-panel ez-guidance-article">
     <span className="ez-overline">{processTitles[content.processKey]} · Sürüm {content.contentVersion} · {sourceTitles[body.sourceKind]}</span>
     <h2>{body.title}</h2>
@@ -46,10 +47,7 @@ function ContentArticle({ content }: { content: GuidanceContent }) {
     {!content.isCurrent && <p role="status">Bu sürüm şu anda güncel rehber olarak kullanılmıyor. Tarihî, ileri tarihli veya inceleme süresi geçmiş olabilir; işlem öncesinde güncel içeriği kontrol edin.</p>}
     <p>Yürürlük: {body.effectiveFrom}{body.effectiveTo ? ` — ${body.effectiveTo}` : " itibarıyla"}</p>
     {body.sourceKind === "company-policy" && <p>Bu merkezî içerik bir politika örneğidir. Kendi şirketinizde yürürlükte olan politikayı ayrıca doğrulayın.</p>}
-    {fields.filter(([key]) => body[key]).map(([key, title]) => <section key={key}>
-      <h3>{title}</h3>
-      {key === "sourceReference" && sourceUrl ? <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{body[key]}</a> : <p>{body[key]}</p>}
-    </section>)}
+    <GuidanceExplanationBody content={content} />
     {body.practice && <section aria-label="Yayın incelemesindeki alıştırma"><h3>İnceleme kapsamındaki alıştırma</h3>
       <p>{body.practice.question}</p><ol>{body.practice.choices.map((choice, index) => <li key={index}>{choice}{index === body.practice!.correctChoice ? " · Doğru seçenek" : ""}</li>)}</ol>
       <p>{body.practice.explanation}</p><p>Soru, seçenekler, doğru yanıt ve açıklama bu içerik sürümünün yayın onayına dahildir.</p></section>}
@@ -192,6 +190,8 @@ export function GuidanceCatalogPage() {
   const [params, setParams] = useSearchParams();
   const versionId = /^\d+$/.test(params.get("version") ?? "") ? Number(params.get("version")) : null;
   const processFilter = params.get("process") ?? "";
+  const history = params.get("tab") === "history" && user?.role === "employee";
+  const search = params.get("q") ?? "";
   const catalog = useGuidanceCatalog(user?.role);
   const version = useGuidanceCatalogVersion(versionId, user?.role);
   const access = useGuidanceEditorialAccess(user?.id);
@@ -202,25 +202,40 @@ export function GuidanceCatalogPage() {
   const [reloadSequence, setReloadSequence] = useState(0);
   const editorial = useGuidanceEditorial(manage && access.data?.canManage === true, user?.id);
   const selectedEntry = selected;
+  const visible = catalog.data?.filter(item => (!processFilter || item.processKey === processFilter)
+    && (item.body.title + " " + processTitles[item.processKey]).toLocaleLowerCase("tr-TR").includes(search.toLocaleLowerCase("tr-TR"))) ?? [];
   const saved = (entry: GuidanceEditorial) => { setCreation(null); setSelected(entry); setMessage("İçerik durumu sunucuda kaydedildi."); };
   return <div className="ez-guidance-catalog">
-    <div className="page-header"><div><span className="ez-overline">İK REHBERİ</span><h1>Rehber içerikleri</h1>
+    <div className="page-header"><div><span className="ez-overline">İK REHBERİ</span><h1>{history ? "Öğrenme geçmişim" : "Süreçler ve içerikler"}</h1>
       <p>Süreçlerin gerekçelerini, örneklerini ve incelenmiş dayanaklarını okuyun.</p></div>
-      {user?.role !== "employee" && <Link className="btn btn-secondary" to={appPath("/guidance")}>Öğrenme yolculuğum</Link>}
     </div>
+    <GuidanceNavigation history={history} />
     {access.data?.canManage && <button className="btn btn-secondary" onClick={() => setManage(prev => !prev)}>{manage ? "Okur görünümüne dön" : "İçerik yayınını yönet"}</button>}
-    {!manage && <>
-      {catalog.isPending ? <PageLoading /> : catalog.isError ? <PageError error={catalog.error} /> : <>
-        <label>Süreç filtresi<select value={processFilter} onChange={event => setParams(event.target.value ? { process: event.target.value } : {})}>
-          <option value="">Tüm süreçler</option>{Object.entries(processTitles).map(([key, title]) => <option key={key} value={key}>{title}</option>)}
-        </select></label>
-        {!!processFilter && !processTitles[processFilter] && <p role="alert">Bu süreç bulunamadı. Tüm süreçler seçeneğine dönün.</p>}
-        {!catalog.data.some(item => !processFilter || item.processKey === processFilter) && <p>Rolünüz ve seçili süreç için yayımlanmış ve incelemesi güncel bir içerik henüz yok. Bu durum süreçte yapılacak iş olmadığı anlamına gelmez.</p>}
-        <ul>{catalog.data.filter(item => !processFilter || item.processKey === processFilter).map(content => <li key={content.id}><button className="btn btn-secondary" onClick={() => setParams({ ...(processFilter ? { process: processFilter } : {}), version: String(content.id) })}>
-          {processTitles[content.processKey]} · {content.body.title} · Sürüm {content.contentVersion}</button></li>)}</ul>
-      </>}
-      {versionId !== null && (version.isPending ? <PageLoading /> : version.isError ? <PageError error={version.error} /> : <ContentArticle content={version.data} />)}
-      <GuidanceReadingJourney />
+    {!manage && history && <section className="ez-learning-history"><h2>Öğrenme geçmişim</h2><GuidanceReadingJourney /></section>}
+    {!manage && !history && <>
+      <div className="ez-catalog-filters">
+        <label>İçerikte ara<input type="search" value={search} placeholder="Örneğin: işe giriş veya izin" onChange={event => {
+          const next = new URLSearchParams(params); if (event.target.value) next.set("q", event.target.value); else next.delete("q"); setParams(next, { replace: true });
+        }} /></label>
+        <label>Süreç filtresi<select value={processFilter} onChange={event => {
+          const next = new URLSearchParams(params); if (event.target.value) next.set("process", event.target.value); else next.delete("process"); setParams(next);
+        }}><option value="">Tüm süreçler</option>{Object.entries(processTitles).map(([key, title]) => <option key={key} value={key}>{title}</option>)}</select></label>
+      </div>
+      {!!processFilter && !processTitles[processFilter] && <p role="alert">Bu süreç bulunamadı. Tüm süreçler seçeneğine dönün.</p>}
+      <div className="ez-catalog-browser">
+        <div>{catalog.isPending ? <PageLoading /> : catalog.isError ? <PageError error={catalog.error} /> : <>
+          {!visible.length && <div className="ez-guide-empty"><p>{search ? "Aramanızla eşleşen içerik bulunamadı." : "Rolünüz ve seçili süreç için yayımlanmış ve incelemesi güncel bir içerik henüz yok. Bu durum süreçte yapılacak iş olmadığı anlamına gelmez."}</p></div>}
+          <ul className="ez-catalog-index" aria-label="Yayımlanmış içerikler">{visible.map(content => <li key={content.id}>
+            <button type="button" aria-pressed={versionId === content.id} className="ez-catalog-entry" onClick={() => {
+              const next = new URLSearchParams(params); next.set("version", String(content.id)); setParams(next);
+            }}><span>{processTitles[content.processKey]}</span><strong>{content.body.title}</strong><small>Sürüm {content.contentVersion}</small></button>
+          </li>)}</ul>
+        </>}</div>
+        <div className="ez-catalog-reading">{versionId !== null
+          ? version.isPending ? <PageLoading /> : version.isError ? <PageError error={version.error} /> : <ContentArticle content={version.data} />
+          : <div className="ez-guide-empty"><h2>Bir adım seçerek başlayın</h2><p>Süreç listesinden bir açıklama seçin. Ne yapacağınız, dayanağı ve hata düzeltme yolu burada açılır.</p></div>}
+        </div>
+      </div>
     </>}
     {manage && access.data?.canManage && <>
       <p>Merkezî yayın Ekipzen ekibince yönetilir. Müşteri şirketlerinin İK rolü yayın yetkisi vermez. Taslak ve inceleme kayıtları okurlara açılmaz.</p>

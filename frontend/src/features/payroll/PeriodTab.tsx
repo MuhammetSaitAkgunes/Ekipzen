@@ -89,8 +89,12 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
         </div>
       </div>
 
-      <section className="card payroll-flow-card">
-        {!periodLocked && <GuidanceOperationSource process="payroll" step="row-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={runCheck.isPending} />}
+      <section className="card payroll-flow-card ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!periodLocked && <GuidanceOperationSource process="payroll" step="row-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={runCheck.isPending} />}</div>
+          <div className="ez-workbench-main">
+
+
         <div className="card-header-clean">
           <div>
             <h4>Bordro Akışı</h4>
@@ -110,7 +114,7 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
             </button>
           ))}
         </div>
-      </section>
+      </div></div></section>
 
       <div className="payroll-main-grid">
         <section className="card payroll-control-card" data-active-step={selectedStep ?? undefined}>

@@ -101,7 +101,11 @@ export function CandidateModal({ onClose, onCreated }: {
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createCandidate.isPending} label="Adayı oluştururken kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
           {error && <p className="form-error" role="alert">{error}</p>}
           <section className="ez-candidate-create-guide" aria-label="Aday kaydı rehberi">
             <p><strong>Ne yapıyoruz?</strong> Başvuruyu aday havuzuna kaydediyoruz. Aday “Yeni” aşamasında açılır; bu işlem çalışan kaydı oluşturmaz veya adaya mesaj göndermez.</p>
@@ -157,7 +161,7 @@ export function CandidateModal({ onClose, onCreated }: {
               <textarea id="cand-summary" className="input-control" rows={3} value={form.summary} onChange={set("summary")} />
             </div>
           </div>
-          <GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createCandidate.isPending} label="Adayı oluştururken kullandığım rehber sürümü" />
+
           {review && <section className="ez-candidate-create-review" aria-labelledby="candidate-create-review-title" aria-live="polite">
             <h4 id="candidate-create-review-title">Kaydetmeden önce son kontrol</h4>
             <p><strong>Aday:</strong> {review.name} · <strong>Başvurulan rol:</strong> {review.appliedRole}</p>
@@ -168,7 +172,7 @@ export function CandidateModal({ onClose, onCreated }: {
             <p><strong>Sonuç:</strong> Aday “Yeni” aşamasında açılacak. Pozisyon bağlantısını ve aynı kişinin zaten kayıtlı olup olmadığını kontrol edin.</p>
             <p>İşe alınmamış adayın temel bilgileri sonradan gerekçeli düzeltmeyle değiştirilebilir. İşe alınmış başvuru kilitlidir; çalışan kartı ayrı düzeltilir. Aday silme işlemi sunulmuyor.</p>
           </section>}
-        </div>
+        </div></div></div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
           {review && <button className="btn btn-ghost" onClick={() => setReview(null)}>Bilgileri düzelt</button>}

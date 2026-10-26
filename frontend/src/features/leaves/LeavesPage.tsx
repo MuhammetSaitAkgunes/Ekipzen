@@ -199,7 +199,13 @@ function PersonalLeaves() {
             </div>
           )}
           {cancelTarget && (
-            <section className="ez-leave-cancel-review" role="region" aria-labelledby="leave-cancel-review-title">
+            <section className="ez-leave-cancel-review ez-workbench" role="region" aria-labelledby="leave-cancel-review-title">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="leave" step="request-lifecycle" value={cancelSource}
+                onChange={id => { setCancelSource(id); setCancelPreview(null); }} disabled={cancelLeave.isPending || previewCancellation.isPending}
+                label="İptalde kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
               <h4 id="leave-cancel-review-title">Talebi iptal etmeden önce</h4>
               <p><strong>Talep:</strong> {cancelTarget.leaveTypeName ?? "İzin"} · {formatLeaveDate(cancelTarget.startDate)} – {formatLeaveDate(cancelTarget.endDate)} · {cancelTarget.days} iş günü</p>
               <p><strong>Şu anki durum:</strong> {LEAVE_STATUS_TEXT[cancelPreview?.status ?? cancelTarget.status ?? ""] ?? cancelTarget.status}</p>
@@ -209,9 +215,7 @@ function PersonalLeaves() {
               {previewCancellation.isPending && <p role="status">İptal etkisi sunucuda kontrol ediliyor.</p>}
               {cancelPreview && <p>Kalkacak yıllık rezervasyon: <strong>{cancelPreview.releasedReservationDays} gün</strong> · Deftere iade: <strong>{cancelPreview.refundedDays} gün</strong>. Önizleme kayıt değiştirmez; son onayda yeniden doğrulanır.</p>}
               {cancelPreview && !cancelPreview.canCancel && <p role="status">Bu talep artık iptal edilemez; güncel listeyi kontrol edin.</p>}
-              <GuidanceOperationSource process="leave" step="request-lifecycle" value={cancelSource}
-                onChange={id => { setCancelSource(id); setCancelPreview(null); }} disabled={cancelLeave.isPending || previewCancellation.isPending}
-                label="İptalde kullandığım rehber sürümü" />
+
               <p>İptal, talebin tarihini veya türünü düzenlemez. Düzeltme gerekiyorsa doğru bilgilerle yeni bir talep oluşturun; yeni talep yeniden kontrol ve onay sürecine girer.</p>
               {cancelError && <p className="form-error" role="alert">{cancelError}</p>}
               <div className="ez-leave-cancel-actions">
@@ -219,7 +223,7 @@ function PersonalLeaves() {
                 <button className="btn btn-secondary" onClick={() => void prepareCancel(cancelTarget.id, true)} disabled={cancelLeave.isPending || previewCancellation.isPending}>İptal etkisini yeniden kontrol et</button>
                 <button className="btn btn-primary" onClick={handleCancel} disabled={cancelLeave.isPending || !cancelPreview?.canCancel}>Talebi iptal etmeyi onayla</button>
               </div>
-            </section>
+            </div></div></section>
           )}
         </div>
 

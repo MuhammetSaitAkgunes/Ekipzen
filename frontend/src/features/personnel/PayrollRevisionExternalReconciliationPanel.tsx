@@ -83,8 +83,12 @@ function ActionForm({ args, kind, current, canRecord }: {
     }
   };
 
-  return <section className="ez-compensation-review" aria-label={`${title} kanıtı`}>
-    {canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={mutation.isPending} />}
+  return <section className="ez-compensation-review ez-workbench" aria-label={`${title} kanıtı`}>
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={mutation.isPending} />}</div>
+          <div className="ez-workbench-main">
+
+
     <h5>{title}: {current ? current.outcome === "completed" ? "kanıtlı tamamlandı"
       : current.outcome === "pending" ? "bekliyor" : "işlem gerekmiyor" : "kanıt bekliyor"}</h5>
     {current && <p>Son kayıt: {current.evidenceReference || "kanıt yok"} · sorumlu {current.responsibleName}. Hata varsa yeni kayıt ekleyin.</p>}
@@ -131,5 +135,5 @@ function ActionForm({ args, kind, current, canRecord }: {
         onClick={save}>{outcome === "pending" ? "Sorumluyu kaydet" : "Yeni kanıt kaydı ekle"}</button>
       {error && <p className="form-error" role="alert">{error}</p>}
     </>}
-  </section>;
+  </div></div></section>;
 }

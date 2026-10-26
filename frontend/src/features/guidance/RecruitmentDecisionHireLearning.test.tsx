@@ -22,7 +22,7 @@ beforeEach(()=>{localStorage.clear();localStorage.setItem(SESSION_KEY,JSON.strin
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();localStorage.clear();});
 const render=()=>renderPage(<AuthProvider><ToastProvider><CandidateDetail id={5}/></ToastProvider></AuthProvider>);
 const writes=(path:string,method="POST")=>vi.mocked(fetch).mock.calls.filter(([url,init])=>String(url)===path&&init?.method===method);
-async function choose(label:string){await userEvent.click(screen.getByText(label,{exact:true}));await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("details")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));}
+async function choose(label:string){await userEvent.click(screen.getByText(label,{exact:true}));await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("aside")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));}
 
 test("sonraki aşama kararı kendi dersini ve ilk aday sürümünü yalnız son teyitte gönderir",async()=>{
   const base=globalThis.fetch;vi.stubGlobal("fetch",vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input)==="/api/candidates/5/status"&&init?.method==="PATCH"?respond({...candidate,status:"Teklif",version:5}):base(input,init)));

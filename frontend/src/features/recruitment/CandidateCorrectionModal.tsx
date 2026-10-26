@@ -103,9 +103,10 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
         <p>{source.name} · incelenen sürüm {source.version}</p>
       </div><button className="btn-icon-sm" onClick={onClose} disabled={correction.isPending} aria-label="Aday düzeltme penceresini kapat">
         <i className="fa-solid fa-xmark" aria-hidden="true" /></button></div>
-      <div className="modal-body-scroll">
-        {error && <p role="alert" className="form-error">{error} Güncel kayda dönüp düzeltmeyi yeniden açabilirsiniz.</p>}
-        {readOnly ? <p>İşe alınmış adayın başvuru kaydı kilitlidir. Çalışan bilgilerindeki hatayı personel kartındaki ayrı düzeltme akışında inceleyin.</p>
+      <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && <GuidanceOperationSource process="recruitment" step="candidate-create" value={guidanceSource} onChange={setGuidanceSource} disabled={correction.isPending} label="Aday düzeltirken kullandığım rehber sürümü" />}</div>
+          <div className="ez-workbench-main">{readOnly ? <p>İşe alınmış adayın başvuru kaydı kilitlidir. Çalışan bilgilerindeki hatayı personel kartındaki ayrı düzeltme akışında inceleyin.</p>
           : <><section aria-label="Aday düzeltme rehberi">
             <p><strong>Ne yapıyoruz?</strong> Hatalı başvuru bilgisini gerekçeyle düzeltiyoruz. Örneğin yanlış pozisyona bağlanan başvuruyu doğru açık kadroya taşıyabilirsiniz.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Rol değiştiğinde eski mülakat ölçütleri yeni işe uygun olmayabilir. Aşama, notlar ve değerlendirmeler korunur; yeniden inceleme kararını siz verirsiniz.</p>
@@ -140,13 +141,16 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
               <textarea id="correction-reason" className="input-control" value={form.reason} onChange={e => set("reason", e.target.value)} /></div>
           </div>{roleChanged && <label><input type="checkbox" checked={evidenceConfirmed}
             onChange={e => { setEvidenceConfirmed(e.target.checked); setReview(null); setError(null); }} /> Mevcut not ve değerlendirmelerin yeni role uygunluğunu kontrol ettim; aşamanın ve geçmişin korunacağını biliyorum.</label>}
-        {!readOnly && <GuidanceOperationSource process="recruitment" step="candidate-create" value={guidanceSource} onChange={setGuidanceSource} disabled={correction.isPending} label="Aday düzeltirken kullandığım rehber sürümü" />}
+
           {review && <section aria-label="Aday düzeltmesi ön kontrolü" aria-live="polite">
             <h4>Kaydetmeden önce karşılaştırın</h4>
             <Comparison before={before} after={{ ...review, positionTitle: reviewPositionTitle, status: before.status }} />
             <p><strong>Gerekçe:</strong> {review.reason}</p>
             <p>Bağlantı değişikliği kalan kadroyu tüketmez. Adayın aşaması {before.status} olarak kalır.</p>
           </section>}</>}
+
+        {error && <p role="alert" className="form-error">{error} Güncel kayda dönüp düzeltmeyi yeniden açabilirsiniz.</p>}
+
         <details><summary>Gerekçeli düzeltme geçmişi</summary>
           {historyQ.isPending && <p>Geçmiş yükleniyor.</p>}
           {historyQ.isError && <p role="alert">Düzeltme geçmişi yüklenemedi.</p>}
@@ -158,7 +162,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
             {item.evidenceReviewConfirmed && <p>Rol değişiminde mevcut kanıtların uygunluğu kontrol edildi.</p>}
           </details>)}
         </details>
-      </div><div className="modal-footer">
+      </div></div></div><div className="modal-footer">
         <button className="btn btn-ghost" onClick={onClose} disabled={correction.isPending}>Güncel kayda dön</button>
         {!readOnly && <button className="btn btn-primary" onClick={review ? submit : prepareReview}
           disabled={correction.isPending || !Number.isInteger(source.version) || source.version < 1}>

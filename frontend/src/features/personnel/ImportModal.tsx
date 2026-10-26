@@ -135,18 +135,22 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
           {ozet.bilinmeyenDepartmanlar!.length > 0 && <section className="surface"><strong>Sistemde olmayan departmanlar</strong><ul>{ozet.bilinmeyenDepartmanlar!.map((department) => <li key={department}>{department}</li>)}</ul><small>Önce departmanı oluşturun, sonra dosyayı yeniden yükleyin.</small></section>}
           {ozet.satirlar!.length > 0 && <ImportRows key={requestId.current} rows={ozet.satirlar!} />}
           {ozet.toplamSatir === 0 && ozet.sorunlar!.map((issue, index) => <p className="form-error" key={index}>Satır {issue.satirNo} · {issue.alan}: {issue.mesaj}</p>)}
-          {review && <section className="ez-import-review" role="region" aria-label="Aktarmadan önce kontrol edin"><h5>Aktarmadan önce kontrol edin</h5>
-            <p><strong>Dosya:</strong> {file?.name} · <strong>Oluşturulacak:</strong> {ozet.gecerliSatir} · <strong>Atlanacak:</strong> {ozet.toplamSatir! - ozet.gecerliSatir!}</p>
-            <GuidanceOperationSource process="personnel" step="import-review" label="Toplu aktarımda kullandığım ders sürümü"
+          {review && <section className="ez-import-review ez-workbench" role="region" aria-label="Aktarmadan önce kontrol edin">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel" step="import-review" label="Toplu aktarımda kullandığım ders sürümü"
               value={guidanceVersion} disabled={busy || uncertain} onChange={id => {
                 setGuidanceVersion(id); setSampleChecked(false); setContractChecked(false); setPartialChecked(false);
-              }} />
+              }} /></div>
+          <div className="ez-workbench-main">
+<h5>Aktarmadan önce kontrol edin</h5>
+            <p><strong>Dosya:</strong> {file?.name} · <strong>Oluşturulacak:</strong> {ozet.gecerliSatir} · <strong>Atlanacak:</strong> {ozet.toplamSatir! - ozet.gecerliSatir!}</p>
+
             {guidanceVersion !== null && <p><Link to={appPath("/guidance/catalog?version=" + guidanceVersion)}>Seçtiğim aktarım dersini ve alıştırmasını aç</Link></p>}
             <label><input type="checkbox" checked={sampleChecked} disabled={busy || uncertain} onChange={(e) => setSampleChecked(e.target.checked)} /> Şablondaki örnek personel satırını sildim ve satır bazındaki gerçek çalışanları kontrol ettim.</label>
             <label><input type="checkbox" checked={contractChecked} disabled={busy || uncertain} onChange={(e) => setContractChecked(e.target.checked)} /> Tüm aktarılacak çalışanların belirsiz süreli sözleşmeyle, tam zamanlı ve aktif kaydedilmesini doğruladım.</label>
             {partial && <label><input type="checkbox" checked={partialChecked} disabled={busy || uncertain} onChange={(e) => setPartialChecked(e.target.checked)} /> Hatalı ve mükerrer satırlar atlanırken yalnız geçerli satırların kaydedilmesini istiyorum.</label>}
             <p>Geçerli satırlar tek işlemde kaydedilir. Oluşan kartlardaki yanlış bilgileri çalışan kartından düzeltin; işten ayrılış için ilgili süreci izleyin.</p>
-          </section>}
+          </div></div></section>}
         </>}
         <div className="toolbar-actions"><button className="btn btn-secondary" onClick={onClose} disabled={busy || uncertain}>Vazgeç</button>
           {review ? <><button className="btn btn-secondary" onClick={() => setReview(false)} disabled={busy || uncertain}>Dosyayı düzelt</button><button className="btn btn-primary" onClick={aktar} disabled={!onaylandi}>{uncertain ? "Aynı gönderimi tekrar dene" : "Kontrol ettim, aktar"}</button></>

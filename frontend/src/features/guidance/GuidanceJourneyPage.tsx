@@ -1,6 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { appPath } from "../../paths";
 import { useAuth } from "../../auth/AuthContext";
+import { GuidanceNavigation } from "./GuidanceNavigation";
 import { GuidanceCoverageJourney } from "./GuidanceCoverageJourney";
 import { GuidanceHelpSettings } from "./GuidanceHelpControl";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -72,15 +73,18 @@ function LeaveApprovalEvidence({ journey }: { journey: LeaveApprovalJourney }) {
 export function GuidanceJourneyPage() {
   const { user } = useAuth();
   const isHrAdmin = user?.role === "hr-admin";
+  const [params] = useSearchParams();
+  const history = params.get("tab") === "history";
   const query = usePersonnelEntryJourney(isHrAdmin);
   const recruitmentQ = useRecruitmentJourney(isHrAdmin);
   const leaveQ = useLeaveApprovalJourney();
   return <div className="ez-journey-page">
     <div className="page-header">
-      <div><span className="ez-overline">İK REHBERİ</span><h1>Öğrenme yolculuğum</h1>
-        <p>Gerçek işlemlerden gelen kanıtları ve rehberde kaldığınız bölümü görün.</p></div>
-      <Link className="btn btn-secondary" to={appPath("/guidance/catalog")}>Rehber içeriklerini aç</Link>
+      <div><span className="ez-overline">İK REHBERİ</span><h1>İK Rehberi</h1>
+        <p>İşinizi adım adım öğrenin, nedenini anlayın ve gerçek kayıtta uygulayın.</p></div>
     </div>
+    <GuidanceNavigation history={history} />
+    {history ? <div className="ez-learning-history"><div className="ez-section-heading"><h2>Öğrenme geçmişim</h2><p>İnceleme, alıştırma ve gerçek işlem kayıtları ayrı izlenir. Bu kayıtlar bağımsız yeterlilik onayı değildir.</p></div>
     {isHrAdmin && (query.isPending ? <PageLoading /> : query.isError
       ? <PageError error={query.error} />
       : <JourneyEvidence journey={query.data} />)}
@@ -94,11 +98,19 @@ export function GuidanceJourneyPage() {
       : leaveQ.isError
         ? <p role="alert">İzin onayı yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
         : <LeaveApprovalEvidence journey={leaveQ.data} />}
-    <GuidanceCoverageJourney />
-    <GuidanceHelpSettings />
     <GuidanceOperationJourney />
     <GuidanceReadingJourney />
     <GuidancePracticeJourney />
+    <GuidanceCoverageJourney /></div> : <>
+      <section className="ez-guide-start ez-panel">
+        <div><span className="ez-overline">BİR SONRAKİ ADIMINIZ</span><h2>{isHrAdmin ? query.data?.hasSavedPosition ? "Kaldığınız yerden devam edin" : "İK işlerinize sağlam bir başlangıç yapın" : "Günlük işlerinizi rehberle yönetin"}</h2>
+        <p>{isHrAdmin ? "İlgili işlem ekranında rehber size ne yapacağınızı, nedenini ve sonucu nasıl kontrol edeceğinizi gösterecek." : "Bekleyen işi açın; karar vermeden önce talebin koşullarını ve dayanağını kontrol edin."}</p>
+        <Link className="btn btn-primary" to={appPath(isHrAdmin ? query.data?.hasSavedPosition ? "/personnel/new" : "/settings" : "/inbox?tab=daily")}>{isHrAdmin ? query.data?.hasSavedPosition ? "Çalışan rehberine devam et" : "Şirket hazırlığıyla başla" : "Günlük işlerimi aç"} <span aria-hidden="true">→</span></Link>
+        </div><div className="ez-guide-start-path"><span>01 · Açıklamayı incele</span><span>02 · Gerçek kayıtta uygula</span><span>03 · Sonucu kontrol et</span></div>
+      </section>
+      {isHrAdmin && query.isError && <p role="alert">Kayıtlı konumunuz okunamadı. <button type="button" className="btn btn-secondary" onClick={() => void query.refetch()}>Konumu tekrar yükle</button></p>}
     <GuidanceProcessMap isHrAdmin={isHrAdmin} />
+    <GuidanceHelpSettings />
+    </>}
   </div>;
 }

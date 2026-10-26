@@ -52,11 +52,15 @@ export function CompensationDateCorrectionPanel({ employeeId, packageId, current
     }
   };
 
-  return <section className="ez-compensation-review" aria-label="Yürürlük tarihi düzeltme">
+  return <section className="ez-compensation-review ez-workbench" aria-label="Yürürlük tarihi düzeltme">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Tarih düzeltmede kullandığım rehber sürümü"
+      value={guidanceVersion} onChange={id => { setGuidanceVersion(id); preview.reset(); }} disabled={correct.isPending} /></div>
+          <div className="ez-workbench-main">
+
     <h4>Yürürlük tarihini ayrı işlemle düzelt</h4>
     <p>Yalnız açık çalışma döneminin son paketi düzeltilebilir. Paket veya değişecek tarih aralığı bordro ya da ayrılışta kullanılmışsa kayıt korunur ve işlem kilitlenir.</p>
-    <GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Tarih düzeltmede kullandığım rehber sürümü"
-      value={guidanceVersion} onChange={id => { setGuidanceVersion(id); preview.reset(); }} disabled={correct.isPending} />
+
     <div className="form-grid-2">
       <div className="input-group">
         <label className="input-label" htmlFor="pm-date-correction-date">Önerilen yeni yürürlük tarihi</label>
@@ -90,5 +94,5 @@ export function CompensationDateCorrectionPanel({ employeeId, packageId, current
       </details>
     </section>}
     {error && <p className="form-error" role="alert">{error}</p>}
-  </section>;
+  </div></div></section>;
 }

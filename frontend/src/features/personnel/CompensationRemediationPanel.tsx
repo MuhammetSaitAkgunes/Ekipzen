@@ -331,9 +331,13 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       setError(cause instanceof ApiError ? cause.message : "Bordro değişti; etki dosyasını yeniden açın.");
     }
   };
-  if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review"
+  if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review ez-workbench"
     aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
-    <GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setSourceConfirmed(false); setExternalConfirmed(false); setChainConfirmed(false); }} />
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setSourceConfirmed(false); setExternalConfirmed(false); setChainConfirmed(false); }} /></div>
+          <div className="ez-workbench-main">
+
+
     <button type="button" className="btn btn-secondary"
       disabled={impactMutation.isPending}
       onClick={async () => {
@@ -473,9 +477,13 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
       </section>}
     </>}
     {error && <p className="form-error" role="alert">{error}</p>}
-  </div>;
-  return <div className="ez-compensation-review" aria-label={`Bordro satırı ${rowId} telafi uygulaması`}>
-    <GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} />
+  </div></div></div>;
+  return <div className="ez-compensation-review ez-workbench" aria-label={`Bordro satırı ${rowId} telafi uygulaması`}>
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} /></div>
+          <div className="ez-workbench-main">
+
+
     <button type="button" className="btn btn-secondary" onClick={loadPreview}
       disabled={previewMutation.isPending || applyMutation.isPending}>
       Satır #{rowId} için telafiyi önizle
@@ -505,5 +513,5 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
     </>}
     {application && <p role="status">Bu satıra telafi uygulandı: kayıt #{application.id} · {application.appliedAtUtc}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
-  </div>;
+  </div></div></div>;
 }

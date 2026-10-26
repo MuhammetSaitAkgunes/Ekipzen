@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -36,9 +36,9 @@ const routes = (process = "personnel-entry", step = "tab-mali") => ({
 });
 function render(element: React.ReactNode) { return renderPage(<AuthProvider><ToastProvider>{element}</ToastProvider></AuthProvider>); }
 async function chooseSource(label: string) {
-  await userEvent.click(screen.getByText(label));
-  await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
+  const panel = screen.getByText(label).closest("aside")!;
+  await userEvent.click(await within(panel).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await within(panel).findByRole("region", { name: "Seçilen adımın açıklaması" });
 }
 const requests = (method: string, path: string) => vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url) === path && init?.method === method);
 const body = (method: string, path: string) => JSON.parse(String(requests(method, path).at(-1)?.[1]?.body));

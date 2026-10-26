@@ -281,7 +281,12 @@ export function CandidateDetail({ id }: { id: number }) {
         </div>
       </div>
 
-      {pendingStatus && <section className="ez-candidate-status-review" role="region" aria-label="Aday aşaması ön kontrolü">
+      {pendingStatus && <section className="ez-candidate-status-review ez-workbench" role="region" aria-label="Aday aşaması ön kontrolü">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource label="Aşama kararında kullandığım rehber sürümü" process="recruitment" step="first-review"
+          value={guidanceVersion} onChange={value => { setGuidanceVersion(value); setStatusConfirmed(false); }} disabled={setStatus.isPending} /></div>
+          <div className="ez-workbench-main">
+
         <h3>Aşama değişikliğinden önce</h3>
         <p><strong>Gerçek kayıt:</strong> {candidate.name} · {pendingStatus.from} → {pendingStatus.to}</p>
         <p><strong>Ne olacak?</strong> {STAGE_EXPLANATIONS[pendingStatus.to]}</p>
@@ -314,8 +319,7 @@ export function CandidateDetail({ id }: { id: number }) {
           <p>Yalnız bu kararda kullandığınız dayanakları seçin; en fazla 20 kayıt bağlanabilir. Seçim kanıtın doğruluğunu otomatik onaylamaz.</p>
         </fieldset>
         <GuidanceDecisionCheck process="recruitment" step="first-review" operationName="aday aşama kararı" />
-        <GuidanceOperationSource label="Aşama kararında kullandığım rehber sürümü" process="recruitment" step="first-review"
-          value={guidanceVersion} onChange={value => { setGuidanceVersion(value); setStatusConfirmed(false); }} disabled={setStatus.isPending} />
+
         <label><input type="checkbox" checked={statusConfirmed} onChange={(e) => setStatusConfirmed(e.target.checked)} /> Aday kaydını ve aşama gerekçesini kontrol ettim.</label>
         <div className="ez-candidate-status-actions">
           <button className="btn btn-ghost" onClick={() => { setStatusReview(null); setStatusConfirmed(false); }}>Vazgeç</button>
@@ -323,7 +327,7 @@ export function CandidateDetail({ id }: { id: number }) {
             || !statusReason.trim() || statusReason.trim().length > 2000 || statusEvidence.length > 20
             || !Number.isInteger(pendingStatus.source.version) || pendingStatus.source.version < 1}>Aşamayı kaydet</button>
         </div>
-      </section>}
+      </div></div></section>}
 
       {candidate.status === "Red" && <p role="status" className="ez-hire-status-note">
         Reddedilmiş aday işe alınamaz. Karar değiştiyse önce pipeline durumunu güncelleyin.
@@ -359,9 +363,14 @@ export function CandidateDetail({ id }: { id: number }) {
 
       {isHired && provisioning && provisioning.status !== "completed" && (
         <div
-          className={`provisioning-banner is-${provisioning.status ?? "pending"}`}
+          className={[`provisioning-banner is-${provisioning.status ?? "pending"}`, "ez-workbench"].filter(Boolean).join(" ")}
           role={provisioning.status === "failed" ? "alert" : "status"}
         >
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource label="Hesap yeniden denemesinde kullandığım rehber sürümü" process="recruitment" step="hire-preparation"
+            value={retrySource} onChange={value => { setRetrySource(value); setRetryReview(null); }} disabled={retryProvisioning.isPending} /></div>
+          <div className="ez-workbench-main">
+
           <div>
             <strong>
               {provisioning.status === "failed"
@@ -379,8 +388,7 @@ export function CandidateDetail({ id }: { id: number }) {
             onChange={(event) => { setProvisioningEmail(event.target.value); setRetryReview(null); }}
           />
           <PublishedGuidancePractice process="recruitment" step="hire-preparation" />
-          <GuidanceOperationSource label="Hesap yeniden denemesinde kullandığım rehber sürümü" process="recruitment" step="hire-preparation"
-            value={retrySource} onChange={value => { setRetrySource(value); setRetryReview(null); }} disabled={retryProvisioning.isPending} />
+
           <button className="btn btn-primary btn-sm" onClick={() => setRetryReview({ email: provisioningEmail.trim() || provisioning.email || "", source: retrySource })} disabled={retryProvisioning.isPending}>
             Şimdi yeniden dene
           </button>
@@ -390,7 +398,7 @@ export function CandidateDetail({ id }: { id: number }) {
             <button className="btn btn-ghost" onClick={() => setRetryReview(null)} disabled={retryProvisioning.isPending}>Yeniden denemeden vazgeç</button>
             <button className="btn btn-primary" onClick={retryLoginProvisioning} disabled={retryProvisioning.isPending}>Kontrol ettim; yeniden denemeyi iste</button>
           </section>}
-        </div>
+        </div></div></div>
       )}
 
       <div className="detail-tabs">
@@ -438,13 +446,17 @@ export function CandidateDetail({ id }: { id: number }) {
 
         {tab === "notes" && (
           <div id="tab-notes" className="tab-content active">
-            <div className="notes-container">
+            <div className="notes-container ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!isHired && <GuidanceOperationSource process="recruitment" step="first-review" value={noteSource} onChange={setNoteSource} disabled={addNote.isPending} label="Not eklerken kullandığım rehber sürümü" />}</div>
+          <div className="ez-workbench-main">
+
               <section className="ez-interview-note-guide" aria-label="Mülakat notu rehberi">
                 <p><strong>Ne yapıyoruz?</strong> Görüşmede gözlediğiniz iş ile ilgili bilgiyi aday kaydına ekliyoruz. Bu işlem değerlendirme puanı veya pipeline aşamasını değiştirmez.</p>
                 <p><strong>Neden kontrol ediyoruz?</strong> Notu sonraki değerlendirmede aynı adaya ve doğru görüşme türüne bağlayabilmek için. Örneğin teknik görüşme bulgusunu İK görüşmesi diye etiketlemeyin; gözlem ve karar yorumunu açıkça ayırın.</p>
                 <p>İlk kayıt ve yazarı korunur. Hatalı not yeni sürüm ve gerekçeyle düzeltilebilir; güncel sürüm bu listede görünür. İşe alınmış adayın geçmişi kilitlidir; ekleme veya düzeltme yapılamaz.</p>
               </section>
-              {!isHired && <GuidanceOperationSource process="recruitment" step="first-review" value={noteSource} onChange={setNoteSource} disabled={addNote.isPending} label="Not eklerken kullandığım rehber sürümü" />}
+
               <div className="add-note-box">
                 <label className="sr-only" htmlFor="interview-note">Mülakat notu</label>
                 <textarea
@@ -487,18 +499,22 @@ export function CandidateDetail({ id }: { id: number }) {
                 </div>
               ))}
               {(candidate.notes ?? []).length === 0 && <p className="pending-desc">Henüz mülakat notu yok.</p>}
-            </div>
+            </div></div></div>
           </div>
         )}
 
         {tab === "eval" && (
-          <div id="tab-eval" className="tab-content active">
+          <div id="tab-eval" className="tab-content active ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!isHired && <GuidanceOperationSource process="recruitment" step="first-review" value={evaluationSource} onChange={setEvaluationSource} disabled={addEvaluation.isPending} label="Değerlendirme eklerken kullandığım rehber sürümü" />}</div>
+          <div className="ez-workbench-main">
+
             <section className="ez-candidate-evaluation-guide" aria-label="Aday değerlendirme rehberi">
               <p><strong>Ne yapıyoruz?</strong> Adayı belirli bir iş ölçütü için puanlıyoruz. Örneğin teknik görüşmede TypeScript bilgisi için 4/5 kaydı açabilirsiniz.</p>
               <p><strong>Neden ölçüt yazıyoruz?</strong> Sayının neyi ölçtüğü ve azami puanı açık olursa sonraki incelemede gerekçe anlaşılır. Bu kayıt adayın genel puanını veya pipeline aşamasını otomatik değiştirmez.</p>
               <p>Hatalı değerlendirme gerekçeli yeni sürümle düzeltilir; ilk puan ve önceki sürümler korunur. İşe alınmış adayın geçmişi kilitlidir; ekleme veya düzeltme yapılamaz. Gözlemin dayanağını mülakat notunda belirtin.</p>
             </section>
-            {!isHired && <GuidanceOperationSource process="recruitment" step="first-review" value={evaluationSource} onChange={setEvaluationSource} disabled={addEvaluation.isPending} label="Değerlendirme eklerken kullandığım rehber sürümü" />}
+
             <div className="ez-candidate-evaluation-form">
               <div className="input-group">
                 <label className="input-label" htmlFor="candidate-evaluation-criterion">Değerlendirme ölçütü</label>
@@ -550,7 +566,7 @@ export function CandidateDetail({ id }: { id: number }) {
               ))}
               {(candidate.evaluations ?? []).length === 0 && <p className="pending-desc">Henüz değerlendirme yok.</p>}
             </div>
-          </div>
+          </div></div></div>
         )}
 
         {tab === "history" && (
@@ -691,7 +707,12 @@ function HireModal({ candidateId, candidateVersion, candidateName, appliedRole, 
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource label="İşe alırken kullandığım rehber sürümü" process="recruitment" step="hire-preparation"
+            value={hireSource} onChange={value => { setHireSource(value); setReview(null); }} disabled={hire.isPending} /></div>
+          <div className="ez-workbench-main">
+
           {error && <p className="form-error" role="alert">{error}</p>}
           <section className="ez-hire-guide" aria-label="İşe alma rehberi">
             <strong>Bu adımda ne yapıyoruz?</strong>
@@ -700,8 +721,7 @@ function HireModal({ candidateId, candidateVersion, candidateName, appliedRole, 
             <p>İmzalı belgedeki sözleşme türünü seçin; seçiminiz çalışan kaydına ve ilk istihdam dönemine birlikte yazılır. Örneğin belirli süreli sözleşmeyi belirsiz süreli seçmeyin. İşe alma sonrası özlük, ücret ve dış bildirim adımları ayrıca kontrol edilir.</p>
           </section>
           <PublishedGuidancePractice process="recruitment" step="hire-preparation" />
-          <GuidanceOperationSource label="İşe alırken kullandığım rehber sürümü" process="recruitment" step="hire-preparation"
-            value={hireSource} onChange={value => { setHireSource(value); setReview(null); }} disabled={hire.isPending} />
+
           {departmentsQ.isPending && <p role="status">Departmanlar yükleniyor…</p>}
           {departmentsQ.isError && <p className="form-error" role="alert">Departman listesi okunamadı; işe alma ön kontrolü yapılamaz.</p>}
           <div className="form-grid-2">
@@ -749,7 +769,7 @@ function HireModal({ candidateId, candidateVersion, candidateName, appliedRole, 
             <p><strong>Sözleşme:</strong> {review.contractType === "fixed-term" ? "Belirli süreli" : "Belirsiz süreli"} olarak kaydedilecek. Bu tür imzalı belgeyle uyuşmuyorsa devam etmeyin.</p>
             <p>Onaydan sonra çalışan kaydı ve varsa pozisyon kontenjanı değişir. Giriş hesabı hazır olmasa bile çalışan kaydı oluşmuş olabilir; aynı işlemi tekrar göndermeden önce sonucu kontrol edin.</p>
           </section>}
-        </div>
+        </div></div></div>
         <div className="modal-footer">
           {review
             ? <>

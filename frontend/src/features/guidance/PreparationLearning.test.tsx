@@ -33,7 +33,7 @@ afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();localStorage.clear();}
 const render=(view:React.ReactNode)=>renderPage(<AuthProvider><ToastProvider>{view}</ToastProvider></AuthProvider>);
 async function choose(label:string) {
   await userEvent.click(screen.getByText(label,{exact:true}));
-  await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("details")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));
+  await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("aside")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));
 }
 const writes=(path:string,method:string)=>vi.mocked(fetch).mock.calls.filter(([url,init])=>String(url)===path&&init?.method===method);
 

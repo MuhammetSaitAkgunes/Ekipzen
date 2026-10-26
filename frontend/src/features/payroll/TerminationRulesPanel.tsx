@@ -98,8 +98,12 @@ export function TerminationRulesPanel() {
   };
 
   return (
-    <section className="card payroll-settings-card">
-      <GuidanceOperationSource process="payroll" step="settings-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={saveRule.isPending || approveRule.isPending} />
+    <section className="card payroll-settings-card ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="settings-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={saveRule.isPending || approveRule.isPending} /></div>
+          <div className="ez-workbench-main">
+
+
       <div className="card-header-clean">
         <div>
           <h4>İşten Çıkış Hesap Kuralları</h4>
@@ -182,6 +186,6 @@ export function TerminationRulesPanel() {
         <i aria-hidden="true" className="fa-solid fa-shield-halved" />
         <span>Bu panel hukuki uygunluk kararı vermez. Kural onayı ve vaka bazlı hak ediş teyidi iki ayrı insan kontrolüdür.</span>
       </div>
-    </section>
+    </div></div></section>
   );
 }

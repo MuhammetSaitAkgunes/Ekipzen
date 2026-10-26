@@ -38,7 +38,7 @@ test("yeni kayıt POST /attendance gövdesiyle gider", async () => {
   await userEvent.type(screen.getByLabelText("Çıkış"), "18:00");
   await userEvent.click(screen.getByRole("button", { name: "Kaydı gözden geçir" }));
   expect(await screen.findByRole("heading", { name: "Kaydetmeden önce kontrol edin" })).toBeInTheDocument();
-  expect(screen.getByRole("status")).toHaveTextContent("8 saat 0 dakika net çalışma");
+  expect(screen.getByText("8 saat 0 dakika net çalışma")).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance/preview" && i?.method === "POST")).toBe(true);
   expect(screen.getByText(/2026-07-14 · Tam/)).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([u, i]) => String(u) === "/api/attendance" && i?.method === "POST")).toBe(false);

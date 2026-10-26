@@ -80,7 +80,11 @@ export function CandidateEvidenceModal({ candidate, selection, onClose }: {
         <p>{source.candidate.name} · incelenen kayıt sürümü {source.selection.record.version}</p></div>
         <button className="btn-icon-sm" aria-label="Kanıt düzeltme penceresini kapat" onClick={onClose} disabled={revise.isPending}>
           <i className="fa-solid fa-xmark" aria-hidden="true" /></button></div>
-      <div className="modal-body-scroll">
+      <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && <GuidanceOperationSource process="recruitment" step="first-review" value={guidanceSource} onChange={setGuidanceSource} disabled={revise.isPending} label={isNote ? "Not düzeltirken kullandığım rehber sürümü" : "Değerlendirme düzeltirken kullandığım rehber sürümü"} />}</div>
+          <div className="ez-workbench-main">
+
         {readOnly ? <p>İşe alınmış adayın başvuru geçmişi kilitli; not ve değerlendirme bu ekrandan düzeltilemez.</p>
           : <><section aria-label="Kanıt düzeltme rehberi">
             <p><strong>Ne yapıyoruz?</strong> Hatalı {isNote ? "görüşme türünü veya not metnini" : "ölçütü, puanı veya azami puanı"} gerekçeli yeni sürümle düzeltiyoruz. İlk kayıt değişmez; yeni sürüm güncel görünür.</p>
@@ -104,7 +108,7 @@ export function CandidateEvidenceModal({ candidate, selection, onClose }: {
               <textarea id="revise-reason" className="input-control" value={form.reason} onChange={e => set("reason", e.target.value)} /></div>
           </div></>}
         {error && <p className="form-error" role="alert">{error} Güncel kayda dönüp yeniden açabilirsiniz.</p>}
-        {!readOnly && <GuidanceOperationSource process="recruitment" step="first-review" value={guidanceSource} onChange={setGuidanceSource} disabled={revise.isPending} label={isNote ? "Not düzeltirken kullandığım rehber sürümü" : "Değerlendirme düzeltirken kullandığım rehber sürümü"} />}
+
         {after && <section aria-label="Kanıt düzeltmesi ön kontrolü" aria-live="polite">
           <h4>Önce</h4><StateView state={current} /><h4>Yeni geçerli sürüm</h4><StateView state={after} />
           <p><strong>Gerekçe:</strong> {review?.reason}</p><p>İlk kayıt korunur. Bu işlem adayın aşamasını veya genel puanını değiştirmez.</p>
@@ -120,7 +124,7 @@ export function CandidateEvidenceModal({ candidate, selection, onClose }: {
               <h4>Önce</h4><StateView state={revision.before} /><h4>Sonra</h4><StateView state={revision.after} />
             </details>)}</>}
         </details>
-      </div><div className="modal-footer">
+      </div></div></div><div className="modal-footer">
         <button className="btn btn-ghost" onClick={onClose} disabled={revise.isPending}>Güncel kayda dön</button>
         {!readOnly && <button className="btn btn-primary" onClick={review ? submit : prepare}
           disabled={revise.isPending || !Number.isInteger(source.candidate.version) || source.candidate.version < 1

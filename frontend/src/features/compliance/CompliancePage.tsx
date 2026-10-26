@@ -164,7 +164,11 @@ export function CompliancePage() {
       )}
 
       {pendingStatus && (
-        <section className="ez-panel ez-compliance-confirm" role="group" aria-label="Belge durum değişikliği ön kontrolü" aria-live="polite">
+        <section className="ez-panel ez-compliance-confirm ez-workbench" role="group" aria-label="Belge durum değişikliği ön kontrolü" aria-live="polite">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="compliance" step="status-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={setDocumentStatus.isPending} /></div>
+          <div className="ez-workbench-main">
+
           <h3>Durum değişikliğini doğrulayın</h3>
           <p><strong>{pendingStatus.document.employee} · {pendingStatus.document.document}</strong>: {pendingStatus.document.status} → {pendingStatus.status}</p>
           <p>{pendingStatus.status === "Tamamlandı"
@@ -172,12 +176,12 @@ export function CompliancePage() {
             : pendingStatus.status === "İncelemede"
               ? "Bu seçim kaydı günlük iş listesinden çıkarır; incelemenin sonucunu ayrıca takip edin. Hata varsa durumu yeniden açabilirsiniz."
               : "Bu seçim kaydı günlük iş listesine getirir. Risk seviyesini ve sorumluyu tekrar kontrol edin."}</p>
-          <GuidanceOperationSource process="compliance" step="status-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={setDocumentStatus.isPending} />
+
           <div className="ez-compliance-confirm-actions">
             <button className="btn btn-ghost" onClick={cancelStatusChange} disabled={setDocumentStatus.isPending}>Vazgeç</button>
             <button ref={confirmButtonRef} className="btn btn-primary" onClick={() => changeStatus(pendingStatus.document, pendingStatus.status)} disabled={setDocumentStatus.isPending}>Durumu kaydet</button>
           </div>
-        </section>
+        </div></div></section>
       )}
 
       <div className="compliance-layout">

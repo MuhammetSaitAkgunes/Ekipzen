@@ -6,12 +6,18 @@ import { useAuth } from "../auth/AuthContext";
 import { appRoutes, navigation, type Role } from "../routes";
 import { LOGIN_PATH, appPath, roleHomeFor } from "../paths";
 import { WriteRecoveryNotice } from "./WriteRecoveryNotice";
+import { GuidanceWorkspaceProvider, useGuidanceWorkspace } from "../features/guidance/GuidanceWorkspace";
 import { GlobalSearch } from "./GlobalSearch";
 import { useToast } from "./ToastProvider";
 import { Logo, usePageMeta } from "../ui";
 import { useDialog } from "../ui/useDialog";
 
 export function AppShell() {
+  return <GuidanceWorkspaceProvider><AppShellFrame /></GuidanceWorkspaceProvider>;
+}
+
+function AppShellFrame() {
+  const guidance = useGuidanceWorkspace();
   const { user, login, logout } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -88,7 +94,7 @@ export function AppShell() {
         <button className="btn-icon ez-mobile-close" onClick={() => setMobileOpen(false)} aria-label="Menüyü kapat"><i className="fa-solid fa-xmark" aria-hidden="true" /></button>
         <nav className="ez-navigation" aria-label="Ana gezinme">
           {navigation.map((group) => {
-            const items = group.items.filter((item) => item.roles.includes(role));
+            const items = group.items.filter((item) => item.roles.includes(role) && (item.key !== "guidance-catalog" || role === "employee"));
             return items.length > 0 && <div className={`ez-nav-group ${group.label === "" ? "ez-nav-bottom" : ""}`} key={group.label}>
               {group.label && <div className="nav-group-label">{group.label}</div>}
               {items.map((item) => <NavLink key={item.key} to={item.path} title={role === "employee" && item.employeeLabel ? item.employeeLabel : item.label} className={`nav-item ${current?.navKey === item.key ? "active" : ""}`}>
@@ -117,7 +123,7 @@ export function AppShell() {
           </div>}
         </div>
       </header>
-      <main className="main-content" id="main-content" tabIndex={-1}><WriteRecoveryNotice /><Outlet /></main>
+      <main className="main-content" id="main-content" tabIndex={-1} onFocusCapture={guidance?.focus}><WriteRecoveryNotice /><Outlet /></main>
     </div>
   );
 }

@@ -110,9 +110,13 @@ export function DocumentModal({ document: doc, onClose }: {
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="compliance" step={isEdit ? "record-correction" : "record-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={isBusy} /></div>
+          <div className="ez-workbench-main">
+
           <p className="ez-compliance-modal-note">Burada bir belge takip kaydı açılır veya düzenlenir; dosya yüklenmez. Son tarih, durum ve risk düzeyini kaynağına göre doğrulayın. “Tamamlandı” seçimi günlük iş görünümünü etkiler ama belgenin kendisini veya dış bildirimi doğrulamaz.</p>
-          <GuidanceOperationSource process="compliance" step={isEdit ? "record-correction" : "record-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={isBusy} />
+
           {isEdit && <p>Belge bilgileri ve sorumlu birlikte kaydedilir; güncel sürüm değişmişse kayıt durdurulur. Sorumlu boş bırakılırsa atama kaldırılır.</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
           {reviewing ? <section className="ez-compliance-document-review" role="region" aria-label="Belge kaydını kaydetmeden önce kontrol edin">
@@ -163,7 +167,7 @@ export function DocumentModal({ document: doc, onClose }: {
               </select>
             </div>
           </div>}
-        </div>
+        </div></div></div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose} disabled={isBusy}>Vazgeç</button>
           {reviewing && <button className="btn btn-ghost" onClick={() => { setReviewing(false); setAcknowledged(false); }} disabled={isBusy}>Bilgileri düzelt</button>}

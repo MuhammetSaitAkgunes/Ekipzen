@@ -32,7 +32,7 @@ const render = () => renderPage(<AuthProvider><ToastProvider><SettingsPage /></T
 const writes = (path: string, method: string) => vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url).split("?")[0] === path && init?.method === method);
 async function choose(label: string) {
   await userEvent.click(screen.getByText(label, { exact: true }));
-  await userEvent.click(await within(screen.getByText(label, { exact: true }).closest("details")!).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await userEvent.click(await within(screen.getByText(label, { exact: true }).closest("aside")!).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
 }
 
 test("logo seçmek yazmaz; kaynak değişimi teyidi sıfırlar ve 409 dosya ile eski belirteci korur", async () => {

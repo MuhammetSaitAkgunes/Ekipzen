@@ -64,9 +64,13 @@ export function ActionModal({ onClose, action }: { onClose: () => void; action?:
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
-          <GuidanceOperationSource process="daily" step="task-action" value={guidanceVersion}
-            onChange={id => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} />
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="daily" step="task-action" value={guidanceVersion}
+            onChange={id => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} /></div>
+          <div className="ez-workbench-main">
+
+
           {baseline && <><ActionRecordSummary action={baseline} />
             <button type="button" className="btn btn-ghost" disabled={pending || refreshing} onClick={async () => {
               setRefreshing(true); setConfirmed(false);
@@ -110,7 +114,7 @@ export function ActionModal({ onClose, action }: { onClose: () => void; action?:
               <textarea id="act-recommended" className="input-control" rows={2} value={form.recommendedAction} onChange={set("recommendedAction")} />
             </div>
           </div>
-        </div>
+        </div></div></div>
         {action && <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} /> Güncel kayıtla düzeltmemi karşılaştırdım; yalnız takip bilgileri değişecek.</label>}
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>

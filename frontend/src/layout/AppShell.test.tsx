@@ -51,7 +51,7 @@ test("employee menüsünde yalnız yetkili modüller görünür", () => {
   renderShellAt("/app/overview", "employee", "Ahmet Yılmaz");
   expect(screen.queryByText("Ayarlar")).not.toBeInTheDocument();
   expect(screen.queryByText("Çalışanlar")).not.toBeInTheDocument();
-  expect(screen.queryByText("Öğrenme Yolculuğum")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "İK Rehberi" })).toHaveAttribute("href", "/app/guidance/catalog");
   expect(screen.getByText("İzinlerim")).toBeInTheDocument();
 });
 
@@ -87,8 +87,8 @@ test("sekme başlığı rotaya göre güncellenir", async () => {
 
 test("öğrenme yolculuğu yalnız İK yöneticisi menüsünde ve rotasında görünür", async () => {
   renderShellAt("/app/guidance", "hr-admin", "İK Yöneticisi");
-  expect(await screen.findByRole("heading", { name: "Öğrenme yolculuğum" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "İK Rehberi" })).toBeInTheDocument();
   const sidebar = document.querySelector("aside.sidebar") as HTMLElement;
-  expect(within(sidebar).getByRole("link", { name: "Öğrenme Yolculuğum" }))
+  expect(within(sidebar).getByRole("link", { name: "İK Rehberi" }))
     .toHaveAttribute("href", "/app/guidance");
 });

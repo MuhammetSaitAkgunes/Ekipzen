@@ -74,19 +74,27 @@ export function DepartmentsPanel() {
       <p>Çalışan kartında doğru ekibi seçebilmek için önce departmanları tanımlayın. Hatalı ad veya kodu daha sonra düzeltebilirsiniz.</p>
     </div>
     {error && <p className="form-error" role="alert">{error}</p>}
-    {deletion && <section className="ez-company-operation-review" aria-label="Departman silme önizlemesi">
+    {deletion && <section className="ez-company-operation-review ez-workbench" aria-label="Departman silme önizlemesi">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="departments" value={deleteSource} onChange={value => { setDeleteSource(value); setDeleteConfirmed(false); }} disabled={remove.isPending} label="Departman silerken kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
       <h4>{deletion.name} departmanını silme</h4>
       <p>Kod: {deletion.code || "Yok"} · {deletion.employeeCount} çalışan · {deletion.positionCount} pozisyon bağlı.</p>
       <p>{deletion.canDelete ? "Bağlı kayıt yok. Silme departmanı seçim listesinden kaldırır; aynı kayıt geri getirilemez. Yanlış ad veya kod için Düzenle yolunu kullanın." : "Bağlı çalışan veya pozisyon olduğu için silme kapalı. Önce gerçek bağlantıları kontrol edip başka departmana taşıyın."}</p>
-      <GuidanceOperationSource process="company" step="departments" value={deleteSource} onChange={value => { setDeleteSource(value); setDeleteConfirmed(false); }} disabled={remove.isPending} label="Departman silerken kullandığım rehber sürümü" />
+
       <label><input type="checkbox" checked={deleteConfirmed} disabled={!deletion.canDelete || remove.isPending} onChange={event => setDeleteConfirmed(event.target.checked)} /> Bu departmanın silinmesini teyit ediyorum</label>
       <div className="ez-department-actions">
         <button type="button" className="btn btn-secondary" disabled={remove.isPending} onClick={() => { setDeletion(null); setDeleteSource(null); }}>Vazgeç</button>
         <button type="button" className="btn btn-secondary" disabled={remove.isPending || previewDelete.isPending} onClick={() => void prepareDeletion(deletion.id)}>Güncel silme etkisini yeniden incele</button>
         <button type="button" className="btn btn-primary" disabled={!deletion.canDelete || !deleteConfirmed || remove.isPending} onClick={() => void confirmDeletion()}>Departmanı sil</button>
       </div>
-    </section>}
-    <form className="ez-department-form" onSubmit={submitCreate}>
+    </div></div></section>}
+    <form className="ez-department-form ez-workbench" onSubmit={submitCreate}>
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="departments" value={createSource} onChange={setCreateSource} disabled={create.isPending} label="Departman eklerken kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
       <div className="input-group">
         <label htmlFor="new-department-name">Yeni departman adı</label>
         <input id="new-department-name" className="input-control" value={name} maxLength={128}
@@ -97,15 +105,19 @@ export function DepartmentsPanel() {
         <input id="new-department-code" className="input-control" value={code} maxLength={32}
           onChange={(event) => setCode(event.target.value)} />
       </div>
-      <GuidanceOperationSource process="company" step="departments" value={createSource} onChange={setCreateSource} disabled={create.isPending} label="Departman eklerken kullandığım rehber sürümü" />
+
       <button className="btn btn-primary" type="submit" disabled={create.isPending}>Departman ekle</button>
-    </form>
+    </div></div></form>
     {departmentsQ.isPending ? <p>Departmanlar yükleniyor…</p>
       : departmentsQ.isError ? <div role="alert"><p>Departman listesi yüklenemedi.</p><button className="btn btn-secondary" onClick={() => void departmentsQ.refetch()}>Yeniden dene</button></div>
         : departmentsQ.data.length === 0 ? <p className="ez-department-empty">Henüz departman yok. Çalışan kartında departman seçmek için ilk departmanı ekleyin.</p>
           : <ul className="ez-department-list">
             {departmentsQ.data.map((department) => <li key={department.id}>
-              {editing && editing.id === department.id ? <form className="ez-department-edit" onSubmit={submitEdit}>
+              {editing && editing.id === department.id ? <form className="ez-department-edit ez-workbench" onSubmit={submitEdit}>
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="departments" value={editSource} onChange={setEditSource} disabled={update.isPending} label="Departman düzeltirken kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
                 <p className="ez-department-edit-note">{department.employeeCount ?? 0} çalışan bu departmana bağlı. Adı veya kodu düzeltmek çalışanları başka departmana taşımaz.</p>
                 <div className="input-group"><label htmlFor={`department-name-${department.id}`}>Departman adı</label>
                   <input id={`department-name-${department.id}`} className="input-control" maxLength={128}
@@ -113,14 +125,14 @@ export function DepartmentsPanel() {
                 <div className="input-group"><label htmlFor={`department-code-${department.id}`}>Kısa kod</label>
                   <input id={`department-code-${department.id}`} className="input-control" maxLength={32}
                     value={editing.code} onChange={(event) => setEditing((current) => current ? { ...current, code: event.target.value } : current)} /></div>
-                <GuidanceOperationSource process="company" step="departments" value={editSource} onChange={setEditSource} disabled={update.isPending} label="Departman düzeltirken kullandığım rehber sürümü" />
+
                 {editing.recordToken && department.recordToken && editing.recordToken !== department.recordToken && <p role="alert">Departman siz düzenlerken değişti. Taslağınız korunuyor; önce güncel kaydı inceleyin.</p>}
                 <div className="ez-department-actions">
                   <button className="btn btn-secondary btn-sm" type="button" disabled={update.isPending}
                     onClick={() => { setEditing(null); setError(""); }}>Vazgeç</button>
                   <button className="btn btn-primary btn-sm" type="submit" disabled={update.isPending}>Değişikliği kaydet</button>
                 </div>
-              </form> : <div className="ez-department-row">
+              </div></div></form> : <div className="ez-department-row">
                 <div><strong>{department.name}</strong><small>{department.code || "Kod yok"} · {department.employeeCount ?? 0} çalışan</small></div>
                 <button className="btn btn-secondary btn-sm" onClick={() => {
                   setError(""); setEditSource(null);

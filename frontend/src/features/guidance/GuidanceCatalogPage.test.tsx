@@ -80,6 +80,25 @@ const routes = (canManage = false, entries: GuidanceEditorial[] = [entry]) => ({
   "/api/guidance/catalog/readings": [],
 });
 
+test("çalışanın kendi okuma geçmişi yönetim rotası açılmadan erişilebilir kalır", async () => {
+  setUser("employee"); stubApi(routes());
+  renderCatalog("/app/guidance/catalog?tab=history");
+  await screen.findByRole("heading", { name: "İncelediğim içerik sürümleri" });
+  expect(screen.getByRole("link", { name: "Öğrenme geçmişim" })).toHaveAttribute("aria-current", "page");
+  expect(screen.queryByRole("link", { name: "Başlangıç" })).not.toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith("/journey"))).toBe(false);
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
+test("katalog araması açık sürüm bağlantısını ve okuma beyanını korur", async () => {
+  stubApi(routes()); renderCatalog("/app/guidance/catalog?version=8");
+  await screen.findByRole("heading", { name: content.body.title });
+  await userEvent.type(screen.getByRole("searchbox", { name: "İçerikte ara" }), "eşleşmeyen konu");
+  expect(screen.getByText("Aramanızla eşleşen içerik bulunamadı.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: content.body.title })).toBeInTheDocument();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
 test("inceleme kaydı yalnız açık beyanla gönderilir ve tekrar okuma tarihi değiştirmez", async () => {
   const reading = { contentRevisionId: 8, contentKey: content.contentKey, processKey: "personnel", contentVersion: 1,
     title: content.body.title, firstReadAtUtc: "2026-10-01T08:00:00Z", isCurrent: true };
@@ -131,7 +150,7 @@ test("çalışan incelenmiş gerekçe ve örnekleri okur; içerik yayınına yet
   await userEvent.click(await screen.findByRole("button", { name: /Kartı doğrulama/ }));
   expect(await screen.findByText("Aynı isimde iki kişi olabilir")).toBeInTheDocument();
   expect(screen.getByText("Belgeyle doğrulanmış anonim örnek")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "https://example.test/reference" })).toHaveAttribute("rel", "noopener noreferrer");
+  expect(screen.getByRole("link", { name: "Bu adımın resmî veya tanımlı kaynağını aç" })).toHaveAttribute("rel", "noopener noreferrer");
   expect(screen.getByText(/İnceleyen uzman/)).toBeInTheDocument();
   expect(screen.getByText(/Rehberi okumak bir işlemi tamamlamaz/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "İçerik yayınını yönet" })).not.toBeInTheDocument();

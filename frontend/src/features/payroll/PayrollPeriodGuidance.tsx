@@ -86,8 +86,12 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
-          <GuidanceOperationSource process="payroll" step="period-create" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={createPeriod.isPending} />
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="period-create" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={createPeriod.isPending} /></div>
+          <div className="ez-workbench-main">
+
+
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="form-grid-2">
             <div className="input-group">
@@ -127,7 +131,7 @@ export function CreatePeriodModal({ latest, onClose, onCreated }: {
             </section>}
             <label><input type="checkbox" checked={confirmed} disabled={!canCreate || !preview || previewPending || createPeriod.isPending} onChange={(e) => setConfirmed(e.target.checked)} /> Ayı, personel satırlarını, kaynakları ve eksikleri kontrol ettim.</label>
           </div>
-        </div>
+        </div></div></div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
           <button className="btn btn-primary" onClick={submit} disabled={!canCreate || !confirmed || !preview || previewPending || createPeriod.isPending}>
@@ -162,8 +166,12 @@ export function SubmitPeriodModal({ detail, pending, onClose, onSubmit }: {
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
-          <GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} />
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} /></div>
+          <div className="ez-workbench-main">
+
+
           <div className="ez-payroll-review">
             <h4>Onaydan önce</h4>
             <p><strong>Gerçek kayıtlar:</strong> {rows.length} bordro satırının {approved} tanesi onaylı.</p>
@@ -174,7 +182,7 @@ export function SubmitPeriodModal({ detail, pending, onClose, onSubmit }: {
             {!allApproved && <p role="alert">Önce {rows.length - approved} bekleyen satırı kontrol edip onaylayın.</p>}
             <label><input type="checkbox" checked={confirmed} disabled={!allApproved} onChange={(e) => setConfirmed(e.target.checked)} /> Satırları ve dönem sonucunu kontrol ettim.</label>
           </div>
-        </div>
+        </div></div></div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Satırlara dön</button>
           <button className="btn btn-primary" onClick={() => onSubmit(guidanceVersion ?? undefined)} disabled={!allApproved || !confirmed || pending}>Dönemi onayla</button>

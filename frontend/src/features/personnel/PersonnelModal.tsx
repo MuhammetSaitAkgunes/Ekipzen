@@ -155,6 +155,19 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "tab-kimlik");
   const selectedGuideStep = useRef(false);
+  const tabStrip = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const revealActive = () => {
+      const strip = tabStrip.current;
+      const button = strip?.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (!strip || !button) return;
+      const area = strip.getBoundingClientRect(); const selected = button.getBoundingClientRect();
+      if (selected.left < area.left) strip.scrollLeft += selected.left - area.left - 12;
+      else if (selected.right > area.right) strip.scrollLeft += selected.right - area.right + 12;
+    };
+    revealActive(); window.addEventListener("resize", revealActive);
+    return () => window.removeEventListener("resize", revealActive);
+  }, [activeTab]);
   const [form, setForm] = useState<FormState>(emptyForm);
   const loadedCard = useRef<EmployeeDetailDto | null>(null);
   const creationRequestId = useRef(crypto.randomUUID());
@@ -438,7 +451,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
       </div>
 
       <div className="modal-body">
-        <aside className="modal-sidebar" aria-label="Profil bölümleri">
+        <aside ref={tabStrip} className="modal-sidebar" aria-label="Profil bölümleri">
           {TABS.map((tab) => (
             <button key={tab.id} aria-pressed={activeTab === tab.id} className={`nav-btn ${activeTab === tab.id ? "active" : ""}`} onClick={() => chooseTab(tab.id)}>
               <i aria-hidden="true" className={tab.icon} /> {tab.label}
@@ -446,9 +459,13 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
           ))}
         </aside>
 
-        <section className="modal-content-area">
-          {!readOnly && activeTab !== "tab-evrak" && <GuidanceOperationSource process={isEdit ? "personnel" : "personnel-entry"} step={isEdit ? "record-review" : "tab-is"}
-            value={guidanceVersion} onChange={setGuidanceVersion} disabled={save.isPending} />}
+        <section className="modal-content-area ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && (guided || !isEdit) && !(isEdit && activeTab !== "tab-evrak") && activeTab !== "tab-is" && <PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} />}{!readOnly && activeTab !== "tab-evrak" && (isEdit || activeTab === "tab-is") && <GuidanceOperationSource fallback={(guided || !isEdit) ? <PersonnelGuide step={activeTab} index={TABS.findIndex(tab => tab.id === activeTab) + 1} /> : undefined} process={isEdit ? "personnel" : "personnel-entry"} step={isEdit ? "record-review" : "tab-is"}
+            value={guidanceVersion} onChange={setGuidanceVersion} disabled={save.isPending} />}</div>
+          <div className="ez-workbench-main">
+
+
           {isEdit && !readOnly && <section className="ez-document-review" aria-label="Personel düzeltme açıklaması">
             <p>Değişiklik yoksa işlem kanıtı oluşmaz. Departman/yönetici değişikliğini yetkili organizasyon kararıyla doğrulayın; yönetici ataması rol eşitlemesi başlatabilir. Durum değişikliği ve parasal düzeltme ayrı süreçlerdir.</p>
             <label className="input-label" htmlFor="pm-correction-reason">Düzeltme gerekçesi (rehber bağlantısında zorunlu)</label>
@@ -460,7 +477,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
             Çalışan kartı için önce departman oluşturun. <Link to={appPath("/settings")}>Ayarlar bölümüne git</Link>.
             Kaydedilmemiş form alanları bu geçişte korunmaz.
           </p>}
-          {!readOnly && (guided || !isEdit) && <PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} />}
+
           <div id="tab-kimlik" className={`content-section ${activeTab === "tab-kimlik" ? "active" : ""}`}>
             <div className="section-head">
               <div>
@@ -494,8 +511,12 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   <input ref={photoInputRef} type="file" accept="image/jpeg,image/png" aria-label="Personel fotoğrafı" hidden disabled={readOnly || uploadPhoto.isPending} onChange={(event) => { handlePhoto(event.target.files?.[0]); event.target.value = ""; }} />
                 </div>
               </div>
-              {!readOnly && employeeId !== null && <div className="col-12">
-                <GuidanceOperationSource process="personnel-entry" step="tab-kimlik" value={photoSource} onChange={value => { setPhotoSource(value); setPhotoConfirmed(false); }} disabled={uploadPhoto.isPending} label="Fotoğraf yüklerken kullandığım rehber sürümü" />
+              {!readOnly && employeeId !== null && <div className="col-12 ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-kimlik" value={photoSource} onChange={value => { setPhotoSource(value); setPhotoConfirmed(false); }} disabled={uploadPhoto.isPending} label="Fotoğraf yüklerken kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
+
                 {photoReview && <section className="ez-company-operation-review" aria-label="Fotoğraf yükleme önizlemesi">
                   <p>Yeni dosya: {photoReview.file.name} ({Math.ceil(photoReview.file.size / 1024)} KB). Yalnız bu çalışanın fotoğrafı değişir. Kimliği doğrulayın; yanlış fotoğrafı doğru dosyayla değiştirin. Fotoğraf sağlık veya çalışma uygunluğu onayı değildir.</p>
                   <label><input type="checkbox" checked={photoConfirmed} disabled={uploadPhoto.isPending} onChange={event => setPhotoConfirmed(event.target.checked)} /> Fotoğraf değişimini teyit ediyorum</label>
@@ -508,7 +529,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   }}>Güncel fotoğraf durumunu yeniden incele</button>
                   <button type="button" className="btn btn-secondary" disabled={uploadPhoto.isPending} onClick={() => { setPhotoReview(null); setPhotoSource(null); }}>Vazgeç</button>
                 </section>}
-              </div>}
+              </div></div></div>}
               <div className="input-group col-6">
                 <label className="input-label" htmlFor="pm-tc">TC Kimlik No *</label>
                 <input id="pm-tc" type="text" className="input-control" maxLength={11} placeholder="11 haneli numara" value={form.nationalId} disabled={readOnly} onChange={(e) => set("nationalId", e.target.value)} />
@@ -613,7 +634,12 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                 </div>
               </div>
               {isEdit && !readOnly && detailQ.data?.status === "passive" && (
-                <div className="notice-card col-12">
+                <div className="notice-card col-12 ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel" step="rehire" label="Yeniden işe alma işleminde kullandığım rehber sürümü"
+                    value={rehireGuidanceVersion} onChange={id => { setRehireGuidanceVersion(id); setRehireReview(false); }} disabled={rehire.isPending} /></div>
+          <div className="ez-workbench-main">
+
                   <strong>Yeni çalışma dönemi aç</strong>
                   <p>İşe dönüş, önceki dönemin izin bakiyesini ve ücret paketini otomatik taşımaz.</p>
                   <div className="form-grid-2">
@@ -635,8 +661,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   <label className="input-label" htmlFor="pm-rehire-reason">Yeniden işe alma gerekçesi / karar referansı</label>
                   <textarea id="pm-rehire-reason" className="input-control" maxLength={500} value={rehireReason}
                     onChange={event => { setRehireReason(event.target.value); setRehireReview(false); }} />
-                  <GuidanceOperationSource process="personnel" step="rehire" label="Yeniden işe alma işleminde kullandığım rehber sürümü"
-                    value={rehireGuidanceVersion} onChange={id => { setRehireGuidanceVersion(id); setRehireReview(false); }} disabled={rehire.isPending} />
+
                   <button type="button" className="btn btn-secondary" onClick={prepareRehire} disabled={rehire.isPending}>İşe dönüşü kontrol et</button>
                   {rehireReview && <section className="ez-compensation-review" aria-label="Yeniden işe alma ön kontrolü">
                     <h4>Yeniden işe alma ön kontrolü</h4><p>Çalışan: {detailQ.data?.name} · Yeni başlangıç: {rehireDate}</p>
@@ -644,7 +669,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                     <p>Personel aktif olur, yeni çalışma dönemi açılır ve erişim eşitlemesi kuyruğa eklenir. Eski dönem, ayrılış ve ücret/izin geçmişi korunur; yeni dönem için ücret hazırlığı ayrıca gerekir. Erişim kuyruğu tamamlanmış sayılmaz.</p>
                     <button type="button" className="btn btn-secondary" onClick={handleRehire} disabled={rehire.isPending}>Yeni çalışma dönemini başlat</button>
                   </section>}
-                </div>
+                </div></div></div>
               )}
             </div>
           </div>
@@ -736,10 +761,14 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   <button type="button" className="btn btn-secondary" onClick={prepareCompensationReview} disabled={saveCompensation.isPending}>
                     Kaydetmeden önce kontrol et
                   </button>
-                  {compensationReview && <section className="ez-compensation-review" aria-labelledby="compensation-review-title" aria-live="polite">
+                  {compensationReview && <section className="ez-compensation-review ez-workbench" aria-labelledby="compensation-review-title" aria-live="polite">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Ücret paketi eklemede kullandığım rehber sürümü"
+                      value={compensationGuidanceVersion} onChange={setCompensationGuidanceVersion} disabled={saveCompensation.isPending} /></div>
+          <div className="ez-workbench-main">
+
                     <h4 id="compensation-review-title">Ücret paketi ön kontrolü</h4>
-                    <GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Ücret paketi eklemede kullandığım rehber sürümü"
-                      value={compensationGuidanceVersion} onChange={setCompensationGuidanceVersion} disabled={saveCompensation.isPending} />
+
                     <p><strong>Çalışan:</strong> {detailQ.data?.name}</p>
                     <p><strong>Yürürlük:</strong> {compensationReview.effectiveFrom} · <strong>Aylık brüt:</strong> {currency.format(tryNumber(compensationReview.monthlyGrossSalary))}</p>
                     <p><strong>Düzenli toplam:</strong> {currency.format([
@@ -753,7 +782,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                       <button type="button" className="btn btn-ghost" onClick={() => setCompensationReview(null)} disabled={saveCompensation.isPending}>Düzenlemeye dön</button>
                       <button type="button" className="btn btn-primary" onClick={handleCompensationSave} disabled={saveCompensation.isPending}>Ücret paketini onayla ve kaydet</button>
                     </div>
-                  </section>}
+                  </div></div></section>}
                   </>}
                 </div>
               )}
@@ -789,7 +818,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
           <div id="tab-evrak" className={`content-section ${activeTab === "tab-evrak" ? "active" : ""}`}>
             <DocumentsTab employeeId={employeeId} readOnly={readOnly} />
           </div>
-        </section>
+        </div></div></section>
       </div>
     </div>
   );

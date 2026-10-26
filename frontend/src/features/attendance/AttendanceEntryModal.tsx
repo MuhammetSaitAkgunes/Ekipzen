@@ -131,8 +131,12 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
           </button>
         </div>
 
-        <div className="modal-body-scroll">
-          <GuidanceOperationSource process="attendance" step={isEdit ? "entry-correction" : "entry-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); formRevision.current += 1; setReviewing(false); setPreview(null); }} disabled={save.isPending || previewEntry.isPending} />
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="attendance" step={isEdit ? "entry-correction" : "entry-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); formRevision.current += 1; setReviewing(false); setPreview(null); }} disabled={save.isPending || previewEntry.isPending} /></div>
+          <div className="ez-workbench-main">
+
+
           {error && <p className="form-error" role="alert">{error}</p>}
           <p className="ez-attendance-guide-note">Bu form gerçek puantaj kaydı oluşturur veya mevcut günü düzeltir. Gün tipini ve molayı gerçek kaynağa göre seçin: “Tam” veya “Mesai” seçimi tek başına çalışılan süre ya da yasal fazla çalışma kararı oluşturmaz. Süre sunucuda saatlerden hesaplanır; “Rapor” başka bir sisteme bildirim yapmaz.</p>
           {reviewing ? (
@@ -196,7 +200,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
               </div>
             </div>
           </>}
-        </div>
+        </div></div></div>
 
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose} disabled={save.isPending || previewEntry.isPending}>Vazgeç</button>

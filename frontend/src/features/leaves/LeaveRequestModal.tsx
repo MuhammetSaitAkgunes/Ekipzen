@@ -171,7 +171,12 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="modal-body-scroll">
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="leave" step="request-lifecycle" value={source}
+            onChange={id => { formRevision.current++; setSource(id); setReview(null); }} disabled={createLeave.isPending || previewLeave.isPending} /></div>
+          <div className="ez-workbench-main">
+
           {error && <p className="form-error" role="alert">{error}</p>}
           <section className="ez-leave-request-guide" aria-label="İzin talebi rehberi">
             <strong>Ne yapıyoruz?</strong>
@@ -207,8 +212,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <LeaveTypeConditions type={selectedType} />
-          <GuidanceOperationSource process="leave" step="request-lifecycle" value={source}
-            onChange={id => { formRevision.current++; setSource(id); setReview(null); }} disabled={createLeave.isPending || previewLeave.isPending} />
+
           <div className="form-grid-2 mt-4">
             <div className="input-group">
               <label className="input-label" htmlFor="start-date">Başlangıç Tarihi</label>
@@ -249,7 +253,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
             {review.description && <p><strong>Açıklama:</strong> {review.description}</p>}
             <p>Gönderimden sonra tarih veya tür bu ekranda düzenlenmez. Bekleyen ya da onaylı talebi iptal edip gerekirse doğru bilgilerle yeni talep oluşturabilirsiniz; onaylı iptal bakiyede ters hareket üretir.</p>
           </section>}
-        </div>
+        </div></div></div>
 
         <div className="modal-footer">
           {review ? <>

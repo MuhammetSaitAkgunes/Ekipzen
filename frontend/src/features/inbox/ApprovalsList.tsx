@@ -46,7 +46,7 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
     {expanded && <div className="ez-request-detail" id={`request-detail-${request.id}`}>
       <p>{request.description || "Bu talebe açıklama eklenmemiş."}</p>
       {error && <p role="alert" className="form-error">{error}</p>}
-      <div className="ez-leave-guide">
+      <div className="ez-leave-guide" hidden={reviewDecision !== null}>
         <strong>Karar öncesi kontrol</strong>
         <p>Çalışanı, izin türünü, tarihleri, gün sayısını ve talep açıklamasını gözden geçirin. Eksik veya çelişkili bilgiyi ilgili kişiyle netleştirin.</p>
         <GuidanceDecisionCheck process="leave-approval" step="review-request"
@@ -58,15 +58,20 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
           <button className="btn btn-primary btn-sm" onClick={() => beginReview(true)}>Onayı incele</button>
         </div>
       ) : (
-        <div className="ez-leave-decision-review" role="group" aria-label="İzin kararını gözden geçir">
+        <div className="ez-leave-decision-review ez-workbench" role="group" aria-label="İzin kararını gözden geçir">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="leave" step="decision-effect" value={guidanceVersion}
+            onChange={setGuidanceVersion} disabled={decide.isPending} />
+          <div className="ez-guide-practice"><h4>Karar alıştırmaları</h4><GuidanceDecisionCheck process="leave-approval" step="decision-effect"
+            operationName="izin kararı" eager={false} /></div>
+          </div>
+          <div className="ez-workbench-main">
+
           <h4>{reviewDecision ? "Onay kararı" : "Ret kararı"}</h4>
           <p>{reviewDecision
             ? "Onay talebin durumunu değiştirir. Bakiyeden düşen türlerde sistem onay anında bakiyeyi yeniden kontrol eder ve kullanım hareketini kaydeder."
             : "Ret talebin durumunu değiştirir ve bekleyen onay kuyruğundan çıkarır. Bu ekranda kararı geri alma işlemi yoktur."}</p>
-          <GuidanceDecisionCheck process="leave-approval" step="decision-effect"
-            operationName="izin kararı" eager={false} />
-          <GuidanceOperationSource process="leave" step="decision-effect" value={guidanceVersion}
-            onChange={setGuidanceVersion} disabled={decide.isPending} />
+
           <label htmlFor={`decision-note-${request.id}`}>Karar notu (isteğe bağlı)</label>
           <textarea id={`decision-note-${request.id}`} className="input-control" rows={2}
             maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)}
@@ -78,7 +83,7 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
               {decide.isPending ? "İşleniyor…" : reviewDecision ? "Onayı kaydet" : "Ret kararını kaydet"}
             </button>
           </div>
-        </div>
+        </div></div></div>
       )}
     </div>}
   </article>;

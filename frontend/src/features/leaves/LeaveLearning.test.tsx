@@ -33,7 +33,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clea
 const render = (view: React.ReactNode) => renderPage(<AuthProvider><ToastProvider>{view}</ToastProvider></AuthProvider>);
 async function chooseSource(label = "Gerçek işlemde kullandığım rehber sürümü") {
   await userEvent.click(screen.getByText(label, { exact: true }));
-  const details = screen.getByText(label, { exact: true }).closest("details")!;
+  const details = screen.getByText(label, { exact: true }).closest("aside")!;
   await userEvent.click(await within(details).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
 }
 async function prepareRequest() {

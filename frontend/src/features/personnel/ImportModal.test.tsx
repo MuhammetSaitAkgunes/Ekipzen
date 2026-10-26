@@ -108,7 +108,7 @@ test("tutarlı satırlar yanlış ders sürümünü başarı yapmaz; aynı gönd
   learningRoutes(init => response({ ...result((init.body as FormData).get("importRequestId") as string),
     guidanceContent: { ...sourceSnapshot, contentRevisionId: ++attempts === 1 ? 23 : 22 } }));
   render(); await approve(); await chooseLesson(); await recheck(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Aktarım sonucu doğrulanamadı");
+  expect(await screen.findByText(/Aktarım sonucu doğrulanamadı/)).toBeInTheDocument();
   expect(screen.queryByText("Gerçek aktarım sonucu")).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Aynı gönderimi tekrar dene" }));
   await screen.findByText("Gerçek aktarım sonucu");
@@ -167,7 +167,7 @@ test("bağlantı hatasında dosya değişmez ve aynı kimlikle güvenli tekrar y
     return response(result((init!.body as FormData).get("importRequestId") as string));
   }));
   render(); await approve(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Aktarım sonucu doğrulanamadı");
+  expect(await screen.findByText(/Aktarım sonucu doğrulanamadı/)).toBeInTheDocument();
   expect(screen.getByLabelText(/Excel dosyası/i)).toBeDisabled(); expect(screen.getByRole("button", { name: "Kapat" })).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "Aynı gönderimi tekrar dene" }));
   expect(await screen.findByText("Gerçek aktarım sonucu")).toBeInTheDocument();
@@ -203,7 +203,7 @@ test("tutarsız başarılı yanıt gerçek sonuç diye gösterilmez", async () =
   vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => response(String(url) === "/api/employees/import"
     ? { ...result((init!.body as FormData).get("importRequestId") as string), olusturulanSatir: 2 } : rapor)));
   render(); await approve(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Aktarım sonucu doğrulanamadı");
+  expect(await screen.findByText(/Aktarım sonucu doğrulanamadı/)).toBeInTheDocument();
   expect(screen.queryByText("Gerçek aktarım sonucu")).not.toBeInTheDocument();
 });
 

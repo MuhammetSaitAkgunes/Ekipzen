@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -15,7 +16,7 @@ const setRole = (role: string) =>
   }));
 beforeEach(() => { localStorage.clear(); setRole("hr-admin"); });
 
-const renderJourney = () => renderPage(<AuthProvider><GuidanceJourneyPage /></AuthProvider>);
+const renderJourney = () => renderPage(<AuthProvider><GuidanceJourneyPage /></AuthProvider>, ["/app/guidance?tab=history"]);
 
 const leaveJourney = {
   processKey: "leave-approval", verifiedDecisions: 0, lastVerifiedAtUtc: null,
@@ -110,6 +111,7 @@ test("yönetici yalnız kendi yetkili yolculuğunu ve izin karar ilerlemesini g�
   expect(within(leaveCard).getByRole("link", { name: "Bekleyen izinleri aç" }))
     .toHaveAttribute("href", "/app/inbox?tab=approvals");
   expect(screen.queryByRole("region", { name: "Aday ilk incelemesi" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("link", { name: "Başlangıç" }));
   const map = screen.getByRole("region", { name: "İK süreç haritası" });
   expect(within(map).getAllByRole("listitem")).toHaveLength(5);
   expect(within(map).queryByRole("link", { name: "İşe alım ekranını aç" })).not.toBeInTheDocument();
@@ -125,7 +127,7 @@ test("süreç haritası bütün kapsam gruplarını, gerçek ekranları ve rehbe
     processKey: "personnel-entry", contentVersion: 1, hasSavedPosition: false,
     bookmarkStepKey: "tab-kimlik", verifiedEmployeeRecords: 0, answeredChecks: 0, correctChecks: 0, lastVerifiedAtUtc: null,
   } });
-  renderJourney();
+  renderPage(<AuthProvider><GuidanceJourneyPage /></AuthProvider>, ["/app/guidance"]);
   const map = await screen.findByRole("region", { name: "İK süreç haritası" });
   expect(within(map).getAllByRole("listitem")).toHaveLength(10);
   expect(within(map).getByRole("link", { name: "Şirket hazırlığı ekranını aç" }))
@@ -146,7 +148,7 @@ test("ilerleme verisi yüklenemese de süreç haritası erişilebilir kalır", a
     JSON.stringify({ title: "Geçici hata" }),
     { status: 503, headers: { "Content-Type": "application/json" } },
   )));
-  renderJourney();
+  renderPage(<AuthProvider><GuidanceJourneyPage /></AuthProvider>, ["/app/guidance"]);
   expect(await screen.findByRole("region", { name: "İK süreç haritası" })).toBeInTheDocument();
-  expect(await screen.findByText("Veri yüklenemedi")).toBeInTheDocument();
+  expect(await screen.findByText(/Kayıtlı konumunuz okunamadı/)).toBeInTheDocument();
 });

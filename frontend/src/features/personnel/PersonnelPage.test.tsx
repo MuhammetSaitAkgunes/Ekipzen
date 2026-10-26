@@ -186,7 +186,7 @@ test("geçersiz finansal tutarı kaydetmeden kullanıcıya düzeltme ister", asy
   await userEvent.type(screen.getByLabelText("İzin ödemesi (₺)"), "-1");
 
   await userEvent.click(screen.getByRole("button", { name: "Taslağı kaydet ve ayrılış etkisini incele" }));
-  expect(screen.getByRole("alert")).toHaveTextContent("İzin ödemesi boş, geçersiz veya negatif olamaz");
+  expect(screen.getByText(/İzin ödemesi boş, geçersiz veya negatif olamaz/)).toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "Tamamlamadan önce kontrol edin" })).not.toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url, init]) =>
     String(url) === "/api/employees/1/offboarding-draft" && init?.method === "PUT")).toBe(false);

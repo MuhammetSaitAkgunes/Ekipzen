@@ -75,9 +75,9 @@ export function PersonnelGuide({ step, index }: { step: PersonnelGuideStep; inde
     </div>
     <p>{item.purpose}</p>
     <p><strong>Şimdi ne yapmalı?</strong> {item.action}</p>
+    <div className="ez-guide-basis"><strong>Neden?</strong><p>{item.reason}</p></div>
     <details>
       <summary>Neden, örnek ve kontrol noktası</summary>
-      <p><strong>Neden?</strong> {item.reason}</p>
       <p><strong>Örnek:</strong> {item.example}</p>
       <p><strong>Kontrol:</strong> {item.check}</p>
     </details>

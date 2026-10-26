@@ -269,10 +269,14 @@ export function SettingsPage() {
 
           {section === "notif" && (
             <div id="set-notif" className="set-section active">
-              <div className="set-card">
+              <div className="set-card ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="company-profile" value={notifSource} onChange={value => { setNotifSource(value); setNotifConfirmed(false); }} disabled={updateNotifications.isPending} label="Bildirim tercihinde kullandığım rehber sürümü" /></div>
+          <div className="ez-workbench-main">
+
                 <div className="card-head"><h3>E-Posta Bildirimleri</h3></div>
                 <p>Bu işlem yalnız tercihi kaydeder; e-posta gönderildiği veya teslim edildiği anlamına gelmez. Gönderim altyapısı ve gerçek teslim sonucu ayrıca kontrol edilir.</p>
-                <GuidanceOperationSource process="company" step="company-profile" value={notifSource} onChange={value => { setNotifSource(value); setNotifConfirmed(false); }} disabled={updateNotifications.isPending} label="Bildirim tercihinde kullandığım rehber sürümü" />
+
                 {NOTIF_ROWS.map(([key, title, description], index) => (
                   <div key={key}>
                     {index > 0 && <div className="divider" />}
@@ -306,7 +310,7 @@ export function SettingsPage() {
                   }}>Güncel bildirim tercihlerini yeniden incele</button>
                   <button type="button" className="btn btn-secondary" disabled={updateNotifications.isPending} onClick={() => { setNotifReview(null); setNotifSource(null); setNotifConfirmed(false); }}>Taslağı bırak</button>
                 </section>}
-              </div>
+              </div></div></div>
             </div>
           )}
 

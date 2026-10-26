@@ -118,9 +118,13 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
         </div>
       )}
 
-      {!readOnly && selectedFile && <section className="ez-document-review" aria-labelledby="document-review-title" aria-live="polite">
+      {!readOnly && selectedFile && <section className="ez-document-review ez-workbench" aria-labelledby="document-review-title" aria-live="polite">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={uploadGuidanceVersion} onChange={setUploadGuidanceVersion} disabled={upload.isPending} /></div>
+          <div className="ez-workbench-main">
+
         <h4 id="document-review-title">Yüklemeden önce kontrol edin</h4>
-        <GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={uploadGuidanceVersion} onChange={setUploadGuidanceVersion} disabled={upload.isPending} />
+
         <p><strong>Dosya:</strong> {selectedFile.name} · {formatSize(selectedFile.size)}</p>
         <p><strong>Evrak türü:</strong> {documentType.trim() || "Girilmedi"}</p>
         <p>Doğru çalışanın kartında olduğunuzu ve dosyanın gerçekten bu belgeye ait olduğunu doğrulayın. Gereksiz hassas bilgi yüklemeyin.</p>
@@ -135,7 +139,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
           }} disabled={upload.isPending}>Seçimi kaldır</button>
           <button className="btn btn-primary" onClick={handleUpload} disabled={upload.isPending}>Dosyayı yükle</button>
         </div>
-      </section>}
+      </div></div></section>}
 
       {documentsQ.isPending && <p role="status">Evrak listesi yükleniyor…</p>}
       {documentsQ.isError && <p className="form-error" role="alert">Evrak listesi okunamadı; boş olduğu sonucuna varmayın.</p>}
@@ -172,8 +176,12 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
           </div>
         )}
       </div>}
-      {!readOnly && withdrawTarget && <section className="ez-document-review" aria-labelledby="document-withdraw-title">
-        <GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={withdrawGuidanceVersion} onChange={setWithdrawGuidanceVersion} disabled={withdraw.isPending} />
+      {!readOnly && withdrawTarget && <section className="ez-document-review ez-workbench" aria-labelledby="document-withdraw-title">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={withdrawGuidanceVersion} onChange={setWithdrawGuidanceVersion} disabled={withdraw.isPending} /></div>
+          <div className="ez-workbench-main">
+
+
         <h4 id="document-withdraw-title">Evrakı geri çekmeden önce kontrol edin</h4>
         <p><strong>Dosya:</strong> {withdrawTarget.fileName} · <strong>Tür:</strong> {withdrawTarget.documentType}</p>
         <p>Bu evrak normal listeden ve indirmeden çıkar; gerekçe ve işlem geçmişi korunur. Geri çekme dosyayı kalıcı olarak silmez. Doğru dosyayı daha sonra yükleyin.</p>
@@ -184,7 +192,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
           <button className="btn btn-ghost" onClick={() => { setWithdrawTarget(null); setWithdrawReason(""); }} disabled={withdraw.isPending}>Vazgeç</button>
           <button className="btn btn-primary" onClick={handleWithdraw} disabled={withdraw.isPending || !withdrawReason.trim()}>Geri çekmeyi onayla</button>
         </div>
-      </section>}
+      </div></div></section>}
       {!readOnly && <section aria-label="Geri çekilen evraklar">
         <h4>Geri çekilen evraklar</h4>
         {withdrawnQ.isPending && <p role="status">Geri çekme geçmişi yükleniyor…</p>}

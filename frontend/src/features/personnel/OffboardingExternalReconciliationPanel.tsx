@@ -101,9 +101,13 @@ export function ExternalActionForm({ args, kind, title, current, canRecord, onRe
     }
   };
 
-  return <section className="ez-compensation-review" aria-label={`${title} kanıtı`}>
-    {canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion}
-      onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending || record.isPending} />}
+  return <section className="ez-compensation-review ez-workbench" aria-label={`${title} kanıtı`}>
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion}
+      onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending || record.isPending} />}</div>
+          <div className="ez-workbench-main">
+
+
     <h5>{title}: {current ? current.outcome === "completed" ? "kanıtlı tamamlandı" : current.outcome === "pending" ? "sorumlu atandı, işlem bekliyor" : "işlem gerekmiyor kaydı" : "sorumlu ve kanıt bekliyor"}</h5>
     {current && <p>Son kayıt: {current.evidenceReference || "Kanıt henüz yok"} · sorumlu {current.responsibleName}. Hata varsa yeni kayıt ekleyin; eski kayıt korunur.</p>}
     {canRecord && <>
@@ -150,5 +154,5 @@ export function ExternalActionForm({ args, kind, title, current, canRecord, onRe
         onClick={save}>{outcome === "pending" ? "Sorumluyu kaydet" : current ? "Yeni kanıt kaydı ekle" : "Kanıtı kaydet"}</button>
       {error && <p className="form-error" role="alert">{error}</p>}
     </>}
-  </section>;
+  </div></div></section>;
 }

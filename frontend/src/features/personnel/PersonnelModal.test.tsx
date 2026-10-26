@@ -125,7 +125,7 @@ test("fotoğraf seçimi yazmaz; açık teyit ilk fotoğraf belirtecini gönderir
   expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
   expect(screen.getByRole("button", { name: "Fotoğrafı kaydet" })).toBeDisabled();
   await userEvent.click(screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }));
-  const sourcePanel = screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }).closest("details")!;
+  const sourcePanel = screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }).closest("aside")!;
   await userEvent.click(await within(sourcePanel).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
   await userEvent.click(screen.getByLabelText("Fotoğraf değişimini teyit ediyorum"));
   await userEvent.click(screen.getByRole("button", { name: "Fotoğrafı kaydet" }));

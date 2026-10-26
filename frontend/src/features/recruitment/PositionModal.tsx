@@ -98,7 +98,11 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
             <i aria-hidden="true" className="fa-solid fa-xmark" />
           </button>
         </div>
-        <div className="modal-body-scroll">
+        <div className="modal-body-scroll ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createPosition.isPending || correctPosition.isPending} label={position ? "Pozisyon düzeltirken kullandığım rehber sürümü" : "Pozisyon açarken kullandığım rehber sürümü"} /></div>
+          <div className="ez-workbench-main">
+
           {error && <p className="form-error" role="alert">{error}</p>}
           <section className="ez-position-guide" aria-label="Pozisyon oluşturma rehberi">
             <p><strong>Ne yapıyoruz?</strong> {position
@@ -148,7 +152,7 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
               {" → "}{item.after.title} / {item.after.openCount} kadro / {item.after.isOpen ? "açık" : "kapalı"}
             </p>)}
           </details>}
-          <GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createPosition.isPending || correctPosition.isPending} label={position ? "Pozisyon düzeltirken kullandığım rehber sürümü" : "Pozisyon açarken kullandığım rehber sürümü"} />
+
           {review && <section className="ez-position-review" role="region" aria-label="Pozisyon ön kontrolü" aria-live="polite">
             <h4>{position ? "Düzeltmeyi kaydetmeden önce" : "Pozisyonu açmadan önce"}</h4>
             <p><strong>Ad:</strong> {review.title} · <strong>Departman:</strong> {review.departmentName}</p>
@@ -156,7 +160,7 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
             {position ? <p><strong>Gerekçe:</strong> {review.reason}. Bağlı {position.candidateCount} adayın bağlantısı korunur.</p>
               : <p>Bu kayıt açık pozisyon olarak oluşacak. Aday eklerken bu pozisyonu ayrıca seçmeniz gerekir.</p>}
           </section>}
-        </div>
+        </div></div></div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Vazgeç</button>
           {review && <button className="btn btn-ghost" onClick={() => setReview(null)}>Bilgileri düzelt</button>}

@@ -26,7 +26,7 @@ test("işlem bitmeden ödeme sorumlusunu bekliyor durumunda atar", async () => {
   await userEvent.type(screen.getByLabelText("Sorumlu kişi", { selector: "#external-payment-owner" }), "Bordro uzmanı");
   const section = screen.getByRole("region", { name: "Dış ödeme kanıtı" });
   await userEvent.click(section.querySelector('input[type="checkbox"]')!);
-  await userEvent.click(section.querySelector("button")!);
+  await userEvent.click(within(section).getByRole("button", { name: /Sorumluyu kaydet|Kanıtı kaydet|Yeni kanıt kaydı ekle/ }));
   await waitFor(() => {
     const request = vi.mocked(fetch).mock.calls.find(([url, init]) =>
       String(url) === path && init?.method === "POST");
@@ -71,7 +71,7 @@ test("ödeme ve bildirimi ayrı kanıtlarla kaydeder; teyit olmadan göndermez",
   await userEvent.type(screen.getByLabelText("İnceleme / gerekçe notu", { selector: "#external-notification-notes" }), "Düzeltme bildirimi gerekmiyor.");
   const notificationSection = screen.getByRole("region", { name: "Dış bildirim kanıtı" });
   await userEvent.click(notificationSection.querySelector('input[type="checkbox"]')!);
-  await userEvent.click(notificationSection.querySelector("button")!);
+  await userEvent.click(within(notificationSection).getByRole("button", { name: /Sorumluyu kaydet|Kanıtı kaydet|Yeni kanıt kaydı ekle/ }));
   await waitFor(() => {
     const requests = vi.mocked(fetch).mock.calls.filter(([url, init]) =>
       String(url) === path && init?.method === "POST");
@@ -88,5 +88,5 @@ test("geçmiş parasal sürümün dış kanıtlarını salt okunur gösterir", a
   stubApi({ [path]: { ...context, isCurrent: false } });
   renderPage(<AuthProvider><ToastProvider><OffboardingExternalReconciliationPanel {...args} /></ToastProvider></AuthProvider>);
   expect(await screen.findByText(/Bu parasal sürüm geçmişte kaldı/)).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Sorumluyu kaydet" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Sorumluyu kaydet|Kanıtı kaydet|Yeni kanıt kaydı ekle/ })).not.toBeInTheDocument();
 });
