@@ -25,12 +25,21 @@ const taskLabels: Record<string, string> = {
   "payroll-revision-external-notification": "BORDRO DIŞ BİLDİRİM KANITI",
 };
 
-export function DailyGuidanceTasks({ limit }: { limit?: number }) {
+export function DailyGuidanceTasks({ limit, compact = false }: { limit?: number; compact?: boolean }) {
   const query = useDailyGuidanceTasks();
   if (query.isPending) return <PageLoading />;
   if (query.isError) return <PageError error={query.error} />;
 
   const tasks = limit ? query.data.slice(0, limit) : query.data;
+  if (compact) return <div className="ez-pending-list">
+    {tasks.map(task => <Link className="ez-pending-row" key={task.key} to={appPath(task.targetPath)}>
+      <span className="ez-task-icon" aria-hidden="true"><i className={`fa-solid ${task.kind === "leave-approval" ? "fa-calendar-days" : "fa-inbox"}`} /></span>
+      <span className="ez-pending-text"><strong>{task.title}</strong><small>{task.reason}</small></span>
+      {task.dueDate && <span className="ez-task-date">{dateLabel(task.dueDate)}</span>}
+      <span aria-hidden="true">→</span>
+    </Link>)}
+    {tasks.length === 0 && <p className="ez-quiet">Bekleyen işiniz yok.</p>}
+  </div>;
   return <div className="ez-guidance-tasks">
     <GuidanceSourceLink processKey="daily" />
     <GuidanceStepLessons process="daily" />

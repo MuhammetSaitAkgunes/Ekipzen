@@ -154,7 +154,7 @@ test("profil menüsü Escape ile kapanır ve tema tercihini saklar", async () =>
 test("çalışma alanından çıkınca koyu tema genel sayfalara sızmaz", async () => {
   localStorage.setItem("ekipzen-theme", "dark");
   const { router } = setup();
-  await screen.findByText("Takip gerektiren kayıtlar");
+  await screen.findByRole("heading", { name: "Bekleyen işler" });
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   await act(async () => { await router.navigate("/"); });
   await waitFor(() => expect(document.documentElement).not.toHaveAttribute("data-theme"));

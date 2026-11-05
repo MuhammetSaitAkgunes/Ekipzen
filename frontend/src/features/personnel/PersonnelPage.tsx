@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -103,37 +104,46 @@ export function PersonnelPage() {
         <div className="page-header">
           <div>
             <h2>Çalışanlar</h2>
-            <GuidanceSourceLink processKey="personnel" />
-            <p>Sicil, özlük, iletişim ve kurumsal bilgileri tek ekrandan yönetin.</p>
+            <p>{employeesQ.data.total ?? items.length} çalışan</p>
           </div>
+          <div className="toolbar-actions">
+            <GuidanceDrawer title="Çalışanlar rehberi">
+              <GuidanceSourceLink processKey="personnel" />
+              <GuidanceStepLessons process="personnel" />
+              <PersonnelRecordGuide
+                resultCount={employeesQ.data.total ?? items.length}
+                singleMatch={employeesQ.data.total === 1 && items.length === 1 && items[0].id != null
+                  ? { id: items[0].id, name: items[0].name ?? "Çalışan" } : null}
+                hasFilters={Boolean(filters.search.trim() || filters.departmentId || filters.status)}
+                isHrAdmin={isHrAdmin}
+                onFocusSearch={() => { document.querySelector<HTMLDialogElement>(".ez-guidance-drawer[open]")?.close(); searchRef.current?.focus(); }}
+                onClearFilters={() => {
+                  setSearchInput("");
+                  setFilters({ search: "", departmentId: "", status: "", page: 1 });
+                  setSelected(new Set());
+                }}
+                onOpenRecord={(id) => openProfile(id)}
+              />
+            </GuidanceDrawer>
           {isHrAdmin && (
-            <div className="toolbar-actions">
+            <>
               <button className="btn btn-secondary" onClick={() => setImportOpen(true)}>
                 <i aria-hidden="true" className="fa-solid fa-file-import" /> Excel'den İçe Aktar
               </button>
               <button className="btn btn-primary" onClick={() => openProfile(null)}>
                 <i aria-hidden="true" className="fa-solid fa-plus" /> Çalışan ekle
               </button>
-            </div>
+            </>
           )}
+          </div>
         </div>
 
-        <GuidanceStepLessons process="personnel" />
-        <PersonnelRecordGuide
-          resultCount={employeesQ.data.total ?? items.length}
-          singleMatch={employeesQ.data.total === 1 && items.length === 1 && items[0].id != null
-            ? { id: items[0].id, name: items[0].name ?? "Çalışan" } : null}
-          hasFilters={Boolean(filters.search.trim() || filters.departmentId || filters.status)}
-          isHrAdmin={isHrAdmin}
-          onFocusSearch={() => searchRef.current?.focus()}
-          onClearFilters={() => {
+        <div className="filter-bar surface">
+          {Boolean(filters.search || filters.departmentId || filters.status) && <button type="button" className="btn btn-secondary" onClick={() => {
             setSearchInput("");
             setFilters({ search: "", departmentId: "", status: "", page: 1 });
             setSelected(new Set());
-          }}
-          onOpenRecord={(id) => openProfile(id)}
-        />
-        <div className="filter-bar surface">
+          }}>Filtreleri temizle</button>}
           <div className="search-wrapper">
             <i aria-hidden="true" className="fa-solid fa-magnifying-glass" />
             <label className="sr-only" htmlFor="personnel-search">Personel ara</label>

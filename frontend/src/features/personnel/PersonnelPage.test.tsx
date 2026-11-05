@@ -91,6 +91,9 @@ test("kayıt rehberi gerçek sonuç sayısını, rol sınırını ve filtre düz
     "/api/departments": departments,
   });
   renderPersonnel();
+  await screen.findByText("Ahmet Yılmaz");
+  expect(screen.queryByRole("region", { name: "Mevcut çalışan kaydını kontrol et" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Rehber" }));
   const guide = await screen.findByRole("region", { name: "Mevcut çalışan kaydını kontrol et" });
   expect(within(guide).getByText("1 kayıt")).toBeInTheDocument();
   expect(within(guide).getByText(/düzeltmeyi yetkili İK kullanıcısına iletin/)).toBeInTheDocument();

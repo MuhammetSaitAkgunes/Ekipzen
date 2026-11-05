@@ -4,6 +4,9 @@ import { appPath } from "../../paths";
 import { useOverview } from "../overview/queries";
 import { useLeaveBalance, useMyLeaves, usePendingLeaves, useTeamLeaves } from "../leaves/queries";
 import { useGlobalActions } from "../actions/queries";
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
+import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
+import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { DailyGuidanceTasks } from "../guidance/DailyGuidanceTasks";
 import { PageError, PageLoading } from "../shared/PageState";
 import { formatLeaveDate } from "../leaves/format";
@@ -52,8 +55,8 @@ function PriorityActions() {
   if (query.isError) return <PageError error={query.error} />;
   const rank: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const actions = query.data.filter((a) => a.status !== "done").sort((a, b) => (rank[a.priority ?? "low"] ?? 2) - (rank[b.priority ?? "low"] ?? 2));
-  return <div>{actions.slice(0, 3).map((action) => <Link className="ez-action-row" key={action.id} to={appPath("/inbox?tab=actions")}><span className={`ez-priority-dot ${action.priority}`} /><div><strong>{action.title}</strong><small>{action.source} {action.due ? `· ${action.due}` : ""}</small></div><span aria-hidden="true">↗</span></Link>)}
-    {actions.length === 0 && <div className="ez-empty"><h3>İyi bir başlangıç</h3><p>Şu anda açık bir aksiyonunuz yok.</p></div>}
+  return <div>{actions.slice(0, 3).map((action) => <Link className="ez-action-row" key={action.id} to={appPath(`/inbox?tab=actions&actionId=${action.id}`)}><span className={`ez-priority-dot ${action.priority}`} /><div><strong>{action.title}</strong><small>{action.source} {action.due ? `· ${action.due}` : ""}</small></div><span aria-hidden="true">↗</span></Link>)}
+    {actions.length === 0 && <p className="ez-quiet">Bekleyen işiniz yok.</p>}
   </div>;
 }
 function MyRequests() {
@@ -70,27 +73,27 @@ export function HomePage() {
   const { user } = useAuth();
   const management = user?.role === "hr-admin" || user?.role === "manager";
   const admin = user?.role === "hr-admin";
-  return <div className="ez-home">
-    <div className="ez-home-heading"><div><span className="ez-overline">{new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}</span><h1>Merhaba, {user?.name?.split(" ")[0] || "hoş geldiniz"}<span className="ez-greeting-dot">.</span></h1><p>{management ? "Ekibinizin günü burada başlıyor. Önce önemli işlere bakalım." : "Gününüzü planlayın, size ait her şeye kolayca ulaşın."}</p></div><Link className="btn btn-primary" to={appPath(admin ? "/personnel/new" : "/leaves?new=1")}><i className="fa-solid fa-plus" aria-hidden="true" />{admin ? "Çalışan ekle" : "İzin talebi oluştur"}</Link></div>
-    {management ? <ManagementMetrics /> : <PersonalMetrics />}
-    <div className="ez-home-grid">
-      <div className="ez-home-main">
-        {management && <section className="ez-panel"><div className="ez-panel-heading"><div><span className="ez-overline">GERÇEK KAYITLARDAN</span><h2>Takip gerektiren kayıtlar</h2><p>Her kaydın neden göründüğünü ve sonraki adımı inceleyin.</p></div><Link className="ez-text-link" to={appPath("/inbox?tab=daily")}>Tümünü gör <span aria-hidden="true">→</span></Link></div><DailyGuidanceTasks limit={4} /></section>}
-        {!management && <section className="ez-panel"><div className="ez-panel-heading"><div><span className="ez-overline">ÖNCE BUNLARA BAKALIM</span><h2>İzin taleplerim</h2></div></div><MyRequests /></section>}
-        <section className="ez-panel"><div className="ez-panel-heading"><div><h2>Öncelikli işler</h2><p>Bugünü kolaylaştıracak küçük adımlar.</p></div><Link className="ez-text-link" to={appPath("/inbox?tab=actions")}>Tümünü gör <span aria-hidden="true">→</span></Link></div><PriorityActions /></section>
+  return <div className="ez-home ez-home-focused">
+    <div className="ez-home-heading">
+      <div><span className="ez-overline">{new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}</span><h1>Bekleyen işler</h1></div>
+      <GuidanceDrawer title="Günlük işler rehberi"><GuidanceSourceLink processKey="daily" /><GuidanceStepLessons process="daily" /></GuidanceDrawer>
+    </div>
+    <section className="ez-panel ez-pending-panel" aria-label="Bekleyen işler">
+      {management ? <DailyGuidanceTasks limit={5} compact /> : <PriorityActions />}
+      <Link className="ez-section-link" to={appPath(management ? "/inbox?tab=daily" : "/inbox?tab=actions")}>Tümünü gör <span aria-hidden="true">→</span></Link>
+    </section>
+    <nav className="ez-home-shortcuts" aria-label="Sık kullanılan işlemler">
+      {admin && <Link to={appPath("/personnel/new")}><i className="fa-solid fa-user-plus" aria-hidden="true" />Çalışan ekle<span aria-hidden="true">↗</span></Link>}
+      {admin && <Link to={appPath("/attendance")}><i className="fa-solid fa-clock" aria-hidden="true" />Puantajı aç<span aria-hidden="true">↗</span></Link>}
+      {!admin && <Link to={appPath("/leaves?new=1")}><i className="fa-regular fa-calendar-plus" aria-hidden="true" />İzin talebi oluştur<span aria-hidden="true">↗</span></Link>}
+      {user?.role === "manager" ? <Link to={appPath("/personnel")}><i className="fa-solid fa-user-group" aria-hidden="true" />Çalışanları bul<span aria-hidden="true">↗</span></Link> : <Link to={appPath("/payroll")}><i className="fa-solid fa-wallet" aria-hidden="true" />{admin ? "Bordro dönemleri" : "Bordrolarım"}<span aria-hidden="true">↗</span></Link>}
+    </nav>
+    <div className="ez-home-secondary">
+      {management ? <ManagementMetrics /> : <PersonalMetrics />}
+      <div className="ez-home-grid">
+        <section className="ez-panel"><div className="ez-panel-heading"><h2>Bugün izinli</h2></div><AwayList /></section>
+        {!management && <section className="ez-panel"><div className="ez-panel-heading"><h2>İzin taleplerim</h2></div><MyRequests /></section>}
       </div>
-      <aside className="ez-home-side">
-        <section className="ez-panel ez-quick-panel"><div className="ez-panel-heading"><h2>Hızlı erişim</h2><i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" /></div>
-          <div className="ez-quick-links">
-            {management && <Link to={appPath("/personnel")}><i className="fa-solid fa-user-group" aria-hidden="true" />Çalışanları bul<span aria-hidden="true">→</span></Link>}
-            <Link to={appPath("/leaves?new=1")}><i className="fa-regular fa-calendar-plus" aria-hidden="true" />İzin talebi oluştur<span aria-hidden="true">→</span></Link>
-            {user?.role !== "manager" && <Link to={appPath("/payroll")}><i className="fa-solid fa-wallet" aria-hidden="true" />{admin ? "Bordro dönemleri" : "Bordrolarım"}<span aria-hidden="true">→</span></Link>}
-            {management && <Link to={appPath("/overview")}><i className="fa-solid fa-chart-pie" aria-hidden="true" />Şirket özeti<span aria-hidden="true">→</span></Link>}
-          </div>
-        </section>
-        <section className="ez-panel"><div className="ez-panel-heading"><h2>Bugün kimler izinli?</h2><span className="ez-soft-icon"><i className="fa-solid fa-sun" aria-hidden="true" /></span></div><AwayList /></section>
-        <p className="ez-home-note"><i className="fa-regular fa-circle-check" aria-hidden="true" />Küçük adımlar, daha iyi bir ekip deneyimi.</p>
-      </aside>
     </div>
   </div>;
 }

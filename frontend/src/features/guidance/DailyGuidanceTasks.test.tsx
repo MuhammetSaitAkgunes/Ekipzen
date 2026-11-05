@@ -7,6 +7,21 @@ import { AuthProvider } from "../../auth/AuthContext";
 
 afterEach(() => vi.unstubAllGlobals());
 
+test("kısa liste sunucu önceliğini ve kayıt hedeflerini korur, yalnız ilk işleri gösterir", async () => {
+  const task = { kind: "leave-approval", recordId: 1, reason: "Onay bekliyor", nextAction: "İnceleyin", dateNote: "Son tarih yok" };
+  stubApi({ "/api/guidance/daily-tasks": [
+    { ...task, key: "a", title: "İlk iş", dueDate: null, targetPath: "/inbox?tab=approvals&requestId=1" },
+    { ...task, key: "b", title: "İkinci iş", dueDate: "2026-01-01", targetPath: "/inbox?tab=approvals&requestId=2" },
+    { ...task, key: "c", title: "Üçüncü iş", dueDate: null, targetPath: "/inbox" },
+  ] });
+  renderPage(<DailyGuidanceTasks compact limit={2} />);
+  const first = await screen.findByRole("link", { name: /İlk iş/ });
+  expect(first).toHaveAttribute("href", "/app/inbox?tab=approvals&requestId=1");
+  expect(screen.getAllByRole("link")[0]).toBe(first);
+  expect(screen.queryByText("Üçüncü iş")).not.toBeInTheDocument();
+  expect(screen.queryByText("Ne yapmalı?")).not.toBeInTheDocument();
+});
+
 test("görev gerekçesi, sonraki adım ve bilinen/bilinmeyen tarih açıkça görünür", async () => {
   stubApi({
     "/api/guidance/daily-tasks": [
