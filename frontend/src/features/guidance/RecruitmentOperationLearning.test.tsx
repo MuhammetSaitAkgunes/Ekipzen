@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -32,7 +33,7 @@ beforeEach(()=>{
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();localStorage.clear();});
 const render=(view:React.ReactNode)=>renderPage(<AuthProvider><ToastProvider>{view}</ToastProvider></AuthProvider>);
 const writes=(path:string,method:string)=>vi.mocked(fetch).mock.calls.filter(([url,init])=>String(url)===path&&init?.method===method);
-async function choose(label:string){await userEvent.click(screen.getByText(label,{exact:true}));await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("aside")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));}
+const choose = chooseOperationGuidance;
 
 test("pozisyon düzeltmesi ilk sürüm ve ayrı kaynağı yalnız son onayda gönderir",async()=>{
   const base=globalThis.fetch;vi.stubGlobal("fetch",vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input)==="/api/positions/12"&&init?.method==="PUT"?respond({...position,openCount:1,version:4}):base(input,init)));
@@ -51,7 +52,7 @@ test("aday düzeltmesinin 409 yanıtı ilk sürüm ve seçilmiş dersi değişti
   await userEvent.click(screen.getByRole("button",{name:"Bilgileri kontrol et"}));await userEvent.click(screen.getByRole("button",{name:"Düzeltmeyi kaydet"}));
   expect(await screen.findByRole("alert")).toHaveTextContent("Aday değişti");expect(name).toHaveValue("Deniz düzeltildi");
   expect(JSON.parse(String(writes("/api/candidates/5","PUT")[0][1]?.body))).toMatchObject({expectedVersion:4,guidanceContentRevisionId:31});
-  expect(screen.getByText("Aday düzeltirken kullandığım rehber sürümü · seçildi")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 test.each([note,evaluation])("not/değerlendirme düzeltmesi kendi kayıt kimliği, iki ilk sürüm ve ayrı dersini gönderir: $kind",async(selection)=>{
@@ -63,7 +64,7 @@ test.each([note,evaluation])("not/değerlendirme düzeltmesi kendi kayıt kimli�
   await userEvent.click(screen.getByRole("button",{name:"Bilgileri kontrol et"}));expect(writes(path,"POST")).toHaveLength(0);
   await userEvent.click(screen.getByRole("button",{name:"Yeni sürümü kaydet"}));expect(await screen.findByRole("alert")).toHaveTextContent("Kaynak sürümü değişti");
   expect(JSON.parse(String(writes(path,"POST")[0][1]?.body))).toMatchObject({expectedCandidateVersion:4,expectedRecordVersion:selection.record.version,guidanceContentRevisionId:32});
-  expect(screen.getByText(label+" · seçildi")).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"Rehber · seçildi"})).toBeInTheDocument();
 });
 
 test("not ekleme kaynağı değerlendirme formuna taşınmaz; iki son yazım ayrı seçilmiş kaynak taşır",async()=>{
@@ -72,7 +73,7 @@ test("not ekleme kaynağı değerlendirme formuna taşınmaz; iki son yazım ayr
   await userEvent.type(screen.getByLabelText("Mülakat notu"),"Gerçek gözlem");await choose("Not eklerken kullandığım rehber sürümü");await userEvent.click(screen.getByRole("button",{name:"Notu kontrol et"}));
   expect(writes("/api/candidates/5/notes","POST")).toHaveLength(0);await userEvent.click(screen.getByRole("button",{name:"Notu kaydet"}));await waitFor(()=>expect(writes("/api/candidates/5/notes","POST")).toHaveLength(1));
   expect(JSON.parse(String(writes("/api/candidates/5/notes","POST")[0][1]?.body))).toMatchObject({guidanceContentRevisionId:32});
-  await userEvent.click(screen.getByRole("button",{name:"Değerlendirme"}));expect(screen.getByText("Değerlendirme eklerken kullandığım rehber sürümü")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button",{name:"Değerlendirme"}));expect(screen.getByRole("group", { name: "Değerlendirme eklerken kullandığım rehber sürümü" })).toBeInTheDocument();
   await userEvent.type(screen.getByLabelText("Değerlendirme ölçütü"),"SQL");await userEvent.type(screen.getByLabelText("Verilen puan"),"4");await choose("Değerlendirme eklerken kullandığım rehber sürümü");
   await userEvent.click(screen.getByRole("button",{name:"Bilgileri kontrol et"}));await userEvent.click(screen.getByRole("button",{name:"Değerlendirmeyi kaydet"}));await waitFor(()=>expect(writes("/api/candidates/5/evaluations","POST")).toHaveLength(1));
   expect(JSON.parse(String(writes("/api/candidates/5/evaluations","POST")[0][1]?.body))).toMatchObject({guidanceContentRevisionId:32,score:4,maxScore:5});

@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { formatCandidateScore } from "./format";
@@ -105,7 +105,7 @@ export function CandidateCorrectionModal({ candidate, onClose }: {
         <i className="fa-solid fa-xmark" aria-hidden="true" /></button></div>
       <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && <GuidanceOperationSource process="recruitment" step="candidate-create" value={guidanceSource} onChange={setGuidanceSource} disabled={correction.isPending} label="Aday düzeltirken kullandığım rehber sürümü" />}</div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && <GuidanceOperationDrawer process="recruitment" step="candidate-create" value={guidanceSource} onChange={setGuidanceSource} disabled={correction.isPending} label="Aday düzeltirken kullandığım rehber sürümü" />}</div>
           <div className="ez-workbench-main">{readOnly ? <p>İşe alınmış adayın başvuru kaydı kilitlidir. Çalışan bilgilerindeki hatayı personel kartındaki ayrı düzeltme akışında inceleyin.</p>
           : <><section aria-label="Aday düzeltme rehberi">
             <p><strong>Ne yapıyoruz?</strong> Hatalı başvuru bilgisini gerekçeyle düzeltiyoruz. Örneğin yanlış pozisyona bağlanan başvuruyu doğru açık kadroya taşıyabilirsiniz.</p>

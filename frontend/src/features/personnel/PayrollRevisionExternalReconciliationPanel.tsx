@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -85,7 +85,7 @@ function ActionForm({ args, kind, current, canRecord }: {
 
   return <section className="ez-compensation-review ez-workbench" aria-label={`${title} kanıtı`}>
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{canRecord && <GuidanceOperationSource process="daily" step="external-followup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={mutation.isPending} />}</div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{canRecord && <GuidanceOperationDrawer process="daily" step="external-followup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} disabled={mutation.isPending} />}</div>
           <div className="ez-workbench-main">
 
 

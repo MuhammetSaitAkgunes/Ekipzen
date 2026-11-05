@@ -1,5 +1,6 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { useQueryClient } from "@tanstack/react-query";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -35,11 +36,7 @@ const routes = (process = "personnel-entry", step = "tab-mali") => ({
   "/api/employees/1/compensation-packages/2/effective-date": foundation,
 });
 function render(element: React.ReactNode) { return renderPage(<AuthProvider><ToastProvider>{element}</ToastProvider></AuthProvider>); }
-async function chooseSource(label: string) {
-  const panel = screen.getByText(label).closest("aside")!;
-  await userEvent.click(await within(panel).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-  await within(panel).findByRole("region", { name: "Seçilen adımın açıklaması" });
-}
+const chooseSource = chooseOperationGuidance;
 const requests = (method: string, path: string) => vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url) === path && init?.method === method);
 const body = (method: string, path: string) => JSON.parse(String(requests(method, path).at(-1)?.[1]?.body));
 beforeEach(() => {
@@ -74,7 +71,7 @@ test("rehberli işe dönüş ön kontrolü yazmaz; onayda yeni sözleşme, gerek
     reason: "Yeni sözleşme kararı", guidanceContentRevisionId: 22 });
   expect(screen.getByLabelText("Yeniden işe alma gerekçesi / karar referansı")).toHaveValue("Yeni sözleşme kararı");
   expect(screen.queryByRole("button", { name: "Yeni çalışma dönemini başlat" })).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Rehber sürümü bağlantısını kaldır" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 test("karttaki kaydedilmemiş düzeltme ayrı yeniden işe alma işlemiyle kaybolmaz", async () => {
@@ -125,7 +122,7 @@ test("yenilenen ücret bağlamı eski düzeltme taslağının değerlerini veya 
   await screen.findByText("Paket sürümü değişti");
   expect(body("PUT", "/api/employees/1/compensation-packages/2")).toMatchObject({ expectedVersion: 1, monthlyGrossSalary: 55000,
     sourceReference: "İlk karar", reason: "Kaynak doğrulandı", guidanceContentRevisionId: 22 });
-  expect(gross).toHaveValue(55000); expect(screen.getByRole("button", { name: "Rehber sürümü bağlantısını kaldır" })).toBeInTheDocument();
+  expect(gross).toHaveValue(55000); expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 test("tarih kaynağı seçilince eski önizleme bırakılır; yeni sunucu önizlemesinin sürümüyle kaydedilir", async () => {

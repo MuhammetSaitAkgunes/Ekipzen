@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -100,17 +100,17 @@ export function PositionModal({ onClose, position }: { onClose: () => void; posi
         </div>
         <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createPosition.isPending || correctPosition.isPending} label={position ? "Pozisyon düzeltirken kullandığım rehber sürümü" : "Pozisyon açarken kullandığım rehber sürümü"} /></div>
-          <div className="ez-workbench-main">
-
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <section className="ez-position-guide" aria-label="Pozisyon oluşturma rehberi">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createPosition.isPending || correctPosition.isPending} label={position ? "Pozisyon düzeltirken kullandığım rehber sürümü" : "Pozisyon açarken kullandığım rehber sürümü"} ><section className="ez-position-guide" aria-label="Pozisyon oluşturma rehberi">
             <p><strong>Ne yapıyoruz?</strong> {position
               ? "Pozisyonun adını, departmanını, kalan kadrosunu veya açık durumunu gerekçeyle düzeltiyoruz. Önceki değerler geçmişte kalır."
               : "Başvuruları bağlayabileceğiniz açık pozisyonu kaydediyoruz. Bu işlem aday veya çalışan oluşturmaz, ilan yayımlamaz."}</p>
             <p><strong>Neden kadro sayısını seçiyoruz?</strong> Açık kadro sayısı, bu pozisyona bağlı bir aday işe alındığında azalır. Örneğin iki kişi alınacaksa sayı 2 olmalıdır; başvuru sayısını yazmayın.</p>
             <p>Kapalı pozisyonun bağlı adayları ve başvuru geçmişi korunur. Kapalı veya kadrosuz pozisyona yeni aday bağlanamaz; bağlı adayın işe alınması için pozisyonun yeniden açılması gerekir.</p>
-          </section>
+          </section></GuidanceOperationDrawer></div>
+          <div className="ez-workbench-main">
+
+          {error && <p className="form-error" role="alert">{error}</p>}
+
           <div className="form-grid-2">
             <div className="input-group">
               <label className="input-label" htmlFor="position-title">Pozisyon adı</label>

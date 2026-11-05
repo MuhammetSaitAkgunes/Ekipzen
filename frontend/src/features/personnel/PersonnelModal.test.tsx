@@ -1,6 +1,7 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { AuthProvider } from "../../auth/AuthContext";
 import { SESSION_KEY } from "../../api/session";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { stubApi } from "../../test/apiStub";
@@ -124,9 +125,7 @@ test("fotoğraf seçimi yazmaz; açık teyit ilk fotoğraf belirtecini gönderir
   await userEvent.upload(screen.getByLabelText("Personel fotoğrafı"), new File(["PNG"], "personel.png", { type: "image/png" }));
   expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
   expect(screen.getByRole("button", { name: "Fotoğrafı kaydet" })).toBeDisabled();
-  await userEvent.click(screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }));
-  const sourcePanel = screen.getByText("Fotoğraf yüklerken kullandığım rehber sürümü", { exact: true }).closest("aside")!;
-  await userEvent.click(await within(sourcePanel).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await chooseOperationGuidance("Fotoğraf yüklerken kullandığım rehber sürümü");
   await userEvent.click(screen.getByLabelText("Fotoğraf değişimini teyit ediyorum"));
   await userEvent.click(screen.getByRole("button", { name: "Fotoğrafı kaydet" }));
   await screen.findByText("Fotoğraf siz incelerken değişti");
@@ -633,6 +632,7 @@ test("pasif personelin işe dönüşü yeni çalışma dönemi olarak gönderili
 
 test("rehber konumunu sunucudan yükler ve sekme değişimini kaydeder", async () => {
   renderModal(null, false, undefined, true);
+  await userEvent.click((await screen.findAllByRole("button", { name: "Rehber" }))[0]);
   expect(await screen.findByText("Ödeme hazırlığını kontrol et")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
   await waitFor(() => {
@@ -666,9 +666,11 @@ test("karar alıştırması denemeyi kaydeder, düzeltir ve işlem kanıtı saym
     return baseFetch(input, init);
   }));
   renderModal(null, false, undefined, true);
+  await userEvent.click((await screen.findAllByRole("button", { name: "Rehber" }))[0]);
   await screen.findByText("Ödeme hazırlığını kontrol et");
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
-  await userEvent.click(screen.getByText("Kısa karar alıştırması"));
+  await userEvent.click(screen.getAllByRole("button", { name: "Rehber" })[0]);
+  await userEvent.click(await screen.findByText("Kısa karar alıştırması"));
   expect(await screen.findByText(/sözleşme türü henüz teyit edilmedi/)).toBeInTheDocument();
   await userEvent.click(screen.getByLabelText("Varsayılan türü seçip devam ederim"));
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -679,8 +681,10 @@ test("karar alıştırması denemeyi kaydeder, düzeltir ve işlem kanıtı saym
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Doğru karar."));
   expect(screen.getByText(/2 kayıtlı deneme/)).toBeInTheDocument();
   expect(screen.getByText(/gerçek personel işlemi kanıtı veya yeterlilik onayı değildir/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
   await userEvent.click(screen.getByRole("button", { name: /İletişim/ }));
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
+  await userEvent.click(screen.getAllByRole("button", { name: "Rehber" })[0]);
   await userEvent.click(screen.getByText("Kısa karar alıştırması"));
   expect(await screen.findByRole("status")).toHaveTextContent("Doğru karar.");
   expect(screen.getByLabelText("İmzalı iş belgesini yetkili kişiyle doğrularım")).toBeChecked();
@@ -688,7 +692,9 @@ test("karar alıştırması denemeyi kaydeder, düzeltir ve işlem kanıtı saym
 
 test("yeni kayıtta doğrulanmamış seçimleri varsaymaz ve sözleşme seçimini ister", async () => {
   renderModal(null);
+  await userEvent.click(screen.getAllByRole("button", { name: "Rehber" })[0]);
   expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Kişiyi doğru kaydet");
+  await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
   expect(screen.getByLabelText("Cinsiyet")).toHaveValue("");
   await userEvent.click(screen.getByRole("button", { name: /^Kaydet$/ }));
   expect(screen.getByRole("alert")).toHaveTextContent("Sözleşme türünü imzalı belgeyle doğrulayıp seçin.");
@@ -707,7 +713,9 @@ test("yeni kayıt kaydedilince POST body doğru kurulur ve yalnız başarılı y
   await userEvent.type(screen.getByLabelText("Adı"), "Yeni");
   await userEvent.type(screen.getByLabelText("Soyadı"), "Kişi");
   await userEvent.click(screen.getByRole("button", { name: /İş & Kurumsal/ }));
-  expect(screen.getByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Çalışma ilişkisini tanımla");
+  await userEvent.click(screen.getAllByRole("button", { name: "Rehber" })[0]);
+  expect(await screen.findByRole("region", { name: "İşe giriş rehberi" })).toHaveTextContent("Çalışma ilişkisini tanımla");
+  await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
   await userEvent.selectOptions(screen.getByLabelText("Departman"), "1");
   await userEvent.selectOptions(screen.getByLabelText("Sözleşme Türü"), "indefinite");
   await userEvent.selectOptions(screen.getByLabelText("Çalışma Şekli"), "Tam Zamanlı");

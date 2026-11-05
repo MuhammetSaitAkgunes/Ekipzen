@@ -59,6 +59,7 @@ test("günlük görev bağlantısı ilgili adayı açar", async () => {
 
 test("gerçek pozisyon listesi ve oluşturma girişi görünür", async () => {
   renderShell();
+  await userEvent.click(await screen.findByText(/Pozisyonlar ·/));
   expect(await screen.findByRole("heading", { name: "Pozisyonlar" })).toBeInTheDocument();
   expect(await screen.findByText("QA Engineer")).toBeInTheDocument();
   expect(screen.getByText(/2 kalan kadro · 1 bağlı aday/)).toBeInTheDocument();
@@ -70,9 +71,11 @@ test("aşama özeti gerçek mevcut sayıları açıklar ve seçilen aşamaya fil
   renderShell();
   expect(await screen.findByRole("heading", { name: "Aday aşamaları" })).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: /Teklif: 0 aday/ })).toBeInTheDocument();
-  expect(screen.getByText(/tarihsel geçiş veya işe alım dönüşüm oranı değildir/)).toBeInTheDocument();
+  expect(screen.queryByText(/teklif belgesinin hazırlanıp gönderildiğini/)).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: /Teklif: 0 aday/ }));
-  expect(screen.getByRole("status")).toHaveTextContent("teklif belgesinin hazırlanıp gönderildiğini");
+  await userEvent.click(screen.getByRole("button", { name: "Rehber" }));
+  expect(screen.getByText(/teklif belgesinin hazırlanıp gönderildiğini/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
   await waitFor(() => {
     expect(vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/candidates?status=Teklif")).toBe(true);
   });
@@ -105,7 +108,7 @@ test("filtre değişince önceki seçim listede yoksa başka aşamadan aday gös
 test("durum filtre sekmesi server-side sorgu atar", async () => {
   renderShell();
   await screen.findByText("Burak Yılmaz");
-  await userEvent.click(screen.getByRole("button", { name: "Yeni" }));
+  await userEvent.click(screen.getByRole("button", { name: /Yeni: 1 aday/ }));
   await waitFor(() => {
     const hit = vi.mocked(fetch).mock.calls.some(([u]) => String(u) === "/api/candidates?status=Yeni");
     expect(hit).toBe(true);

@@ -49,6 +49,7 @@ test("aday puanı karar alıştırması kaydedilir ama aday oluşturulmuş sayı
     return baseFetch(input, init);
   }));
   renderModal();
+  await userEvent.click(screen.getByRole("button", { name: "Rehber" }));
   await userEvent.click(screen.getByText("Kısa karar alıştırması"));
   expect(await screen.findByText(/aday puanının dayanağı henüz yok/)).toBeInTheDocument();
   await userEvent.click(screen.getByLabelText("Tahmini bir puan girerim"));
@@ -70,7 +71,9 @@ test("ön kontrolden sonra aday tam gövdeyle kaydedilir", async () => {
   await userEvent.type(screen.getByLabelText("Elle verilen aday puanı (0-100)"), "70");
   await userEvent.type(screen.getByLabelText("Yetenekler (virgülle)"), "Playwright, API testi");
   await userEvent.click(screen.getByRole("button", { name: /Bilgileri kontrol et/ }));
+  await userEvent.click(screen.getByRole("button", { name: "Rehber" }));
   expect(screen.getByRole("region", { name: "Aday kaydı rehberi" })).toHaveTextContent("sistem AI ile hesaplamaz");
+  await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
   expect(screen.getByText("Kaydetmeden önce son kontrol")).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
   await userEvent.click(screen.getByRole("button", { name: /Adayı oluştur/ }));

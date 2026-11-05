@@ -1,3 +1,4 @@
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
@@ -7,7 +8,7 @@ import { useDecideLeave, usePendingLeaves, type LeaveRequestDto } from "../leave
 import { formatLeaveDate } from "../leaves/format";
 import { PageError, PageLoading } from "../shared/PageState";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 
 function Approval({ request, selected }: { request: LeaveRequestDto; selected: boolean }) {
   const decide = useDecideLeave();
@@ -46,12 +47,12 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
     {expanded && <div className="ez-request-detail" id={`request-detail-${request.id}`}>
       <p>{request.description || "Bu talebe açıklama eklenmemiş."}</p>
       {error && <p role="alert" className="form-error">{error}</p>}
-      <div className="ez-leave-guide" hidden={reviewDecision !== null}>
+      {reviewDecision === null && <GuidanceDrawer title="İzin kararı rehberi"><div className="ez-leave-guide">
         <strong>Karar öncesi kontrol</strong>
         <p>Çalışanı, izin türünü, tarihleri, gün sayısını ve talep açıklamasını gözden geçirin. Eksik veya çelişkili bilgiyi ilgili kişiyle netleştirin.</p>
         <GuidanceDecisionCheck process="leave-approval" step="review-request"
           operationName="izin kararı" eager={false} />
-      </div>
+      </div></GuidanceDrawer>}
       {reviewDecision === null ? (
         <div className="toolbar-actions">
           <button className="btn btn-secondary btn-sm" onClick={() => beginReview(false)}>Reddetmeyi incele</button>
@@ -60,10 +61,10 @@ function Approval({ request, selected }: { request: LeaveRequestDto; selected: b
       ) : (
         <div className="ez-leave-decision-review ez-workbench" role="group" aria-label="İzin kararını gözden geçir">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="leave" step="decision-effect" value={guidanceVersion}
-            onChange={setGuidanceVersion} disabled={decide.isPending} />
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="leave" step="decision-effect" value={guidanceVersion}
+            onChange={setGuidanceVersion} disabled={decide.isPending}>
           <div className="ez-guide-practice"><h4>Karar alıştırmaları</h4><GuidanceDecisionCheck process="leave-approval" step="decision-effect"
-            operationName="izin kararı" eager={false} /></div>
+            operationName="izin kararı" eager={false} /></div></GuidanceOperationDrawer>
           </div>
           <div className="ez-workbench-main">
 

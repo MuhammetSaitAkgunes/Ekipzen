@@ -1,3 +1,4 @@
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, apiFetch, apiDownload } from "../../api/client";
@@ -9,7 +10,7 @@ import { PersonnelChangeHistory } from "./PersonnelChangeHistory";
 import { DocumentsTab } from "./DocumentsTab";
 import { CompensationCorrectionPanel } from "./CompensationCorrectionPanel";
 import { PersonnelGuide } from "./PersonnelGuide";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { usePersonnelEntryBookmark, useSavePersonnelEntryBookmark } from "./guidanceQueries";
 import {
   useDepartments,
@@ -461,7 +462,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
 
         <section className="modal-content-area ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && (guided || !isEdit) && !(isEdit && activeTab !== "tab-evrak") && activeTab !== "tab-is" && <PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} />}{!readOnly && activeTab !== "tab-evrak" && (isEdit || activeTab === "tab-is") && <GuidanceOperationSource fallback={(guided || !isEdit) ? <PersonnelGuide step={activeTab} index={TABS.findIndex(tab => tab.id === activeTab) + 1} /> : undefined} process={isEdit ? "personnel" : "personnel-entry"} step={isEdit ? "record-review" : "tab-is"}
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!readOnly && (guided || !isEdit) && !(isEdit && activeTab !== "tab-evrak") && activeTab !== "tab-is" && <GuidanceDrawer title="İşe giriş rehberi"><PersonnelGuide step={activeTab} index={TABS.findIndex((tab) => tab.id === activeTab) + 1} /></GuidanceDrawer>}{!readOnly && activeTab !== "tab-evrak" && (isEdit || activeTab === "tab-is") && <GuidanceOperationDrawer fallback={(guided || !isEdit) ? <PersonnelGuide step={activeTab} index={TABS.findIndex(tab => tab.id === activeTab) + 1} /> : undefined} process={isEdit ? "personnel" : "personnel-entry"} step={isEdit ? "record-review" : "tab-is"}
             value={guidanceVersion} onChange={setGuidanceVersion} disabled={save.isPending} />}</div>
           <div className="ez-workbench-main">
 
@@ -513,7 +514,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               </div>
               {!readOnly && employeeId !== null && <div className="col-12 ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-kimlik" value={photoSource} onChange={value => { setPhotoSource(value); setPhotoConfirmed(false); }} disabled={uploadPhoto.isPending} label="Fotoğraf yüklerken kullandığım rehber sürümü" /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel-entry" step="tab-kimlik" value={photoSource} onChange={value => { setPhotoSource(value); setPhotoConfirmed(false); }} disabled={uploadPhoto.isPending} label="Fotoğraf yüklerken kullandığım rehber sürümü" /></div>
           <div className="ez-workbench-main">
 
 
@@ -636,7 +637,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
               {isEdit && !readOnly && detailQ.data?.status === "passive" && (
                 <div className="notice-card col-12 ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel" step="rehire" label="Yeniden işe alma işleminde kullandığım rehber sürümü"
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel" step="rehire" label="Yeniden işe alma işleminde kullandığım rehber sürümü"
                     value={rehireGuidanceVersion} onChange={id => { setRehireGuidanceVersion(id); setRehireReview(false); }} disabled={rehire.isPending} /></div>
           <div className="ez-workbench-main">
 
@@ -763,7 +764,7 @@ export function PersonnelModal({ employeeId, readOnly, onClose, embedded = false
                   </button>
                   {compensationReview && <section className="ez-compensation-review ez-workbench" aria-labelledby="compensation-review-title" aria-live="polite">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Ücret paketi eklemede kullandığım rehber sürümü"
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel-entry" step="tab-mali" label="Ücret paketi eklemede kullandığım rehber sürümü"
                       value={compensationGuidanceVersion} onChange={setCompensationGuidanceVersion} disabled={saveCompensation.isPending} /></div>
           <div className="ez-workbench-main">
 

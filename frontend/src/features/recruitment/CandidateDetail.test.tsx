@@ -1,5 +1,5 @@
 import { AuthProvider } from "../../auth/AuthContext";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -270,6 +270,7 @@ test("Yeni adayın ilk aşama ön kontrolü karar alıştırmasını gösterir",
   renderDetail();
   await screen.findByRole("heading", { name: "Burak Yılmaz" });
   await userEvent.selectOptions(screen.getByLabelText("Pipeline durumu"), "Mülakat");
+  await userEvent.click(within(screen.getByRole("group", { name: "Aşama kararında kullandığım rehber sürümü" })).getByRole("button", { name: "Rehber" }));
   expect(await screen.findByText(/Yeni adayın aşamasını değiştirmeden önce hangi kontrol gerekir/)).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Aday aşaması ön kontrolü" })).toHaveTextContent("Kısa karar alıştırması");
 });

@@ -1,3 +1,4 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { useQueryClient } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -26,11 +27,7 @@ const routes = (process = "personnel", step = "record-review") => ({
   "/api/employees/1/personnel-history": [], "/api/employees/1/employment-foundation": { employeeId: 1, employmentPeriods: [], compensationPackages: [] },
 });
 function render(element: React.ReactNode) { return renderPage(<AuthProvider><ToastProvider>{element}</ToastProvider></AuthProvider>); }
-async function chooseSource() {
-  await userEvent.click(screen.getByText("Gerçek işlemde kullandığım rehber sürümü"));
-  await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
-}
+const chooseSource = chooseOperationGuidance;
 beforeEach(() => {
   localStorage.clear(); localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "T", refreshToken: "R", user: {
     id: "u", name: "İK", email: "u@example.test", role: "hr-admin", roleLabel: "İK", initials: "İK", employeeId: null } }));

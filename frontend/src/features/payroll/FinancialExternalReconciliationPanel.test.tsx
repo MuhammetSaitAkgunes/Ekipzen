@@ -1,3 +1,4 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -41,8 +42,7 @@ test("ilk ödeme gerçek kaynak belirteci ve seçilmiş dersle kaydolur; kaynak 
   render(); const region = await preparePayment();
   const save = within(region).getByRole("button", { name: "Kanıtı kaydet" });
   expect(save).toBeEnabled();
-  await userEvent.click(within(region).getByText("Gerçek işlemde kullandığım rehber sürümü"));
-  await userEvent.click(await within(region).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await chooseOperationGuidance(undefined, region);
   expect(save).toBeDisabled();
   await userEvent.click(within(region).getByRole("checkbox"));
   await userEvent.click(save);

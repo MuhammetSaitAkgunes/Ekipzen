@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -22,7 +23,7 @@ beforeEach(()=>{localStorage.clear();localStorage.setItem(SESSION_KEY,JSON.strin
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();localStorage.clear();});
 const render=()=>renderPage(<AuthProvider><ToastProvider><CandidateDetail id={5}/></ToastProvider></AuthProvider>);
 const writes=(path:string,method="POST")=>vi.mocked(fetch).mock.calls.filter(([url,init])=>String(url)===path&&init?.method===method);
-async function choose(label:string){await userEvent.click(screen.getByText(label,{exact:true}));await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("aside")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));}
+const choose = chooseOperationGuidance;
 
 test("sonraki aşama kararı kendi dersini ve ilk aday sürümünü yalnız son teyitte gönderir",async()=>{
   const base=globalThis.fetch;vi.stubGlobal("fetch",vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input)==="/api/candidates/5/status"&&init?.method==="PATCH"?respond({...candidate,status:"Teklif",version:5}):base(input,init)));
@@ -42,7 +43,7 @@ test("işe alma eski kaynak reddinde taslak, ilk aday sürümü ve kaynak seçim
   const base=globalThis.fetch;vi.stubGlobal("fetch",vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input)==="/api/candidates/5/hire"&&init?.method==="POST"?respond({title:"Kaynak artık güncel değil"},409):base(input,init)));
   await prepareHire();expect(writes("/api/candidates/5/hire")).toHaveLength(0);await userEvent.click(screen.getByRole("button",{name:"İşe almayı onayla"}));
   expect(await screen.findByRole("alert")).toHaveTextContent("Kaynak artık güncel değil");expect(screen.getByLabelText("İş e-postası")).toHaveValue("deniz@test.local");
-  expect(screen.getByText("İşe alırken kullandığım rehber sürümü · seçildi")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
   expect(JSON.parse(String(writes("/api/candidates/5/hire")[0][1]?.body))).toMatchObject({expectedCandidateVersion:4,guidanceContentRevisionId:42,hireDate:"2026-10-01"});
 });
 
@@ -59,5 +60,5 @@ test("hesap yeniden denemesi ayrı ders ve açık son teyit ister; çalışan ol
   await choose("Hesap yeniden denemesinde kullandığım rehber sürümü");await userEvent.click(screen.getByRole("button",{name:"Şimdi yeniden dene"}));expect(writes("/api/candidates/5/provisioning/retry")).toHaveLength(0);
   await userEvent.click(screen.getByRole("button",{name:"Kontrol ettim; yeniden denemeyi iste"}));await waitFor(()=>expect(writes("/api/candidates/5/provisioning/retry")).toHaveLength(1));
   expect(JSON.parse(String(writes("/api/candidates/5/provisioning/retry")[0][1]?.body))).toEqual({email:"correct@test.local",guidanceContentRevisionId:42});expect(writes("/api/candidates/5/hire")).toHaveLength(0);
-  expect(email).toHaveValue("correct@test.local");expect(screen.getByText("Hesap yeniden denemesinde kullandığım rehber sürümü · seçildi")).toBeInTheDocument();
+  expect(email).toHaveValue("correct@test.local");expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });

@@ -1,3 +1,4 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { useState } from "react";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -29,14 +30,7 @@ function routes(process = "leave", step = "decision-effect") {
 function render(element: React.ReactNode) {
   return renderPage(<AuthProvider><ToastProvider>{element}</ToastProvider></AuthProvider>);
 }
-async function chooseSource(label = "Gerçek işlemde kullandığım rehber sürümü") {
-  const drawer = !screen.queryByText(label);
-  if (drawer) await userEvent.click(screen.getAllByRole("button", { name: "Rehber" }).at(-1)!);
-  await userEvent.click(screen.getByText(label));
-  await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
-  if (drawer) await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
-}
+const chooseSource = chooseOperationGuidance;
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem(SESSION_KEY, JSON.stringify({ token: "T", refreshToken: "R", user: { id: "u", name: "İK", email: "u@example.test",
@@ -107,7 +101,7 @@ test("yeni çalışan POST'u seçilen sürümü taşır; çakışmada form ve s�
   const input = mock.mock.calls.find(([url, init]) => String(url) === "/api/employees" && init?.method === "POST")!;
   expect(JSON.parse(String(input[1]?.body))).toMatchObject({ firstName: "Yeni", guidanceContentRevisionId: 22 });
   expect(screen.getByLabelText("Adı")).toHaveValue("Yeni"); expect(created).not.toHaveBeenCalled();
-  expect(screen.getByText(/Gerçek işlemde kullandığım rehber sürümü · seçildi/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 test("aday ilk aşama PATCH'i kaynak kimliğini taşır ve seçmek tek başına karar göndermez", async () => {
@@ -142,7 +136,7 @@ test("izin kararı sürüm ve notu birlikte gönderir; eski sürümde inceleme k
   const request = mock.mock.calls.find(([url, init]) => String(url) === "/api/leaves/8/approve" && init?.method === "POST")!;
   expect(JSON.parse(String(request[1]?.body))).toEqual({ note: "Kaynak kontrol edildi.", guidanceContentRevisionId: 22 });
   expect(screen.getByLabelText("Karar notu (isteğe bağlı)")).toHaveValue("Kaynak kontrol edildi.");
-  expect(screen.getByText(/Gerçek işlemde kullandığım rehber sürümü · seçildi/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 
@@ -160,7 +154,7 @@ test("kurulum kaynağı seçimi ön kontrolü yeniler; eski sürüm hatasında s
   expect(mock.mock.calls.some(([, i]) => i?.method === "POST")).toBe(false);
   await userEvent.click(ack); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, kayıtları oluştur" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Seçilen sürüm güncel değil");
-  expect(screen.getByText(/rehber sürümü · seçildi/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
   const posted = mock.mock.calls.find(([u, i]) => String(u) === "/api/setup" && i?.method === "POST")!;
   expect(JSON.parse(String(posted[1]?.body))).toEqual({ guidanceContentRevisionId: 22, expectedPreviewToken: "setup-v1" });
 });

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ApiError, apiDownload } from "../../api/client";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useToast } from "../../layout/ToastProvider";
 import { useEmployeeDocuments, useUploadDocument, useWithdrawDocument, useWithdrawnEmployeeDocuments } from "./queries";
 import type { EmployeeDocumentDto } from "./queries";
@@ -120,7 +120,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
 
       {!readOnly && selectedFile && <section className="ez-document-review ez-workbench" aria-labelledby="document-review-title" aria-live="polite">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={uploadGuidanceVersion} onChange={setUploadGuidanceVersion} disabled={upload.isPending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel-entry" step="tab-evrak" value={uploadGuidanceVersion} onChange={setUploadGuidanceVersion} disabled={upload.isPending} /></div>
           <div className="ez-workbench-main">
 
         <h4 id="document-review-title">Yüklemeden önce kontrol edin</h4>
@@ -178,7 +178,7 @@ export function DocumentsTab({ employeeId, readOnly }: { employeeId: number | nu
       </div>}
       {!readOnly && withdrawTarget && <section className="ez-document-review ez-workbench" aria-labelledby="document-withdraw-title">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-evrak" value={withdrawGuidanceVersion} onChange={setWithdrawGuidanceVersion} disabled={withdraw.isPending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel-entry" step="tab-evrak" value={withdrawGuidanceVersion} onChange={setWithdrawGuidanceVersion} disabled={withdraw.isPending} /></div>
           <div className="ez-workbench-main">
 
 

@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { AuthProvider } from "../../auth/AuthContext";
@@ -31,10 +32,7 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();localStorage.clear();});
 const render=(view:React.ReactNode)=>renderPage(<AuthProvider><ToastProvider>{view}</ToastProvider></AuthProvider>);
-async function choose(label:string) {
-  await userEvent.click(screen.getByText(label,{exact:true}));
-  await userEvent.click(await within(screen.getByText(label,{exact:true}).closest("aside")!).findByRole("button",{name:"Bu rehber sürümünü işlemime bağla"}));
-}
+const choose = chooseOperationGuidance;
 const writes=(path:string,method:string)=>vi.mocked(fetch).mock.calls.filter(([url,init])=>String(url)===path&&init?.method===method);
 
 test("şirket profili kendi kaynak ve ilk kayıt belirteciyle kaydedilir; yolculuk gerçek kanıtı yeniler",async()=>{
@@ -59,7 +57,7 @@ test("şirket profilinin bayat kaydı reddedilince taslak ve seçili kaynak koru
   render(<SettingsPage/>);const name=await screen.findByLabelText("Şirket Adı");await userEvent.clear(name);await userEvent.type(name,"Korunan taslak");
   await choose("Şirket profili işleminde kullandığım rehber sürümü");await userEvent.click(screen.getByRole("button",{name:/Değişiklikleri Kaydet/}));
   expect(await screen.findByText("Kayıt değişti; güncel profili inceleyin.")).toBeInTheDocument();expect(name).toHaveValue("Korunan taslak");
-  expect(screen.getByText("Şirket profili işleminde kullandığım rehber sürümü · seçildi")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 test("departman ekleme kaynağı düzeltmeye taşınmaz; düzeltme ayrı kaynak ve kayıt belirteci kullanır",async()=>{
@@ -69,7 +67,7 @@ test("departman ekleme kaynağı düzeltmeye taşınmaz; düzeltme ayrı kaynak 
   await userEvent.type(screen.getByLabelText("Yeni departman adı"),"Yeni birim");await choose("Departman eklerken kullandığım rehber sürümü");
   await userEvent.click(screen.getByRole("button",{name:"Departman ekle"}));await waitFor(()=>expect(writes("/api/departments","POST")).toHaveLength(1));
   expect(JSON.parse(String(writes("/api/departments","POST")[0][1]?.body))).toMatchObject({guidanceContentRevisionId:22});
-  await userEvent.click(screen.getByRole("button",{name:"Düzenle"}));expect(screen.getByText("Departman düzeltirken kullandığım rehber sürümü")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button",{name:"Düzenle"}));expect(screen.getByRole("group", { name: "Departman düzeltirken kullandığım rehber sürümü" })).toBeInTheDocument();
   expect(screen.queryByText("Departman düzeltirken kullandığım rehber sürümü · seçildi")).not.toBeInTheDocument();
   const name=screen.getByLabelText("Departman adı");await userEvent.clear(name);await userEvent.type(name,"Düzeltilmiş");
   await choose("Departman düzeltirken kullandığım rehber sürümü");await userEvent.click(screen.getByRole("button",{name:"Değişikliği kaydet"}));
@@ -95,5 +93,5 @@ test("aday son onayda seçilen dersi gönderir; sunucu hatası taslağı ve puan
   await choose("Adayı oluştururken kullandığım rehber sürümü");await userEvent.click(screen.getByRole("button",{name:"Bilgileri kontrol et"}));expect(writes("/api/candidates","POST")).toHaveLength(0);
   await userEvent.click(screen.getByRole("button",{name:"Adayı oluştur"}));expect(await screen.findByText("Pozisyon değişti; inceleyin.")).toBeInTheDocument();
   expect(JSON.parse(String(writes("/api/candidates","POST")[0][1]?.body))).toMatchObject({name:"Yeni aday",score:null,guidanceContentRevisionId:23});
-  expect(screen.getByLabelText("Ad Soyad")).toHaveValue("Yeni aday");expect(screen.getByText("Adayı oluştururken kullandığım rehber sürümü · seçildi")).toBeInTheDocument();expect(onCreated).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("Ad Soyad")).toHaveValue("Yeni aday");expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();expect(onCreated).not.toHaveBeenCalled();
 });

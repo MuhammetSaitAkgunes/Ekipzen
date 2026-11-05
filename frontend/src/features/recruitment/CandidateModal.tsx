@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { GuidanceDecisionCheck } from "../guidance/GuidanceDecisionCheck";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
@@ -103,17 +103,17 @@ export function CandidateModal({ onClose, onCreated }: {
         </div>
         <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createCandidate.isPending} label="Adayı oluştururken kullandığım rehber sürümü" /></div>
-          <div className="ez-workbench-main">
-
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <section className="ez-candidate-create-guide" aria-label="Aday kaydı rehberi">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="recruitment" step="candidate-create" value={source} onChange={setSource} disabled={createCandidate.isPending} label="Adayı oluştururken kullandığım rehber sürümü" ><section className="ez-candidate-create-guide" aria-label="Aday kaydı rehberi">
             <p><strong>Ne yapıyoruz?</strong> Başvuruyu aday havuzuna kaydediyoruz. Aday “Yeni” aşamasında açılır; bu işlem çalışan kaydı oluşturmaz veya adaya mesaj göndermez.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Kimlik, başvurulan rol ve değerlendirme puanı sonraki aşama kararlarında görünür. Örneğin farklı bir pozisyon için yapılan başvuruyu yanlış role kaydetmek değerlendirmeyi yanıltır.</p>
             <p><strong>Puanın kaynağı:</strong> Buradaki 0-100 puanı siz girersiniz; sistem AI ile hesaplamaz. Genel puanın dayanağı henüz yoksa alanı boş bırakın. Boş alan “Henüz puan verilmedi”, 0 ise verilmiş sıfır puandır. Not veya ölçüt değerlendirmesi genel puanı otomatik hesaplamaz.</p>
             <p>Açık pozisyon seçerseniz aday o kadroya bağlanır ve rol adı pozisyondan alınır. İlan yayımlamadan gelen başvuruyu pozisyon bağlantısı olmadan da kaydedebilirsiniz.</p>
             <GuidanceDecisionCheck process="recruitment" step="candidate-create" operationName="aday işlemi" />
-          </section>
+          </section></GuidanceOperationDrawer></div>
+          <div className="ez-workbench-main">
+
+          {error && <p className="form-error" role="alert">{error}</p>}
+
           <div className="form-grid-2">
             <div className="input-group">
               <label className="input-label" htmlFor="cand-name">Ad Soyad</label>

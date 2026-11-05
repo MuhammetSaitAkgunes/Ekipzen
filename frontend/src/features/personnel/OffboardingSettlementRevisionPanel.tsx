@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -119,7 +119,7 @@ function SettlementRevisionContent({ args, context }: {
   };
 
   return <>
-    <GuidanceOperationSource process="offboarding" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setFinancialConfirmed(false); setExternalConfirmed(false); }} />
+    <GuidanceOperationDrawer process="offboarding" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setFinancialConfirmed(false); setExternalConfirmed(false); }} />
     <p><strong>İlk hesap:</strong> brüt {money.format(context.original.monthlyGrossSalarySnapshot)} · toplam {money.format(context.original.totalPayment)}</p>
     <p><strong>Geçerli hesap:</strong> brüt {money.format(context.effective.monthlyGrossSalarySnapshot)} · toplam {money.format(context.effective.totalPayment)}</p>
     {context.history.length > 0 && <ul>{context.history.map((item) =>

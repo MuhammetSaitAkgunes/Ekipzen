@@ -1,3 +1,4 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -30,10 +31,7 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 const render = () => renderPage(<AuthProvider><ToastProvider><SettingsPage /></ToastProvider></AuthProvider>);
 const writes = (path: string, method: string) => vi.mocked(fetch).mock.calls.filter(([url, init]) => String(url).split("?")[0] === path && init?.method === method);
-async function choose(label: string) {
-  await userEvent.click(screen.getByText(label, { exact: true }));
-  await userEvent.click(await within(screen.getByText(label, { exact: true }).closest("aside")!).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-}
+const choose = chooseOperationGuidance;
 
 test("logo seçmek yazmaz; kaynak değişimi teyidi sıfırlar ve 409 dosya ile eski belirteci korur", async () => {
   const base = fetch;
@@ -97,7 +95,9 @@ test("bağlı pozisyon varken silme kapalıdır; erişim rehberi gerçek ekranla
   await userEvent.click(screen.getByRole("button", { name: "Silme etkisini incele" }));
   await screen.findByText(/1 pozisyon bağlı/);
   expect(screen.getByRole("button", { name: "Departmanı sil" })).toBeDisabled();
+  await userEvent.click(screen.getAllByRole("button", { name: "Rehber" })[0]);
   await userEvent.click(screen.getByRole("button", { name: "Erişim hazırlığına git" }));
+  await userEvent.click(screen.getAllByRole("button", { name: "Rehber" })[0]);
   const access = screen.getByRole("region", { name: "Erişimi hazırlayın ve doğrulayın" });
   expect(within(access).getByRole("link", { name: "Personel kartını açın" })).toHaveAttribute("href", "/app/personnel");
   expect(within(access).getByRole("link", { name: "İşe alım ekranında" })).toHaveAttribute("href", "/app/recruitment");

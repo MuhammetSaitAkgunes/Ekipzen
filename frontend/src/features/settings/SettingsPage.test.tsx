@@ -118,6 +118,7 @@ test("şirket hazırlığı eksik kayıtları ve sonraki gerçek ekranı göster
     "/api/departments": [],
   });
   renderShell();
+  await userEvent.click((await screen.findAllByRole("button", { name: "Rehber" }))[0]);
   const guide = await screen.findByRole("region", { name: "İlk çalışan kaydından önce" });
   expect(await within(guide).findByText(/Eksik başlangıç kayıtları var/)).toBeInTheDocument();
   expect(await within(guide).findByText(/Henüz departman yok/)).toBeInTheDocument();

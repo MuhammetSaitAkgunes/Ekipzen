@@ -67,6 +67,7 @@ test("izin kararı alıştırması isteğe bağlı açılır ve yanıt gerçek o
   await screen.findByRole("button", { name: "Kapat" });
   expect(vi.mocked(fetch).mock.calls.some(([url]) =>
     String(url) === "/api/guidance/leave-approval/checks/review-request")).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: "Rehber" }));
   await userEvent.click(screen.getByText("Kısa karar alıştırması"));
   expect(await screen.findByText(/İzin türü, tarihler ve talep açıklaması/)).toBeInTheDocument();
   await userEvent.click(screen.getByLabelText("Türü, tarihleri, gün sayısını ve gerekli dayanağı netleştiririm"));

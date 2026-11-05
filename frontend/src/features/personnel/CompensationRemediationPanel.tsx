@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -131,7 +131,7 @@ function RemediationContent({ context, employeeId, packageId }: {
   };
 
   return <>
-    <GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} />
+    <GuidanceOperationDrawer process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} />
     <p><strong>Mevcut paket:</strong> {context.package.effectiveFrom} · {currency.format(context.package.monthlyGrossSalary)} · sürüm {context.package.version}</p>
     {context.history?.length > 0 && <details>
       <summary>Uzman inceleme dosyası geçmişi ({context.history.length})</summary>
@@ -334,7 +334,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   if (periodStatus === "approved" || periodStatus === "closed") return <div className="ez-compensation-review ez-workbench"
     aria-label={`Onaylı bordro satırı ${rowId} etki dosyası`}>
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setSourceConfirmed(false); setExternalConfirmed(false); setChainConfirmed(false); }} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setSourceConfirmed(false); setExternalConfirmed(false); setChainConfirmed(false); }} /></div>
           <div className="ez-workbench-main">
 
 
@@ -480,7 +480,7 @@ function PayrollRemediationRow({ employeeId, packageId, caseId, periodId, rowId,
   </div></div></div>;
   return <div className="ez-compensation-review ez-workbench" aria-label={`Bordro satırı ${rowId} telafi uygulaması`}>
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="payroll" step="correction-external" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setConfirmed(false); }} /></div>
           <div className="ez-workbench-main">
 
 

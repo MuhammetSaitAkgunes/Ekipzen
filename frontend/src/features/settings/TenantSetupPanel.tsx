@@ -1,6 +1,6 @@
 import { dailyTasksKey } from "../guidance/queries";
 import { guidanceOperationsKey } from "../guidance/operationQueries";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "../../api/client";
@@ -72,7 +72,7 @@ export function TenantSetupPanel({ onInitialized }: { onInitialized?: () => void
           <p>Eksik izin türü: {data.missingLeaveTypeCount} · Eksik tam gün tatil: {data.missingFullDayHolidayCount}</p>
           {reviewing && <section className="ez-setup-review ez-workbench" role="region" aria-label="Başlangıç kayıtlarını oluşturmadan önce kontrol edin">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="initial-setup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={initialize.isPending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="company" step="initial-setup" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setAcknowledged(false); }} disabled={initialize.isPending} /></div>
           <div className="ez-workbench-main">
 
             <h4>Başlangıç kayıtlarını oluşturmadan önce kontrol edin</h4>

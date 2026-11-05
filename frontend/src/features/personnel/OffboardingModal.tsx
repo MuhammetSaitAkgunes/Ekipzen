@@ -1,6 +1,7 @@
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { GuidanceOperationDeck } from "../guidance/GuidanceOperationDeck";
 import { OffboardingImpactDetails, type EmployeeOffboardingImpactPreview } from "./OffboardingImpactPreview";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { FinancialExternalReconciliationPanel } from "../payroll/FinancialExternalReconciliationPanel";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
@@ -336,21 +337,20 @@ export function OffboardingModal({ employeeId, onClose }: {
 
         <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{context && !completedCase && <GuidanceOperationDeck><GuidanceOperationSource process="offboarding" step="preparation" value={draftGuidanceVersion} onChange={setDraftGuidanceVersion} disabled={isBusy} /><GuidanceOperationSource process="offboarding" step="settlement-review" value={calculationGuidanceVersion} onChange={setCalculationGuidanceVersion} disabled={isBusy} /><GuidanceOperationSource process="offboarding" step="completion" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setCompletionAcknowledged(false); }} disabled={isBusy} /></GuidanceOperationDeck>}</div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{context && !completedCase && <GuidanceOperationDeck><GuidanceOperationDrawer process="offboarding" step="preparation" value={draftGuidanceVersion} onChange={setDraftGuidanceVersion} disabled={isBusy} /><GuidanceOperationDrawer process="offboarding" step="settlement-review" value={calculationGuidanceVersion} onChange={setCalculationGuidanceVersion} disabled={isBusy} /><GuidanceOperationDrawer process="offboarding" step="completion" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setCompletionAcknowledged(false); }} disabled={isBusy} /></GuidanceOperationDeck>}</div>
           <div className="ez-workbench-main">
 
           {contextQ.isPending && <p>İşten çıkış bilgileri yükleniyor…</p>}
           {contextError && <p className="form-error" role="alert">{contextError}</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
-          {context && <section className="ez-offboarding-guide" aria-label="İşten ayrılış rehberi">
+          {context && <GuidanceDrawer title="İşten ayrılış rehberi"><section className="ez-offboarding-guide" aria-label="İşten ayrılış rehberi">
             <strong>Ne yapıyoruz?</strong>
             <p>Önce ayrılış dosyasını taslak olarak hazırlıyoruz. Taslak kaydı personeli pasife almaz. Tamamlama ise istihdam dönemini kapatır, varsa ekibi halefe devreder ve erişim/rol işlemlerini kuyruğa alır.</p>
             <p><strong>Neden kontrol ediyoruz?</strong> Tarih, çıkış kodu, fesih nedeni, ihbar uygulaması ve finansal tutarlar gerçek vaka ve uzman incelemesiyle uyuşmalıdır. Hesap taslağı tek başına hukuki hak kararı veya ödeme kanıtı değildir.</p>
             <GuidanceSourceLink processKey="offboarding" />
             <p>Kaynaklı metinler inceleme ve yayın onayından sonra katalogda görünür. Gerekli dış bildirim ve ödemeleri ayrıca takip edin; tamamlanan uygulama kaydı bunları doğrulamaz.</p>
-          </section>}
+          </section><GuidanceStepLessons process="offboarding" /></GuidanceDrawer>}
 
-          {context && <GuidanceStepLessons process="offboarding" />}
           {completedCase?.id && <FinancialExternalReconciliationPanel source="offboarding" parentId={employeeId} resourceId={completedCase.id} />}
           {context && !completedCase && <>
 
@@ -420,7 +420,7 @@ export function OffboardingModal({ employeeId, onClose }: {
               </div>}
               {!context.hasSettlementRevisions && reverseReview && <section className="ez-offboarding-review ez-workbench" role="region" aria-label="Geri almadan önce kontrol edin">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={(id) => { setReverseGuidanceVersion(id); setReverseAcknowledged(false); }} disabled={isBusy} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="offboarding" step="reversal-review" value={reverseGuidanceVersion} onChange={(id) => { setReverseGuidanceVersion(id); setReverseAcknowledged(false); }} disabled={isBusy} /></div>
           <div className="ez-workbench-main">
 
                 <h4>Geri almadan önce kontrol edin</h4>

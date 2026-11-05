@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useToast } from "../../layout/ToastProvider";
 import {
   useCorrectCompensationDate,
@@ -54,7 +54,7 @@ export function CompensationDateCorrectionPanel({ employeeId, packageId, current
 
   return <section className="ez-compensation-review ez-workbench" aria-label="Yürürlük tarihi düzeltme">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Tarih düzeltmede kullandığım rehber sürümü"
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel-entry" step="tab-mali" label="Tarih düzeltmede kullandığım rehber sürümü"
       value={guidanceVersion} onChange={id => { setGuidanceVersion(id); preview.reset(); }} disabled={correct.isPending} /></div>
           <div className="ez-workbench-main">
 

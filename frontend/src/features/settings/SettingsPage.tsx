@@ -1,4 +1,5 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { ApiError, apiDownload } from "../../api/client";
@@ -164,16 +165,22 @@ export function SettingsPage() {
       <div className="page-header">
         <div>
           <h2>Sistem Ayarları</h2>
-          <GuidanceSourceLink processKey="company" />
-          <p>Şirket profili, bildirimler, güvenlik ve abonelik tercihlerini yönetin.</p>
         </div>
+        <div className="header-actions">
+          <GuidanceDrawer title="Şirket ayarları rehberi">
+            <GuidanceSourceLink processKey="company" />
+            <CompanyPreparationGuide companyName={data.company?.name ?? ""} onOpenAccess={() => {
+              document.querySelector<HTMLDialogElement>(".ez-guidance-drawer[open]")?.close();
+              setSection("security");
+            }} />
+            <CompanyAccessPreparation />
+          </GuidanceDrawer>
         <button className="btn btn-primary" onClick={saveCompany} disabled={updateCompany.isPending}>
           <i aria-hidden="true" className="fa-solid fa-save" /> Değişiklikleri Kaydet
         </button>
+        </div>
       </div>
 
-      {section === "general" && <CompanyPreparationGuide companyName={data.company?.name ?? ""} onOpenAccess={() => setSection("security")} />}
-      <TenantSetupPanel onInitialized={() => setCompany(null)} />
       <div className="settings-layout">
         <aside className="settings-sidebar">
           <nav className="set-nav">
@@ -189,12 +196,13 @@ export function SettingsPage() {
           {section === "general" && (
             <div id="set-general" className="set-section active">
               <DepartmentsPanel />
+              <details className="set-card ez-setup-details"><summary>Şirket başlangıç kurulumu</summary><TenantSetupPanel onInitialized={() => setCompany(null)} /></details>
               <div id="settings-company" className="set-card mt-4">
                 <div className="card-head">
                   <h3>Marka & Görünüm</h3>
                   <p>Sistemde görünecek şirket adı ve marka varlıkları.</p>
                 </div>
-                <GuidanceOperationSource process="company" step="company-profile" value={companySource} onChange={setCompanySource} disabled={updateCompany.isPending} label="Şirket profili işleminde kullandığım rehber sürümü" />
+                <GuidanceOperationDrawer process="company" step="company-profile" value={companySource} onChange={setCompanySource} disabled={updateCompany.isPending} label="Şirket profili işleminde kullandığım rehber sürümü" />
                 <p>Bu işlem profil alanlarını kaydeder; logo, erişim ve bildirim tercihleri ayrı işlemlerdir. Aynı değerleri kaydetmek yeni öğrenme kanıtı oluşturmaz.</p>
                 {companyToken && data.company?.recordToken && companyToken !== data.company.recordToken && <p role="alert">Şirket profili başka işlemde değişti. Taslağınız korunuyor; eski kayıt belirteciyle değişiklik kabul edilmez.</p>}
                 <button className="btn btn-secondary btn-sm" disabled={updateCompany.isPending || settingsQ.isFetching} onClick={async () => {
@@ -222,7 +230,7 @@ export function SettingsPage() {
                     </div>
                   </div>
                 </div>
-                <GuidanceOperationSource process="company" step="company-profile" value={logoSource} onChange={value => { setLogoSource(value); setLogoConfirmed(false); }} disabled={uploadLogo.isPending} label="Logo yüklerken kullandığım rehber sürümü" />
+                <GuidanceOperationDrawer process="company" step="company-profile" value={logoSource} onChange={value => { setLogoSource(value); setLogoConfirmed(false); }} disabled={uploadLogo.isPending} label="Logo yüklerken kullandığım rehber sürümü" />
                 {logoReview && <section className="ez-company-operation-review" aria-label="Logo yükleme önizlemesi">
                   <p>Yeni dosya: {logoReview.file.name} ({Math.ceil(logoReview.file.size / 1024)} KB). Mevcut logo değişir; şirket profili alanları değişmez. Hatalı dosyayı doğru dosyayla yeniden değiştirebilirsiniz.</p>
                   <label><input type="checkbox" checked={logoConfirmed} disabled={uploadLogo.isPending} onChange={event => setLogoConfirmed(event.target.checked)} /> Logo değişimini teyit ediyorum</label>
@@ -271,7 +279,7 @@ export function SettingsPage() {
             <div id="set-notif" className="set-section active">
               <div className="set-card ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="company-profile" value={notifSource} onChange={value => { setNotifSource(value); setNotifConfirmed(false); }} disabled={updateNotifications.isPending} label="Bildirim tercihinde kullandığım rehber sürümü" /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="company" step="company-profile" value={notifSource} onChange={value => { setNotifSource(value); setNotifConfirmed(false); }} disabled={updateNotifications.isPending} label="Bildirim tercihinde kullandığım rehber sürümü" /></div>
           <div className="ez-workbench-main">
 
                 <div className="card-head"><h3>E-Posta Bildirimleri</h3></div>
@@ -316,7 +324,6 @@ export function SettingsPage() {
 
           {section === "security" && (
             <div id="set-security" className="set-section active">
-              <CompanyAccessPreparation />
               <div className="set-card">
                 <div className="card-head"><h3>Giriş Güvenliği</h3></div>
                 {passwordError && <p className="form-error" role="alert">{passwordError}</p>}

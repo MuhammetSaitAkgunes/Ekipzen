@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useToast } from "../../layout/ToastProvider";
 import { CompensationRemediationPanel } from "./CompensationRemediationPanel";
 import { CompensationDateCorrectionPanel } from "./CompensationDateCorrectionPanel";
@@ -93,7 +93,7 @@ function CorrectionForm({ context, employeeId, packageId, onClose }: {
     {!context.canCorrect && <div role="alert"><strong>Doğrudan düzeltme kilitli.</strong><ul>{context.blockingReasons.map((item) => <li key={item}>{item}</li>)}</ul></div>}
     {!context.canCorrect && <CompensationRemediationPanel employeeId={employeeId} packageId={packageId} />}
     {context.canCorrect && <>
-      <GuidanceOperationSource process="personnel-entry" step="tab-mali" label="Tutar düzeltmede kullandığım rehber sürümü"
+      <GuidanceOperationDrawer process="personnel-entry" step="tab-mali" label="Tutar düzeltmede kullandığım rehber sürümü"
         value={guidanceVersion} onChange={id => { setGuidanceVersion(id); setReview(false); }} disabled={correct.isPending} />
       <div className="form-grid-2">
         {fields.map(({ key, label }) => <div className="input-group" key={key}>

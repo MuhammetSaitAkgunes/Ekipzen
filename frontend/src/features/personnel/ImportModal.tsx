@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { appPath } from "../../paths";
 import { guidanceOperationsKey } from "../guidance/operationQueries";
 import { dailyTasksKey } from "../guidance/queries";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { ApiError, apiDownload, apiFetch } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { ImportRows, validImportPreview, validImportResult } from "./ImportRows";
@@ -137,7 +137,7 @@ export function ImportModal({ open, onClose }: { open: boolean; onClose: () => v
           {ozet.toplamSatir === 0 && ozet.sorunlar!.map((issue, index) => <p className="form-error" key={index}>Satır {issue.satirNo} · {issue.alan}: {issue.mesaj}</p>)}
           {review && <section className="ez-import-review ez-workbench" role="region" aria-label="Aktarmadan önce kontrol edin">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="personnel" step="import-review" label="Toplu aktarımda kullandığım ders sürümü"
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="personnel" step="import-review" label="Toplu aktarımda kullandığım ders sürümü"
               value={guidanceVersion} disabled={busy || uncertain} onChange={id => {
                 setGuidanceVersion(id); setSampleChecked(false); setContractChecked(false); setPartialChecked(false);
               }} /></div>

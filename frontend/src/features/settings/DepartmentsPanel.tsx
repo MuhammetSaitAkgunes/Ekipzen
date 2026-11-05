@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useState, type FormEvent } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -76,7 +76,7 @@ export function DepartmentsPanel() {
     {error && <p className="form-error" role="alert">{error}</p>}
     {deletion && <section className="ez-company-operation-review ez-workbench" aria-label="Departman silme önizlemesi">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="departments" value={deleteSource} onChange={value => { setDeleteSource(value); setDeleteConfirmed(false); }} disabled={remove.isPending} label="Departman silerken kullandığım rehber sürümü" /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="company" step="departments" value={deleteSource} onChange={value => { setDeleteSource(value); setDeleteConfirmed(false); }} disabled={remove.isPending} label="Departman silerken kullandığım rehber sürümü" /></div>
           <div className="ez-workbench-main">
 
       <h4>{deletion.name} departmanını silme</h4>
@@ -92,7 +92,7 @@ export function DepartmentsPanel() {
     </div></div></section>}
     <form className="ez-department-form ez-workbench" onSubmit={submitCreate}>
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="departments" value={createSource} onChange={setCreateSource} disabled={create.isPending} label="Departman eklerken kullandığım rehber sürümü" /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="company" step="departments" value={createSource} onChange={setCreateSource} disabled={create.isPending} label="Departman eklerken kullandığım rehber sürümü" /></div>
           <div className="ez-workbench-main">
 
       <div className="input-group">
@@ -115,7 +115,7 @@ export function DepartmentsPanel() {
             {departmentsQ.data.map((department) => <li key={department.id}>
               {editing && editing.id === department.id ? <form className="ez-department-edit ez-workbench" onSubmit={submitEdit}>
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="company" step="departments" value={editSource} onChange={setEditSource} disabled={update.isPending} label="Departman düzeltirken kullandığım rehber sürümü" /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="company" step="departments" value={editSource} onChange={setEditSource} disabled={update.isPending} label="Departman düzeltirken kullandığım rehber sürümü" /></div>
           <div className="ez-workbench-main">
 
                 <p className="ez-department-edit-note">{department.employeeCount ?? 0} çalışan bu departmana bağlı. Adı veya kodu düzeltmek çalışanları başka departmana taşımaz.</p>

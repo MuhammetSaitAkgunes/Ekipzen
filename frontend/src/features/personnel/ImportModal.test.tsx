@@ -1,3 +1,4 @@
+import { chooseOperationGuidance, openOperationGuidance } from "../../test/chooseOperationGuidance";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -39,11 +40,7 @@ const sourceSnapshot = { contentRevisionId: 22, contentKey: "personnel-import-re
   contentVersion: 1, title: "Aktarım dersi" };
 const importLesson = { id: 22, contentKey: sourceSnapshot.contentKey, processKey: "personnel", contentVersion: 1,
   state: "published", isCurrent: true, body: guidanceStepDrafts.find(x => x.contentKey === sourceSnapshot.contentKey)!.body };
-const chooseLesson = async () => {
-  await userEvent.click(screen.getByText("Toplu aktarımda kullandığım ders sürümü"));
-  await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-  await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
-};
+const chooseLesson = () => chooseOperationGuidance("Toplu aktarımda kullandığım ders sürümü");
 const recheck = async () => {
   for (const name of [/Şablondaki örnek/, /Tüm aktarılacak/, /Hatalı ve mükerrer/]) await userEvent.click(screen.getByRole("checkbox", { name }));
 };
@@ -66,7 +63,9 @@ test("aktarım dersini seçmek kayıt yapmaz; tercihleri yeniden teyit edip sür
   expect(screen.getByRole("checkbox", { name: /Şablondaki örnek/ })).not.toBeChecked();
   expect(screen.getByRole("button", { name: "Kontrol ettim, aktar" })).toBeDisabled();
   expect(screen.getByRole("link", { name: "Seçtiğim aktarım dersini ve alıştırmasını aç" })).toHaveAttribute("href", "/app/guidance/catalog?version=22");
-  expect(screen.getByText(/Kayıtlı sonucu sorgula veya Aynı gönderimi tekrar dene kullanın/)).toBeInTheDocument();
+  const guide = await openOperationGuidance("Toplu aktarımda kullandığım ders sürümü");
+  expect(within(guide).getByText(/Kayıtlı sonucu sorgula veya Aynı gönderimi tekrar dene kullanın/)).toBeInTheDocument();
+  await userEvent.click(within(guide.closest("dialog")!).getByRole("button", { name: "Kapat" }));
   await recheck(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
   await screen.findByText("Gerçek aktarım sonucu");
   expect((importCalls()[0][1]!.body as FormData).get("guidanceContentRevisionId")).toBe("22");
@@ -84,6 +83,7 @@ test("belirsiz yanıtta ders seçimi sabittir; makbuz kurtarması kişisel kanı
   renderPage(<AuthProvider><ToastProvider><ImportModal open onClose={() => {}} /><GuidanceOperationJourney /></ToastProvider></AuthProvider>);
   await approve(); await chooseLesson(); await recheck(); await userEvent.click(screen.getByRole("button", { name: "Kontrol ettim, aktar" }));
   await screen.findByText(/Yanıt kayboldu/);
+  await openOperationGuidance("Toplu aktarımda kullandığım ders sürümü");
   expect(screen.getByRole("button", { name: "Rehber sürümü bağlantısını kaldır" })).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "Kayıtlı sonucu sorgula" }));
   await screen.findByText("Gerçek aktarım sonucu");
