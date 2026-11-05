@@ -30,9 +30,12 @@ function render(element: React.ReactNode) {
   return renderPage(<AuthProvider><ToastProvider>{element}</ToastProvider></AuthProvider>);
 }
 async function chooseSource(label = "Gerçek işlemde kullandığım rehber sürümü") {
+  const drawer = !screen.queryByText(label);
+  if (drawer) await userEvent.click(screen.getAllByRole("button", { name: "Rehber" }).at(-1)!);
   await userEvent.click(screen.getByText(label));
   await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
   await screen.findByRole("region", { name: "Seçilen adımın açıklaması" });
+  if (drawer) await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
 }
 beforeEach(() => {
   localStorage.clear();
@@ -248,7 +251,7 @@ test("bordro açılışında kaynak değişimi teyidi sıfırlar; 409 tarih ve s
   const request = mock.mock.calls.find(([url, init]) => String(url) === "/api/payroll/periods" && init?.method === "POST")!;
   expect(JSON.parse(String(request[1]?.body))).toEqual({ year: 2026, month: 10, expectedPreviewToken: "period-token", guidanceContentRevisionId: 22 });
   expect(screen.getByLabelText("Yıl")).toHaveValue(2026); expect(screen.getByLabelText("Ay")).toHaveValue("10");
-  expect(onCreated).not.toHaveBeenCalled(); expect(screen.getByText(/rehber sürümü · seçildi/)).toBeInTheDocument();
+  expect(onCreated).not.toHaveBeenCalled(); expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
 });
 
 test("bordro dönemi onayı seçilen kaynağı yalnız son teyitten sonra iletir", async () => {

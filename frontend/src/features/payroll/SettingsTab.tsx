@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -192,7 +192,7 @@ export function SettingsTab() {
     <>
       <section className="card payroll-settings-card ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="settings-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={busy} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="payroll" step="settings-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={busy} /></div>
           <div className="ez-workbench-main">
 
 

@@ -50,7 +50,7 @@ test("günlük görev bağlantısı istenen bordro dönemini seçer", async () =
     ["/app/payroll?periodId=2"],
   );
   expect(await screen.findByLabelText("Bordro dönemi")).toHaveValue("2");
-  expect(screen.getByText(/Haziran 2026 dönemi için/)).toBeInTheDocument();
+  expect(screen.getByText("Haziran 2026", { selector: "p" })).toBeInTheDocument();
 });
 
 test("çalışan sekme kabuğu yerine Bordrolarım görünümünü alır", async () => {

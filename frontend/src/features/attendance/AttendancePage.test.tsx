@@ -71,6 +71,8 @@ test("puantaj sekmesi tabloyu ve aylık toplamı gösterir", async () => {
 test("rehber aylık puantaj sekmesine geçirir ve düzeltme sınırını açıklar", async () => {
   renderAttendance();
   await screen.findByText("Zamanında");
+  expect(screen.queryByRole("heading", { name: "Bir kaydı nasıl kontrol ederim?" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Rehber" }));
   expect(screen.getByRole("heading", { name: "Bir kaydı nasıl kontrol ederim?" })).toBeInTheDocument();
   expect(screen.getByText(/Aynı çalışan için aynı güne ikinci kayıt açılamaz/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Aylık puantajı aç" }));

@@ -1,4 +1,5 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useEffect, useRef, useState } from "react";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
@@ -101,10 +102,15 @@ export function CompliancePage() {
       <div className="page-header">
         <div>
           <h2>Uyum, Evrak ve Denetim Risk Merkezi</h2>
-          <GuidanceSourceLink processKey="compliance" />
-          <p>Eksik evrak, yaklaşan son tarih ve denetim hazırlığını operasyonel takip görünümünde yönetin.</p>
+          <p>{documents.length} evrak kaydı</p>
         </div>
-        <BackToRisk />
+        <div className="header-actions">
+          <GuidanceDrawer title="Evrak rehberi">
+            <GuidanceSourceLink processKey="compliance" />
+            <GuidanceStepLessons process="compliance" />
+          </GuidanceDrawer>
+          <BackToRisk />
+        </div>
       </div>
 
       <div className="detail-kpi-grid">
@@ -114,7 +120,6 @@ export function CompliancePage() {
         <div className="stat-box"><span className="sb-label">Denetim Riski</span><strong className="sb-val text-orange">{readiness.readinessRisk}</strong></div>
       </div>
 
-      <GuidanceStepLessons process="compliance" />
       <div className="toolbar-actions compliance-toolbar">
         <div className="search-wrap">
           <i aria-hidden="true" className="fa-solid fa-magnifying-glass" />
@@ -146,8 +151,9 @@ export function CompliancePage() {
 
       {selectedDocument && (
         <section ref={guideRef} tabIndex={-1} className="ez-panel ez-compliance-guide" aria-labelledby="compliance-guide-title">
-          <span className="ez-overline">GERÇEK KAYIT ÜZERİNDE REHBER</span>
           <h3 id="compliance-guide-title">{selectedDocument.employee} · {selectedDocument.document}</h3>
+          <p>{selectedDocument.status} · Sorumlu: {selectedDocument.owner || "Atanmadı"} · Son tarih: {selectedDocument.dueDate || "Kayıtlı değil"}</p>
+          <GuidanceDrawer title={selectedDocument.document + " rehberi"}>
           <p>Bu takip kaydı <strong>{selectedDocument.status}</strong> durumunda. Önce belgenin gerçekten mevcut ve uygun olup olmadığını kendi kaynağından doğrulayın; burada durum değiştirmek dosya yüklemez veya dış kuruma bildirim yapmaz.</p>
           <ol>
             <li>Sorumluyu ({selectedDocument.owner || "henüz atanmadı"}) ve kayıtlı son tarihi ({selectedDocument.dueDate || "yok"}) kontrol edin. Tarih yoksa hukuki son tarih varsaymayın.</li>
@@ -157,6 +163,7 @@ export function CompliancePage() {
           <p><strong>Örnek:</strong> Bir iş sözleşmesi kaydı “Eksik” görünüyorsa önce imzalı nüshanın gerçekten saklandığını kontrol edin; yalnız çalışana istem göndermek “Tamamlandı” demek için yeterli değildir.</p>
           <p><strong>Düzeltme:</strong> {isAdmin ? "Yanlış durum seçtiyseniz aynı satırdan doğru durumu yeniden seçin. Ad, son tarih, risk veya sorumlu hatalıysa Düzenle’yi açın." : "Hatalı bir kayıt görürseniz İK yöneticisine iletin."} Tamamlanmış kayıt yeniden açıldığında risk seviyesini de tekrar değerlendirin.</p>
           <p><strong>Dayanak sınırı:</strong> Bu ekrandaki tarih ve risk seviyesi kayıt alanlarıdır. Belgenin hangi mevzuat hükmüyle zorunlu olduğu burada doğrulanmadığından, bunları yasal zorunluluk veya son tarih olarak yorumlamayın.</p>
+          </GuidanceDrawer>
         </section>
       )}
       {selectedDocumentId > 0 && !selectedDocument && (
@@ -166,7 +173,7 @@ export function CompliancePage() {
       {pendingStatus && (
         <section className="ez-panel ez-compliance-confirm ez-workbench" role="group" aria-label="Belge durum değişikliği ön kontrolü" aria-live="polite">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="compliance" step="status-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={setDocumentStatus.isPending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="compliance" step="status-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={setDocumentStatus.isPending} /></div>
           <div className="ez-workbench-main">
 
           <h3>Durum değişikliğini doğrulayın</h3>
@@ -188,7 +195,7 @@ export function CompliancePage() {
         <div className="table-container">
           <table className="detail-table data-table">
             <thead>
-              <tr><th>Personel</th><th>Departman</th><th>Evrak</th><th>Sorumlu</th><th>Son Tarih</th><th>Durum</th><th>Risk</th><th>Rehber</th>{isAdmin && <th>İşlem</th>}</tr>
+              <tr><th>Personel</th><th>Departman</th><th>Evrak</th><th>Sorumlu</th><th>Son Tarih</th><th>Durum</th><th>Risk</th><th>Detay</th>{isAdmin && <th>İşlem</th>}</tr>
             </thead>
             <tbody>
               {displayDocuments.map((doc) => (
@@ -217,7 +224,7 @@ export function CompliancePage() {
                     )}
                   </td>
                   <td><span className={`risk-badge ${doc.level ?? ""}`}>{getLevelText(doc.level)}</span></td>
-                  <td><button className="btn btn-ghost btn-sm" aria-label={doc.document + " belgesinin rehberini aç"} onClick={() => showGuide(doc.id!)}>Rehber</button></td>
+                  <td><button className="btn btn-ghost btn-sm" aria-label={doc.document + " belgesini incele"} onClick={() => showGuide(doc.id!)}>İncele</button></td>
                   {isAdmin && (
                     <td>
                       <button

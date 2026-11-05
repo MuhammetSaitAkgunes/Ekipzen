@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { useRef, useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
@@ -133,7 +133,7 @@ export function AttendanceEntryModal({ rowId, initial, defaultEmployeeId, onClos
 
         <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="attendance" step={isEdit ? "entry-correction" : "entry-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); formRevision.current += 1; setReviewing(false); setPreview(null); }} disabled={save.isPending || previewEntry.isPending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="attendance" step={isEdit ? "entry-correction" : "entry-review"} value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); formRevision.current += 1; setReviewing(false); setPreview(null); }} disabled={save.isPending || previewEntry.isPending} /></div>
           <div className="ez-workbench-main">
 
 

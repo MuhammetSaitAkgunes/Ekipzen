@@ -1,3 +1,4 @@
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { appPath } from "../../paths";
@@ -9,7 +10,7 @@ import { PageError, PageLoading } from "../shared/PageState";
 import { LeaveRequestModal } from "./LeaveRequestModal";
 import { LEAVE_STATUS_TEXT, awayDateLabel, formatLeaveDate } from "./format";
 import { useCancelLeave, useLeaveBalance, useLeaveLedger, useMyLeaves, useTeamLeaves, usePreviewLeaveCancellation, type LeaveCancellationPreview } from "./queries";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { LeaveLearningJourney } from "./LeaveLearningJourney";
 
 const LEDGER_TYPE_TEXT: Record<string, string> = {
@@ -89,19 +90,22 @@ function PersonalLeaves() {
       <div className="page-header">
         <div>
           <h2>İzinlerim</h2>
-          <p>Bakiye, geçmiş talepler ve ekip yokluk takibini tek alanda görüntüleyin.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-          <i aria-hidden="true" className="fa-solid fa-plus" /> İzin Talebi Oluştur
-        </button>
+        <div className="header-actions">
+          <GuidanceDrawer title="İzin rehberi">
+            <section className="ez-leave-overview" aria-label="İzin bakiyesi rehberi">
+              <strong>Bu ekranı nasıl okuyacağım?</strong>
+              <p>Kalan bakiye izin defterindeki hak ediş, kullanım ve iade hareketlerinden gelir. Bekleyen taleplerin rezervasyonu ayrıca gösterilir; yeni bir talebin uygunluğu sunucuda yeniden kontrol edilir.</p>
+              <p>Örneğin onaylı yıllık izni yanlış tarihle oluşturduysanız talebi iptal edip doğru tarihlerle yeni talep açın. İptal eski kaydı silmez; bakiyeden düşen kullanım için deftere iade hareketi eklenir.</p>
+            </section>
+            <LeaveLearningJourney />
+          </GuidanceDrawer>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+            <i aria-hidden="true" className="fa-solid fa-plus" /> İzin Talebi Oluştur
+          </button>
+        </div>
       </div>
 
-      <section className="ez-leave-overview" aria-label="İzin bakiyesi rehberi">
-        <strong>Bu ekranı nasıl okuyacağım?</strong>
-        <p>Kalan bakiye izin defterindeki hak ediş, kullanım ve iade hareketlerinden gelir. Bekleyen taleplerin rezervasyonu ayrıca gösterilir; yeni bir talebin uygunluğu sunucuda yeniden kontrol edilir.</p>
-        <p>Örneğin onaylı yıllık izni yanlış tarihle oluşturduysanız talebi iptal edip doğru tarihlerle yeni talep açın. İptal eski kaydı silmez; bakiyeden düşen kullanım için deftere iade hareketi eklenir.</p>
-      </section>
-      <LeaveLearningJourney />
       <div className="balance-grid">
         <div className="bal-card primary">
           <div className="bal-header">
@@ -201,7 +205,7 @@ function PersonalLeaves() {
           {cancelTarget && (
             <section className="ez-leave-cancel-review ez-workbench" role="region" aria-labelledby="leave-cancel-review-title">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="leave" step="request-lifecycle" value={cancelSource}
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="leave" step="request-lifecycle" value={cancelSource}
                 onChange={id => { setCancelSource(id); setCancelPreview(null); }} disabled={cancelLeave.isPending || previewCancellation.isPending}
                 label="İptalde kullandığım rehber sürümü" /></div>
           <div className="ez-workbench-main">

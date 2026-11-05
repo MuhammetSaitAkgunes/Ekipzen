@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useToast } from "../../layout/ToastProvider";
@@ -65,10 +66,24 @@ export function AttendancePage() {
       <div className="page-header">
         <div>
           <h2>Mesai & Puantaj Takibi</h2>
-          <GuidanceSourceLink processKey="attendance" />
-          <p>Giriş-çıkış saatleri, vardiya durumu ve aylık puantaj kontrolü.</p>
         </div>
         <div className="header-actions">
+          <GuidanceDrawer title="Puantaj rehberi">
+            <GuidanceSourceLink processKey="attendance" />
+            <GuidanceStepLessons process="attendance" />
+
+            <section className="ez-panel ez-attendance-guide" aria-labelledby="attendance-guide-title">
+              <span className="ez-overline">PUANTAJ İŞ AKIŞI</span>
+              <h3 id="attendance-guide-title">Bir kaydı nasıl kontrol ederim?</h3>
+              <ol>
+                <li>Ayı ve çalışanı seçip Aylık Puantaj satırlarını gerçek giriş-çıkış kaydıyla karşılaştırın. Canlı İzleme yalnız o günün görünümüdür.</li>
+                <li>Eksik günü manuel girin; yanlış saati mevcut satırdan düzeltin. Aynı çalışan için aynı güne ikinci kayıt açılamaz.</li>
+                <li>Kaydettikten sonra süre ve fazla mesai sonucunu yeniden okuyun. Bu uygulama hesabıdır; izin veya yasal fazla çalışma kararı yerine geçmez.</li>
+                <li>Bordro dönemi önceden açıldıysa, ilgili bordro girdisini ayrıca kontrol edin.</li>
+              </ol>
+              <button className="btn btn-ghost" onClick={event => { event.currentTarget.closest("dialog")?.close(); setActiveTab("timesheet-view"); }}>Aylık puantajı aç</button>
+            </section>
+          </GuidanceDrawer>
           <div className="date-picker-wrapper">
             <button className="btn-icon" aria-label="Önceki ay" title="Önceki ay" onClick={() => changeMonth(-1)}>
               <i aria-hidden="true" className="fa-solid fa-chevron-left" />
@@ -92,20 +107,6 @@ export function AttendancePage() {
         <div className="stat-box"><span className="sb-label">Geç Kalma</span><strong className="sb-val text-red">{lateCount} <small>kişi</small></strong></div>
         <div className="stat-box"><span className="sb-label">Devamsızlık</span><strong className="sb-val">{absentDays} <small>gün</small></strong></div>
       </div>
-      <GuidanceStepLessons process="attendance" />
-
-      <section className="ez-panel ez-attendance-guide" aria-labelledby="attendance-guide-title">
-        <span className="ez-overline">PUANTAJ İŞ AKIŞI</span>
-        <h3 id="attendance-guide-title">Bir kaydı nasıl kontrol ederim?</h3>
-        <ol>
-          <li>Ayı ve çalışanı seçip Aylık Puantaj satırlarını gerçek giriş-çıkış kaydıyla karşılaştırın. Canlı İzleme yalnız o günün görünümüdür.</li>
-          <li>Eksik günü manuel girin; yanlış saati mevcut satırdan düzeltin. Aynı çalışan için aynı güne ikinci kayıt açılamaz.</li>
-          <li>Kaydettikten sonra süre ve fazla mesai sonucunu yeniden okuyun. Bu uygulama hesabıdır; izin veya yasal fazla çalışma kararı yerine geçmez.</li>
-          <li>Bordro dönemi önceden açıldıysa, ilgili bordro girdisini ayrıca kontrol edin.</li>
-        </ol>
-        <button className="btn btn-ghost" onClick={() => setActiveTab("timesheet-view")}>Aylık puantajı aç</button>
-      </section>
-
       <div className="att-content surface">
         <div className="att-tabs">
           <button className={`att-tab ${activeTab === "live-view" ? "active" : ""}`} onClick={() => setActiveTab("live-view")}>

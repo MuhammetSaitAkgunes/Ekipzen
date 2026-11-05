@@ -1,4 +1,4 @@
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { FinancialExternalReconciliationPanel } from "./FinancialExternalReconciliationPanel";
 import { useState } from "react";
 import { ApiError, apiDownload, apiFetch } from "../../api/client";
@@ -206,7 +206,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
   return (
     <div className="payroll-detail-panel ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!isApproved && <GuidanceOperationSource process="payroll" step="row-review" value={editGuidanceVersion} onChange={setEditGuidanceVersion} disabled={updateRow.isPending} />}</div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!isApproved && <GuidanceOperationDrawer process="payroll" step="row-review" value={editGuidanceVersion} onChange={setEditGuidanceVersion} disabled={updateRow.isPending} />}</div>
           <div className="ez-workbench-main">
 
 
@@ -386,7 +386,7 @@ export function PayrollDetailPanel({ periodId, periodName, row, onClose }: {
               {error && <p className="form-error" role="alert">{error}</p>}
               <div className="ez-payroll-review ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setReviewConfirmed(false); }} disabled={approveRow.isPending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="payroll" step="approval" value={guidanceVersion} onChange={(id) => { setGuidanceVersion(id); setReviewConfirmed(false); }} disabled={approveRow.isPending} /></div>
           <div className="ez-workbench-main">
 
                 <h4>{reviewRow.name} · {periodName}</h4>

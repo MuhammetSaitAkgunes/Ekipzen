@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
@@ -97,10 +97,11 @@ test("manager salt-okur: Yeni Belge ve durum select'i yok", async () => {
   await screen.findAllByText("İş Sözleşmesi");
   expect(screen.queryByRole("button", { name: /Yeni Belge/ })).not.toBeInTheDocument();
   expect(screen.queryAllByLabelText("Belge durumu")).toHaveLength(0);
-  await userEvent.click(screen.getByRole("button", { name: "İş Sözleşmesi belgesinin rehberini aç" }));
+  await userEvent.click(screen.getByRole("button", { name: "İş Sözleşmesi belgesini incele" }));
   const guideTitle = screen.getByRole("heading", { name: "Ahmet Yılmaz · İş Sözleşmesi" });
   expect(guideTitle).toBeInTheDocument();
   expect(guideTitle.closest("section")).toHaveFocus();
+  await userEvent.click(within(guideTitle.closest("section")!).getByRole("button", { name: "Rehber" }));
   expect(screen.getByText(/İK yöneticisine bildirin/)).toBeInTheDocument();
 });
 
@@ -114,6 +115,9 @@ test("günlük iş bağlantısı ilgili belgeyi tabloda öne çıkarır", async 
   expect(screen.getAllByRole("row")[1]).toHaveAttribute("id", "document-2");
   expect(screen.getAllByRole("row")[1]).toHaveClass("ez-guidance-target");
   expect(screen.getByRole("heading", { name: "Ece Arslan · SGK Girişi" })).toBeInTheDocument();
+  const record = screen.getByRole("heading", { name: "Ece Arslan · SGK Girişi" }).closest("section")!;
+  expect(within(record).queryByText(/durum değiştirmek dosya yüklemez/)).not.toBeInTheDocument();
+  await userEvent.click(within(record).getByRole("button", { name: "Rehber" }));
   expect(screen.getByText(/durum değiştirmek dosya yüklemez/)).toBeInTheDocument();
 });
 

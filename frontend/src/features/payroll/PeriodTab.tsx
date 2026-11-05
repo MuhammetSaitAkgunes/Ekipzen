@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { PageError, PageLoading } from "../shared/PageState";
@@ -89,97 +89,10 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
         </div>
       </div>
 
-      <section className="card payroll-flow-card ez-workbench">
-          <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!periodLocked && <GuidanceOperationSource process="payroll" step="row-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={runCheck.isPending} />}</div>
-          <div className="ez-workbench-main">
-
-
-        <div className="card-header-clean">
-          <div>
-            <h4>Bordro Akışı</h4>
-            <p className="text-muted">Dönem kontrolü ve onayı için adım adım operasyon takibi.</p>
-          </div>
-        </div>
-        <div className="payroll-flow">
-          {steps.map((step) => (
-            <button
-              key={step.id}
-              className={`payroll-step ${step.status} ${selectedStep === step.id ? "selected" : ""}`}
-              onClick={() => setSelectedStep(step.id)}
-            >
-              <span>{step.label}</span>
-              <strong>{step.status === "done" ? "Tamam" : step.status === "active" ? "Aktif" : "Bekliyor"}</strong>
-              <small>{step.meta}</small>
-            </button>
-          ))}
-        </div>
-      </div></div></section>
-
-      <div className="payroll-main-grid">
-        <section className="card payroll-control-card" data-active-step={selectedStep ?? undefined}>
-          <div className="card-header-clean">
-            <div>
-              <h4>Kontrol Merkezi</h4>
-              <p className="text-muted">Eksik veri, matrah ve onay uyarıları.</p>
-            </div>
-            {!periodLocked && <button className="btn btn-secondary btn-sm" onClick={handleCheck} disabled={runCheck.isPending}>
-              <i aria-hidden="true" className="fa-solid fa-check-double" /> {detail.status === "control" ? "Kontrolü yeniden çalıştır" : "Kontrolü çalıştır"}
-            </button>}
-          </div>
-          <div className="ez-payroll-control-guide">
-            <p><strong>Ne yapıyoruz?</strong> {rows.length} bordro satırının {rows.length - approvedCount} tanesi henüz onaylı değil. Kontrol, onaylanmamış satırların puantaj ve kümülatif matrahını sunucuda yeniler; satır durumlarını yeniden hesaplar.</p>
-            <p><strong>Neden?</strong> Eksik girdileri onaydan önce bulmak için. Dönemin Kontrol durumuna geçmesi, bütün uyarıların giderildiği veya bordronun onaylandığı anlamına gelmez.</p>
-            <p>{periodLocked ? "Bu dönem onaylı veya kapalı olduğu için kontrol yeniden çalıştırılamaz." : "Uyarı varsa ilgili satırın detayına dönün, kaydı düzeltin ve kontrolü yeniden çalıştırın. Bu adım ödeme veya dış bildirim yapmaz."}</p>
-          </div>
-          <div className="payroll-control-grid">
-            {controls.map((control) => {
-              const meta = CONTROL_META[control.label ?? ""] ?? { detail: "", icon: "fa-circle-info" };
-              return (
-                <div key={control.label} className={`payroll-control ${control.level ?? ""}`}>
-                  <div className="payroll-control-icon"><i aria-hidden="true" className={`fa-solid ${meta.icon}`} /></div>
-                  <div>
-                    <span>{control.label}</span>
-                    <strong>{control.value}</strong>
-                    <p>{meta.detail}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="card payroll-parameters">
-          <div className="card-header-clean">
-            <div>
-              <h4>Bordro Parametreleri ({parameters.effectiveFrom} tarihinden geçerli)</h4>
-              <p className="text-muted">Bu dönemin hesabında kilitlenen onaylı Türkiye 4/a mevzuat seti.</p>
-            </div>
-            <span className="status-pill approved">Onaylı v{parameters.version}</span>
-          </div>
-          <div className="parameter-grid">
-            <div><span>Fazla çalışma çarpanı</span><strong>{formatPayrollNumber(parameters.overtimeMultiplier)}</strong></div>
-            <div><span>Aylık çalışma saati</span><strong>{formatPayrollNumber(parameters.monthlyWorkingHours)}</strong></div>
-            <div><span>Brüt asgari ücret / SGK alt sınır</span><strong>{formatPayrollMoney(parameters.minWageGross)}</strong></div>
-            <div><span>SGK PEK üst sınır</span><strong>{formatPayrollMoney(parameters.sgkBaseMax)}</strong></div>
-            <div><span>SGK işçi / işsizlik</span><strong>%{formatPayrollNumber(parameters.sgkEmployeeRate)} + %{formatPayrollNumber(parameters.unemploymentEmployeeRate)}</strong></div>
-            <div><span>Teşviksiz SGK işveren / işsizlik</span><strong>%{formatPayrollNumber(parameters.sgkEmployerRate)} + %{formatPayrollNumber(parameters.unemploymentEmployerRate)}</strong></div>
-            <div><span>Nakit yemek SGK / GV günlük istisna</span><strong>{formatPayrollMoney(parameters.mealSgkDailyExemption)} / {formatPayrollMoney(parameters.mealIncomeTaxDailyExemption)}</strong></div>
-            <div><span>Diğer sektör / imalat indirimi</span><strong>{formatPayrollNumber(parameters.otherSectorEmployerDiscountPoints)} / {formatPayrollNumber(parameters.manufacturingEmployerDiscountPoints)} puan</strong></div>
-            <div><span>Damga vergisi</span><strong>%{formatPayrollNumber(parameters.stampTaxRate)}</strong></div>
-          </div>
-          <div className="payroll-note">
-            <i aria-hidden="true" className="fa-solid fa-circle-info" />
-            <span>{parameters.reviewNotes} Kaynak: {parameters.sourceReference}</span>
-          </div>
-        </div>
-      </div>
-
       <section className="table-container payroll-table-card">
         <div className="payroll-table-header">
           <div>
             <h4>Çalışan Bordro Tablosu</h4>
-            <p className="text-muted">Satıra tıklayarak bordro pusulası ve hesap detayını açın.</p>
           </div>
           <div className="toolbar-actions">
             <label className="sr-only" htmlFor="payroll-dept-filter">Departman filtresi</label>
@@ -224,6 +137,89 @@ export function PeriodTab({ periodId }: { periodId: number | null }) {
           </tbody>
         </table>
       </section>
+
+      <section className="card payroll-flow-card ez-workbench">
+          <div className="ez-workbench-layout">
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}>{!periodLocked && <GuidanceOperationDrawer process="payroll" step="row-review" value={guidanceVersion} onChange={setGuidanceVersion} disabled={runCheck.isPending} />}</div>
+          <div className="ez-workbench-main">
+
+
+        <div className="card-header-clean">
+          <div>
+            <h4>Bordro Akışı</h4>
+          </div>
+        </div>
+        <div className="payroll-flow">
+          {steps.map((step) => (
+            <button
+              key={step.id}
+              className={`payroll-step ${step.status} ${selectedStep === step.id ? "selected" : ""}`}
+              onClick={() => setSelectedStep(step.id)}
+            >
+              <span>{step.label}</span>
+              <strong>{step.status === "done" ? "Tamam" : step.status === "active" ? "Aktif" : "Bekliyor"}</strong>
+              <small>{step.meta}</small>
+            </button>
+          ))}
+        </div>
+      </div></div></section>
+
+      <div className="payroll-main-grid">
+        <section className="card payroll-control-card" data-active-step={selectedStep ?? undefined}>
+          <div className="card-header-clean">
+            <div>
+              <h4>Kontrol Merkezi</h4>
+              <p className="text-muted">Eksik veri, matrah ve onay uyarıları.</p>
+            </div>
+            {!periodLocked && <button className="btn btn-secondary btn-sm" onClick={handleCheck} disabled={runCheck.isPending}>
+              <i aria-hidden="true" className="fa-solid fa-check-double" /> {detail.status === "control" ? "Kontrolü yeniden çalıştır" : "Kontrolü çalıştır"}
+            </button>}
+          </div>
+          <p className="text-muted">{periodLocked ? "Dönem kilitli; kontrol yeniden çalıştırılamaz." : "Kontrol, onaylanmamış satırların puantaj ve matrahını yeniler."}</p>
+          <div className="payroll-control-grid">
+            {controls.map((control) => {
+              const meta = CONTROL_META[control.label ?? ""] ?? { detail: "", icon: "fa-circle-info" };
+              return (
+                <div key={control.label} className={`payroll-control ${control.level ?? ""}`}>
+                  <div className="payroll-control-icon"><i aria-hidden="true" className={`fa-solid ${meta.icon}`} /></div>
+                  <div>
+                    <span>{control.label}</span>
+                    <strong>{control.value}</strong>
+                    <p>{meta.detail}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+      </div>
+
+        <details className="card payroll-parameters">
+          <summary>Hesaplama parametreleri</summary>
+          <div className="card-header-clean">
+            <div>
+              <h4>Bordro Parametreleri ({parameters.effectiveFrom} tarihinden geçerli)</h4>
+              <p className="text-muted">Bu dönemin hesabında kilitlenen onaylı Türkiye 4/a mevzuat seti.</p>
+            </div>
+            <span className="status-pill approved">Onaylı v{parameters.version}</span>
+          </div>
+          <div className="parameter-grid">
+            <div><span>Fazla çalışma çarpanı</span><strong>{formatPayrollNumber(parameters.overtimeMultiplier)}</strong></div>
+            <div><span>Aylık çalışma saati</span><strong>{formatPayrollNumber(parameters.monthlyWorkingHours)}</strong></div>
+            <div><span>Brüt asgari ücret / SGK alt sınır</span><strong>{formatPayrollMoney(parameters.minWageGross)}</strong></div>
+            <div><span>SGK PEK üst sınır</span><strong>{formatPayrollMoney(parameters.sgkBaseMax)}</strong></div>
+            <div><span>SGK işçi / işsizlik</span><strong>%{formatPayrollNumber(parameters.sgkEmployeeRate)} + %{formatPayrollNumber(parameters.unemploymentEmployeeRate)}</strong></div>
+            <div><span>Teşviksiz SGK işveren / işsizlik</span><strong>%{formatPayrollNumber(parameters.sgkEmployerRate)} + %{formatPayrollNumber(parameters.unemploymentEmployerRate)}</strong></div>
+            <div><span>Nakit yemek SGK / GV günlük istisna</span><strong>{formatPayrollMoney(parameters.mealSgkDailyExemption)} / {formatPayrollMoney(parameters.mealIncomeTaxDailyExemption)}</strong></div>
+            <div><span>Diğer sektör / imalat indirimi</span><strong>{formatPayrollNumber(parameters.otherSectorEmployerDiscountPoints)} / {formatPayrollNumber(parameters.manufacturingEmployerDiscountPoints)} puan</strong></div>
+            <div><span>Damga vergisi</span><strong>%{formatPayrollNumber(parameters.stampTaxRate)}</strong></div>
+          </div>
+          <div className="payroll-note">
+            <i aria-hidden="true" className="fa-solid fa-circle-info" />
+            <span>{parameters.reviewNotes} Kaynak: {parameters.sourceReference}</span>
+          </div>
+        </details>
 
       <div id="payroll-detail-overlay" className={`payroll-detail-overlay ${detailRow ? "active" : ""}`}>
         {detailRow && (

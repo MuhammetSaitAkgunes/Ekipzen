@@ -32,9 +32,13 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clear(); });
 const render = (view: React.ReactNode) => renderPage(<AuthProvider><ToastProvider>{view}</ToastProvider></AuthProvider>);
 async function chooseSource(label = "Gerçek işlemde kullandığım rehber sürümü") {
+  const region = screen.queryByRole("region", { name: "Talebi iptal etmeden önce" });
+  const scope = region ? within(region) : screen;
+  await userEvent.click(scope.getByRole("button", { name: /^Rehber/ }));
   await userEvent.click(screen.getByText(label, { exact: true }));
   const details = screen.getByText(label, { exact: true }).closest("aside")!;
   await userEvent.click(await within(details).findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
+  await userEvent.click(screen.getByRole("button", { name: "Kapat" }));
 }
 async function prepareRequest() {
   await userEvent.click(await screen.findByRole("radio", { name: /Yıllık İzin/ }));
@@ -49,7 +53,7 @@ test("çalışan kendi dersini ve tokeni talebe bağlar; kaynak seçimi yapılm�
   render(<LeaveRequestModal onClose={() => {}} />); await prepareRequest();
   await chooseSource();
   expect(screen.queryByRole("button", { name: "Talebi onayla ve gönder" })).not.toBeInTheDocument();
-  expect(await screen.findByRole("region", { name: "Seçilen adımın açıklaması" })).toHaveTextContent("Defterde 14 gün");
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
   expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url) === "/api/guidance/help-preferences" || String(url) === "/api/guidance/operations")).toBe(false);
   await userEvent.click(screen.getByRole("button", { name: "Bilgileri kontrol et" }));
   await screen.findByRole("region", { name: "Göndermeden önce kontrol edin" });
@@ -66,7 +70,7 @@ test("kaynak veya kayıt çakışmasında talep taslağı ve ders korunur; yeni 
   await userEvent.click(screen.getByRole("button", { name: "Talebi onayla ve gönder" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("güncel değil");
   expect(screen.getByLabelText("Başlangıç Tarihi")).toHaveValue("2026-10-05");
-  expect(screen.getByText(/Gerçek işlemde kullandığım rehber sürümü · seçildi/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Talebi onayla ve gönder" })).not.toBeInTheDocument();
   expect(writes("/api/leaves")).toHaveLength(1);
 });
@@ -98,12 +102,13 @@ test("iptal çakışması seçilmiş dersi korur ve eski önizlemeyle yeniden ya
   await userEvent.click(screen.getByRole("button", { name: "Talebi iptal etmeyi onayla" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("değişti");
   expect(screen.getByRole("button", { name: "Talebi iptal etmeyi onayla" })).toBeDisabled();
-  expect(screen.getByText("İptalde kullandığım rehber sürümü · seçildi")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Rehber · seçildi" })).toBeInTheDocument();
   expect(writes("/api/leaves/9/cancel")).toHaveLength(1);
 });
 
 test("kişisel geçmiş gerçek kaynak sürümünü gösterir; okumak yönetim API'sine erişmez veya işlem üretmez", async () => {
   render(<LeavesPage />);
+  await userEvent.click(await screen.findByRole("button", { name: "Rehber" }));
   await userEvent.click(await screen.findByText("Kendi talep ve iptal işlem kanıtlarım"));
   expect(await screen.findByText("Talep oluşturuldu")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Kendi izin türünü, talebini ve iptalini izleme · Sürüm 1/ })).toHaveAttribute("href", "/app/guidance/catalog?version=71");

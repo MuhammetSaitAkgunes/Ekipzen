@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GuidanceDrawer } from "../guidance/GuidanceDrawer";
 import { GuidanceSourceLink } from "../guidance/GuidanceSourceLink";
 import { GuidanceStepLessons } from "../guidance/GuidanceStepLessons";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -65,14 +66,13 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
       <div className="page-header">
         <div>
           <h2>Bordro</h2>
-          <GuidanceSourceLink processKey="payroll" />
-          <p>
-            {selected
-              ? `${selected.name} dönemi için hesaplama, kontrol, onay ve tekil bordro senaryolarını yönetin.`
-              : "Bordro dönemi oluşturarak hesaplama, kontrol ve onay akışını başlatın."}
-          </p>
+          <p>{selected?.name ?? "Henüz bordro dönemi yok"}</p>
         </div>
         <div className="header-actions">
+          <GuidanceDrawer title="Bordro rehberi">
+            <GuidanceSourceLink processKey="payroll" />
+            <GuidanceStepLessons process="payroll" />
+          </GuidanceDrawer>
           {tab === "period" && (
             <>
               <label className="sr-only" htmlFor="payroll-period-select">Bordro dönemi</label>
@@ -102,7 +102,6 @@ function PayrollAdminShell({ tab }: { tab: "period" | "calculator" | "settings" 
         </div>
       </div>
 
-      <GuidanceStepLessons process="payroll" />
       <div className="payroll-tabs">
         {TABS.map((item) => (
           <button

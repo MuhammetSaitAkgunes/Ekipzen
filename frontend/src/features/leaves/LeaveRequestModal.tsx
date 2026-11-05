@@ -7,7 +7,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../layout/ToastProvider";
 import { useCreateLeave, useLeaveBalance, useLeaveTypes, usePreviewLeave, useSubstituteOptions, type LeaveTypeDto } from "./queries";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { LeaveTypeConditions } from "./LeaveTypeConditions";
 
 const typeCardMeta = (type: LeaveTypeDto, remaining: number): { icon: string; tone: string; small: string } => {
@@ -173,7 +173,7 @@ export function LeaveRequestModal({ onClose }: { onClose: () => void }) {
 
         <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="leave" step="request-lifecycle" value={source}
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="leave" step="request-lifecycle" value={source}
             onChange={id => { formRevision.current++; setSource(id); setReview(null); }} disabled={createLeave.isPending || previewLeave.isPending} /></div>
           <div className="ez-workbench-main">
 

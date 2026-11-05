@@ -189,11 +189,22 @@
 .ez-home-secondary .ez-metrics { margin: 0; }
 .ez-guidance-drawer { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(580px, 100%); max-width: 100%; height: 100dvh; max-height: 100dvh; padding: 24px; border: 0; border-left: 1px solid var(--line); color: var(--text); background: var(--surface); overflow-y: auto; box-shadow: var(--shadow-md); }
 .ez-guidance-drawer::backdrop { background: rgb(16 36 42 / .4); }
+.ez-workbench > .ez-workbench-layout:has(> .ez-workbench-guide > .ez-operation-help) { display: flex; flex-direction: column; gap: 12px; }
+.ez-workbench-layout > .ez-workbench-guide:has(> .ez-operation-help) { position: static; max-height: none; overflow: visible; align-self: flex-end; }
+.ez-operation-help .ez-context-guide { border: 0; padding: 0; }
+.ez-workspace .ez-guidance-drawer .ez-panel { padding: 16px; }
+.ez-workspace .payroll-parameters { margin-block: 20px; }
+.ez-workspace .payroll-parameters > summary { color: var(--ink); }
+.ez-workspace .compliance-layout .table-container { position: relative; }
+.ez-workspace #payroll-screen .header-actions .small-select { width: auto; min-width: 160px; }
+.ez-workspace .payroll-table-card { margin-bottom: 20px; }
+.ez-workspace .payroll-main-grid { grid-template-columns: minmax(0, 1fr); }
 .ez-drawer-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
 .ez-drawer-heading h2 { margin: 0; }
 .ez-workspace[data-app-theme="dark"] .ez-home-shortcuts a:nth-child(2) { background: #433d2f; }
 .ez-workspace[data-app-theme="dark"] .ez-home-shortcuts a:nth-child(3) { background: #2c3848; }
 @media (max-width: 600px) {
+  .ez-workspace :is(.detail-kpi-grid, .stats-stripe) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .ez-home-focused .ez-home-heading { flex-direction: row; align-items: center; }
   .ez-home-focused .ez-pending-panel { padding-inline: 16px; }
   .ez-pending-row { flex-wrap: wrap; gap: 10px; }
