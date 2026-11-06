@@ -23,6 +23,24 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+test("arama düğmesi sorguyu koruyarak kapanıp açılır ve klavyeyle kayıt seçilir", async () => {
+  renderPage(<AuthProvider><GlobalSearch /></AuthProvider>);
+  await userEvent.click(screen.getByRole("button", { name: "Genel aramayı aç" }));
+  const input = screen.getByRole("combobox");
+  expect(input).toHaveFocus();
+  await userEvent.type(input, "ahmet");
+  await screen.findByRole("option", { name: /Ahmet Yılmaz/ });
+  expect(input).toHaveAttribute("aria-activedescendant", "global-search-option-0");
+  await userEvent.click(screen.getByRole("button", { name: "Genel aramayı kapat" }));
+  expect(input).toHaveAttribute("aria-expanded", "false");
+  await userEvent.click(screen.getByRole("button", { name: "Genel aramayı aç" }));
+  expect(input).toHaveValue("ahmet");
+  expect(input).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  expect(input).toHaveValue("");
+  expect(screen.getByRole("button", { name: "Genel aramayı aç" })).toHaveAttribute("aria-expanded", "false");
+});
+
 test("API sonuçları debounce sonrası listelenir", async () => {
   renderPage(
     <AuthProvider>
@@ -58,5 +76,5 @@ test("personel sonucu profil rotasına, aksiyon sonucu iş kutusuna gider", asyn
   expect(screen.getByTestId("location")).toHaveTextContent("/app/personnel/3");
   await userEvent.type(search, "sgk");
   await userEvent.click(await screen.findByRole("option", { name: /SGK matrah kontrolü/ }));
-  expect(screen.getByTestId("location")).toHaveTextContent("/app/inbox?tab=actions");
+  expect(screen.getByTestId("location")).toHaveTextContent("/app/inbox?tab=actions&actionId=1");
 });

@@ -52,7 +52,7 @@ test("özet risk halkası ve açık iş dağılımıyla hızlı durum verir", as
   expect(screen.getByRole("img", { name: "1 yüksek, 0 orta, 1 düşük öncelikli açık iş" })).toBeInTheDocument();
   const nav = screen.getByRole("navigation", { name: "Risk Merkezi görünümleri" });
   expect(within(nav).getByRole("link", { name: "Özet" })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: /Tükenmişlik sinyali işini İş Kutusunda aç/ })).toHaveAttribute("href", "/app/inbox?tab=actions");
+  expect(screen.getByRole("link", { name: /Tükenmişlik sinyali işini İş Kutusunda aç/ })).toHaveAttribute("href", "/app/inbox?tab=actions&actionId=1");
   expect(screen.queryByText("Kapanan iş")).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Departman karşılaştırması" })).not.toBeInTheDocument();
 });

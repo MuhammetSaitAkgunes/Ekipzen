@@ -60,6 +60,7 @@ test("öncelik filtresi client-side uygulanır; ek ağ isteği yapılmaz", async
   ).length;
 
   // Açık sekmedeki tek kart "high"; "medium" seçilince client-side gizlenir.
+  await userEvent.click(screen.getByText("Filtreler"));
   await userEvent.selectOptions(screen.getByLabelText("Öncelik filtresi"), "medium");
   expect(screen.queryByText("SGK matrah kontrolü")).not.toBeInTheDocument();
   expect(screen.getByText("Bu filtrede aksiyon yok.")).toBeInTheDocument();
@@ -68,6 +69,8 @@ test("öncelik filtresi client-side uygulanır; ek ağ isteği yapılmaz", async
     ([u]) => String(u).startsWith("/api/actions") && !String(u).includes("/audit"),
   ).length;
   expect(actionsCallsAfter).toBe(actionsCallsBefore);
+  await userEvent.click(screen.getByRole("button", { name: "Filtreleri temizle" }));
+  expect(screen.getByText("SGK matrah kontrolü")).toBeInTheDocument();
 });
 
 test("aksiyon listesi tek /api/actions isteğiyle çekilir (çift sorgu yok)", async () => {

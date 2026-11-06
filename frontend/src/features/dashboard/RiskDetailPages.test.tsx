@@ -23,7 +23,7 @@ afterEach(() => vi.unstubAllGlobals());
 test("ayrılma detayı KPI ve tablo satırını gösterir", async () => {
   renderPage(<AttritionDetailPage />);
   expect(await screen.findByText("Ayrılma Riski Detayı")).toBeInTheDocument();
-  expect(screen.getByText("Ahmet Yılmaz")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Ahmet Yılmaz" })).toHaveAttribute("href", "/app/personnel/1");
   expect(screen.getByText("Kritik Rol Riski").closest(".stat-box")).toHaveTextContent("1");
 });
 

@@ -18,7 +18,6 @@ export function EmployeeVoicePage() {
       <div className="page-header">
         <div>
           <h2>Çalışan Sesleri / Nabız Analitiği</h2>
-          <p>Departman bazlı ruh hali, bağlılık sinyali ve takip önerilerini tek görünümde izleyin.</p>
         </div>
         <BackToRisk />
       </div>
@@ -37,6 +36,7 @@ export function EmployeeVoicePage() {
               <tr><th>Departman</th><th>Ruh Hali</th><th>Nabız</th><th>eNPS</th><th>Katılım</th><th>Öne Çıkan Sinyal</th><th>Seviye</th></tr>
             </thead>
             <tbody>
+            {departments.length === 0 && <tr><td colSpan={7}>Bu kapsamda departman kaydı yok.</td></tr>}
               {departments.map((department) => (
                 <tr key={department.departmentId}>
                   <td><strong>{department.dept}</strong></td>

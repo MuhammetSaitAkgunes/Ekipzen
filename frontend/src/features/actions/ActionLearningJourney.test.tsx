@@ -1,3 +1,4 @@
+import { chooseOperationGuidance } from "../../test/chooseOperationGuidance";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -24,10 +25,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 const render = (node: React.ReactNode) => renderPage(<AuthProvider><ToastProvider>{node}</ToastProvider></AuthProvider>);
-const chooseSource = async () => {
-  await userEvent.click(screen.getByText("Gerçek işlemde kullandığım rehber sürümü"));
-  await userEvent.click(await screen.findByRole("button", { name: "Bu rehber sürümünü işlemime bağla" }));
-};
+const chooseSource = chooseOperationGuidance;
 
 test("yeni aksiyon gerçek kayıt gövdesine seçilen güncel ders sürümünü taşır", async () => {
   const closed = vi.fn(); render(<ActionModal onClose={closed} />);

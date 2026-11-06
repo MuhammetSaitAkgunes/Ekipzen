@@ -79,7 +79,7 @@ function Overview() {
               <div className="ez-risk-priority-legend" aria-hidden="true"><span><i className="high" />{count(high)} yüksek</span><span><i className="medium" />{count(medium)} orta</span><span><i className="low" />{count(low)} düşük</span></div>
               <div className="ez-risk-action-list">
                 {topPriorityActions(actions, 3).map((action) => (
-                  <Link className="ez-risk-action" key={action.id} to={appPath("/inbox?tab=actions")} aria-label={(action.title || "Aksiyon") + " işini İş Kutusunda aç"}>
+                  <Link className="ez-risk-action" key={action.id} to={appPath(action.id != null && action.id > 0 ? `/inbox?tab=actions&actionId=${action.id}` : "/inbox?tab=actions")} aria-label={(action.title || "Aksiyon") + " işini İş Kutusunda aç"}>
                     <i className={"ez-risk-action-dot " + (action.priority || "low")} aria-hidden="true" />
                     <span>{action.title}</span>
                     <small>{action.due || ""}</small>
@@ -197,7 +197,7 @@ export function RiskCenterPage() {
   const view = params.get("view") === "people" ? "people" : params.get("view") === "operations" ? "operations" : "overview";
   return (
     <div className="ez-risk-page">
-      <header className="ez-risk-header"><span className="ez-risk-eyebrow">ANALİZ</span><h1>Risk Merkezi</h1></header>
+      <header className="ez-risk-header"><h1>Risk Merkezi</h1></header>
       <nav className="ez-risk-nav" aria-label="Risk Merkezi görünümleri">
         <Link to={overviewPath} aria-current={view === "overview" ? "page" : undefined}>Özet</Link>
         <Link to={peoplePath} aria-current={view === "people" ? "page" : undefined}>İnsan ve ekip</Link>

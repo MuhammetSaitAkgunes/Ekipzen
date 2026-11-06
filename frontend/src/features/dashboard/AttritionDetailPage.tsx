@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { BackToRisk } from "./BackToRisk";
 import { getLevelText } from "./format";
@@ -16,7 +18,6 @@ export function AttritionDetailPage() {
       <div className="page-header">
         <div>
           <h2>Ayrılma Riski Detayı</h2>
-          <p>Riskli personelleri, sinyal nedenlerini ve önerilen takip aksiyonlarını görün.</p>
         </div>
         <BackToRisk />
       </div>
@@ -32,9 +33,10 @@ export function AttritionDetailPage() {
             <tr><th>Personel</th><th>Departman</th><th>Yönetici</th><th>Risk</th><th>Son Sinyal</th><th>Önerilen Aksiyon</th></tr>
           </thead>
           <tbody>
+            {employees.length === 0 && <tr><td colSpan={6}>Bu kapsamda çalışan kaydı yok.</td></tr>}
             {employees.map((employee) => (
               <tr key={employee.employeeId}>
-                <td><strong>{employee.name}</strong><small>{employee.title}</small></td>
+                <td>{employee.employeeId != null && employee.employeeId > 0 ? <Link className="ez-record-link" to={appPath(`/personnel/${employee.employeeId}`)}>{employee.name}</Link> : <strong>{employee.name}</strong>}<small>{employee.title}</small></td>
                 <td>{employee.dept}</td>
                 <td>{employee.manager}</td>
                 <td><span className={`risk-badge ${employee.attritionRisk ?? ""}`}>{getLevelText(employee.attritionRisk)}</span></td>

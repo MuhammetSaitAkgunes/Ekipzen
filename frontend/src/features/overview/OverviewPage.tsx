@@ -31,7 +31,6 @@ export function OverviewPage() {
       <div className="welcome-header">
         <div>
           <h2>Genel Durum</h2>
-          <p className="text-muted">Şirkette bugün ne oluyor? Operasyonel İK görünümünü hızlıca tarayın.</p>
         </div>
         <div className="date-widget">
           <i aria-hidden="true" className="fa-regular fa-calendar" />
@@ -81,7 +80,6 @@ export function OverviewPage() {
           <div className="card-header-clean">
             <div>
               <h4>Departman Dağılımı</h4>
-              <p className="text-muted">Aktif çalışan kırılımı</p>
             </div>
           </div>
           <DeptDistributionChart distribution={distribution} />
@@ -91,7 +89,6 @@ export function OverviewPage() {
           <div className="card-header-clean">
             <div>
               <h4>İşe Alım Hunisi</h4>
-              <p className="text-muted">Aday ilerleyişi</p>
             </div>
           </div>
           <RecruitmentFunnelChart funnel={data.recruitmentFunnel ?? {}} />

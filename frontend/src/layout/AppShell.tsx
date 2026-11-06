@@ -104,7 +104,6 @@ function AppShellFrame() {
             </div>;
           })}
         </nav>
-        <div className="ez-sidebar-footer"><span className="ez-presence" /><span>Ekibiniz için bir alan.</span></div>
       </aside>
       <header className="header">
         <button className="btn-icon shell-toggle" onClick={toggleNavigation} aria-controls="app-navigation" aria-expanded={compactViewport ? mobileOpen : !collapsed} aria-label="Menüyü aç veya daralt"><i className="fa-solid fa-bars" aria-hidden="true" /></button>

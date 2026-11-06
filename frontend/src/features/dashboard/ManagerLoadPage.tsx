@@ -15,7 +15,6 @@ export function ManagerLoadPage() {
       <div className="page-header">
         <div>
           <h2>Yönetici Yükü Detayı</h2>
-          <p>Yönetici bazlı ekip büyüklüğü, bekleyen onay, açık aksiyon ve ekip nabzını görün.</p>
         </div>
         <BackToRisk />
       </div>
@@ -31,6 +30,7 @@ export function ManagerLoadPage() {
             <tr><th>Yönetici</th><th>Ekip</th><th>Onay</th><th>Aksiyon</th><th>Fazla Mesai</th><th>Ekip Nabzı</th><th>Yük</th><th>Öneri</th></tr>
           </thead>
           <tbody>
+            {!data.managers?.length && <tr><td colSpan={8}>Bu kapsamda yönetici kaydı yok.</td></tr>}
             {(data.managers ?? []).map((manager) => (
               <tr key={manager.employeeId}>
                 <td><strong>{manager.name}</strong><small>{(manager.load ?? 0) > 70 ? "Kritik takip" : "Normal takip"}</small></td>

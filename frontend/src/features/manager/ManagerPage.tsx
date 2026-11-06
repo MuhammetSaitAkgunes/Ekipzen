@@ -85,6 +85,7 @@ export function ManagerPage() {
           <h3>Departman Bazlı Kullanım Raporu</h3>
           <span className="status-pill info">Demo</span>
         </div>
+        <div className="table-scroll" role="region" aria-label="Departman kullanım tablosu" tabIndex={0}>
         <table className="mini-table">
           <thead><tr><th>Departman</th><th>Toplam Personel</th><th>Kullanılan İzin</th><th>Kalan Hak</th><th>Doluluk</th></tr></thead>
           <tbody>
@@ -99,6 +100,7 @@ export function ManagerPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
   </div>;

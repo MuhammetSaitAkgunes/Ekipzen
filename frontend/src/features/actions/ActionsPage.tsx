@@ -114,10 +114,10 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div id="actions-screen">
+      {(!embedded || isAdmin) && (
       <div className="page-header">
         <div>
           {!embedded && <h2>Aksiyonlar</h2>}
-          <p>Açık işleri, sorumluları ve tamamlanan adımları takip edin.</p>
         </div>
         {isAdmin && (
           <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
@@ -125,33 +125,38 @@ export function ActionsPage({ embedded = false }: { embedded?: boolean }) {
           </button>
         )}
       </div>
+      )}
 
       <div className="actions-kpi-grid">
-        <div className="stat-box"><span className="sb-label">Bugün</span><strong className="sb-val">{kpis.today}</strong><small>“Bugün” etiketli kayıtlar</small></div>
-        <div className="stat-box"><span className="sb-label">Geciken</span><strong className="sb-val text-red">{kpis.overdue}</strong><small>“Gecikti” etiketli kayıtlar</small></div>
-        <div className="stat-box"><span className="sb-label">Yüksek Öncelik</span><strong className="sb-val text-orange">{kpis.high}</strong><small>Aktif takip</small></div>
-        <div className="stat-box"><span className="sb-label">Tamamlanan</span><strong className="sb-val">{kpis.done}</strong><small>Listedeki toplam</small></div>
+        <div className="stat-box"><span className="sb-label">Bugün etiketli</span><strong className="sb-val">{kpis.today}</strong></div>
+        <div className="stat-box"><span className="sb-label">Gecikti etiketli</span><strong className="sb-val text-red">{kpis.overdue}</strong></div>
+        <div className="stat-box"><span className="sb-label">Yüksek Öncelik</span><strong className="sb-val text-orange">{kpis.high}</strong></div>
+        <div className="stat-box"><span className="sb-label">Tamamlanan</span><strong className="sb-val">{kpis.done}</strong></div>
       </div>
 
-      <section className="card actions-filter-bar">
-        <label className="sr-only" htmlFor="actions-priority-filter">Öncelik filtresi</label>
-        <select id="actions-priority-filter" className="small-select" value={filters.priority} onChange={setFilter("priority")}>
-          <option value="">Öncelik: Tümü</option>
-          <option value="high">Yüksek</option>
-          <option value="medium">Orta</option>
-          <option value="low">Düşük</option>
-        </select>
-        <label className="sr-only" htmlFor="actions-source-filter">Kaynak filtresi</label>
-        <select id="actions-source-filter" className="small-select" value={filters.source} onChange={setFilter("source")}>
-          <option value="">Kaynak: Tümü</option>
-          {sources.map((source) => <option key={source} value={source}>{source}</option>)}
-        </select>
-        <label className="sr-only" htmlFor="actions-owner-filter">Sahip filtresi</label>
-        <select id="actions-owner-filter" className="small-select" value={filters.owner} onChange={setFilter("owner")}>
-          <option value="">Sahip: Tümü</option>
-          {owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
-        </select>
-      </section>
+      <details className="card actions-filter-bar">
+        <summary>Filtreler{Object.values(filters).some(Boolean) ? ` · ${Object.values(filters).filter(Boolean).length} etkin` : ""}</summary>
+        <div className="ez-action-filters">
+          {Object.values(filters).some(Boolean) && <button className="btn btn-secondary" onClick={() => setFilters({ priority: "", source: "", owner: "" })}>Filtreleri temizle</button>}
+          <label className="sr-only" htmlFor="actions-priority-filter">Öncelik filtresi</label>
+          <select id="actions-priority-filter" className="small-select" value={filters.priority} onChange={setFilter("priority")}>
+            <option value="">Öncelik: Tümü</option>
+            <option value="high">Yüksek</option>
+            <option value="medium">Orta</option>
+            <option value="low">Düşük</option>
+          </select>
+          <label className="sr-only" htmlFor="actions-source-filter">Kaynak filtresi</label>
+          <select id="actions-source-filter" className="small-select" value={filters.source} onChange={setFilter("source")}>
+            <option value="">Kaynak: Tümü</option>
+            {sources.map((source) => <option key={source} value={source}>{source}</option>)}
+          </select>
+          <label className="sr-only" htmlFor="actions-owner-filter">Sahip filtresi</label>
+          <select id="actions-owner-filter" className="small-select" value={filters.owner} onChange={setFilter("owner")}>
+            <option value="">Sahip: Tümü</option>
+            {owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+          </select>
+        </div>
+      </details>
 
       <div className="actions-tabs">
         {TABS.map(([key, label]) => (

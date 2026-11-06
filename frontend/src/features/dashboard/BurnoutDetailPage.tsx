@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { appPath } from "../../paths";
 import { PageError, PageLoading } from "../shared/PageState";
 import { BackToRisk } from "./BackToRisk";
 import { getLevelText } from "./format";
@@ -18,7 +20,6 @@ export function BurnoutDetailPage() {
       <div className="page-header">
         <div>
           <h2>Tükenmişlik Sinyali</h2>
-          <p>Fazla mesai, kullanılmayan izin, geç çıkış ve ekip yoğunluğu kırılımlarını izleyin.</p>
         </div>
         <BackToRisk />
       </div>
@@ -34,9 +35,10 @@ export function BurnoutDetailPage() {
             <tr><th>Personel</th><th>Departman</th><th>Fazla Mesai</th><th>Kullanılmayan İzin</th><th>Nabız</th><th>Seviye</th><th>Önerilen Aksiyon</th></tr>
           </thead>
           <tbody>
+            {employees.length === 0 && <tr><td colSpan={7}>Bu kapsamda çalışan kaydı yok.</td></tr>}
             {employees.map((employee) => (
               <tr key={employee.employeeId}>
-                <td><strong>{employee.name}</strong><small>{employee.title}</small></td>
+                <td>{employee.employeeId != null && employee.employeeId > 0 ? <Link className="ez-record-link" to={appPath(`/personnel/${employee.employeeId}`)}>{employee.name}</Link> : <strong>{employee.name}</strong>}<small>{employee.title}</small></td>
                 <td>{employee.dept}</td>
                 <td>{employee.overtime}%</td>
                 <td>{employee.unusedLeave}%</td>

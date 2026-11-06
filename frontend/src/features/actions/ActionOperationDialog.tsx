@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { actionStatusText, nextActionStatus } from "./format";
 import { readCurrentAction, useDeleteGlobalAction, useSetActionStatus, type GlobalActionDto } from "./queries";
 
@@ -39,7 +39,7 @@ export function ActionOperationDialog({ action, kind, onClose }: {
     <div className="modal-head"><h3>{kind === "delete" ? "Takip aksiyonunu sil" : "Aksiyon durumunu ilerlet"}</h3><button type="button" className="btn btn-ghost" onClick={onClose}>Vazgeç</button></div>
     <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="daily" step="task-action" value={guidanceVersion} onChange={id => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} /></div>
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="daily" step="task-action" value={guidanceVersion} onChange={id => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} /></div>
           <div className="ez-workbench-main">
 
       <ActionRecordSummary action={baseline} />

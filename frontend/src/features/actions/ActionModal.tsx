@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ApiError } from "../../api/client";
 import { useToast } from "../../layout/ToastProvider";
 import { useCreateGlobalAction, useUpdateGlobalAction, readCurrentAction, type GlobalActionDto } from "./queries";
-import { GuidanceOperationSource } from "../guidance/GuidanceOperationSource";
+import { GuidanceOperationDrawer } from "../guidance/GuidanceOperationDrawer";
 import { ActionRecordSummary } from "./ActionOperationDialog";
 
 export function ActionModal({ onClose, action }: { onClose: () => void; action?: GlobalActionDto }) {
@@ -66,7 +66,7 @@ export function ActionModal({ onClose, action }: { onClose: () => void; action?:
         </div>
         <div className="modal-body-scroll ez-workbench">
           <div className="ez-workbench-layout">
-<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationSource process="daily" step="task-action" value={guidanceVersion}
+<div className="ez-workbench-guide" role="group" aria-label="İşlem açıklamaları" tabIndex={0}><GuidanceOperationDrawer process="daily" step="task-action" value={guidanceVersion}
             onChange={id => { setGuidanceVersion(id); setConfirmed(false); }} disabled={pending} /></div>
           <div className="ez-workbench-main">
 
