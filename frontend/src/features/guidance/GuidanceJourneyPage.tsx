@@ -32,9 +32,9 @@ function JourneyEvidence({ journey }: { journey: PersonnelEntryJourney }) {
       <div><dt>Son denemesi doğru olan konu</dt><dd>{journey.correctChecks}/6</dd></div>
       {journey.lastVerifiedAtUtc && <div><dt>Son gerçek işlem</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
     </dl>
-    <p>Bu kanıt yalnız çalışan kartı oluşturmayı gösterir. Evrak, ücret paketi ve uygulama dışındaki adımların tamamlandığı ya da tüm işe giriş sürecinde bağımsız yeterlilik kazanıldığı anlamına gelmez.</p>
+    <details className="ez-evidence-explanation"><summary>Bu kayıt neyi gösterir?</summary><p>Bu kanıt yalnız çalışan kartı oluşturmayı gösterir. Evrak, ücret paketi ve uygulama dışındaki adımların tamamlandığı ya da tüm işe giriş sürecinde bağımsız yeterlilik kazanıldığı anlamına gelmez.</p>
     <p>Karar alıştırması sayıları gerçek işlem kanıtından ayrıdır; doğru yanıt tek başına bağımsız yeterlilik değildir.</p>
-    <p>Rehber konumu form taslağı değildir; kaydedilmemiş alanları yeniden girmeniz gerekebilir.</p>
+    <p>Rehber konumu form taslağı değildir; kaydedilmemiş alanları yeniden girmeniz gerekebilir.</p></details>
     <Link className="btn btn-primary" to={appPath("/personnel/new")}>Gerçek bir işe girişte rehberi aç</Link>
   </section>;
 }
@@ -49,8 +49,8 @@ function RecruitmentEvidence({ journey }: { journey: RecruitmentJourney }) {
       <div><dt>Son denemesi doğru olan konu</dt><dd>{journey.correctChecks}/2</dd></div>
       {journey.lastVerifiedAtUtc && <div><dt>Son gerçek karar</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
     </dl>
-    <p>Bu kayıt, “Yeni” aşamasındaki bir adayın durumunu gerçekten değiştirdiğinizi gösterir. Kararın doğruluğunu, adayla iletişimi veya işe alım sürecinde bağımsız yeterliliği kanıtlamaz.</p>
-    <p>Karar alıştırmaları gerçek aşama değişikliği kanıtından ayrıdır; doğru yanıt yeterlilik onayı değildir.</p>
+    <details className="ez-evidence-explanation"><summary>Bu kayıt neyi gösterir?</summary><p>Bu kayıt, “Yeni” aşamasındaki bir adayın durumunu gerçekten değiştirdiğinizi gösterir. Kararın doğruluğunu, adayla iletişimi veya işe alım sürecinde bağımsız yeterliliği kanıtlamaz.</p>
+    <p>Karar alıştırmaları gerçek aşama değişikliği kanıtından ayrıdır; doğru yanıt yeterlilik onayı değildir.</p></details>
     <Link className="btn btn-secondary" to={appPath("/recruitment")}>Aday havuzunu aç</Link>
   </section>;
 }
@@ -65,7 +65,7 @@ function LeaveApprovalEvidence({ journey }: { journey: LeaveApprovalJourney }) {
       <div><dt>Son denemesi doğru olan konu</dt><dd>{journey.correctChecks}/2</dd></div>
       {journey.lastVerifiedAtUtc && <div><dt>Son gerçek karar</dt><dd>{new Date(journey.lastVerifiedAtUtc).toLocaleDateString("tr-TR")}</dd></div>}
     </dl>
-    <p>Gerçek karar sayısı onay ve ret kayıtlarından gelir; kararın doğruluğunu veya bağımsız yeterliliği kanıtlamaz. Alıştırma yanıtları gerçek işlemden ayrı sayılır.</p>
+    <details className="ez-evidence-explanation"><summary>Bu kayıt neyi gösterir?</summary><p>Gerçek karar sayısı onay ve ret kayıtlarından gelir; kararın doğruluğunu veya bağımsız yeterliliği kanıtlamaz. Alıştırma yanıtları gerçek işlemden ayrı sayılır.</p></details>
     <Link className="btn btn-secondary" to={appPath("/inbox?tab=approvals")}>Bekleyen izinleri aç</Link>
   </section>;
 }
@@ -80,12 +80,12 @@ export function GuidanceJourneyPage() {
   const leaveQ = useLeaveApprovalJourney();
   return <div className="ez-journey-page">
     <div className="page-header">
-      <div><span className="ez-overline">İK REHBERİ</span><h1>İK Rehberi</h1>
-        <p>İşinizi adım adım öğrenin, nedenini anlayın ve gerçek kayıtta uygulayın.</p></div>
+      <div><h1>{history ? "Öğrenme geçmişim" : "İK Rehberi"}</h1>
+        {!history && <p>Süreçleri keşfedin, ihtiyaç duyduğunuz rehberi açın.</p>}</div>
     </div>
     <GuidanceNavigation history={history} />
-    {history ? <div className="ez-learning-history"><div className="ez-section-heading"><h2>Öğrenme geçmişim</h2><p>İnceleme, alıştırma ve gerçek işlem kayıtları ayrı izlenir. Bu kayıtlar bağımsız yeterlilik onayı değildir.</p></div>
-    {isHrAdmin && (query.isPending ? <PageLoading /> : query.isError
+    {history ? <div className="ez-learning-history"><div className="ez-section-heading"><p>İnceleme, alıştırma ve gerçek işlem kayıtları ayrı izlenir. Bu kayıtlar bağımsız yeterlilik onayı değildir.</p></div>
+    <div className="ez-evidence-grid">{isHrAdmin && (query.isPending ? <PageLoading /> : query.isError
       ? <PageError error={query.error} />
       : <JourneyEvidence journey={query.data} />)}
     {isHrAdmin && (recruitmentQ.isPending
@@ -98,15 +98,16 @@ export function GuidanceJourneyPage() {
       : leaveQ.isError
         ? <p role="alert">İzin onayı yolculuğu yüklenemedi. Daha sonra yeniden deneyin.</p>
         : <LeaveApprovalEvidence journey={leaveQ.data} />}
-    <GuidanceOperationJourney />
-    <GuidanceReadingJourney />
+    </div>
+    <details className="ez-history-group"><summary>Rehberle yapılan işlemler</summary><GuidanceOperationJourney /></details>
+    <details className="ez-history-group"><summary>İncelediğim içerikler</summary><GuidanceReadingJourney /></details>
     <GuidancePracticeJourney />
     <GuidanceCoverageJourney /></div> : <>
       <section className="ez-guide-start ez-panel">
-        <div><span className="ez-overline">BİR SONRAKİ ADIMINIZ</span><h2>{isHrAdmin ? query.data?.hasSavedPosition ? "Kaldığınız yerden devam edin" : "İK işlerinize sağlam bir başlangıç yapın" : "Günlük işlerinizi rehberle yönetin"}</h2>
-        <p>{isHrAdmin ? "İlgili işlem ekranında rehber size ne yapacağınızı, nedenini ve sonucu nasıl kontrol edeceğinizi gösterecek." : "Bekleyen işi açın; karar vermeden önce talebin koşullarını ve dayanağını kontrol edin."}</p>
+        <div><span className="ez-overline">BİR SONRAKİ ADIMINIZ</span><h2>{isHrAdmin ? query.data?.hasSavedPosition ? "Kaldığınız yerden devam edin" : "Şirketinizi hazırlayın" : "Bekleyen işlerinizden başlayın"}</h2>
+        <p>{isHrAdmin ? "Rehber, ilgili işlem ekranında sizi bekliyor." : "Talebi açın; karar öncesinde koşulları ve dayanağı inceleyin."}</p>
         <Link className="btn btn-primary" to={appPath(isHrAdmin ? query.data?.hasSavedPosition ? "/personnel/new" : "/settings" : "/inbox?tab=daily")}>{isHrAdmin ? query.data?.hasSavedPosition ? "Çalışan rehberine devam et" : "Şirket hazırlığıyla başla" : "Günlük işlerimi aç"} <span aria-hidden="true">→</span></Link>
-        </div><div className="ez-guide-start-path"><span>01 · Açıklamayı incele</span><span>02 · Gerçek kayıtta uygula</span><span>03 · Sonucu kontrol et</span></div>
+        </div>
       </section>
       {isHrAdmin && query.isError && <p role="alert">Kayıtlı konumunuz okunamadı. <button type="button" className="btn btn-secondary" onClick={() => void query.refetch()}>Konumu tekrar yükle</button></p>}
     <GuidanceProcessMap isHrAdmin={isHrAdmin} />

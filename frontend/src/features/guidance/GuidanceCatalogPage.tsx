@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { appPath } from "../../paths";
@@ -200,21 +200,35 @@ export function GuidanceCatalogPage() {
   const [creation, setCreation] = useState<{ body: GuidanceContentBody; contentKey?: string; processKey?: string; basedOnId?: number } | null>(null);
   const [message, setMessage] = useState("");
   const [reloadSequence, setReloadSequence] = useState(0);
+  const readingRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const entriesRef = useRef(new Map<number, HTMLButtonElement>());
+  const lastVersion = useRef<number | null>(null);
+  useEffect(() => {
+    if (manage || history) return;
+    if (versionId !== null && !version.isPending) {
+      readingRef.current?.focus();
+      lastVersion.current = versionId;
+    } else if (versionId === null && lastVersion.current !== null) {
+      (entriesRef.current.get(lastVersion.current) ?? searchRef.current)?.focus();
+      lastVersion.current = null;
+    }
+  }, [versionId, version.isPending, manage, history]);
   const editorial = useGuidanceEditorial(manage && access.data?.canManage === true, user?.id);
   const selectedEntry = selected;
   const visible = catalog.data?.filter(item => (!processFilter || item.processKey === processFilter)
     && (item.body.title + " " + processTitles[item.processKey]).toLocaleLowerCase("tr-TR").includes(search.toLocaleLowerCase("tr-TR"))) ?? [];
   const saved = (entry: GuidanceEditorial) => { setCreation(null); setSelected(entry); setMessage("İçerik durumu sunucuda kaydedildi."); };
-  return <div className="ez-guidance-catalog">
-    <div className="page-header"><div><span className="ez-overline">İK REHBERİ</span><h1>{history ? "Öğrenme geçmişim" : "Süreçler ve içerikler"}</h1>
-      <p>Süreçlerin gerekçelerini, örneklerini ve incelenmiş dayanaklarını okuyun.</p></div>
+  return <div className={`ez-guidance-catalog${versionId !== null && !manage && !history ? " is-reading" : ""}`}>
+    <div className="page-header"><div><h1>{history ? "Öğrenme geçmişim" : "Süreçler ve içerikler"}</h1>
+      {!history && <p>Bir içerik seçin; açıklamasını ve dayanaklarını inceleyin.</p>}</div>
     </div>
     <GuidanceNavigation history={history} />
     {access.data?.canManage && <button className="btn btn-secondary" onClick={() => setManage(prev => !prev)}>{manage ? "Okur görünümüne dön" : "İçerik yayınını yönet"}</button>}
-    {!manage && history && <section className="ez-learning-history"><h2>Öğrenme geçmişim</h2><GuidanceReadingJourney /></section>}
+    {!manage && history && <section className="ez-learning-history"><GuidanceReadingJourney /></section>}
     {!manage && !history && <>
       <div className="ez-catalog-filters">
-        <label>İçerikte ara<input type="search" value={search} placeholder="Örneğin: işe giriş veya izin" onChange={event => {
+        <label>İçerikte ara<input ref={searchRef} type="search" value={search} placeholder="Örneğin: işe giriş veya izin" onChange={event => {
           const next = new URLSearchParams(params); if (event.target.value) next.set("q", event.target.value); else next.delete("q"); setParams(next, { replace: true });
         }} /></label>
         <label>Süreç filtresi<select value={processFilter} onChange={event => {
@@ -223,18 +237,21 @@ export function GuidanceCatalogPage() {
       </div>
       {!!processFilter && !processTitles[processFilter] && <p role="alert">Bu süreç bulunamadı. Tüm süreçler seçeneğine dönün.</p>}
       <div className="ez-catalog-browser">
-        <div>{catalog.isPending ? <PageLoading /> : catalog.isError ? <PageError error={catalog.error} /> : <>
+        <div className="ez-catalog-list">{catalog.isPending ? <PageLoading /> : catalog.isError ? <PageError error={catalog.error} /> : <>
+          <p className="ez-catalog-count">{visible.length} içerik</p>
           {!visible.length && <div className="ez-guide-empty"><p>{search ? "Aramanızla eşleşen içerik bulunamadı." : "Rolünüz ve seçili süreç için yayımlanmış ve incelemesi güncel bir içerik henüz yok. Bu durum süreçte yapılacak iş olmadığı anlamına gelmez."}</p></div>}
           <ul className="ez-catalog-index" aria-label="Yayımlanmış içerikler">{visible.map(content => <li key={content.id}>
-            <button type="button" aria-pressed={versionId === content.id} className="ez-catalog-entry" onClick={() => {
+            <button ref={node => { if (node) entriesRef.current.set(content.id, node); else entriesRef.current.delete(content.id); }} type="button" aria-pressed={versionId === content.id} className="ez-catalog-entry" onClick={() => {
               const next = new URLSearchParams(params); next.set("version", String(content.id)); setParams(next);
             }}><span>{processTitles[content.processKey]}</span><strong>{content.body.title}</strong><small>Sürüm {content.contentVersion}</small></button>
           </li>)}</ul>
         </>}</div>
-        <div className="ez-catalog-reading">{versionId !== null
-          ? version.isPending ? <PageLoading /> : version.isError ? <PageError error={version.error} /> : <ContentArticle content={version.data} />
-          : <div className="ez-guide-empty"><h2>Bir adım seçerek başlayın</h2><p>Süreç listesinden bir açıklama seçin. Ne yapacağınız, dayanağı ve hata düzeltme yolu burada açılır.</p></div>}
-        </div>
+        {versionId !== null && <div ref={readingRef} tabIndex={-1} className="ez-catalog-reading" role="region" aria-label="Seçili rehber içeriği">
+          <button type="button" className="btn btn-secondary ez-catalog-back" onClick={() => {
+            const next = new URLSearchParams(params); next.delete("version"); setParams(next);
+          }}>← İçerik listesine dön</button>
+          {version.isPending ? <PageLoading /> : version.isError ? <PageError error={version.error} /> : <ContentArticle content={version.data} />}
+        </div>}
       </div>
     </>}
     {manage && access.data?.canManage && <>

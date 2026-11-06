@@ -33,60 +33,48 @@ export function MyPayslipsView() {
   };
 
   return (
-    <div id="payroll-screen">
+    <div id="payroll-screen" className="ez-my-payslips">
       <div className="page-header">
         <div>
-          <h2>Bordro</h2>
-          <p>Onaylanan bordro pusulalarınızı görüntüleyin ve indirin.</p>
+          <h1>Bordrolarım</h1>
+          <p>Onaylı pusulalarınız · {slips.length} dönem</p>
         </div>
       </div>
 
-      <section className="table-container payroll-table-card">
-        <div className="payroll-table-header">
-          <div>
-            <h4>Bordrolarım</h4>
-            <p className="text-muted">Dönem bazında brüt, kesinti ve net ödeme özetiniz.</p>
-          </div>
-        </div>
-        <table className="data-table payroll-table">
-          <thead>
-            <tr>
-              <th>Dönem</th><th>Brüt</th><th>Kesinti</th><th>Net</th><th>Durum</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {slips.map((slip) => (
-              <tr key={slip.rowId}>
-                <td><strong>{slip.periodName}</strong>{slip.hasRevision && <small>Geçerli düzeltme sürümü · dış ödeme ve bildirim bu ekranda doğrulanmaz</small>}</td>
-                <td>{formatPayrollMoney(slip.grossEarnings)}</td>
-                <td>{formatPayrollMoney(slip.totalDeductions)}</td>
-                <td><strong>{formatPayrollMoney(slip.netPay)}</strong></td>
-                <td>
-                  <span className={`status-pill ${payrollStatusClass(slip.approvalStatus)}`}>
-                    {slip.approvalStatus}
-                  </span>
-                </td>
-                <td className="text-right">
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    title="Pusulayı indir"
-                    aria-label={`${slip.periodName} bordro pusulasını indir`}
-                    onClick={() => handleDownload(slip.periodId, slip.rowId, slip.periodName ?? "")}
-                  >
-                    <i aria-hidden="true" className="fa-solid fa-file-pdf" /> PDF
-                  </button>
-                  {slip.hasRevision && <button className="btn btn-secondary btn-sm"
-                    aria-label={`${slip.periodName} ilk onaylı bordro pusulasını indir`}
-                    onClick={() => handleDownload(slip.periodId, slip.rowId, slip.periodName ?? "", true)}>
-                    İlk onay PDF
-                  </button>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {slips.length === 0 && <p className="pending-desc">Henüz bordro kaydınız yok.</p>}
-      </section>
+      <ul className="ez-payslip-list" aria-label="Bordro dönemleri">
+        {slips.map((slip) => (
+          <li key={slip.rowId} className="ez-payslip-card">
+            <div className="ez-payslip-period">
+              <h2>{slip.periodName}</h2>
+              <span className={`status-pill ${payrollStatusClass(slip.approvalStatus)}`}>
+                {slip.approvalStatus}
+              </span>
+            </div>
+            <dl>
+              <div><dt>Brüt</dt><dd>{formatPayrollMoney(slip.grossEarnings)}</dd></div>
+              <div><dt>Kesinti</dt><dd>{formatPayrollMoney(slip.totalDeductions)}</dd></div>
+              <div className="ez-payslip-net"><dt>Net tutar</dt><dd>{formatPayrollMoney(slip.netPay)}</dd></div>
+            </dl>
+            {slip.hasRevision && <p className="ez-payslip-revision">Geçerli düzeltme sürümü · dış ödeme ve bildirim bu ekranda doğrulanmaz</p>}
+            <div className="ez-payslip-downloads">
+              <button
+                className="btn btn-secondary btn-sm"
+                title="Pusulayı indir"
+                aria-label={`${slip.periodName} bordro pusulasını indir`}
+                onClick={() => handleDownload(slip.periodId, slip.rowId, slip.periodName ?? "")}
+              >
+                <i aria-hidden="true" className="fa-solid fa-file-pdf" /> PDF
+              </button>
+              {slip.hasRevision && <button className="btn btn-secondary btn-sm"
+                aria-label={`${slip.periodName} ilk onaylı bordro pusulasını indir`}
+                onClick={() => handleDownload(slip.periodId, slip.rowId, slip.periodName ?? "", true)}>
+                İlk onay PDF
+              </button>}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {slips.length === 0 && <section className="ez-panel ez-guide-empty"><i className="fa-regular fa-file-lines" aria-hidden="true" /><h2>Henüz bordro kaydınız yok.</h2><p>Onaylı pusulalarınız burada listelenecek.</p></section>}
     </div>
   );
 }

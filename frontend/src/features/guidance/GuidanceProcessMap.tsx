@@ -17,6 +17,12 @@ const coverageLabels: Record<Process["coverage"], string> = {
   screen: "Ayrıntılı rehber hazırlanıyor",
 };
 
+const processIcons: Record<string, string> = {
+  company: "building", recruitment: "briefcase", entry: "user-plus", personnel: "users",
+  leave: "calendar-check", attendance: "clock", payroll: "wallet", compliance: "shield-halved",
+  offboarding: "arrow-right-from-bracket", daily: "list-check",
+};
+
 const processes: Process[] = [
   {
     key: "company", title: "Şirket hazırlığı", purpose: "Şirket bilgilerini ve departman yapısını hazırlayın.",
@@ -66,17 +72,18 @@ export function GuidanceProcessMap({ isHrAdmin = true }: { isHrAdmin?: boolean }
   return <section className="ez-process-map" aria-labelledby="guidance-process-map">
     <div className="ez-process-map-heading">
       <h2 id="guidance-process-map">İK süreç haritası</h2>
-      <p>Bu alanlar günlük işte birbirine bağlanır; sıra her durum için zorunlu değildir. Bağlantılar gerçek kayıt ekranlarını açar.</p>
+      <p>İhtiyacınız olan süreci seçin; rehberini veya işlem ekranını açın.</p>
     </div>
     <ol>
       {visibleProcesses.map((process) => <li key={process.key}>
         <article className="ez-process-map-card">
-          <span className={`ez-process-coverage ez-process-coverage--${process.coverage}`}>{coverageLabels[process.coverage]}</span>
-          <h3>{process.title}</h3>
+          <div className="ez-process-title"><span className="ez-process-icon"><i className={`fa-solid fa-${processIcons[process.key]}`} aria-hidden="true" /></span><h3>{process.title}</h3></div>
           <p>{process.purpose}</p>
-          <p className="ez-process-connection"><strong>Bağlantı:</strong> {process.connection}</p>
-          <Link to={appPath(process.path)} aria-label={`${process.title} ekranını aç`}>Ekranı aç <span aria-hidden="true">→</span></Link>
-          <p><Link to={appPath(`/guidance/catalog?process=${process.key === "entry" ? "personnel-entry" : process.key}`)}>{process.title} için kaynaklı rehberi aç</Link></p>
+          <details><summary>Süreç ayrıntısı</summary><p className="ez-process-connection">{process.connection}</p><span className={`ez-process-coverage ez-process-coverage--${process.coverage}`}>{coverageLabels[process.coverage]}</span></details>
+          <div className="ez-process-links">
+            <Link to={appPath(`/guidance/catalog?process=${process.key === "entry" ? "personnel-entry" : process.key}`)} aria-label={`${process.title} için kaynaklı rehberi aç`}>Rehberi aç</Link>
+            <Link to={appPath(process.path)} aria-label={`${process.title} ekranını aç`}>Ekranı aç <span aria-hidden="true">→</span></Link>
+          </div>
         </article>
       </li>)}
     </ol>

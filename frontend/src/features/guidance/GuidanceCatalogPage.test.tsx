@@ -99,6 +99,23 @@ test("katalog araması açık sürüm bağlantısını ve okuma beyanını korur
   expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
 });
 
+test("içerikten listeye dönüş aramayı ve klavye odağını korur; inceleme kaydı oluşturmaz", async () => {
+  stubApi(routes()); renderCatalog();
+  const search = screen.getByRole("searchbox", { name: "İçerikte ara" });
+  await userEvent.type(search, "Kartı");
+  await userEvent.selectOptions(screen.getByLabelText("Süreç filtresi"), "personnel");
+  const entryButton = await screen.findByRole("button", { name: /Kartı doğrulama/ });
+  await userEvent.click(entryButton);
+  const reading = await screen.findByRole("region", { name: "Seçili rehber içeriği" });
+  await waitFor(() => expect(reading).toHaveFocus());
+  await userEvent.click(within(reading).getByRole("button", { name: /İçerik listesine dön/ }));
+  expect(screen.queryByRole("region", { name: "Seçili rehber içeriği" })).not.toBeInTheDocument();
+  expect(search).toHaveValue("Kartı");
+  expect(screen.getByLabelText("Süreç filtresi")).toHaveValue("personnel");
+  expect(entryButton).toHaveFocus();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
 test("inceleme kaydı yalnız açık beyanla gönderilir ve tekrar okuma tarihi değiştirmez", async () => {
   const reading = { contentRevisionId: 8, contentKey: content.contentKey, processKey: "personnel", contentVersion: 1,
     title: content.body.title, firstReadAtUtc: "2026-10-01T08:00:00Z", isCurrent: true };
